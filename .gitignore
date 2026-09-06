@@ -1,0 +1,49 @@
+# Unreal Engine - build artifacts & local state
+Binaries/
+DerivedDataCache/
+Intermediate/
+Saved/
+Build/
+Platforms/*/Binaries/
+Platforms/*/Build/
+Platforms/*/Intermediate/
+
+# Plugin build artifacts
+Plugins/**/Binaries/
+Plugins/**/Intermediate/
+
+# Visual Studio / Rider / VS Code
+.vs/
+.vscode/
+.idea/
+*.sln
+*.slnx
+*.suo
+*.sdf
+*.opensdf
+*.opendb
+*.VC.db
+*.VC.opendb
+*.user
+*.userprefs
+*.xcodeproj
+*.xcworkspace
+
+# Compiled binaries
+*.dll
+*.exe
+*.lib
+*.pdb
+*.obj
+*.o
+*.so
+*.dylib
+
+# OS cruft
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Crash/log output
+*.log
+*.tlog
