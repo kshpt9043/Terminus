@@ -7,7 +7,10 @@
 		{
 			"Name": "Terminus",
 			"Type": "Runtime",
-			"LoadingPhase": "Default"
+			"LoadingPhase": "Default",
+			"AdditionalDependencies": [
+				"Engine"
+			]
 		}
 	],
 	"Plugins": [
@@ -16,6 +19,28 @@
 			"Enabled": true,
 			"TargetAllowList": [
 				"Editor"
+			]
+		},
+		{
+			"Name": "OnlineSubsystem",
+			"Enabled": true
+		},
+		{
+			"Name": "OnlineSubsystemUtils",
+			"Enabled": true
+		},
+		{
+			"Name": "OnlineSubsystemSteam",
+			"Enabled": true,
+			"PlatformAllowList": [
+				"Win64"
+			]
+		},
+		{
+			"Name": "SteamSockets",
+			"Enabled": true,
+			"PlatformAllowList": [
+				"Win64"
 			]
 		}
 	]
