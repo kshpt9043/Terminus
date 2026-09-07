@@ -68,6 +68,15 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Terminus|Session")
 	FOnLeaveComplete OnLeaveComplete;
 
+	/**
+	 * 검색 시 빌드 태그 필터를 적용할지 여부.
+	 * spacewar(480) 은 전 세계 개발자가 공유하는 AppID 라, 켜두면 우리 로비만 잡힌다.
+	 * 끄면 남의 480 로비까지 전부 잡히므로 검색 경로 자체가 살아 있는지 확인할 때 쓴다.
+	 * 자체 AppID 로 전환하면(M5) 이 스위치와 태그가 함께 필요 없어진다.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Terminus|Session")
+	bool bUseBuildFilter = true;
+
 private:
 	IOnlineSessionPtr GetSessionInterface() const;
 

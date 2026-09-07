@@ -10,6 +10,8 @@
 #include "Engine/World.h"
 #include "Online/OnlineSessionNames.h"   // NAME_GameSession, SEARCH_LOBBIES
 
+DEFINE_LOG_CATEGORY_STATIC(LogTerminusSession, Log, All);
+
 namespace
 {
 	// 480 로비 오염 필터용 키. 이 값이 일치하는 세션만 검색
@@ -89,6 +91,7 @@ void USessionSubsystem::HostSession(int32 MaxPlayers, const FString& MapPath)
 		FOnCreateSessionCompleteDelegate::CreateUObject(
 			this, &USessionSubsystem::HandleCreateComplete));
 
+	UE_LOG(LogTerminusSession, Log, TEXT("HostSession: MaxPlayers=%d, MapPath='%s'"), MaxPlayers, *MapPath);
 	Session->CreateSession(0, NAME_GameSession, Settings);
 }
 
@@ -107,12 +110,18 @@ void USessionSubsystem::FindSessions(int32 MaxResults)
 	LastSearch->MaxSearchResults = FMath::Max(MaxResults, 200);
 	LastSearch->bIsLanQuery = false;
 	LastSearch->QuerySettings.Set(SEARCH_LOBBIES, true, EOnlineComparisonOp::Equals);
-	LastSearch->QuerySettings.Set(KEY_BUILD_TAG, VALUE_BUILD_TAG, EOnlineComparisonOp::Equals);
+	// 빌드 태그 필터. bUseBuildFilter 를 끄면 남의 480 로비까지 전부 잡힌다.
+	if (bUseBuildFilter)
+	{
+		LastSearch->QuerySettings.Set(KEY_BUILD_TAG, VALUE_BUILD_TAG, EOnlineComparisonOp::Equals);
+	}
 
 	FindHandle = Session->AddOnFindSessionsCompleteDelegate_Handle(
 		FOnFindSessionsCompleteDelegate::CreateUObject(
 			this, &USessionSubsystem::HandleFindComplete));
 	
+	UE_LOG(LogTerminusSession, Log, TEXT("FindSessions: MaxResults=%d, bUseBuildFilter=%d"),
+		LastSearch->MaxSearchResults, bUseBuildFilter ? 1 : 0);
 	Session->FindSessions(0, LastSearch.ToSharedRef());
 }
 
@@ -175,12 +184,26 @@ void USessionSubsystem::HandleFindComplete(bool bWasSuccessful)
 	}
 
 	TArray<FTerminusSessionInfo> Out;
+	int32 SkippedInvalid = 0;
+
+	UE_LOG(LogTerminusSession, Log, TEXT("FindComplete: bWasSuccessful=%d, SearchValid=%d, RawResults=%d"),
+		bWasSuccessful ? 1 : 0,
+		LastSearch.IsValid() ? 1 : 0,
+		LastSearch.IsValid() ? LastSearch->SearchResults.Num() : -1);
+
 	if (bWasSuccessful && LastSearch.IsValid())
 	{
 		for (int32 i = 0; i < LastSearch->SearchResults.Num(); ++i)
 		{
 			const FOnlineSessionSearchResult& R = LastSearch->SearchResults[i];
-			if (!R.IsValid()) continue;
+			if (!R.IsValid())
+			{
+				// 여기서 전부 걸리면 IsValid() 조건이 원인이다.
+				++SkippedInvalid;
+				UE_LOG(LogTerminusSession, Warning, TEXT("  [%d] skipped: IsValid()==false, Owner=%s"),
+					i, *R.Session.OwningUserName);
+				continue;
+			}
 
 			FTerminusSessionInfo Info;
 			Info.Index          = i;
@@ -191,6 +214,9 @@ void USessionSubsystem::HandleFindComplete(bool bWasSuccessful)
 			Out.Add(Info);
 		}
 	}
+	UE_LOG(LogTerminusSession, Log, TEXT("FindComplete: broadcasting %d entries (skipped %d invalid)"),
+		Out.Num(), SkippedInvalid);
+
 	OnFindComplete.Broadcast(bWasSuccessful, Out);
 }
 
