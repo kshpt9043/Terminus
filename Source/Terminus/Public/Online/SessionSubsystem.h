@@ -77,6 +77,14 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Terminus|Session")
 	bool bUseBuildFilter = true;
 
+	/**
+	 * 현재 NAME_GameSession 의 상태를 로그와 화면에 덤프한다. 디버그 전용.
+	 * RegisterPlayer 가 실제로 걸리고 있는지(RegisteredPlayers 수)를 확인하는 용도.
+	 * 접속이 끝난 뒤 호스트 쪽에서 호출할 것.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Terminus|Session|Debug")
+	void DumpSessionState();
+
 private:
 	IOnlineSessionPtr GetSessionInterface() const;
 

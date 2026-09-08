@@ -8,6 +8,7 @@
 #include "OnlineSessionSettings.h"
 #include "GameFramework/PlayerController.h"
 #include "Engine/World.h"
+#include "Engine/Engine.h"          // GEngine (화면 출력)
 #include "Online/OnlineSessionNames.h"   // NAME_GameSession, SEARCH_LOBBIES
 
 DEFINE_LOG_CATEGORY_STATIC(LogTerminusSession, Log, All);
@@ -152,6 +153,58 @@ void USessionSubsystem::LeaveSession()
 			this, &USessionSubsystem::HandleDestroyComplete));
 
 	Session->DestroySession(NAME_GameSession);
+}
+
+void USessionSubsystem::DumpSessionState()
+{
+	IOnlineSessionPtr Session = GetSessionInterface();
+	if (!Session.IsValid())
+	{
+		UE_LOG(LogTerminusSession, Warning, TEXT("DumpSessionState: 세션 인터페이스 없음"));
+		return;
+	}
+
+	const FNamedOnlineSession* Named = Session->GetNamedSession(NAME_GameSession);
+	if (Named == nullptr)
+	{
+		UE_LOG(LogTerminusSession, Warning, TEXT("DumpSessionState: GameSession 이 존재하지 않음 (호스트/참가 전)"));
+		if (GEngine)
+		{
+			GEngine->AddOnScreenDebugMessage(-1, 8.f, FColor::Orange, TEXT("Session: none"));
+		}
+		return;
+	}
+
+	const int32 Registered = Named->RegisteredPlayers.Num();
+
+	UE_LOG(LogTerminusSession, Log, TEXT("---- Session dump ----"));
+	UE_LOG(LogTerminusSession, Log, TEXT("  State             : %s"), EOnlineSessionState::ToString(Named->SessionState));
+	UE_LOG(LogTerminusSession, Log, TEXT("  bHosting          : %d"), Named->bHosting ? 1 : 0);
+	UE_LOG(LogTerminusSession, Log, TEXT("  RegisteredPlayers : %d"), Registered);
+	UE_LOG(LogTerminusSession, Log, TEXT("  PublicConnections : %d (open %d)"),
+		Named->SessionSettings.NumPublicConnections, Named->NumOpenPublicConnections);
+
+	for (int32 i = 0; i < Registered; ++i)
+	{
+		UE_LOG(LogTerminusSession, Log, TEXT("    [%d] %s"), i, *Named->RegisteredPlayers[i]->ToString());
+	}
+
+	// 두 번째 PC 에서는 로그를 보기 어려우므로 화면에도 요약을 띄운다.
+	if (GEngine)
+	{
+		const FString Msg = FString::Printf(
+			TEXT("Session[%s] hosting=%d  registered=%d  open=%d/%d"),
+			EOnlineSessionState::ToString(Named->SessionState),
+			Named->bHosting ? 1 : 0,
+			Registered,
+			Named->NumOpenPublicConnections,
+			Named->SessionSettings.NumPublicConnections);
+
+		GEngine->AddOnScreenDebugMessage(-1, 8.f, FColor::Cyan, Msg);
+	}
+
+	// 엔진 기본 덤프 (LogOnlineSession 으로 전체 상세 출력)
+	Session->DumpSessionState();
 }
 
 void USessionSubsystem::HandleCreateComplete(FName SessionName, bool bWasSuccessful)
