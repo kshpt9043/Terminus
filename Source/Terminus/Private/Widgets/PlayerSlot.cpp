@@ -9,7 +9,7 @@
 void UPlayerSlot::NativeConstruct()
 {
 	Super::NativeConstruct();
-	
+
 	Clear();
 }
 
@@ -20,7 +20,7 @@ void UPlayerSlot::Setup(APlayerState* PS)
 		Clear();
 		return;
 	}
-	
+
 	FString Name = PS->GetPlayerName();
 	if (GetOwningPlayerState() == PS)
 	{
@@ -39,5 +39,4 @@ void UPlayerSlot::Clear()
 	ClassNameText->SetText(FText::GetEmpty());
 	ReadyMark->SetVisibility(ESlateVisibility::Collapsed);
 	EmptyMark->SetVisibility(ESlateVisibility::Visible);
-	
 }
