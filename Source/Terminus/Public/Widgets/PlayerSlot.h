@@ -28,7 +28,7 @@ protected:
 
 public:
 	// PS 가 null 이면 빈 자리로 되돌린다
-	void Setup(APlayerState* PS);
+	void Setup(APlayerState* PS, const FText& ClassName, bool bReady);
 	void Clear();
 
 };

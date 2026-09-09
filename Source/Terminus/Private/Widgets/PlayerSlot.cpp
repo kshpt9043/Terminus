@@ -13,7 +13,7 @@ void UPlayerSlot::NativeConstruct()
 	Clear();
 }
 
-void UPlayerSlot::Setup(APlayerState* PS)
+void UPlayerSlot::Setup(APlayerState* PS, const FText& ClassName, bool bReady)
 {
 	if (!PS)
 	{
@@ -28,8 +28,9 @@ void UPlayerSlot::Setup(APlayerState* PS)
 		Name += TEXT(" (나)");
 	}
 	PlayerNameText->SetText(FText::FromString(Name));
-	ClassNameText->SetText(FText::GetEmpty());
-	ReadyMark->SetVisibility(ESlateVisibility::Collapsed);
+	ClassNameText->SetText(ClassName);
+	// 준비 상태 -> ReadyMark 켜고 끄기
+	ReadyMark->SetVisibility(bReady ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
 	EmptyMark->SetVisibility(ESlateVisibility::Collapsed);
 }
 

@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerController.h"
+#include "Data/CharacterTypes.h"
 #include "TerminusPlayerController.generated.h"
 
 class UTavernWidget;
@@ -24,5 +25,15 @@ protected:
 	
 	UPROPERTY()
 	TObjectPtr<UTavernWidget> TavernWidget;
+	
+public:
+	UFUNCTION(Server, Reliable)
+	void Server_SelectCharacter(ECharacterClass InClass);
+	
+	UFUNCTION(Server, Reliable)
+	void Server_SetReady(bool bInReady);
+	
+	UFUNCTION(Server, Reliable)
+	void Server_StartGame();
 	
 };

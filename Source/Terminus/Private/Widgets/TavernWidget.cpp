@@ -7,6 +7,7 @@
 #include "Components/PanelWidget.h"
 #include "Components/Image.h"
 #include "Components/TextBlock.h"
+#include "Components/Button.h"
 #include "Engine/World.h"
 #include "Engine/DataTable.h"
 #include "Engine/Texture2D.h"
@@ -15,8 +16,25 @@
 #include "GameFramework/GameStateBase.h"
 #include "Widgets/ClassButton.h"
 #include "Data/CharacterTypes.h"
+#include "Player/TerminusPlayerController.h"
+#include "Player/TerminusPlayerState.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogTerminusUI, Log, All);
+
+void UTavernWidget::NativeOnInitialized()
+{
+	Super::NativeOnInitialized();
+	
+	// NativeConstruct 는 여러 번 불릴 수 있어서 바인딩은 여기서 한 번만
+	if (ReadyButton)
+	{
+		ReadyButton->OnClicked.AddDynamic(this, &UTavernWidget::HandleReadyClicked);
+	}
+	if (StartButton)
+	{
+		StartButton->OnClicked.AddDynamic(this, &UTavernWidget::HandleStartClicked);
+	}
+}
 
 void UTavernWidget::NativeConstruct()
 {
@@ -88,7 +106,80 @@ void UTavernWidget::CreateClassButtons()
 void UTavernWidget::HandleClassChosen(ECharacterClass InClass)
 {
 	if (InClass == Selected) { return; }
+	
+	// 준비 완료 상태면 못 바꿈. 여기서 안 막으면 서버는 거절하는데
+	// 내 정보 패널만 바뀐 채로 남는다
+	const ATerminusPlayerState* MyPS = GetOwningPlayerState<ATerminusPlayerState>();
+	if (MyPS && MyPS->IsReady()) { return; }
+	// 내 화면은 바로 바꾸고
 	ApplySelection(InClass);
+	
+	// 이후에 서버를 거쳐서 실제 선택되는 로직
+	if (ATerminusPlayerController* PC = GetOwningPlayer<ATerminusPlayerController>())
+	{
+		PC->Server_SelectCharacter(InClass);
+	}
+}
+
+void UTavernWidget::HandleStartClicked()
+{
+	ATerminusPlayerController* PC = GetOwningPlayer<ATerminusPlayerController>();
+	if (!PC)
+	{
+		return;
+	}
+	
+	// 새로고침 풀링 간격 동안 레디를 풀었을수도 있으므로 검사
+	if (!AreAllPlayersReady())
+	{
+		return;
+	}
+	
+	PC->Server_StartGame();
+}
+
+bool UTavernWidget::AreAllPlayersReady() const
+{
+	const UWorld* World = GetWorld();
+	if (!World)
+	{
+		return false;
+	}
+	
+	const AGameStateBase* GS = World->GetGameState();
+	if (!GS)
+	{
+		return false;
+	}
+	
+	if (GS->PlayerArray.Num() == 0)
+	{
+		return false;
+	}
+	
+	for (const APlayerState* PS : GS->PlayerArray)
+	{
+		const ATerminusPlayerState* TPS = Cast<ATerminusPlayerState>(PS);
+		if (!TPS || !TPS->IsReady())
+		{
+			// 한명이라도 레디가 안되어있다면
+			return false;
+		}
+	}
+	
+	return true;
+}
+
+void UTavernWidget::HandleReadyClicked()
+{
+	ATerminusPlayerController* PC = GetOwningPlayer<ATerminusPlayerController>();
+	if (!PC) { return; }
+	
+	// 내 PS 의 반대값을 서버로 보냄
+	const ATerminusPlayerState* PS = PC->GetPlayerState<ATerminusPlayerState>();
+	const bool bNext = PS ? !PS->IsReady() : true;
+	
+	PC->Server_SetReady(bNext);
 }
 
 void UTavernWidget::CreateSlots()
@@ -200,9 +291,47 @@ void UTavernWidget::RefreshSlots()
 		if (!SlotWidget) { continue; }
 
 		APlayerState* PS = Players.IsValidIndex(i) ? Players[i].Get() : nullptr;
-		SlotWidget->Setup(PS);
+		FText ClassName = FText::GetEmpty();
+		bool bReady = false;
+		if (const ATerminusPlayerState* TPS = Cast<ATerminusPlayerState>(PS))
+		{
+			bReady = TPS->IsReady();
+			if (const FCharacterClassRow* Row = FindClassRow(TPS->GetCharacterClass()))
+			{
+				ClassName = Row->DisplayName;
+			}
+		}
+
+		SlotWidget->Setup(PS, ClassName, bReady);
 	}
 
+	// 내 준비 상태 -> 버튼 라벨과 클래스 버튼 잠금에 같이 씀
+	// 폴링으로 맞추니 OnRep 안 써도 호스트/클라 동일
+	const ATerminusPlayerState* MyPS = GetOwningPlayerState<ATerminusPlayerState>();
+	const bool bMyReady = MyPS && MyPS->IsReady();
+	
+	if (ReadyButtonText)
+	{
+		ReadyButtonText->SetText(FText::FromString(bMyReady ? TEXT("준비 취소") : TEXT("준비 완료")));
+	}
+	
+	// 준비 완료면 캐릭터 버튼 잠금
+	for (UClassButton* Btn : ClassButtons)
+	{
+		if (Btn) { Btn->SetIsEnabled(!bMyReady); }
+	}
+
+	const ATerminusPlayerController* PC = GetOwningPlayer<ATerminusPlayerController>();
+	const bool bIsHost = PC && PC->HasAuthority();
+	
+	if (StartButton)
+	{
+		StartButton->SetVisibility(
+			bIsHost ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
+		
+		StartButton->SetIsEnabled(AreAllPlayersReady());
+	}
+	
 	// 인원이 바뀔 때 알려주는 로그
 	if (Players.Num() != LastPlayerCount)
 	{

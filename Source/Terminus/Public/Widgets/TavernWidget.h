@@ -12,6 +12,7 @@ class UPanelWidget;
 class UImage;
 class UTextBlock;
 class UDataTable;
+class UButton;
 class UClassButton;
 
 /**
@@ -23,6 +24,7 @@ class TERMINUS_API UTavernWidget : public UUserWidget
 	GENERATED_BODY()
 
 protected:
+	virtual void NativeOnInitialized() override;
 	virtual void NativeConstruct() override;
 	virtual void NativeDestruct() override;
 
@@ -64,6 +66,21 @@ protected:
 	
 	void CreateClassButtons();
 	void HandleClassChosen(ECharacterClass InClass);
+	
+	// 준비 버튼. 아직 WBP 에 없어도 되게 Optional 로 둠
+	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UButton>    ReadyButton;
+	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UTextBlock> ReadyButtonText;
+	
+	// 시작 버튼. 호스트만 봐야함
+	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UButton> StartButton;
+	
+	UFUNCTION()
+	void HandleStartClicked();
+	
+	bool AreAllPlayersReady() const;
+	
+	UFUNCTION()
+	void HandleReadyClicked();
 
 private:
 	void CreateSlots();
