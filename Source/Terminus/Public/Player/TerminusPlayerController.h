@@ -19,6 +19,7 @@ class TERMINUS_API ATerminusPlayerController : public APlayerController
 	
 protected:
 	virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	
 	UPROPERTY(EditDefaultsOnly, Category = "Terminus|UI")
 	TSubclassOf<UTavernWidget> TavernWidgetClass;

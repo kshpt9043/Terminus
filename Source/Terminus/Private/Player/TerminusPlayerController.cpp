@@ -5,6 +5,7 @@
 
 #include "Widgets/TavernWidget.h"
 #include "Blueprint/UserWidget.h"
+#include "Game/TavernGameMode.h"
 #include "Player/TerminusPlayerState.h"
 
 
@@ -37,6 +38,17 @@ void ATerminusPlayerController::BeginPlay()
 	bShowMouseCursor = true;
 }
 
+void ATerminusPlayerController::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	if (TavernWidget)
+	{
+		TavernWidget->RemoveFromViewport();
+		TavernWidget = nullptr;
+	}
+	
+	Super::EndPlay(EndPlayReason);
+}
+
 void ATerminusPlayerController::Server_StartGame_Implementation()
 {
 	if (!IsLocalController())
@@ -45,6 +57,11 @@ void ATerminusPlayerController::Server_StartGame_Implementation()
 	}
 	
 	UE_LOG(LogTemp, Log, TEXT("PC: 게임 시작 요청 수락"));
+	
+	if (ATavernGameMode* GM = GetWorld()->GetAuthGameMode<ATavernGameMode>())
+	{
+		GM->TryStartGame();
+	}
 }
 
 void ATerminusPlayerController::Server_SelectCharacter_Implementation(ECharacterClass InClass)

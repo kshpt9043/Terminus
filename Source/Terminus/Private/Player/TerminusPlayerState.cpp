@@ -9,7 +9,7 @@ void ATerminusPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>&
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	
-	DOREPLIFETIME(ATerminusPlayerState, PlayerCharacter);
+	DOREPLIFETIME(ATerminusPlayerState, RunState);
 	DOREPLIFETIME(ATerminusPlayerState, bReady);
 }
 
@@ -20,7 +20,7 @@ void ATerminusPlayerState::SetCharacterClass(ECharacterClass InClass)
 		return;
 	}
 	
-	PlayerCharacter = InClass;
+	RunState.CharacterClass = InClass;
 }
 
 void ATerminusPlayerState::SetReady(bool bInReady)
@@ -31,4 +31,18 @@ void ATerminusPlayerState::SetReady(bool bInReady)
 	}
 	
 	bReady = bInReady;
+}
+
+void ATerminusPlayerState::CopyProperties(APlayerState* NewPS)
+{
+	Super::CopyProperties(NewPS);
+	
+	if (ATerminusPlayerState* New = Cast<ATerminusPlayerState>(NewPS))
+	{
+		New->RunState = RunState;
+		
+		UE_LOG(LogTemp, Log, TEXT("PS: %s 의 %s 를 넘김"),
+			*GetPlayerName(),
+			*UEnum::GetValueAsString(RunState.CharacterClass));
+	}
 }
