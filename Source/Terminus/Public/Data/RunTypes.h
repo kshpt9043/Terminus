@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Data/CharacterTypes.h"
+#include "Data/StatTypes.h"
 #include "RunTypes.generated.h"
 
 // 던전을 돌 동안 유지되는 데이터 구조체
@@ -14,4 +15,7 @@ struct FRunState
 	
 	UPROPERTY(BlueprintReadOnly)
 	ECharacterClass CharacterClass = ECharacterClass::Monk;
+	
+	UPROPERTY(BlueprintReadOnly)
+	FCharacterStats Stats;
 };

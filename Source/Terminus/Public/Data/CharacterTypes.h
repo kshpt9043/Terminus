@@ -6,6 +6,7 @@
 #include "CharacterTypes.generated.h"
 
 class UTexture2D;
+class UPaperZDAnimInstance;
 
 UENUM(BlueprintType)
 enum class ECharacterClass : uint8
@@ -60,4 +61,8 @@ struct FCharacterClassRow : public FTableRowBase
 	// 강화 전 기본 스텟. 던전에서 늘어난 값은 FRunState가 들고 있음
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	FCharacterStats BaseStats;
+	
+	// ZD 애님블프.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	TSoftClassPtr<UPaperZDAnimInstance> AnimInstanceClass;
 };
