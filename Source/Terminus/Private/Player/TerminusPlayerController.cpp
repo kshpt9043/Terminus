@@ -9,33 +9,21 @@
 #include "Player/TerminusPlayerState.h"
 #include "Camera/CameraActor.h"
 #include "Kismet/GameplayStatics.h"
+#include "TimerManager.h"
 
 
 void ATerminusPlayerController::BeginPlay()
 {
 	Super::BeginPlay();
 	
-	// 던전에서 시점 잡아줄 때, 클라이언트는 알아서 못잡아서 SetViewTarget으로 잡아줘야 함
-	if (GetNetMode() == NM_Client)
-	{
-		TArray<AActor*> Cameras;
-		UGameplayStatics::GetAllActorsOfClass(this, ACameraActor::StaticClass(), Cameras);
-		for (AActor* Actor : Cameras)
-		{
-			const ACameraActor* Cam = Cast<ACameraActor>(Actor);
-			if (Cam && Cam->GetAutoActivatePlayerIndex() == 0)
-			{
-				SetViewTarget(Actor);
-				break;
-			}
-		}
-	}
-	
 	// 다른 플레이어의 컨트롤러는 리턴
 	if (!IsLocalController())
 	{
 		return;
 	}
+	
+	// 한 틱 뒤에 BeginPlay에서 카메라 액터 찾아서 맵 잡기
+	GetWorldTimerManager().SetTimerForNextTick(this, &ATerminusPlayerController::ApplyFixedCamera);
 	
 	if (!TavernWidgetClass)
 	{
@@ -65,6 +53,28 @@ void ATerminusPlayerController::EndPlay(const EEndPlayReason::Type EndPlayReason
 	}
 	
 	Super::EndPlay(EndPlayReason);
+}
+
+void ATerminusPlayerController::ApplyFixedCamera()
+{
+	TArray<AActor*> Cameras;
+	UGameplayStatics::GetAllActorsOfClass(this, ACameraActor::StaticClass(), Cameras);
+
+	for (AActor* Actor : Cameras)
+	{
+		const ACameraActor* Cam = Cast<ACameraActor>(Actor);
+		if (!Cam || Cam->GetAutoActivatePlayerIndex() != 0)
+		{
+			continue;
+		}
+		
+		// 기존 컨트롤러는 빙의할때마다 시점을 폰으로 잡아서, 던전에서는 그 관리를 꺼야함
+		bAutoManageActiveCameraTarget = false;
+		SetViewTarget(Actor);
+		return;
+	}
+
+	// 카메라가 없는 레벨(주점)에서는 아무것도 안 한다. 엔진 기본 동작 유지
 }
 
 void ATerminusPlayerController::Server_StartGame_Implementation()

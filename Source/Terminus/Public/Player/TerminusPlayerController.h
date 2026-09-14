@@ -27,6 +27,8 @@ protected:
 	UPROPERTY()
 	TObjectPtr<UTavernWidget> TavernWidget;
 	
+	void ApplyFixedCamera();
+	
 public:
 	UFUNCTION(Server, Reliable)
 	void Server_SelectCharacter(ECharacterClass InClass);
