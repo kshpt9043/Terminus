@@ -7,11 +7,29 @@
 #include "Blueprint/UserWidget.h"
 #include "Game/TavernGameMode.h"
 #include "Player/TerminusPlayerState.h"
+#include "Camera/CameraActor.h"
+#include "Kismet/GameplayStatics.h"
 
 
 void ATerminusPlayerController::BeginPlay()
 {
 	Super::BeginPlay();
+	
+	// 던전에서 시점 잡아줄 때, 클라이언트는 알아서 못잡아서 SetViewTarget으로 잡아줘야 함
+	if (GetNetMode() == NM_Client)
+	{
+		TArray<AActor*> Cameras;
+		UGameplayStatics::GetAllActorsOfClass(this, ACameraActor::StaticClass(), Cameras);
+		for (AActor* Actor : Cameras)
+		{
+			const ACameraActor* Cam = Cast<ACameraActor>(Actor);
+			if (Cam && Cam->GetAutoActivatePlayerIndex() == 0)
+			{
+				SetViewTarget(Actor);
+				break;
+			}
+		}
+	}
 	
 	// 다른 플레이어의 컨트롤러는 리턴
 	if (!IsLocalController())
