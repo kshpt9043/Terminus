@@ -18,6 +18,7 @@
 #include "Data/CharacterTypes.h"
 #include "Player/TerminusPlayerController.h"
 #include "Player/TerminusPlayerState.h"
+#include "Data/TerminusDataSettings.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogTerminusUI, Log, All);
 
@@ -211,24 +212,8 @@ void UTavernWidget::CreateSlots()
 
 const FCharacterClassRow* UTavernWidget::FindClassRow(ECharacterClass InClass) const
 {
-	if (!CharacterClassTable)
-	{
-		return nullptr;
-	}
-
-	// Ctx 는 행 구조가 안 맞을 때 로그에 찍히는 이름
-	static const FString Ctx(TEXT("FindClassRow"));
-	TArray<FCharacterClassRow*> Rows;
-	CharacterClassTable->GetAllRows<FCharacterClassRow>(Ctx, Rows);
-
-	for (const FCharacterClassRow* Row : Rows)
-	{
-		if (Row && Row->Class == InClass)
-		{
-			return Row;
-		}
-	}
-	return nullptr;
+	// 실제 조회는 게시판(프로젝트 세팅)이 한다. 여기서 3곳이 부르고 있어서 이름만 남겨둠
+	return UTerminusDataSettings::FindCharacterClassRow(InClass);
 }
 
 void UTavernWidget::ApplySelection(ECharacterClass InClass)
@@ -247,7 +232,7 @@ void UTavernWidget::ApplySelection(ECharacterClass InClass)
 	if (!Row)
 	{
 		UE_LOG(LogTerminusUI, Warning,
-			TEXT("TavernWidget: %s 행이 없음. DT_CharacterClass 와 Character Class Table 지정을 확인할 것"),
+			TEXT("TavernWidget: %s 행이 없음. Project Settings > Game > Terminus Data 지정을 확인할 것"),
 			*UEnum::GetValueAsString(InClass));
 		return;
 	}

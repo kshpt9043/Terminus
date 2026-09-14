@@ -18,7 +18,8 @@ public class Terminus : ModuleRules
 			"SlateCore",
 			"UMG",
 			"OnlineSubsystem",
-			"OnlineSubsystemUtils"
+			"OnlineSubsystemUtils",
+			"DeveloperSettings"
 		});
 	}
 }

@@ -11,7 +11,6 @@ class UPlayerSlot;
 class UPanelWidget;
 class UImage;
 class UTextBlock;
-class UDataTable;
 class UButton;
 class UClassButton;
 
@@ -45,10 +44,6 @@ protected:
 
 	// 선택한 캐릭터 이름을 따로 띄우고 싶을 때만
 	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UTextBlock> ClassTitleText;
-
-	// 캐릭터 정보 담은 DT
-	UPROPERTY(EditDefaultsOnly, Category = "Terminus|Data")
-	TObjectPtr<UDataTable> CharacterClassTable;
 
 	// 지금 고른 클래스. 기본값은 기획서대로 무도가
 	ECharacterClass Selected = ECharacterClass::Monk;
