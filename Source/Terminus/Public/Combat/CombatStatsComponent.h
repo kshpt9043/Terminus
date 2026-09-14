@@ -7,6 +7,8 @@
 #include "Data/StatTypes.h"
 #include "CombatStatsComponent.generated.h"
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnCombatStateChanged);
+
 /**
  * 체력 보호막 에너지를 들고 있는 전투용 컴포넌트.
  *
@@ -31,12 +33,31 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Terminus|Combat")
 	const FCombatState& GetCombatState() const { return State; }
 	
+	UPROPERTY(BlueprintAssignable, Category = "Terminus|Combat")
+	FOnCombatStateChanged OnCombatStateChanged;
+	
+	// 전투 함수
+	void ApplyDamage(int32 Amount);
+	void AddShield(int32 Amount);
+	void Heal(int32 Amount);
+	bool SpendEnergy(int32 Cost);
+	void RefillEnergy();
+	void AddBonusEvasion(int32 Amount);
+	
 protected:
 	// 클래스가 준 고정 스텟
 	UPROPERTY(Replicated)
 	FCharacterStats Stats;
 
-	// 전투 중에만 사는 현재값
-	UPROPERTY(Replicated)
+	// 전투 중에만 사는 현재값. OnRep가 불리는 식으로 클라에서 복제되어야 함
+	UPROPERTY(ReplicatedUsing = OnRep_State)
 	FCombatState State;
+	
+	UFUNCTION()
+	void OnRep_State();
+
+	void NotifyStateChanged();
+	
+private:
+	bool HasAuth() const;
 };

@@ -42,6 +42,11 @@ ATerminusBattler::ATerminusBattler()
 	CombatStats = CreateDefaultSubobject<UCombatStatsComponent>(TEXT("CombatStats"));
 }
 
+void ATerminusBattler::DebugDamage(int32 Amount)
+{
+	CombatStats->ApplyDamage(Amount);
+}
+
 void ATerminusBattler::OnConstruction(const FTransform& Transform)
 {
 	Super::OnConstruction(Transform);
