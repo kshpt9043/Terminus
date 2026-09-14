@@ -43,6 +43,10 @@
 			"PlatformAllowList": [
 				"Win64"
 			]
+		},
+		{
+			"Name": "PaperZD",
+			"Enabled": true
 		}
 	]
 }

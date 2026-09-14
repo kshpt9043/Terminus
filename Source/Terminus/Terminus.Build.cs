@@ -19,6 +19,8 @@ public class Terminus : ModuleRules
 			"UMG",
 			"OnlineSubsystem",
 			"OnlineSubsystemUtils",
+			"Paper2D",
+			"PaperZD",
 			"DeveloperSettings"
 		});
 	}
