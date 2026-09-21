@@ -14,7 +14,7 @@ REM    Run-Standalone.bat nosteam    Steam 끄고 실행 (로컬 2인 접속 테
 REM ============================================================
 
 REM --- 설치 경로가 다르면 이 줄만 고치세요 ---
-set "ENGINE=C:\Program Files\Epic Games\UE_5.8\Engine\Binaries\Win64\UnrealEditor.exe"
+set "ENGINE=E:\UE_5.8\Engine\Binaries\Win64\UnrealEditor.exe"
 
 REM --- 실행 옵션 ---
 set "RESX=1280"
