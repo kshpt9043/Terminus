@@ -26,3 +26,15 @@ const FCharacterClassRow* UTerminusDataSettings::FindCharacterClassRow(ECharacte
 
 	return nullptr;
 }
+
+const FSkillRow* UTerminusDataSettings::FindSkillRow(FName RowName)
+{
+	const UDataTable* Table = Get()->SkillTable.LoadSynchronous();
+	if (!Table)
+	{
+		return nullptr;
+	}
+	
+	static const FString Ctx(TEXT("FindSkillRow"));
+	return Table->FindRow<FSkillRow>(RowName, Ctx);
+}

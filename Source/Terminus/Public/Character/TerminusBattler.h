@@ -26,6 +26,9 @@ public:
 	// 테스트용 함수
 	UFUNCTION(Exec)
 	void DebugDamage(int32 Amount = 20);
+	
+	UFUNCTION(Exec)
+	void DebugSkill(FName RowName);
 
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Terminus|Visual")

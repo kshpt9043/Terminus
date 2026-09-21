@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "Engine/DeveloperSettings.h"
 #include "Data/CharacterTypes.h"
+#include "Data/SkillTypes.h"
 #include "TerminusDataSettings.generated.h"
 
 class UDataTable;
@@ -37,4 +38,11 @@ public:
 	UPROPERTY(Config, EditAnywhere, Category = "Character",
 		meta = (RequiredAssetDataTags = "RowStructure=/Script/Terminus.CharacterClassRow"))
 	TSoftObjectPtr<UDataTable> CharacterClassTable;
+	
+	// 같은 방식으로 스킬을 찾는 법
+	static const FSkillRow* FindSkillRow(FName RowName);
+	
+	UPROPERTY(Config, EditAnywhere, Category = "Skill",
+	meta = (RequiredAssetDataTags = "RowStructure=/Script/Terminus.SkillRow"))
+	TSoftObjectPtr<UDataTable> SkillTable;
 };

@@ -42,10 +42,30 @@ ATerminusBattler::ATerminusBattler()
 	CombatStats = CreateDefaultSubobject<UCombatStatsComponent>(TEXT("CombatStats"));
 }
 
+// 테스트 ===============================================
 void ATerminusBattler::DebugDamage(int32 Amount)
 {
 	CombatStats->ApplyDamage(Amount);
 }
+
+void ATerminusBattler::DebugSkill(FName RowName)
+{
+	const FSkillRow* Row = UTerminusDataSettings::FindSkillRow(RowName);
+	
+	if (!Row)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Skill] %s 못 찾음"), *RowName.ToString());
+		return;
+	}
+	
+	UE_LOG(LogTemp, Warning, TEXT("[Skill] %s / %s / %s / Base=%d"),
+	*RowName.ToString(),
+	*Row->DisplayName_KR.ToString(),
+	*StaticEnum<EActionKind>()->GetNameStringByValue((int64)Row->ActionKind),
+	Row->BaseValue);
+}
+
+// ======================================================
 
 void ATerminusBattler::OnConstruction(const FTransform& Transform)
 {
