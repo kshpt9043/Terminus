@@ -14,7 +14,7 @@ struct FRunState
 	GENERATED_BODY()
 	
 	UPROPERTY(BlueprintReadOnly)
-	ECharacterClass CharacterClass = ECharacterClass::Monk;
+	ECharacterClass CharacterClass = ECharacterClass::Fighter;
 	
 	UPROPERTY(BlueprintReadOnly)
 	FCharacterStats Stats;

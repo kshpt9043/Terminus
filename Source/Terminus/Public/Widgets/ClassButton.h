@@ -32,7 +32,7 @@ protected:
 	UFUNCTION()
 	void HandleClicked();
 	
-	ECharacterClass MyClass = ECharacterClass::Monk;
+	ECharacterClass MyClass = ECharacterClass::Fighter;
 	
 public:
 	FOnClassButtonClicked OnClicked;
