@@ -33,6 +33,9 @@ struct FRoomNode
 
 	UPROPERTY(BlueprintReadWrite)
 	ERoomType Type = ERoomType::MONSTER;
+	
+	UPROPERTY(BlueprintReadWrite)
+	int32 MaxPlayers = 1;
 
 	UPROPERTY(BlueprintReadWrite)
 	TArray<int32> ConnectedRoomIds;
@@ -49,21 +52,24 @@ class TERMINUS_API AMapGenerator : public AActor
 public: 
 	AMapGenerator();
 
-	// 네트워크 복제 설정 (ReplicatedUsing = CallBackFunctionName)
 	UPROPERTY(ReplicatedUsing = OnRep_Rooms, BlueprintReadOnly, Category = "Map")
 	TArray<FRoomNode> Rooms;
 
-	// UI 위젯에서 맵 데이터를 수신하기 위해 바인딩할 델리게이트
 	UPROPERTY(BlueprintAssignable, Category = "Map")
 	FOnMapGenerated OnMapGenerated;
 
+	// 현재 게임 멀티플레이 참여 인원수 (서버에서 설정 가능)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map Settings")
+	int32 CurrentPlayerCount = 4;
+
+	// 일반 방 비율 설정 (기본값: 몬스터 55%, 휴식 10%, 상점 10%, 가디언 10%, 이벤트 15%)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map Settings")
+	TMap<ERoomType, float> RoomTypeWeights;
+
 protected:
 	virtual void BeginPlay() override;
-
-	// 네트워크 복제 변수 등록 함수
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
-	// 클라이언트에 Rooms 배열이 동기화되었을 때 자동으로 호출되는 함수
 	UFUNCTION()
 	void OnRep_Rooms();
 
@@ -72,8 +78,14 @@ public:
 	TArray<FRoomNode> GenerateMap();
 
 private:
-	FRoomNode CreateRoom(int32 RoomId, int32 Row, int32 Col, ERoomType Type = ERoomType::MONSTER);
-	ERoomType GetRandomNormalRoomType();
-	// 1레벨부터 보스방까지 실제로 도달 가능한 경로가 존재하는지 검증하는 함수
+	FRoomNode CreateRoom(int32 RoomId, int32 Row, int32 Col, ERoomType Type = ERoomType::MONSTER, int32 MaxPlayers = 1);
+    
+	// 비율 기반 랜덤 방 타입 추첨 함수
+	ERoomType GetWeightedRandomRoomType();
+
+	// 1레벨 -> 보스방 경로 존재 검증 (BFS)
 	bool ValidatePathToBoss(const TArray<FRoomNode>& InMap);
+
+	// 몬스터/가디언 방 분기 시 입장 인원 합산 조건 검증
+	bool ValidatePlayerCapacity(const TArray<FRoomNode>& InMap);
 };

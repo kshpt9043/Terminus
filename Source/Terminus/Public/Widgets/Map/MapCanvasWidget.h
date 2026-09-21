@@ -6,6 +6,7 @@
 #include "Blueprint/UserWidget.h"
 #include "MapCanvasWidget.generated.h"
 
+class UScrollBox;
 enum class ERoomType : uint8;
 class UCanvasPanel;
 class URoomNodeWidget;
@@ -23,6 +24,10 @@ public:
 	// UMG의 바탕 CanvasPanel 바인딩
 	UPROPERTY(meta = (BindWidget))
 	UCanvasPanel* MapCanvasPanel;
+	
+	UPROPERTY(meta = (BindWidget))
+	UScrollBox* ScrollBox;
+	
 
 	// 에디터 패널에서 ERoomType별 아이콘 이미지들을 직접 등록할 TMap
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map Settings")

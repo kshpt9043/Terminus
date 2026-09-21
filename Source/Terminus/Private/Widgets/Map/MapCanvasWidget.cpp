@@ -7,6 +7,7 @@
 #include "Components/CanvasPanelSlot.h"
 #include "Kismet/GameplayStatics.h"
 #include "Widgets/Map/RoomNodeWidget.h"
+#include "Components/ScrollBox.h"
 
 void UMapCanvasWidget::NativeConstruct()
 {
@@ -61,6 +62,18 @@ void UMapCanvasWidget::BuildMapUI(const TArray<FRoomNode>& MapData)
 
 		// 클릭/선 그리기 참조용으로 저장
 		CreatedRoomWidgets.Add(Node.RoomId, NewRoomWidget);
+		
+		if (ScrollBox)
+		{
+			// 한 프레임 뒤에 ScrollToEnd 호출
+			GetWorld()->GetTimerManager().SetTimerForNextTick([this]()
+			{
+				if (ScrollBox)
+				{
+					ScrollBox->ScrollToEnd();
+				}
+			});
+		}
 	}
 }
 

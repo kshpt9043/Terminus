@@ -12,6 +12,13 @@ AMapGenerator::AMapGenerator()
     // ★ 네트워크 복제(Replication) 활성화
     bReplicates = true;
     bAlwaysRelevant = true; // 모든 클라이언트에 항상 데이터 전송되도록 설정
+    
+    // 기획 비율 기본값 세팅 (디테일 패널에서 변경 가능)
+    RoomTypeWeights.Add(ERoomType::MONSTER, 55.0f);
+    RoomTypeWeights.Add(ERoomType::BREAK, 10.0f);
+    RoomTypeWeights.Add(ERoomType::STORE, 10.0f);
+    RoomTypeWeights.Add(ERoomType::GUARDIAN, 10.0f);
+    RoomTypeWeights.Add(ERoomType::EVENT, 15.0f);
 }
 
 void AMapGenerator::BeginPlay()
@@ -33,7 +40,7 @@ TArray<FRoomNode> AMapGenerator::GenerateMap()
     TArray<FRoomNode> Map;
     bool bIsValidMap = false;
     int32 RetryCount = 0;
-    const int32 MaxRetries = 100; // 안전장치 (최대 재시도 횟수)
+    const int32 MaxRetries = 200;
 
     while (!bIsValidMap && RetryCount < MaxRetries)
     {
@@ -42,32 +49,42 @@ TArray<FRoomNode> AMapGenerator::GenerateMap()
         int32 GlobalRoomId = 1;
 
         // ==========================================
-        // [Pass 1] 방 생성
+        // [Pass 1] 모든 레벨의 방 생성 및 입장 인원 무작위 지정
         // ==========================================
         for (int32 Row = 0; Row < 10; ++Row)
         {
+            // 10레벨: 보스방 (보스방은 전원 입장 가능하도록 설정)
             if (Row == 9)
             {
-                Map.Add(CreateRoom(GlobalRoomId++, Row, 3, ERoomType::BOSS));
+                Map.Add(CreateRoom(GlobalRoomId++, Row, 3, ERoomType::BOSS, CurrentPlayerCount));
                 continue;
             }
 
             int32 CreatedCountInRow = 0;
+
             for (int32 Col = 0; Col < 6; ++Col)
             {
                 if (FMath::RandRange(0.0f, 1.0f) > 0.6f)
                 {
-                    ERoomType RoomType = (Row == 0) ? ERoomType::MONSTER : GetRandomNormalRoomType();
-                    Map.Add(CreateRoom(GlobalRoomId++, Row, Col, RoomType));
+                    // 1레벨(Row 0)은 몬스터 방 고정, 그 외는 비율 기반 랜덤
+                    ERoomType RoomType = (Row == 0) ? ERoomType::MONSTER : GetWeightedRandomRoomType();
+                    
+                    // 입장 수용 인원 (1명 ~ CurrentPlayerCount 사이)
+                    int32 RandomMaxPlayers = FMath::RandRange(1, CurrentPlayerCount);
+                    
+                    Map.Add(CreateRoom(GlobalRoomId++, Row, Col, RoomType, RandomMaxPlayers));
                     CreatedCountInRow++;
                 }
             }
 
+            // 방이 0개 생성되는 것 방지
             if (CreatedCountInRow == 0)
             {
                 int32 RandomCol = FMath::RandRange(0, 5);
-                ERoomType RoomType = (Row == 0) ? ERoomType::MONSTER : GetRandomNormalRoomType();
-                Map.Add(CreateRoom(GlobalRoomId++, Row, RandomCol, RoomType));
+                ERoomType RoomType = (Row == 0) ? ERoomType::MONSTER : GetWeightedRandomRoomType();
+                int32 RandomMaxPlayers = FMath::RandRange(1, CurrentPlayerCount);
+
+                Map.Add(CreateRoom(GlobalRoomId++, Row, RandomCol, RoomType, RandomMaxPlayers));
             }
         }
 
@@ -148,54 +165,66 @@ TArray<FRoomNode> AMapGenerator::GenerateMap()
         }
 
         // ==========================================
-        // [Pass 3] 경로 검증 (Validation)
+        // [Pass 3] 맵 통과 가능성 및 기획 조건 검증
         // ==========================================
-        bIsValidMap = ValidatePathToBoss(Map);
+        bool bPathValid = ValidatePathToBoss(Map);
+        bool bCapacityValid = ValidatePlayerCapacity(Map);
 
-        if (!bIsValidMap)
-        {
-            UE_LOG(LogTemp, Warning, TEXT("[MapGenerator] Invalid Map generated! Retrying... (%d)"), RetryCount);
-        }
+        bIsValidMap = bPathValid && bCapacityValid;
     }
 
-    UE_LOG(LogTemp, Log, TEXT("[MapGenerator] Map Generation Completed in %d attempt(s). Total Rooms: %d"), RetryCount, Map.Num());
-
+    UE_LOG(LogTemp, Log, TEXT("[MapGenerator] Map Generated after %d Retries."), RetryCount);
     return Map;
 }
 
-FRoomNode AMapGenerator::CreateRoom(int32 RoomId, int32 Row, int32 Col, ERoomType Type)
+FRoomNode AMapGenerator::CreateRoom(int32 RoomId, int32 Row, int32 Col, ERoomType Type, int32 MaxPlayers)
 {
     FRoomNode Room;
     Room.RoomId = RoomId;
     Room.Row = Row;
     Room.Col = Col;
     Room.Type = Type;
+    Room.MaxPlayers = MaxPlayers;
     return Room;
 }
 
-// BOSS(5)를 제외한 일반 방 타입(0~4) 랜덤 반환
-ERoomType AMapGenerator::GetRandomNormalRoomType()
+// 가중치 확률 추첨
+ERoomType AMapGenerator::GetWeightedRandomRoomType()
 {
-    uint8 RandomIndex = static_cast<uint8>(FMath::RandRange(0, 4));
-    return static_cast<ERoomType>(RandomIndex);
+    float TotalWeight = 0.0f;
+    for (const auto& Pair : RoomTypeWeights)
+    {
+        TotalWeight += Pair.Value;
+    }
+
+    if (TotalWeight <= 0.0f) return ERoomType::MONSTER;
+
+    float RandomValue = FMath::RandRange(0.0f, TotalWeight);
+    float AccumulatedWeight = 0.0f;
+
+    for (const auto& Pair : RoomTypeWeights)
+    {
+        AccumulatedWeight += Pair.Value;
+        if (RandomValue <= AccumulatedWeight)
+        {
+            return Pair.Key;
+        }
+    }
+
+    return ERoomType::MONSTER;
 }
 
+// BFS를 통한 보스방 도달 경로 검증
 bool AMapGenerator::ValidatePathToBoss(const TArray<FRoomNode>& InMap)
 {
     if (InMap.Num() == 0) return false;
 
-    // RoomId를 Key로 하여 빠르게 Node 데이터를 찾기 위한 Map 생성
     TMap<int32, const FRoomNode*> RoomLookup;
-    for (const FRoomNode& Node : InMap)
-    {
-        RoomLookup.Add(Node.RoomId, &Node);
-    }
+    for (const FRoomNode& Node : InMap) RoomLookup.Add(Node.RoomId, &Node);
 
-    // 1. Queue와 방문 여부(Visited) 집합 준비
     TQueue<int32> SearchQueue;
     TSet<int32> VisitedRoomIds;
 
-    // 2. 1레벨(Row == 0)의 모든 시작 방들을 큐에 삽입
     for (const FRoomNode& Node : InMap)
     {
         if (Node.Row == 0)
@@ -205,7 +234,6 @@ bool AMapGenerator::ValidatePathToBoss(const TArray<FRoomNode>& InMap)
         }
     }
 
-    // 3. BFS (너비 우선 탐색) 수행
     while (!SearchQueue.IsEmpty())
     {
         int32 CurrentRoomId;
@@ -216,13 +244,11 @@ bool AMapGenerator::ValidatePathToBoss(const TArray<FRoomNode>& InMap)
 
         const FRoomNode* CurrentNode = *CurrentNodePtr;
 
-        // 보스방(Row == 9 또는 ERoomType::BOSS)에 도달했다면 검증 성공!
         if (CurrentNode->Type == ERoomType::BOSS || CurrentNode->Row == 9)
         {
-            return true; // 경로 존재 확인!
+            return true;
         }
 
-        // 연결된 다음 방들을 큐에 방문 추가
         for (int32 ConnectedId : CurrentNode->ConnectedRoomIds)
         {
             if (!VisitedRoomIds.Contains(ConnectedId))
@@ -233,8 +259,46 @@ bool AMapGenerator::ValidatePathToBoss(const TArray<FRoomNode>& InMap)
         }
     }
 
-    // 큐를 다 돌 때까지 보스방에 도달하지 못했다면 연결 실패
     return false;
+}
+
+// 몬스터/가디언 방에서 2개 이상으로 갈라질 때 인원수 합산 조건 검증
+bool AMapGenerator::ValidatePlayerCapacity(const TArray<FRoomNode>& InMap)
+{
+    TMap<int32, const FRoomNode*> RoomLookup;
+    for (const FRoomNode& Node : InMap)
+    {
+        RoomLookup.Add(Node.RoomId, &Node);
+    }
+
+    for (const FRoomNode& SourceNode : InMap)
+    {
+        // 몬스터 방 또는 가디언 방일 때 검사
+        if (SourceNode.Type == ERoomType::MONSTER || SourceNode.Type == ERoomType::GUARDIAN)
+        {
+            // 2개 이상의 방으로 갈라지는 경우
+            if (SourceNode.ConnectedRoomIds.Num() >= 2)
+            {
+                int32 CombinedCapacity = 0;
+
+                for (int32 TargetId : SourceNode.ConnectedRoomIds)
+                {
+                    if (const FRoomNode** TargetPtr = RoomLookup.Find(TargetId))
+                    {
+                        CombinedCapacity += (*TargetPtr)->MaxPlayers;
+                    }
+                }
+
+                // 갈라진 방들의 수용 인원 합이 현재 전체 플레이어 인원보다 적으면 검증 실패
+                if (CombinedCapacity < CurrentPlayerCount)
+                {
+                    return false;
+                }
+            }
+        }
+    }
+
+    return true;
 }
 
 // 네트워크 복제 속성 등록
