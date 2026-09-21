@@ -6,6 +6,7 @@
 #include "Blueprint/UserWidget.h"
 #include "MapCanvasWidget.generated.h"
 
+struct FRoomNode;
 class UScrollBox;
 enum class ERoomType : uint8;
 class UCanvasPanel;
@@ -43,6 +44,13 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map Settings")
 	FVector2D CanvasOffset = FVector2D(100.0f, 100.0f);
+	
+	// 연결선 색상 및 두께 설정
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map Settings|Line")
+	FLinearColor LineColor = FLinearColor(0.8f, 0.8f, 0.8f, 0.8f);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map Settings|Line")
+	float LineThickness = 3.0f;
 
 	void NativeConstruct();
 	// 전체 지도 세팅 함수
@@ -52,10 +60,16 @@ public:
 protected:
 	UFUNCTION()
 	void HandleRoomClicked(int32 ClickedRoomId);
+	
+	// UMG의 UI 렌더링 단계에서 연결선을 그리기 위한 오버라이드
+	virtual int32 NativePaint(const FPaintArgs& Args, const FGeometry& AllottedGeometry, const FSlateRect& MyCullingRect, FSlateWindowElementList& OutDrawElements, int32 LayerId, const FWidgetStyle& InWidgetStyle, bool bParentEnabled) const override;
 
 private:
 	// 생성된 위젯들을 RoomId로 빠르게 찾기 위한 Map
 	UPROPERTY()
 	TMap<int32, URoomNodeWidget*> CreatedRoomWidgets;
+	
+	// 맵 원본 데이터 저장 (OnPaint에서 선을 그릴 때 참조)
+	TArray<FRoomNode> CachedMapData;
 	
 };
