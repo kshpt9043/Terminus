@@ -179,6 +179,52 @@ int32 UCombatStatsComponent::GetStatusValue(EStatusEffect Type) const
 	return Existing ? Existing->Value : 0;
 }
 
+void UCombatStatsComponent::OnTurnEnd()
+{
+	if (!HasAuth())
+	{
+		return;
+	}
+
+	// 독 걸려있으면 턴 끝날때마다 대미지.
+	const int32 Poison = GetStatusValue(EStatusEffect::Poison);
+	if (Poison > 0)
+	{
+		ApplyDamage(Poison);
+	}
+	// ApplyDamage에 끝났음을 알리는 델리게이트 있어서 여기선 안부름
+}
+
+void UCombatStatsComponent::OnCycleEnd()
+{
+	if (!HasAuth())
+	{
+		return;
+	}
+	if (State.Statuses.Num() == 0)
+	{
+		return;
+	}
+
+	// 지속 효과 전부 1씩 깎기, &로 해야 원본을 건듬
+	for (FStatusInstance& S : State.Statuses)
+	{
+		S.Duration -= 1;
+	}
+
+	// 뒤에서부터 검사해야 당겨지는 문제가 없음
+	for (int32 i = State.Statuses.Num() - 1; i >= 0; --i)
+	{
+		if (State.Statuses[i].Duration <= 0)
+		{
+			State.Statuses.RemoveAt(i);
+		}
+	}
+
+	NotifyStateChanged();
+
+}
+
 
 void UCombatStatsComponent::OnRep_State()
 {

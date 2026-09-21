@@ -32,7 +32,17 @@ public:
 	
 	UFUNCTION(Exec)
 	void DebugStatus(FName StatusName, int32 Value = 1, int32 Duration = 1);
+	
+	UFUNCTION(Exec)
+	void DebugTurnEnd();
 
+	UFUNCTION(Exec)
+	void DebugCycleEnd();
+
+protected:
+	// 테스트용. 체력이랑 상태이상 목록 찍기
+	void LogCombatState() const;
+	
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Terminus|Visual")
 	TObjectPtr<USceneComponent> Root;

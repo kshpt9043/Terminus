@@ -76,10 +76,29 @@ void ATerminusBattler::DebugStatus(FName StatusName, int32 Value, int32 Duration
 	}
 	
 	CombatStats->ApplyStatus((EStatusEffect)V, Value, Duration);
-	const TArray<FStatusInstance>& List = CombatStats->GetCombatState().Statuses;
-	UE_LOG(LogTemp, Warning, TEXT("[Status] 현재 %d개"), List.Num());
-	
-	for (const FStatusInstance& S : List)
+	LogCombatState();
+}
+
+void ATerminusBattler::DebugTurnEnd()
+{
+	CombatStats->OnTurnEnd();
+	LogCombatState();
+}
+
+void ATerminusBattler::DebugCycleEnd()
+{
+	CombatStats->OnCycleEnd();
+	LogCombatState();
+}
+
+void ATerminusBattler::LogCombatState() const
+{
+	const FCombatState& Current = CombatStats->GetCombatState();
+
+	UE_LOG(LogTemp, Warning, TEXT("[State] 체력 %d  보호막 %d  상태 %d개"),
+		Current.Health, Current.Shield, Current.Statuses.Num());
+
+	for (const FStatusInstance& S : Current.Statuses)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("   %s  수치 %d  남은 %d"),
 			*StaticEnum<EStatusEffect>()->GetNameStringByValue((int64)S.Type),

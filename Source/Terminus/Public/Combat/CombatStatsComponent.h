@@ -47,6 +47,11 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Terminus|Combat")
 	int32 GetStatusValue(EStatusEffect Type) const;
 	
+	// 자기 턴 끝
+	void OnTurnEnd();
+	// 모두 턴 끝 = 사이클 하나 끝
+	void OnCycleEnd();
+	
 protected:
 	// 클래스가 준 고정 스텟
 	UPROPERTY(Replicated)
