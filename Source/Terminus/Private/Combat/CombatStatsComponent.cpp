@@ -46,8 +46,11 @@ void UCombatStatsComponent::ApplyDamage(int32 Amount)
 	{
 		return;
 	}
-	
 	if (Amount <= 0)
+	{
+		return;
+	}
+	if (IsDead())
 	{
 		return;
 	}
@@ -57,6 +60,12 @@ void UCombatStatsComponent::ApplyDamage(int32 Amount)
 	State.Shield -= Absorbed;
 	State.Health = FMath::Max(0, State.Health - ( Amount - Absorbed ));
 	NotifyStateChanged();
+	
+	// 위에서 이미 죽은 건 걸렀으니 여기서 죽어 있으면 방금 이 한 대로 죽은 것
+	if (IsDead())
+	{
+		NotifyDied();
+	}
 }
 
 void UCombatStatsComponent::AddShield(int32 Amount)
@@ -65,7 +74,10 @@ void UCombatStatsComponent::AddShield(int32 Amount)
 	{
 		return;
 	}
-	
+	if (IsDead())
+	{
+		return;
+	}
 	if (Amount <= 0)
 	{
 		return;
@@ -81,7 +93,10 @@ void UCombatStatsComponent::Heal(int32 Amount)
 	{
 		return;
 	}
-	
+	if (IsDead())
+	{
+		return;
+	}
 	if (Amount <= 0)
 	{
 		return;
@@ -130,6 +145,10 @@ void UCombatStatsComponent::RefillEnergy()
 void UCombatStatsComponent::ApplyStatus(EStatusEffect Type, int32 Value, int32 Duration)
 {
 	if (!HasAuth())
+	{
+		return;
+	}
+	if (IsDead())
 	{
 		return;
 	}
@@ -226,14 +245,30 @@ void UCombatStatsComponent::OnCycleEnd()
 }
 
 
-void UCombatStatsComponent::OnRep_State()
+void UCombatStatsComponent::OnRep_State(const FCombatState& OldState)
 {
 	NotifyStateChanged();
+	
+	// 클라는 ApplyDamage 가 안 돌아서 복제로 알아채야 함
+	// 이전엔 살아 있었는데 지금 죽었으면 -> 죽은 순간
+	if (OldState.Health > 0 && IsDead())
+	{
+		NotifyDied();
+	}
 }
 
 void UCombatStatsComponent::NotifyStateChanged()
 {
 	OnCombatStateChanged.Broadcast();
+}
+
+void UCombatStatsComponent::NotifyDied()
+{
+	UE_LOG(LogTemp, Warning, TEXT("[Died] %s (%s)"),
+		*GetNameSafe(GetOwner()),
+		HasAuth() ? TEXT("서버") : TEXT("클라"));
+
+	OnCombatDied.Broadcast();
 }
 
 bool UCombatStatsComponent::HasAuth() const
