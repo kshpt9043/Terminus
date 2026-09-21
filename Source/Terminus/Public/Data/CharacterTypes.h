@@ -11,7 +11,7 @@ class UPaperZDAnimInstance;
 UENUM(BlueprintType)
 enum class ECharacterClass : uint8
 {
-	Monk     UMETA(DisplayName = "무도가"),
+	Fighter  UMETA(DisplayName = "무도가"),
 	Engineer UMETA(DisplayName = "마도 공학자"),
 	Paladin  UMETA(DisplayName = "성기사"),
 	Assassin UMETA(DisplayName = "암살자"),
@@ -36,7 +36,7 @@ struct FCharacterClassRow : public FTableRowBase
 	
 	// 캐릭터 클래스
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	ECharacterClass Class = ECharacterClass::Monk;
+	ECharacterClass Class = ECharacterClass::Fighter;
 
 	// 캐릭터 표시 이름
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)

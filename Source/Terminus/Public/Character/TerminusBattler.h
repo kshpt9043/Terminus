@@ -22,6 +22,10 @@ class TERMINUS_API ATerminusBattler : public APawn
 
 public:
 	ATerminusBattler();
+	
+	// 테스트용 함수
+	UFUNCTION(Exec)
+	void DebugDamage(int32 Amount = 20);
 
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Terminus|Visual")
@@ -58,7 +62,7 @@ protected:
 	bool bUsePreviewClass = false;
 
 	UPROPERTY(EditAnywhere, Category = "Terminus|Preview", meta = (EditCondition = "bUsePreviewClass"))
-	ECharacterClass PreviewClass = ECharacterClass::Monk; 
+	ECharacterClass PreviewClass = ECharacterClass::Fighter; 
 	
 public:
 	UFUNCTION(BlueprintCallable, Category = "Terminus|Visual")

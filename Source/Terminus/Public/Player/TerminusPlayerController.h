@@ -27,7 +27,11 @@ protected:
 	UPROPERTY()
 	TObjectPtr<UTavernWidget> TavernWidget;
 	
-	void ApplyFixedCamera();
+	// 시점 결정을 엔진 대신 우리가 함 -> 고정 카메라 레벨은 폰이 아니라 카메라를 봐야해서
+	virtual void AutoManageActiveCameraTarget(AActor* SuggestedTarget) override;
+	
+	// 그 레벨의 고정 카메라. 없으면 nullptr
+	class ACameraActor* FindFixedCamera() const;
 	
 public:
 	UFUNCTION(Server, Reliable)

@@ -9,7 +9,6 @@
 #include "Player/TerminusPlayerState.h"
 #include "Camera/CameraActor.h"
 #include "Kismet/GameplayStatics.h"
-#include "TimerManager.h"
 
 
 void ATerminusPlayerController::BeginPlay()
@@ -21,9 +20,6 @@ void ATerminusPlayerController::BeginPlay()
 	{
 		return;
 	}
-	
-	// 한 틱 뒤에 BeginPlay에서 카메라 액터 찾아서 맵 잡기
-	GetWorldTimerManager().SetTimerForNextTick(this, &ATerminusPlayerController::ApplyFixedCamera);
 	
 	if (!TavernWidgetClass)
 	{
@@ -55,26 +51,46 @@ void ATerminusPlayerController::EndPlay(const EEndPlayReason::Type EndPlayReason
 	Super::EndPlay(EndPlayReason);
 }
 
-void ATerminusPlayerController::ApplyFixedCamera()
+void ATerminusPlayerController::AutoManageActiveCameraTarget(AActor* SuggestedTarget)
+{
+	ACameraActor* Fixed = FindFixedCamera();
+	
+	// 안되면 이 줄만 보면 됨. 카메라를 찾았냐 못찾았냐가 전부임
+	UE_LOG(LogTemp, Warning, TEXT("[FixedCam] World=%s Local=%d Found=%s"),
+		*GetWorld()->GetName(),
+		IsLocalController() ? 1 : 0,
+		*GetNameSafe(Fixed));
+	
+	// 엔진은 빙의할 때마다 시점을 폰으로 잡으려함 -> 2.5D는 폰 말고 카메라를 봐야함
+	// 빙의마다 불려서 트래블로 레벨이 바뀌어도 다시 걸림. BeginPlay 처럼 한 번만 도는게 아님
+	if (Fixed)
+	{
+		SetViewTarget(Fixed);
+		return;
+	}
+	
+	// 카메라 없는 레벨(주점)은 엔진 기본 동작 그대로
+	Super::AutoManageActiveCameraTarget(SuggestedTarget);
+}
+
+ACameraActor* ATerminusPlayerController::FindFixedCamera() const
 {
 	TArray<AActor*> Cameras;
 	UGameplayStatics::GetAllActorsOfClass(this, ACameraActor::StaticClass(), Cameras);
-
+	
 	for (AActor* Actor : Cameras)
 	{
-		const ACameraActor* Cam = Cast<ACameraActor>(Actor);
-		if (!Cam || Cam->GetAutoActivatePlayerIndex() != 0)
-		{
-			continue;
-		}
+		ACameraActor* Cam = Cast<ACameraActor>(Actor);
 		
-		// 기존 컨트롤러는 빙의할때마다 시점을 폰으로 잡아서, 던전에서는 그 관리를 꺼야함
-		bAutoManageActiveCameraTarget = false;
-		SetViewTarget(Actor);
-		return;
+		// 레벨에서 Auto Activate 켜둔 카메라 = 그 레벨의 고정 카메라
+		// 인덱스 0만 보면 호스트만 걸려서 INDEX_NONE 만 걸러냄
+		if (Cam && Cam->GetAutoActivatePlayerIndex() != INDEX_NONE)
+		{
+			return Cam;
+		}
 	}
-
-	// 카메라가 없는 레벨(주점)에서는 아무것도 안 한다. 엔진 기본 동작 유지
+	
+	return nullptr;
 }
 
 void ATerminusPlayerController::Server_StartGame_Implementation()

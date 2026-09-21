@@ -46,7 +46,7 @@ protected:
 	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UTextBlock> ClassTitleText;
 
 	// 지금 고른 클래스. 기본값은 기획서대로 무도가
-	ECharacterClass Selected = ECharacterClass::Monk;
+	ECharacterClass Selected = ECharacterClass::Fighter;
 
 	// 열거형으로 행을 찾는 유일한 창구. 나중에 CSV 로 옮겨도 여기만 고치면 된다
 	const FCharacterClassRow* FindClassRow(ECharacterClass InClass) const;
