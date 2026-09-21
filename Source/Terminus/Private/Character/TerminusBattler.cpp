@@ -10,6 +10,8 @@
 #include "Data/TerminusDataSettings.h"
 #include "Player/TerminusPlayerState.h"
 #include "PaperZDAnimInstance.h"
+#include "Character/TerminusMonster.h"
+#include "Kismet/GameplayStatics.h"
 
 ATerminusBattler::ATerminusBattler()
 {
@@ -108,6 +110,44 @@ void ATerminusBattler::DebugCast(FName RowName)
 	UE_LOG(LogTemp, Warning, TEXT("[Cast] %s"), *Row->DisplayName_KR.ToString());
 	FSkillExecutor::Execute(*Row, CombatStats, Targets);
 	LogCombatState();
+}
+
+void ATerminusBattler::DebugCastAt(FName RowName, int32 MonsterIndex)
+{
+	const FSkillRow* Row = UTerminusDataSettings::FindSkillRow(RowName);
+	if (!Row)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Cast] %s 못 찾음"), *RowName.ToString());
+		return;
+	}
+
+	// 레벨에 서 있는 몬스터 전부. 왼쪽부터 0번
+	TArray<AActor*> Found;
+	UGameplayStatics::GetAllActorsOfClass(this, ATerminusMonster::StaticClass(), Found);
+	Found.Sort([](const AActor& A, const AActor& B)
+	{
+		return A.GetActorLocation().X < B.GetActorLocation().X;
+	});
+
+	if (!Found.IsValidIndex(MonsterIndex))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Cast] 몬스터 %d번 없음. 지금 %d마리"), MonsterIndex, Found.Num());
+		return;
+	}
+
+	// 맞는 쪽이 몬스터인지는 몰라도 됨. 배틀러면 전부 같은 컴포넌트로 맞음
+	ATerminusBattler* Target = Cast<ATerminusBattler>(Found[MonsterIndex]);
+
+	TArray<UCombatStatsComponent*> Targets;
+	Targets.Add(Target->GetCombatStats());
+
+	UE_LOG(LogTemp, Warning, TEXT("[Cast] %s -> 몬스터 %d번"), *Row->DisplayName_KR.ToString(), MonsterIndex);
+	FSkillExecutor::Execute(*Row, CombatStats, Targets);
+
+	UE_LOG(LogTemp, Warning, TEXT("--- 나"));
+	LogCombatState();
+	UE_LOG(LogTemp, Warning, TEXT("--- 몬스터 %d번"), MonsterIndex);
+	Target->LogCombatState();
 }
 
 void ATerminusBattler::LogCombatState() const

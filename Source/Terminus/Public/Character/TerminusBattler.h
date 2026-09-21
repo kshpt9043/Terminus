@@ -41,6 +41,9 @@ public:
 	
 	UFUNCTION(Exec)
 	void DebugCast(FName RowName);
+	
+	UFUNCTION(Exec)
+	void DebugCastAt(FName RowName, int32 MonsterIndex = 0);
 
 protected:
 	// 테스트용. 체력이랑 상태이상 목록 찍기
@@ -89,6 +92,10 @@ public:
 	
 	UFUNCTION(BlueprintPure, Category = "Terminus|Visual")
 	bool IsFacingRight() const { return bFacingRight; }
+	
+	// 밖에서 이 배틀러의 전투 컴포넌트를 꺼낼 때. 턴 진행 쪽이 대상 고를 때 쓸 것
+	UFUNCTION(BlueprintPure, Category = "Terminus|Component")
+	UCombatStatsComponent* GetCombatStats() const { return CombatStats; }
 	
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Terminus|Visual")

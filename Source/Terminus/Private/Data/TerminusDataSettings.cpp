@@ -38,3 +38,15 @@ const FSkillRow* UTerminusDataSettings::FindSkillRow(FName RowName)
 	static const FString Ctx(TEXT("FindSkillRow"));
 	return Table->FindRow<FSkillRow>(RowName, Ctx);
 }
+
+const FMonsterRow* UTerminusDataSettings::FindMonsterRow(FName RowName)
+{
+	const UDataTable* Table = Get()->MonsterTable.LoadSynchronous();
+	if (!Table)
+	{
+		return nullptr;
+	}
+	
+	static const FString Ctx(TEXT("FindMonsterRow"));
+	return Table->FindRow<FMonsterRow>(RowName, Ctx);
+}
