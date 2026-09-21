@@ -6,6 +6,7 @@
 #include "PaperFlipbookComponent.h"
 #include "PaperZDAnimationComponent.h"
 #include "Combat/CombatStatsComponent.h"
+#include "Combat/SkillExecutor.h"
 #include "Data/TerminusDataSettings.h"
 #include "Player/TerminusPlayerState.h"
 #include "PaperZDAnimInstance.h"
@@ -88,6 +89,24 @@ void ATerminusBattler::DebugTurnEnd()
 void ATerminusBattler::DebugCycleEnd()
 {
 	CombatStats->OnCycleEnd();
+	LogCombatState();
+}
+
+void ATerminusBattler::DebugCast(FName RowName)
+{
+	const FSkillRow* Row = UTerminusDataSettings::FindSkillRow(RowName);
+	if (!Row)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Cast] %s 못 찾음"), *RowName.ToString());
+		return;
+	}
+
+	// 연습용이라 자기 자신한테 쏨. 진짜 대상 고르기는 TargetType 보고 턴 진행 쪽이 함
+	TArray<UCombatStatsComponent*> Targets;
+	Targets.Add(CombatStats);
+
+	UE_LOG(LogTemp, Warning, TEXT("[Cast] %s"), *Row->DisplayName_KR.ToString());
+	FSkillExecutor::Execute(*Row, CombatStats, Targets);
 	LogCombatState();
 }
 

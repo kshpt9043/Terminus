@@ -38,6 +38,9 @@ public:
 
 	UFUNCTION(Exec)
 	void DebugCycleEnd();
+	
+	UFUNCTION(Exec)
+	void DebugCast(FName RowName);
 
 protected:
 	// 테스트용. 체력이랑 상태이상 목록 찍기
