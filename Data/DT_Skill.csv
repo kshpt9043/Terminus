@@ -1,0 +1,49 @@
+﻿RowName,SkillID,DisplayName_KR,OwnerClass,SkillCategory,SkillType,SkillTier,ActionKind,TargetType,EnergyCost,SkillEnergyCost,BaseValue,ScalingStat,ScalingRatio,HitCount,SecondaryValue,StatusEffect,StatusValue,StatusDuration,SelfDamage,IconID,AnimMontageTag,VFXTag,SFXTag,Description_KR,Notes
+fighter_attack,SK_FTR_001,공격 태세,Fighter,Basic,Attack,Surface,HitEnemyMulti,SingleEnemy,1,0,3,ATK,1,2,0,None,0,0,0,,,,,1명의 적에게 (3+공격) 피해를 2회 준다.,
+fighter_defend,SK_FTR_002,방어 태세,Fighter,Basic,Defense,Surface,ShieldSelf,Self,1,0,6,DEF,1,1,0,None,0,0,0,,,,,자신에게 (6+방어)의 보호막을 생성한다.,
+fighter_special,SK_FTR_003,반격 태세,Fighter,Basic,Special,Surface,ShieldSelfCounter,Self,1,0,3,DEF,1,1,2,Counter,1,1,0,,,,,자신에게 (3+방어) 보호막을 얻고 1사이클 동안 (2+방어)의 피해를 반사하는 반격을 부여한다.,"StatusValue=1(반격 스택), StatusDuration=1사이클 SecondaryValue = (반격 기본 데미지)"
+engineer_attack,SK_ENG_001,마도 캐논 발사,Engineer,Basic,Attack,Surface,HitEnemySingleAoe,SingleEnemy,1,0,5,ATK,1,1,2,None,0,0,0,,,,,"1명의 적에게 (5+공격), 전체 적에게 추가로 (2+공격) 피해.",SecondaryValue=광역 피해 계수(2)
+engineer_defend,SK_ENG_002,에너지 쉴드,Engineer,Basic,Defense,Surface,ShieldSelf,Self,1,0,5,DEF,1,1,0,None,0,0,0,,,,,자신에게 (5+방어)의 보호막을 생성한다.,
+engineer_special,SK_ENG_003,과부하 방출,Engineer,Basic,Special,Surface,HitAllEnemies,AllEnemies,1,0,3,ATK,1,1,0,None,0,0,0,,,,,전체 적에게 (3+공격) 피해를 준다.,
+paladin_attack,SK_PAL_001,기본 검술,Paladin,Basic,Attack,Surface,HitEnemy,SingleEnemy,1,0,5,ATK,1,1,0,None,1,1,0,,,,,1명의 적에게 (5+공격) 피해를 준다.,
+paladin_defend,SK_PAL_002,기본 방패술,Paladin,Basic,Defense,Surface,ShieldSelf,Self,1,0,5,DEF,1,1,0,None,0,0,0,,,,,자신에게 (5+방어)의 보호막을 생성한다.,
+paladin_special,SK_PAL_003,회복,Paladin,Basic,Special,Surface,HealAlly,SingleAlly,1,0,3,DEF,1,1,0,None,0,0,0,,,,,아군 1명의 체력을 (3+방어)만큼 회복한다.,"신의 가호 패시브: 회복량만큼 자신도 보호막 획득(회복 대상이 본인일 때 명확, 타인 대상 시 시전자에게 적용 여부는 기획 확정 필요)"
+assassin_attack,SK_ASN_001,급소 찌르기,Assassin,Basic,Attack,Surface,HitEnemyMark,SingleEnemy,1,0,5,ATK,1,1,0,Mark,1,1,0,,,,,1명의 적에게 (5+공격) 피해와 1사이클 급소 지정을 부여한다.,"StatusValue=1(급소 지정 스택), StatusDuration=1사이클"
+assassin_defend,SK_ASN_002,은신,Assassin,Basic,Defense,Surface,EvasionSelf,Self,1,0,0,DEF,1,1,0,Evasion,1,1,0,,,,,1사이클 동안 회피를 (1+방어)만큼 증가시킨다.,StatusDuration=1사이클
+assassin_special,SK_ASN_003,독 연막,Assassin,Basic,Special,Surface,ShieldSelfPoisonAll,AllEnemies,1,0,2,DEF,1,1,0,Poison,2,1,0,,,,,"1사이클 동안 보호막을 (2+방어)만큼 증가시키고, 전체 적에게 2사이클 동안 중독 부여한다.",StatusValue=2(중독 스택)
+aura_of_valor,SK_CMN_301,용기의 오라,Paladin,Common,Special,Surface,BraveAll,AllAllies,0,1,0,None,1,1,0,Brave,1,1,0,,,,,아군의 1사이클 동안 아군 전체의 공격을 1만큼 증가시킨다.,몬스터 방 처치 보상 풀. 스킬에너지로 사용
+double_attack,SK_CMN_302,2단 베기,Paladin,Common,Attack,Surface,HitEnemyMulti,SingleEnemy,0,1,4,ATK,1,2,0,None,0,0,0,,,,,적 1명에게 (4+공격) 피해를 2회 준다.,몬스터 방 처치 보상 풀
+healing_light,SK_CMN_303,치유의 빛,Paladin,Common,Defense,Surface,HealAll,AllAllies,0,1,2,DEF,1,1,0,None,0,0,0,,,,,아군 전체를 (2+방어)만큼 회복한다.,몬스터 방 처치 보상 풀
+ironclad_faith,SK_CMN_304,철벽의 신앙,Paladin,Common,Defense,Surface,ShieldSelf,Self,0,1,8,DEF,1,1,0,None,0,0,0,,,,,자신에게 (8+방어)의 보호막을 생성한다.,몬스터 방 처치 보상 풀
+holy_charge,SK_CMN_305,성스러운 돌진,Paladin,Common,Attack,Surface,HitEnemy,SingleEnemy,0,1,7,ATK,1,1,0,None,0,0,0,,,,,적 1명에게 (7+공격)의 데미지를 준다.,몬스터 방 처치 보상 풀.
+sanctuary,SK_CMN_306,수호의 성역,Paladin,Common,Defense,Surface,ShieldAll,AllAllies,0,1,4,DEF,1,1,0,None,0,0,0,,,,,아군 전체에게 (4+방어)의 보호막을 생성한다.,몬스터 방 처치 보상 풀
+holy_smite,SK_CMN_307,신성 강타,Paladin,Common,Attack,Surface,HitEnemySelfDmg,SingleEnemy,0,1,10,ATK,1,1,0,None,3,0,3,,,,,"적 1명에게 (10+공격) 피해, 자신은 3 피해를 받는다.",몬스터 방 처치 보상 풀. SelfDamage=3
+god_bless,SK_CMN_308,신의 축복,Shared,Common,Special,Surface,GainEnergy,Self,0,1,1,None,0,1,0,None,0,0,0,,,,,즉시 행동 에너지를 1 회복한다.,몬스터 방 처치 보상 풀
+arc_of_purification,SK_CMN_309,정화의 검,Paladin,Common,Attack,Surface,HitAllEnemies,AllEnemies,0,1,5,ATK,1,1,0,None,0,0,0,,,,,적 전체에게 (5+공격) 피해를 입힌다.,몬스터 방 처치 보상 풀.
+holy_shield,SK_CMN_310,신성 방패,Paladin,Common,Defense,Surface,ShieldSelfCounter,Self,0,1,5,DEF,1,1,2,None,1,1,0,,,,,자신에게 (5+방어) 보호막을 얻고 1사이클 동안 (2+방어)의 피해를 반사하는 반격을 부여한다.,"몬스터 방 처치 보상 풀, SecondaryValue = (반격 기본 데미지)"
+steadfast_blow,SK_CMN_311,견고한 일격,Paladin,Common,Attack,Surface,HitEnemyShield,SingleEnemy,0,1,6,ATK,1,1,3,None,0,0,0,,,,,"적 1명에게 (6+공격)의 피해를 입히고 (3+방어)의 보호막을 
+얻는다.","몬스터 방 처치 보상 풀, 
+SecondaryValue = (획득 보호막 수치)"
+slime_strike,SK_SLI_001,슬라임 박치기,Monster,Common,Attack,Surface,HitAllEnemies,AllEnemies,0,0,5,ATK,1,1,0,None,0,0,0,,,,,적 전체에게 (5+공격)의 피해를 입힌다.,몬스터 스킬(슬라임 왕국)
+condense,SK_SLI_002,응축,Monster,Common,Defense,Surface,ShieldSelf,Self,0,0,5,DEF,1,1,0,None,0,0,0,,,,,자신에게 (5+방어)의 보호막을 부여한다.,몬스터 스킬(슬라임 왕국)
+mucus_heal,SK_SLI_003,점액질 회복,Monster,Common,Defense,Surface,HealAll,AllAllies,0,0,5,DEF,1,1,0,None,0,0,0,,,,,아군 모두의 체력을 (5+방어)만큼 회복한다.,몬스터 스킬(슬라임 왕국)
+lava_spit,SK_SLI_004,마그마 투척,Monster,Common,Attack,Surface,HitAllEnemiesLavaAll,AllEnemies,0,0,5,ATK,1,1,0,Lava,1,1,0,,,,,"적 전체에게 (5+공격)의 피해를 입히고, 1사이클 동안 용암
+디버프를 적용시킵니다.",몬스터 스킬(슬라임 왕국)
+toxic_split,SK_SLI_005,맹독 투척,Monster,Common,Attack,Surface,HitAllEnemiesPoisonAll,AllEnemies,0,0,5,ATK,1,1,0,Poison,5,1,0,,,,,"적 전체에게 (5+공격)의 피해를 입히고, 1사이클 동안 중독
+디버프를 적용시킵니다.",몬스터 스킬(슬라임 왕국)
+ice_split,SK_SLI_006,서리 투척,Monster,Common,Attack,Surface,HitAllEnemiesIceAll,AllEnemies,0,0,5,ATK,1,1,0,Ice,1,1,0,,,,,"적 전체에게 (5+공격)의 피해를 입히고, 1사이클 동안 얼음
+디버프를 적용시킵니다.",몬스터 스킬(슬라임 왕국)
+slime_charge,SK_SLI_007,슬라임 돌진,Monster,Common,Attack,Surface,HitAllEnemies,AllEnemies,0,0,7,ATK,1,1,0,None,0,0,0,,,,,적 전체에게 (7+공격)의 피해를 입힌다.,몬스터 스킬(슬라임 왕국)
+metallic,SK_SLI_008,강철화,Monster,Common,Defense,Surface,MetalSelf,Self,0,0,0,DEF,1,1,0,Metal,1,1,0,,,,,자신에게 1사이클 동안 강철 버프를 부여한다.,몬스터 스킬(슬라임 왕국)(가디언)
+metal_press,SK_SLI_009,메탈 프레스,Monster,Common,Attack,Surface,HitAllEnemies,AllEnemies,0,0,8,ATK,1,1,0,None,0,0,0,,,,,적 전체에게 (8+공격)의 피해를 입힌다.,몬스터 스킬(슬라임 왕국)(가디언)
+acid_split,SK_SLI_010,산성액 투척,Monster,Common,Attack,Surface,HitAllEnemiesAcidAll,AllEnemies,0,0,8,ATK,1,1,0,Acid,1,1,0,,,,,"적 전체에게 (8+공격)의 피해를 입히고, 1사이클 동안 산성 디버프를 적용시킵니다.",몬스터 스킬(슬라임 왕국)(가디언)
+primal_fear,SK_SLI_011,근원적인 공포,Monster,Common,Special,Surface,StatusFearAll,AllEnemies,0,0,0,None,1,1,0,Fear,1,1,0,,,,,적 전체에게 1사이클 동안 공포 디버프를 적용시킵니다.,몬스터 스킬(슬라임 왕국)(가디언)
+declaration_of_war,SK_SLI_012,선전포고,Monster,Common,Special,Surface,BraveAll,AllEnemies,0,0,0,None,1,1,0,Brave,2,1,0,,,,,아군 전체에게 용기 버프를 부여한다.,"몬스터 스킬(슬라임 왕국)(가디언)
+StatusValue = 용기로 인한 공격력 증가치"
+generals_sword,SK_SLI_013,장군의 검,Monster,Common,Attack,Surface,HitAllEnemies,AllEnemies,0,0,10,ATK,1,1,0,None,0,0,0,,,,,적 전체에게 (10+공격)의 피해를 입힌다.,몬스터 스킬(슬라임 왕국)(가디언)
+trinity,SK_SLI_014,삼위일체,Monster,Common,Attack,Surface,HitAllEnemiesFusionAll,AllEnemies,0,0,12,ATK,1,1,0,Fusion,2,1,0,,,,,"적 전체에게 (12+공격)의 피해를 입힌 후, 퓨전 디버프를 적용시킵니다.","몬스터 스킬(슬라임 왕국)(보스)
+퓨전: 중독, 용암, 얼음 중 1가지를 랜덤으로 적용시킨다."
+harden,SK_SLI_015,단단해지기,Monster,Common,Defense,Surface,ShieldSelf,Self,0,0,13,DEF,1,1,0,None,0,0,0,,,,,자신에게 (13+방어)의 보호막을 부여한다.,몬스터 스킬(슬라임 왕국)(보스)
+kings_roar,SK_SLI_016,왕의 포효,Monster,Common,Attack,Surface,HealAllBraveAll,AllAllies,0,0,10,DEF,1,1,0,Brave,2,1,0,,,,,"아군 전체의 체력을 (10+방어)만큼 회복하고, 용기 버프를 부여한다.",몬스터 스킬(슬라임 왕국)(보스)
+kings_sword,SK_SLI_017,왕의 검,Monster,Common,Attack,Surface,HitAllEnemies,AllEnemies,0,0,15,ATK,1,1,0,None,0,0,0,,,,,적 전체에게 (15+공격)의 피해를 입힌다.,몬스터 스킬(슬라임 왕국)(보스)
+common_adrenaline,SK_CMN_108,아드레날린,Shared,Common,Special,Mid,GainEnergy,Self,0,1,1,None,0,1,0,None,0,0,0,,,,,즉시 행동 에너지를 1 회복한다.,몬스터 방 처치 보상 풀
