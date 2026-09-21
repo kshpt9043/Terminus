@@ -65,6 +65,29 @@ void ATerminusBattler::DebugSkill(FName RowName)
 	Row->BaseValue);
 }
 
+void ATerminusBattler::DebugStatus(FName StatusName, int32 Value, int32 Duration)
+{
+	const int64 V = StaticEnum<EStatusEffect>()->GetValueByNameString(StatusName.ToString());
+	
+	if (V == INDEX_NONE)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Status] %s 못 찾음"), *StatusName.ToString());
+		return;
+	}
+	
+	CombatStats->ApplyStatus((EStatusEffect)V, Value, Duration);
+	const TArray<FStatusInstance>& List = CombatStats->GetCombatState().Statuses;
+	UE_LOG(LogTemp, Warning, TEXT("[Status] 현재 %d개"), List.Num());
+	
+	for (const FStatusInstance& S : List)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("   %s  수치 %d  남은 %d"),
+			*StaticEnum<EStatusEffect>()->GetNameStringByValue((int64)S.Type),
+			S.Value,
+			S.Duration);
+	}
+}
+
 // ======================================================
 
 void ATerminusBattler::OnConstruction(const FTransform& Transform)

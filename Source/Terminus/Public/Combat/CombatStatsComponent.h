@@ -42,7 +42,10 @@ public:
 	void Heal(int32 Amount);
 	bool SpendEnergy(int32 Cost);
 	void RefillEnergy();
-	void AddBonusEvasion(int32 Amount);
+	void ApplyStatus(EStatusEffect Type, int32 Value, int32 Duration);
+
+	UFUNCTION(BlueprintPure, Category = "Terminus|Combat")
+	int32 GetStatusValue(EStatusEffect Type) const;
 	
 protected:
 	// 클래스가 준 고정 스텟

@@ -29,6 +29,9 @@ public:
 	
 	UFUNCTION(Exec)
 	void DebugSkill(FName RowName);
+	
+	UFUNCTION(Exec)
+	void DebugStatus(FName StatusName, int32 Value = 1, int32 Duration = 1);
 
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Terminus|Visual")

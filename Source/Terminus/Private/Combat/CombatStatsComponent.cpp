@@ -127,21 +127,58 @@ void UCombatStatsComponent::RefillEnergy()
 	NotifyStateChanged();
 }
 
-void UCombatStatsComponent::AddBonusEvasion(int32 Amount)
+void UCombatStatsComponent::ApplyStatus(EStatusEffect Type, int32 Value, int32 Duration)
 {
 	if (!HasAuth())
 	{
 		return;
 	}
-	
-	if (Amount <= 0)
+	if (Type == EStatusEffect::None)
+	{
+		return;
+	}
+	// 퓨전은 걸리는 순간 중독 용암 얼음 중 하나로 바뀌는 거라 저장할 상태가 아님
+	// -> 스킬 실행 쪽이 셋 중 하나를 골라서 넘겨야 함. 여기 오면 호출부 버그
+	if (Type == EStatusEffect::Fusion)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Status] 퓨전이 그대로 들어옴. 스킬 쪽에서 중독/용암/얼음 중 하나로 바꿔서 넘길 것"));
+		return;
+	}
+	if (Duration <= 0)
 	{
 		return;
 	}
 	
-	State.BonusEvasion += Amount;
+	// 같은 종류가 이미 걸려 있나 찾기. 찾기만 하고 만들진 않음
+	// 배열 안 진짜 항목의 포인터라 여기다 바로 쓰면 원본이 바뀜. 없으면 nullptr 라서 else 에서 직접 Add
+	FStatusInstance* Existing = State.Statuses.FindByPredicate(
+	[Type](const FStatusInstance& S) { return S.Type == Type; });
+	if (Existing)
+	{
+		Existing->Value = Value;
+		Existing->Duration = Duration;
+	}
+	else
+	{
+		FStatusInstance NewStatus;
+		NewStatus.Type = Type;
+		NewStatus.Value = Value;
+		NewStatus.Duration = Duration;
+		State.Statuses.Add(NewStatus);
+	}
+	
 	NotifyStateChanged();
 }
+
+int32 UCombatStatsComponent::GetStatusValue(EStatusEffect Type) const
+{
+	// 같은 종류 찾기. const 함수 안이라 멤버가 전부 읽기 전용 -> 포인터도 const 로 받아야 함
+	const FStatusInstance* Existing = State.Statuses.FindByPredicate(
+	[Type](const FStatusInstance& S) { return S.Type == Type; });
+	
+	return Existing ? Existing->Value : 0;
+}
+
 
 void UCombatStatsComponent::OnRep_State()
 {
