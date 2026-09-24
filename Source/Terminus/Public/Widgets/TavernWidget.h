@@ -69,6 +69,9 @@ protected:
 	// 시작 버튼. 호스트만 봐야함
 	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UButton> StartButton;
 	
+	// 나가기 버튼.
+	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UButton> LeaveButton;
+	
 	UFUNCTION()
 	void HandleStartClicked();
 	
@@ -76,6 +79,9 @@ protected:
 	
 	UFUNCTION()
 	void HandleReadyClicked();
+	
+	UFUNCTION()
+	void HandleLeaveClicked();
 
 private:
 	void CreateSlots();

@@ -6,9 +6,12 @@
 #include "Subsystems/GameInstanceSubsystem.h"
 #include "Interfaces/OnlineSessionInterface.h"
 #include "Online/OnlineSessionNames.h"
+#include "OnlineSessionSettings.h"
+#include "Engine/EngineBaseTypes.h"
 #include "SessionSubsystem.generated.h"
 
 class FOnlineSessionSearch;
+class UNetDriver;
 
 USTRUCT(BlueprintType)
 struct FTerminusSessionInfo
@@ -55,6 +58,9 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Terminus|Session")
 	void LeaveSession();
+	
+	UFUNCTION(BlueprintCallable, Category = "Terminus|Session")
+	void LeaveToMenu();
 
 	UPROPERTY(BlueprintAssignable, Category = "Terminus|Session")
 	FOnHostComplete  OnHostComplete;
@@ -67,6 +73,10 @@ public:
 	
 	UPROPERTY(BlueprintAssignable, Category = "Terminus|Session")
 	FOnLeaveComplete OnLeaveComplete;
+	
+	// 메뉴 화면이 켜질 때 한 번 꺼내 보는 용도. 꺼내면 비워진다
+	UFUNCTION(BlueprintCallable, Category = "Terminus|Session")
+	FText ConsumeDisconnectReason();
 
 	/**
 	 * 검색 시 빌드 태그 필터를 적용할지 여부.
@@ -99,5 +109,27 @@ private:
 
 	FString PendingHostMap;
 	int32   PendingMaxPlayers = 4;
-	bool    bHostAfterDestroy = false;
+	
+	// 검색 결과, 초대 모두 이 함수를 타게 하기
+	void JoinSearchResult(const FOnlineSessionSearchResult& Result);
+	
+	// 세션 파괴는 비동기라서 끝난 후 할 일이 정해져야 함
+	enum class EAfterDestroy : uint8
+	{
+		None, Host, Join, ToMenu
+	};
+	EAfterDestroy AfterDestroy = EAfterDestroy::None;
+	
+	// 파괴를 기다리는 동안 참가할 대상
+	FOnlineSessionSearchResult PendingJoinResult;
+	
+	void TravelToMenu();
+	
+	void HandleNetworkFailure(UWorld* World, UNetDriver* NetDriver,
+	ENetworkFailure::Type FailureType, const FString& ErrorString);
+	void HandleTravelFailure(UWorld* World, ETravelFailure::Type FailureType, const FString& ErrorString);
+	void CleanupAfterFailure(const FText& Reason);
+
+	FDelegateHandle NetworkFailureHandle, TravelFailureHandle;
+	FText PendingDisconnectReason;
 };

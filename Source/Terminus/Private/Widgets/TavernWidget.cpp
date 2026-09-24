@@ -19,6 +19,8 @@
 #include "Player/TerminusPlayerController.h"
 #include "Player/TerminusPlayerState.h"
 #include "Data/TerminusDataSettings.h"
+#include "Online/SessionSubsystem.h"
+#include "Engine/GameInstance.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogTerminusUI, Log, All);
 
@@ -34,6 +36,10 @@ void UTavernWidget::NativeOnInitialized()
 	if (StartButton)
 	{
 		StartButton->OnClicked.AddDynamic(this, &UTavernWidget::HandleStartClicked);
+	}
+	if (LeaveButton)
+	{
+		LeaveButton->OnClicked.AddDynamic(this, &UTavernWidget::HandleLeaveClicked);
 	}
 }
 
@@ -181,6 +187,17 @@ void UTavernWidget::HandleReadyClicked()
 	const bool bNext = PS ? !PS->IsReady() : true;
 	
 	PC->Server_SetReady(bNext);
+}
+
+void UTavernWidget::HandleLeaveClicked()
+{
+	USessionSubsystem* Sessions = GetGameInstance()->GetSubsystem<USessionSubsystem>();
+	if (!Sessions) { return; }
+
+	// 파괴는 비동기라 그 사이 연타하면 LeaveSession 이 겹쳐 불림
+	if (LeaveButton) { LeaveButton->SetIsEnabled(false); }
+
+	Sessions->LeaveToMenu();
 }
 
 void UTavernWidget::CreateSlots()
