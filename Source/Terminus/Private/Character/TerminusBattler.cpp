@@ -6,9 +6,12 @@
 #include "PaperFlipbookComponent.h"
 #include "PaperZDAnimationComponent.h"
 #include "Combat/CombatStatsComponent.h"
+#include "Combat/SkillExecutor.h"
 #include "Data/TerminusDataSettings.h"
 #include "Player/TerminusPlayerState.h"
 #include "PaperZDAnimInstance.h"
+#include "Character/TerminusMonster.h"
+#include "Kismet/GameplayStatics.h"
 
 ATerminusBattler::ATerminusBattler()
 {
@@ -42,10 +45,128 @@ ATerminusBattler::ATerminusBattler()
 	CombatStats = CreateDefaultSubobject<UCombatStatsComponent>(TEXT("CombatStats"));
 }
 
+// 테스트 ===============================================
 void ATerminusBattler::DebugDamage(int32 Amount)
 {
 	CombatStats->ApplyDamage(Amount);
 }
+
+void ATerminusBattler::DebugSkill(FName RowName)
+{
+	const FSkillRow* Row = UTerminusDataSettings::FindSkillRow(RowName);
+	
+	if (!Row)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Skill] %s 못 찾음"), *RowName.ToString());
+		return;
+	}
+	
+	UE_LOG(LogTemp, Warning, TEXT("[Skill] %s / %s / %s / Base=%d"),
+	*RowName.ToString(),
+	*Row->DisplayName_KR.ToString(),
+	*StaticEnum<EActionKind>()->GetNameStringByValue((int64)Row->ActionKind),
+	Row->BaseValue);
+}
+
+void ATerminusBattler::DebugStatus(FName StatusName, int32 Value, int32 Duration)
+{
+	const int64 V = StaticEnum<EStatusEffect>()->GetValueByNameString(StatusName.ToString());
+	
+	if (V == INDEX_NONE)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Status] %s 못 찾음"), *StatusName.ToString());
+		return;
+	}
+	
+	CombatStats->ApplyStatus((EStatusEffect)V, Value, Duration);
+	LogCombatState();
+}
+
+void ATerminusBattler::DebugTurnEnd()
+{
+	CombatStats->OnTurnEnd();
+	LogCombatState();
+}
+
+void ATerminusBattler::DebugCycleEnd()
+{
+	CombatStats->OnCycleEnd();
+	LogCombatState();
+}
+
+void ATerminusBattler::DebugCast(FName RowName)
+{
+	const FSkillRow* Row = UTerminusDataSettings::FindSkillRow(RowName);
+	if (!Row)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Cast] %s 못 찾음"), *RowName.ToString());
+		return;
+	}
+
+	// 연습용이라 자기 자신한테 쏨. 진짜 대상 고르기는 TargetType 보고 턴 진행 쪽이 함
+	TArray<UCombatStatsComponent*> Targets;
+	Targets.Add(CombatStats);
+
+	UE_LOG(LogTemp, Warning, TEXT("[Cast] %s"), *Row->DisplayName_KR.ToString());
+	FSkillExecutor::Execute(*Row, CombatStats, Targets);
+	LogCombatState();
+}
+
+void ATerminusBattler::DebugCastAt(FName RowName, int32 MonsterIndex)
+{
+	const FSkillRow* Row = UTerminusDataSettings::FindSkillRow(RowName);
+	if (!Row)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Cast] %s 못 찾음"), *RowName.ToString());
+		return;
+	}
+
+	// 레벨에 서 있는 몬스터 전부. 왼쪽부터 0번
+	TArray<AActor*> Found;
+	UGameplayStatics::GetAllActorsOfClass(this, ATerminusMonster::StaticClass(), Found);
+	Found.Sort([](const AActor& A, const AActor& B)
+	{
+		return A.GetActorLocation().X < B.GetActorLocation().X;
+	});
+
+	if (!Found.IsValidIndex(MonsterIndex))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Cast] 몬스터 %d번 없음. 지금 %d마리"), MonsterIndex, Found.Num());
+		return;
+	}
+
+	// 맞는 쪽이 몬스터인지는 몰라도 됨. 배틀러면 전부 같은 컴포넌트로 맞음
+	ATerminusBattler* Target = Cast<ATerminusBattler>(Found[MonsterIndex]);
+
+	TArray<UCombatStatsComponent*> Targets;
+	Targets.Add(Target->GetCombatStats());
+
+	UE_LOG(LogTemp, Warning, TEXT("[Cast] %s -> 몬스터 %d번"), *Row->DisplayName_KR.ToString(), MonsterIndex);
+	FSkillExecutor::Execute(*Row, CombatStats, Targets);
+
+	UE_LOG(LogTemp, Warning, TEXT("--- 나"));
+	LogCombatState();
+	UE_LOG(LogTemp, Warning, TEXT("--- 몬스터 %d번"), MonsterIndex);
+	Target->LogCombatState();
+}
+
+void ATerminusBattler::LogCombatState() const
+{
+	const FCombatState& Current = CombatStats->GetCombatState();
+
+	UE_LOG(LogTemp, Warning, TEXT("[State] 체력 %d  보호막 %d  상태 %d개"),
+		Current.Health, Current.Shield, Current.Statuses.Num());
+
+	for (const FStatusInstance& S : Current.Statuses)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("   %s  수치 %d  남은 %d"),
+			*StaticEnum<EStatusEffect>()->GetNameStringByValue((int64)S.Type),
+			S.Value,
+			S.Duration);
+	}
+}
+
+// ======================================================
 
 void ATerminusBattler::OnConstruction(const FTransform& Transform)
 {

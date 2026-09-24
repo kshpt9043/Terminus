@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "CoreMinimal.h"
+#include "Data/SkillTypes.h"
 #include "StatTypes.generated.h"
 
 // 캐릭터 스텟을 최대치와 현재치로 나눠서 담는 구조체들
@@ -8,8 +9,10 @@
 //
 // 한 구조체에 안 몰아넣은 이유
 // 1. 성격이 다름 -> 최대치는 클래스가 정하는 정의, 현재치는 전투 중에만 사는 상태
-// 2. 복제 비용 -> 섞으면 체력 1 깎일 때마다 MaxHealth 랑 EnhanceSlots 까지 같이 날아감
-// 3. FCharacterStats 는 FRunState 로 가야 하고 FCombatState 는 전투 컴포넌트에만 있으면 됨
+// 2. FCharacterStats 는 FRunState 로 가야 하고 FCombatState 는 전투 컴포넌트에만 있으면 됨
+//
+// 복제 비용 때문은 아님. 일반 구조체는 엔진이 필드 단위로 펼쳐서 바뀐 필드만 보냄 (RepLayout)
+// 통째로 가는 건 NetSerialize 를 직접 짠 구조체뿐. OnRep 만 프로퍼티 단위로 한 번 불림
 
 /**
  * 캐릭터 클래스가 정하는 고정 스텟. 전투 중엔 안 바뀐다.
@@ -49,6 +52,22 @@ struct FCharacterStats
 	int32 EnhanceSlots = 3;
 };
 
+
+USTRUCT(BlueprintType)
+struct FStatusInstance
+{
+	GENERATED_BODY()
+	
+	UPROPERTY(BlueprintReadOnly)
+	EStatusEffect Type = EStatusEffect::None;
+
+	UPROPERTY(BlueprintReadOnly)
+	int32 Value = 0;
+
+	UPROPERTY(BlueprintReadOnly)
+	int32 Duration = 0;
+};
+
 /**
  * 전투 중에만 사는 현재값. 전투가 끝나면 버린다.
  * 서버가 바꾸고 클라는 받기만 할 거라 BlueprintReadOnly.
@@ -75,7 +94,6 @@ struct FCombatState
 	UPROPERTY(BlueprintReadOnly)
 	int32 EnergySpentCounter = 0;
 
-	// 사이클 한정으로 올라가는 회피. 암살자 은신이랑 독 연막이 여기를 건드림
 	UPROPERTY(BlueprintReadOnly)
-	int32 BonusEvasion = 0;
+	TArray<FStatusInstance> Statuses;
 };
