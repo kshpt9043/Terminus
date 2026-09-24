@@ -54,3 +54,10 @@
 *.icu  filter=lfs diff=lfs merge=lfs -text
 *.res  filter=lfs diff=lfs merge=lfs -text
 *.bin  filter=lfs diff=lfs merge=lfs -text
+
+# ---- 기획 데이터 ----
+# 엑셀은 바이너리라 맨 위 text=auto 로 줄끝 변환 들어가면 파일이 깨짐
+*.xlsx binary
+*.xlsm binary
+
+# csv 는 일부러 텍스트로 둠 -> git diff 로 기획이 뭘 바꿨는지 줄 단위로 보려고

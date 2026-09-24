@@ -8,6 +8,7 @@
 #include "CombatStatsComponent.generated.h"
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnCombatStateChanged);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnCombatDied);
 
 /**
  * 체력 보호막 에너지를 들고 있는 전투용 컴포넌트.
@@ -36,13 +37,28 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Terminus|Combat")
 	FOnCombatStateChanged OnCombatStateChanged;
 	
+	UPROPERTY(BlueprintAssignable, Category = "Terminus|Combat")
+	FOnCombatDied OnCombatDied;
+	
+	// State 값 물어보는 함수라서 무조건 InitFrom 이후에 불려야함
+	UFUNCTION(BlueprintPure, Category = "Terminus|Combat")
+	bool IsDead() const { return State.Health <= 0; }
+	
 	// 전투 함수
 	void ApplyDamage(int32 Amount);
 	void AddShield(int32 Amount);
 	void Heal(int32 Amount);
 	bool SpendEnergy(int32 Cost);
 	void RefillEnergy();
-	void AddBonusEvasion(int32 Amount);
+	void ApplyStatus(EStatusEffect Type, int32 Value, int32 Duration);
+
+	UFUNCTION(BlueprintPure, Category = "Terminus|Combat")
+	int32 GetStatusValue(EStatusEffect Type) const;
+	
+	// 자기 턴 끝
+	void OnTurnEnd();
+	// 모두 턴 끝 = 사이클 하나 끝
+	void OnCycleEnd();
 	
 protected:
 	// 클래스가 준 고정 스텟
@@ -54,9 +70,11 @@ protected:
 	FCombatState State;
 	
 	UFUNCTION()
-	void OnRep_State();
+	void OnRep_State(const FCombatState& OldState);
 
 	void NotifyStateChanged();
+	
+	void NotifyDied();
 	
 private:
 	bool HasAuth() const;

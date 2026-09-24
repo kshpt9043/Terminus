@@ -3,6 +3,8 @@
 #include "CoreMinimal.h"
 #include "Engine/DeveloperSettings.h"
 #include "Data/CharacterTypes.h"
+#include "Data/SkillTypes.h"
+#include "Data/MonsterTypes.h"
 #include "TerminusDataSettings.generated.h"
 
 class UDataTable;
@@ -37,4 +39,18 @@ public:
 	UPROPERTY(Config, EditAnywhere, Category = "Character",
 		meta = (RequiredAssetDataTags = "RowStructure=/Script/Terminus.CharacterClassRow"))
 	TSoftObjectPtr<UDataTable> CharacterClassTable;
+	
+	// 같은 방식으로 스킬을 찾는 법
+	static const FSkillRow* FindSkillRow(FName RowName);
+	
+	UPROPERTY(Config, EditAnywhere, Category = "Skill",
+	meta = (RequiredAssetDataTags = "RowStructure=/Script/Terminus.SkillRow"))
+	TSoftObjectPtr<UDataTable> SkillTable;
+	
+	// 행 이름으로 몬스터 찾기. FindSkillRow 랑 진짜 같은 방식 -> 행 이름이 DataTable 의 키라 바로 찾음
+	static const FMonsterRow* FindMonsterRow(FName RowName);
+	
+	UPROPERTY(Config, EditAnywhere, Category = "Monster",
+		meta = (RequiredAssetDataTags = "RowStructure=/Script/Terminus.MonsterRow"))
+	TSoftObjectPtr<UDataTable> MonsterTable;
 };

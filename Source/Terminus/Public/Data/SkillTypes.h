@@ -5,7 +5,7 @@
 #include "SkillTypes.generated.h"
 
 // 스킬 한 개를 정의하는 열거형들과 행 구조체
-// 전부 skill_data_template.xlsx 기준이고, 열거형 값 이름과 순서도 그 파일 그대로 맞춤
+// 전부 skill_data.xlsx 기준이고, 열거형 값 이름과 순서도 그 파일 그대로 맞춤
 // 값 이름 바꾸면 나중에 CSV 임포트할 때 그 행이 조용히 틀어짐
 
 UENUM(BlueprintType)
@@ -17,7 +17,9 @@ enum class ESkillOwner : uint8
 	Assassin UMETA(DisplayName = "암살자"),
 
 	// 공용 스킬. ECharacterClass 에 끼우면 MAX 반복문 도는 주점 버튼까지 같이 늘어서 따로 뺌
-	Shared   UMETA(DisplayName = "공용")
+	Shared   UMETA(DisplayName = "공용"),
+	// 몬스터 스킬
+	Monster  UMETA(DisplayName = "몬스터")
 };
 
 // 스킬을 어떻게 획득하는지
@@ -26,7 +28,8 @@ enum class ESkillCategory : uint8
 {
 	Basic    UMETA(DisplayName = "기본"),
 	Common   UMETA(DisplayName = "공용"),
-	Personal UMETA(DisplayName = "개인")
+	Personal UMETA(DisplayName = "개인"),
+	Event    UMETA(DisplayName = "이벤트")
 };
 
 // 주점 UI 의 공격/방어/특수 세 칸에 대응
@@ -71,17 +74,31 @@ UENUM(BlueprintType)
 enum class EStatusEffect : uint8
 {
 	None,
-	Poison      UMETA(DisplayName = "중독"),
-	Mark        UMETA(DisplayName = "급소 지정"),
-	EvasionBuff UMETA(DisplayName = "회피 증가"),
-	Counter     UMETA(DisplayName = "반격"),
-
-	// 상태효과는 아닌데 엑셀이 여기 넣어둠. 반동 피해는 SelfDamage 컬럼이 따로 있어서 값이 두 군데 들어감
-	SelfDamage  UMETA(DisplayName = "반동 피해")
+	Counter,         // State_01  반격
+	Mark,            // State_02  급소 지정
+	Evasion,         // State_03  민첩
+	Poison,          // State_04  중독
+	Brave,           // State_05  용기
+	Protection,      // State_06  가호
+	Ice,             // State_07  얼음
+	Lava,            // State_08  용암
+	Metal,           // State_09  강철
+	Acid,            // State_10  산성
+	Fear,            // State_11  공포
+	Fusion,          // State_12  퓨전
+	Vitality,        // State_13  활력
+	Reflux,          // State_14  역류
+	InternalInjury,  // State_15  내상
+	Immortality,     // State_16  불사
+	Absorption       // State_17  흡수
 };
 
-// 실제 효과를 실행하는 로직 종류
-// 20개인데 6개는 위쪽 값들을 두 개 섞은 것뿐이라, 나중에 스위치는 원자 14개만 구현하면 됨
+// 실제 효과를 실행하는 로직 종류. 엑셀 Enum_Reference 시트 그대로 44개
+//
+// 44갈래 스위치 짜면 안 됨. 상태 종류는 StatusEffect 컬럼이, 대상은 TargetType 이 이미 말해줌
+// HitAllEnemies~All 여섯 개가 코드가 전부 같은 이유임 -> 피해 주고 StatusEffect 대로 거는 것뿐
+// 실제 원자는 피해 보호막 회복 상태부여 반동 에너지 여섯 개고
+// 나중에 이걸 원자 플래그로 번역하는 함수 하나 끼워서 실행부는 여섯 개만 보게 할 것
 UENUM(BlueprintType)
 enum class EActionKind : uint8
 {
@@ -101,18 +118,38 @@ enum class EActionKind : uint8
 	ShieldAll,            // 아군 전체 보호막
 	HealAlly,             // 아군 1명 회복
 	HealAll,              // 아군 전체 회복
-
-	// 엑셀 Enum_Reference 시트에는 EvasionSelf 로 적혀 있는데, 실제 데이터 행은 EvasionBuff 를 씀
-	// EStatusEffect::EvasionBuff 와 이름을 맞춘 것으로 보여서 데이터 행 쪽을 따름
-	EvasionBuff,          // 자신 회피 증가. 1사이클만 유지
-
-	PoisonAll,            // 적 전체 중독만 부여
-	EvasionBuffPoisonAll, // 조합 -> EvasionBuff + PoisonAll
-	GainEnergy            // 즉시 행동 에너지 회복
+	EvasionSelf,          // 자신 회피 증가. 1사이클만 유지
+	StatusPoisonAll,      // 적 전체 중독만 부여
+	EvasionSelfPoisonAll, // 조합 -> EvasionSelf + StatusPoisonAll
+	GainEnergy,           // 즉시 행동 에너지 회복
+	BraveSelf,            // 자신 용기 부여만. 공격 오름
+	BraveAll,             // 아군 전체 용기 부여
+	HitEnemyProtect,      // 조합 -> HitEnemy + ProtectSelf
+	ProtectSelf,          // 자신 가호 부여만. 방어 오름
+	HitEnemyShield,       // 조합 -> HitEnemy + ShieldSelf. 보호막은 SecondaryValue 로 계산
+	StatusLava,           // 적 1명 용암만 부여. 방어 깎임
+	StatusLavaAll,        // 적 전체 용암만 부여
+	StatusIce,            // 적 1명 얼음만 부여. 공격 깎임
+	StatusIceAll,         // 적 전체 얼음만 부여
+	ShieldSelfPoisonAll,  // 조합 -> ShieldSelf + StatusPoisonAll. 독 연막이 회피에서 보호막으로 바뀜
+	MetalSelf,            // 자신 강철 부여. 한 사이클 받는 피해가 1로 고정
+	HitAllEnemiesLavaAll, // 조합 -> HitAllEnemies + StatusLavaAll
+	HitAllEnemiesIceAll,  // 조합 -> HitAllEnemies + StatusIceAll
+	HitAllEnemiesPoisonAll, // 조합 -> HitAllEnemies + StatusPoisonAll
+	StatusAcid,           // 적 1명 산성만 부여. 에너지 소모량 1 늘어남
+	StatusAcidAll,        // 적 전체 산성만 부여
+	HitAllEnemiesAcidAll, // 조합 -> HitAllEnemies + StatusAcidAll
+	StatusFear,           // 적 1명 공포만 부여. 주는 피해 25% 깎임
+	StatusFearAll,        // 적 전체 공포만 부여
+	HitAllEnemiesFearAll, // 조합 -> HitAllEnemies + StatusFearAll
+	StatusFusion,         // 적 1명 퓨전만 부여. 중독 용암 얼음 중 랜덤
+	StatusFusionAll,      // 적 전체 퓨전만 부여
+	HitAllEnemiesFusionAll, // 조합 -> HitAllEnemies + StatusFusionAll
+	HealAllBraveAll       // 조합 -> HealAll + BraveAll
 };
 
 /**
- * 스킬 한 개의 정의. skill_data_template.xlsx 의 Skill_DataTable 시트 한 행과 1:1.
+ * 스킬 한 개의 정의. skill_data.xlsx 의 Skill_DataTable 시트 한 행과 1:1.
  *
  * 컬럼은 26개인데 프로퍼티는 25개다. RowName 은 구조체 필드가 아니라
  * DataTable 이 행을 담는 TMap 의 키라서 여기 넣으면 이름이 두 군데로 갈린다.
