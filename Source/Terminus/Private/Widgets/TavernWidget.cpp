@@ -41,6 +41,10 @@ void UTavernWidget::NativeOnInitialized()
 	{
 		LeaveButton->OnClicked.AddDynamic(this, &UTavernWidget::HandleLeaveClicked);
 	}
+	if (InviteButton)
+	{
+		InviteButton->OnClicked.AddDynamic(this, &UTavernWidget::HandleInviteClicked);
+	}
 }
 
 void UTavernWidget::NativeConstruct()
@@ -125,6 +129,14 @@ void UTavernWidget::HandleClassChosen(ECharacterClass InClass)
 	if (ATerminusPlayerController* PC = GetOwningPlayer<ATerminusPlayerController>())
 	{
 		PC->Server_SelectCharacter(InClass);
+	}
+}
+
+void UTavernWidget::HandleInviteClicked()
+{
+	if (USessionSubsystem* Sessions = GetGameInstance()->GetSubsystem<USessionSubsystem>())
+	{
+		Sessions->ShowInviteUI();
 	}
 }
 

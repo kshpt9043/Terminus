@@ -80,6 +80,10 @@ public:
 	
 	// 호스트가 시작할 때 세션을 진행 중이라고 바꾸는 함수
 	void StartRun();
+	
+	// 스팀 오버레이의 친구 초대 창을 연다. 세션에 들어가 있을 때만 의미 있음
+	UFUNCTION(BlueprintCallable, Category = "Terminus|Session")
+	void ShowInviteUI();
 
 	/**
 	 * 검색 시 빌드 태그 필터를 적용할지 여부.

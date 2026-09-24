@@ -72,6 +72,12 @@ protected:
 	// 나가기 버튼.
 	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UButton> LeaveButton;
 	
+	// .h
+	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UButton> InviteButton;
+
+	UFUNCTION()
+	void HandleInviteClicked();
+	
 	UFUNCTION()
 	void HandleStartClicked();
 	

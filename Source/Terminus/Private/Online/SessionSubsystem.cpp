@@ -11,6 +11,7 @@
 #include "Engine/Engine.h"          // GEngine (화면 출력)
 #include "Online/OnlineSessionNames.h"   // NAME_GameSession, SEARCH_LOBBIES
 #include "Kismet/GameplayStatics.h"
+#include "Interfaces/OnlineExternalUIInterface.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogTerminusSession, Log, All);
 
@@ -218,6 +219,23 @@ void USessionSubsystem::StartRun()
 	
 	UE_LOG(LogTerminusSession, Log, TEXT("StartRun: 세션 진행 중으로 전환"));
 	Session->StartSession(NAME_GameSession);
+}
+
+void USessionSubsystem::ShowInviteUI()
+{
+	IOnlineSubsystem* OSS = Online::GetSubsystem(GetWorld());
+	IOnlineExternalUIPtr UI = OSS ? OSS->GetExternalUIInterface() : nullptr;
+	if (!UI.IsValid())
+	{
+		UE_LOG(LogTerminusSession, Warning, TEXT("ShowInviteUI: 외부 UI 인터페이스 없음"));
+		return;
+	}
+
+	// 어느 세션으로 초대할지 넘겨야 스팀이 로비 초대 창을 띄운다
+	if (!UI->ShowInviteUI(0, NAME_GameSession))
+	{
+		UE_LOG(LogTerminusSession, Warning, TEXT("ShowInviteUI: 실패 (세션이 없거나 오버레이 꺼짐)"));
+	}
 }
 
 void USessionSubsystem::DumpSessionState()
