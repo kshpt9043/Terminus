@@ -77,6 +77,9 @@ public:
 	// 메뉴 화면이 켜질 때 한 번 꺼내 보는 용도. 꺼내면 비워진다
 	UFUNCTION(BlueprintCallable, Category = "Terminus|Session")
 	FText ConsumeDisconnectReason();
+	
+	// 호스트가 시작할 때 세션을 진행 중이라고 바꾸는 함수
+	void StartRun();
 
 	/**
 	 * 검색 시 빌드 태그 필터를 적용할지 여부.
@@ -132,4 +135,9 @@ private:
 
 	FDelegateHandle NetworkFailureHandle, TravelFailureHandle;
 	FText PendingDisconnectReason;
+	
+	void HandleInviteAccepted(const bool bWasSuccessful, const int32 ControllerId,
+		FUniqueNetIdPtr UserId, const FOnlineSessionSearchResult& InviteResult);
+
+	FDelegateHandle InviteHandle;
 };

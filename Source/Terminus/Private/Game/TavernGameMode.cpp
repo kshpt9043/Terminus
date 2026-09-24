@@ -6,6 +6,8 @@
 #include "Player/TerminusPlayerState.h"
 #include "GameFramework/GameStateBase.h"
 #include "Engine/World.h"
+#include "Online/SessionSubsystem.h"
+#include "Engine/GameInstance.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogTerminusFlow, Log, All);
 
@@ -15,6 +17,11 @@ void ATavernGameMode::TryStartGame()
 	{
 		UE_LOG(LogTerminusFlow, Warning, TEXT("Tavern: 시작 거절. 전원 준비 아님"));
 		return;
+	}
+	
+	if (USessionSubsystem* Sessions = GetGameInstance()->GetSubsystem<USessionSubsystem>())
+	{
+		Sessions->StartRun();
 	}
 	
 	UE_LOG(LogTerminusFlow, Log, TEXT("Tavern: 던전으로 이동 %s"), *DungeonMapPath);

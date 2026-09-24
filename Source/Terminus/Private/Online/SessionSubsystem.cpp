@@ -34,6 +34,17 @@ void USessionSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 		TravelFailureHandle = GEngine->OnTravelFailure().AddUObject(
 			this, &USessionSubsystem::HandleTravelFailure);
 	}
+	
+	// 초대는 게임 시작 직후에도 올 수 있어서 월드 없이 기본 OSS 로 붙인다
+	if (IOnlineSubsystem* OSS = IOnlineSubsystem::Get())
+	{
+		if (IOnlineSessionPtr Session = OSS->GetSessionInterface())
+		{
+			InviteHandle = Session->AddOnSessionUserInviteAcceptedDelegate_Handle(
+				FOnSessionUserInviteAcceptedDelegate::CreateUObject(
+					this, &USessionSubsystem::HandleInviteAccepted));
+		}
+	}
 }
 
 void USessionSubsystem::Deinitialize()
@@ -51,6 +62,14 @@ void USessionSubsystem::Deinitialize()
 	{
 		GEngine->OnNetworkFailure().Remove(NetworkFailureHandle);
 		GEngine->OnTravelFailure().Remove(TravelFailureHandle);
+	}
+	
+	if (IOnlineSubsystem* OSS = IOnlineSubsystem::Get())
+	{
+		if (IOnlineSessionPtr Session = OSS->GetSessionInterface())
+		{
+			Session->ClearOnSessionUserInviteAcceptedDelegate_Handle(InviteHandle);
+		}
 	}
 	
 	Super::Deinitialize();
@@ -96,7 +115,7 @@ void USessionSubsystem::HostSession(int32 MaxPlayers, const FString& MapPath)
 	Settings.NumPublicConnections   = MaxPlayers;
 	Settings.NumPrivateConnections  = 0;
 	Settings.bShouldAdvertise       = true;
-	Settings.bAllowJoinInProgress   = true;
+	Settings.bAllowJoinInProgress   = false; // 게임 중인 세션은 참가 x
 	Settings.bAllowJoinViaPresence  = true;
 	Settings.bUsesPresence          = true;
 	Settings.bAllowInvites          = true;
@@ -187,6 +206,18 @@ FText USessionSubsystem::ConsumeDisconnectReason()
 	FText Out = PendingDisconnectReason;
 	PendingDisconnectReason = FText::GetEmpty();
 	return Out;
+}
+
+void USessionSubsystem::StartRun()
+{
+	IOnlineSessionPtr Session = GetSessionInterface();
+	if (!Session.IsValid() || Session->GetNamedSession(NAME_GameSession) == nullptr)
+	{
+		return;
+	}
+	
+	UE_LOG(LogTerminusSession, Log, TEXT("StartRun: 세션 진행 중으로 전환"));
+	Session->StartSession(NAME_GameSession);
 }
 
 void USessionSubsystem::DumpSessionState()
@@ -434,4 +465,20 @@ void USessionSubsystem::CleanupAfterFailure(const FText& Reason)
 		AfterDestroy = EAfterDestroy::None;   // 끊긴 마당에 대기 중이던 Host/Join 은 취소
 		LeaveSession();
 	}
+}
+
+void USessionSubsystem::HandleInviteAccepted(const bool bWasSuccessful, const int32 ControllerId,
+	FUniqueNetIdPtr UserId, const FOnlineSessionSearchResult& InviteResult)
+{
+	UE_LOG(LogTerminusSession, Log, TEXT("InviteAccepted: ok=%d valid=%d"),
+		bWasSuccessful ? 1 : 0, InviteResult.IsValid() ? 1 : 0);
+
+	if (!bWasSuccessful || !InviteResult.IsValid())
+	{
+		OnJoinComplete.Broadcast(false);
+		return;
+	}
+
+	// 내 주점을 열어둔 상태여도 JoinSearchResult 가 먼저 정리하고 들어간다
+	JoinSearchResult(InviteResult);
 }

@@ -32,3 +32,17 @@ AActor* ADungeonGameMode::ChoosePlayerStart_Implementation(AController* Player)
 	
 	return Super::ChoosePlayerStart_Implementation(Player);
 }
+
+void ADungeonGameMode::PreLogin(const FString& Options, const FString& Address, const FUniqueNetIdRepl& UniqueId,
+	FString& ErrorMessage)
+{
+	Super::PreLogin(Options, Address, UniqueId, ErrorMessage);
+	
+	if (!ErrorMessage.IsEmpty()) { return; }   // 엔진이 이미 거절했으면 그대로
+
+	// PIE 는 심리스 트래블이 막혀서 클라가 재접속으로 넘어옴 -> 막으면 테스트 불가
+	if (GetWorld()->WorldType == EWorldType::PIE) { return; }
+
+	// 던전엔 주점에서 같이 넘어온 사람만. 심리스로 온 사람은 여기를 안 탐
+	ErrorMessage = TEXT("이미 던전이 진행 중입니다.");
+}

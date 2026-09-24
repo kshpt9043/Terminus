@@ -19,6 +19,7 @@ public:
 	 * 를 로비 UI에 있던 순서대로 하기 위해서 함 */
 	virtual AActor* ChoosePlayerStart_Implementation(AController* Player) override;
 	
+	virtual void PreLogin(const FString& Options, const FString& Address, const FUniqueNetIdRepl& UniqueId, FString& ErrorMessage) override;
 protected:
 	// 이미 배정한 자리. 같은 자리를 두 번 주지 않기 위함
 	UPROPERTY()
