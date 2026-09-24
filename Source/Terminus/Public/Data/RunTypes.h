@@ -18,4 +18,14 @@ struct FRunState
 	
 	UPROPERTY(BlueprintReadOnly)
 	FCharacterStats Stats;
+	
+	// 맵 진행 및 선택 관련 추가 데이터
+	UPROPERTY(BlueprintReadWrite)
+	int32 CurrentRoomId = -1; // 방금 클리어하고 나온 방 ID (-1: 시작 전)
+
+	UPROPERTY(BlueprintReadWrite)
+	int32 CurrentMapLevel = 0; // 현재 진행 레벨 (Row 0 ~ 11)
+
+	UPROPERTY(BlueprintReadWrite)
+	int32 SelectedRoomId = -1; // 선택한 다음 방 ID (-1: 선택 안 함)
 };

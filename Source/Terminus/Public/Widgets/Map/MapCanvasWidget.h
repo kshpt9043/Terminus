@@ -52,14 +52,21 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map Settings|Line")
 	float LineThickness = 3.0f;
 
-	void NativeConstruct();
+	virtual void NativeConstruct() override;
 	// 전체 지도 세팅 함수
 	UFUNCTION(BlueprintCallable, Category = "Map")
 	void BuildMapUI(const TArray<FRoomNode>& MapData);
+	
+	// 전체 방 위젯들의 선택 상태 동기화 갱신
+	UFUNCTION(BlueprintCallable, Category = "Map")
+	void RefreshAllRoomSelections();
 
 protected:
 	UFUNCTION()
 	void HandleRoomClicked(int32 ClickedRoomId);
+	
+	UFUNCTION()
+	void OnPlayerRunStateChanged(const FRunState& NewRunState);
 	
 	// UMG의 UI 렌더링 단계에서 연결선을 그리기 위한 오버라이드
 	virtual int32 NativePaint(const FPaintArgs& Args, const FGeometry& AllottedGeometry, const FSlateRect& MyCullingRect, FSlateWindowElementList& OutDrawElements, int32 LayerId, const FWidgetStyle& InWidgetStyle, bool bParentEnabled) const override;

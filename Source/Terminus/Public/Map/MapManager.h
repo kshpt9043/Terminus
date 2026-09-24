@@ -4,7 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include "MapGenerator.generated.h"
+#include "Player/TerminusPlayerState.h"
+#include "MapManager.generated.h"
 
 UENUM(BlueprintType)
 enum class ERoomType : uint8
@@ -46,12 +47,12 @@ struct FRoomNode
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMapGenerated, const TArray<FRoomNode>&, MapData);
 
 UCLASS()
-class TERMINUS_API AMapGenerator : public AActor
+class TERMINUS_API AMapManager : public AActor
 {
 	GENERATED_BODY()
     
 public: 
-	AMapGenerator();
+	AMapManager();
 
 	UPROPERTY(ReplicatedUsing = OnRep_Rooms, BlueprintReadOnly, Category = "Map")
 	TArray<FRoomNode> Rooms;
@@ -74,6 +75,15 @@ public:
 	// 일반 방 비율 설정 (기본값: 몬스터 55%, 휴식 10%, 상점 10%, 가디언 10%, 이벤트 15%)
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map Settings")
 	TMap<ERoomType, float> RoomTypeWeights;
+	
+	// 클라이언트가 서버에 방 선택 요청
+	UFUNCTION(Server, Reliable, WithValidation)
+	void Server_RequestSelectRoom(ATerminusPlayerState* RequestingPS, int32 RoomId);
+	
+	// 실패 메시지 UI 알림 (Client RPC)
+	UFUNCTION(Client, Reliable)
+	void Client_OnRoomSelectFailed(const FString& ReasonMessage);
+	
 
 protected:
 	virtual void BeginPlay() override;
@@ -97,4 +107,8 @@ private:
 
 	// 몬스터/가디언 방 분기 시 입장 인원 합산 조건 검증
 	bool ValidatePlayerCapacity(const TArray<FRoomNode>& InMap);
+	
+	bool IsValidNextRoom(const FRunState& PlayerRunState, const FRoomNode& TargetRoom);
+	
+	void CheckAllPlayersReadyAndStart();
 };

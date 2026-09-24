@@ -46,3 +46,39 @@ void ATerminusPlayerState::CopyProperties(APlayerState* NewPS)
 			*UEnum::GetValueAsString(RunState.CharacterClass));
 	}
 }
+
+void ATerminusPlayerState::SetSelectedRoomId(int32 InRoomId)
+{
+	// 오직 서버에서만 실행
+	if (HasAuthority())
+	{
+		RunState.SelectedRoomId = InRoomId;
+
+		// 리슨 서버(Listen Server, 호스트 플레이어) 자신도 UI 및 델리게이트를 즉시 갱신하기 위함
+		OnRep_RunState();
+	}
+}
+
+void ATerminusPlayerState::SetCurrentRoomInfo(int32 InRoomId, int32 InMapLevel)
+{
+	if (HasAuthority())
+	{
+		RunState.CurrentRoomId = InRoomId;
+		RunState.CurrentMapLevel = InMapLevel;
+		OnRep_RunState();
+	}
+}
+
+void ATerminusPlayerState::SetRunState(const FRunState& InRunState)
+{
+	if (HasAuthority())
+	{
+		RunState = InRunState;
+		OnRep_RunState();
+	}
+}
+
+void ATerminusPlayerState::OnRep_RunState()
+{
+	OnRunStateChanged.Broadcast(RunState);
+}

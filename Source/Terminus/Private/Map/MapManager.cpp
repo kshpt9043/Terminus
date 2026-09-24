@@ -1,11 +1,11 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "Map/MapGenerator.h"
-
+#include "Map/MapManager.h"
+#include "Player/TerminusPlayerState.h"
 #include "Net/UnrealNetwork.h"
 
-AMapGenerator::AMapGenerator()
+AMapManager::AMapManager()
 { 
     PrimaryActorTick.bCanEverTick = false;
 
@@ -21,7 +21,70 @@ AMapGenerator::AMapGenerator()
     RoomTypeWeights.Add(ERoomType::EVENT, 15.0f);
 }
 
-void AMapGenerator::BeginPlay()
+void AMapManager::Server_RequestSelectRoom_Implementation(ATerminusPlayerState* RequestingPS, int32 RoomId)
+{
+    if (!HasAuthority() || !RequestingPS) return;
+
+    const FRoomNode* TargetRoom = Rooms.FindByPredicate([RoomId](const FRoomNode& Node) {
+        return Node.RoomId == RoomId;
+    });
+
+    if (!TargetRoom) return;
+
+    // 1. 유효 노드 검증 (Getter 사용)
+    if (!IsValidNextRoom(RequestingPS->GetRunState(), *TargetRoom))
+    {
+        Client_OnRoomSelectFailed(TEXT("이동할 수 없는 경로의 방입니다."));
+        return;
+    }
+
+    // 2. 토글 처리 (Getter 사용 및 Setter 호출)
+    if (RequestingPS->GetSelectedRoomId() == RoomId)
+    {
+        RequestingPS->SetSelectedRoomId(-1);
+        return;
+    }
+
+    // 3. 인원 수용 검증 (Getter 사용)
+    int32 CurrentlySelectedCount = 0;
+    for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
+    {
+        APlayerController* PC = It->Get();
+        if (PC && PC->PlayerState)
+        {
+            ATerminusPlayerState* PS = Cast<ATerminusPlayerState>(PC->PlayerState);
+            if (PS && PS->GetSelectedRoomId() == RoomId)
+            {
+                CurrentlySelectedCount++;
+            }
+        }
+    }
+
+    if (CurrentlySelectedCount >= TargetRoom->MaxPlayers)
+    {
+        Client_OnRoomSelectFailed(TEXT("선택한 방의 정원이 가득 찼습니다!"));
+        return;
+    }
+
+    // 4. 선택 완료 (Setter 호출)
+    RequestingPS->SetSelectedRoomId(RoomId);
+
+    // 5. 전원 확인 후 던전 진입
+    CheckAllPlayersReadyAndStart();
+}
+
+bool AMapManager::Server_RequestSelectRoom_Validate(ATerminusPlayerState* RequestingPS, int32 RoomId)
+{
+    return RequestingPS != nullptr;
+}
+
+void AMapManager::Client_OnRoomSelectFailed_Implementation(const FString& ReasonMessage)
+{
+    UE_LOG(LogTemp, Warning, TEXT("[MapManager] 선택 실패: %s"), *ReasonMessage);
+    // TODO: 화면에 인원 초과/실패 팝업 UI 생성 및 메시지 출력
+}
+
+void AMapManager::BeginPlay()
 {
     Super::BeginPlay();
     
@@ -35,7 +98,7 @@ void AMapGenerator::BeginPlay()
     }
 }
 
-TArray<FRoomNode> AMapGenerator::GenerateMap()
+TArray<FRoomNode> AMapManager::GenerateMap()
 {
     TArray<FRoomNode> Map;
     bool bIsValidMap = false;
@@ -249,7 +312,7 @@ TArray<FRoomNode> AMapGenerator::GenerateMap()
     return Map;
 }
 
-FRoomNode AMapGenerator::CreateRoom(int32 RoomId, int32 Row, int32 Col, ERoomType Type, int32 MaxPlayers)
+FRoomNode AMapManager::CreateRoom(int32 RoomId, int32 Row, int32 Col, ERoomType Type, int32 MaxPlayers)
 {
     FRoomNode Room;
     Room.RoomId = RoomId;
@@ -260,7 +323,7 @@ FRoomNode AMapGenerator::CreateRoom(int32 RoomId, int32 Row, int32 Col, ERoomTyp
     return Room;
 }
 
-ERoomType AMapGenerator::GetWeightedRandomRoomType()
+ERoomType AMapManager::GetWeightedRandomRoomType()
 {
     float TotalWeight = 0.0f;
     for (const auto& Pair : RoomTypeWeights)
@@ -285,7 +348,7 @@ ERoomType AMapGenerator::GetWeightedRandomRoomType()
     return ERoomType::MONSTER;
 }
 
-bool AMapGenerator::ValidatePathToBoss(const TArray<FRoomNode>& InMap, int32 LastRowIndex)
+bool AMapManager::ValidatePathToBoss(const TArray<FRoomNode>& InMap, int32 LastRowIndex)
 {
     if (InMap.Num() == 0) return false;
 
@@ -332,7 +395,7 @@ bool AMapGenerator::ValidatePathToBoss(const TArray<FRoomNode>& InMap, int32 Las
     return false;
 }
 
-bool AMapGenerator::ValidatePlayerCapacity(const TArray<FRoomNode>& InMap)
+bool AMapManager::ValidatePlayerCapacity(const TArray<FRoomNode>& InMap)
 {
     TMap<int32, const FRoomNode*> RoomLookup;
     for (const FRoomNode& Node : InMap)
@@ -365,17 +428,64 @@ bool AMapGenerator::ValidatePlayerCapacity(const TArray<FRoomNode>& InMap)
 
     return true;
 }
+
+bool AMapManager::IsValidNextRoom(const FRunState& PlayerRunState, const FRoomNode& TargetRoom)
+{
+    // 시작 단계(1레벨)면 퀘스트방(Row == 0)만 선택 가능
+    if (PlayerRunState.CurrentMapLevel == 0)
+    {
+        return TargetRoom.Row == 0;
+    }
+
+    // 2레벨 이후: 현재 방의 ConnectedRoomIds에 포함된 방인가?
+    const FRoomNode* CurrentRoom = Rooms.FindByPredicate([&PlayerRunState](const FRoomNode& Node) {
+        return Node.RoomId == PlayerRunState.CurrentRoomId;
+    });
+
+    if (!CurrentRoom) return false;
+
+    return CurrentRoom->ConnectedRoomIds.Contains(TargetRoom.RoomId);
+}
+
+void AMapManager::CheckAllPlayersReadyAndStart()
+{
+    if (!HasAuthority()) return;
+
+    int32 TotalPlayers = GetWorld()->GetNumPlayerControllers();
+    int32 ReadyPlayers = 0;
+
+    for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
+    {
+        APlayerController* PC = It->Get();
+        if (PC && PC->PlayerState)
+        {
+            ATerminusPlayerState* PS = Cast<ATerminusPlayerState>(PC->PlayerState);
+            if (PS && PS->GetSelectedRoomId() != -1)
+            {
+                ReadyPlayers++;
+            }
+        }
+    }
+
+    if (ReadyPlayers >= TotalPlayers && TotalPlayers > 0)
+    {
+        UE_LOG(LogTemp, Log, TEXT("모든 플레이어 방 선택 완료! 던전으로 이동합니다."));
+        GetWorld()->ServerTravel("/Game/Maps/Lv_DungeonPlay?listen");
+    }
+}
+
 // 네트워크 복제 속성 등록
-void AMapGenerator::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+void AMapManager::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
     Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
-    DOREPLIFETIME(AMapGenerator, Rooms);
+    DOREPLIFETIME(AMapManager, Rooms);
 }
 
 // ★ 클라이언트가 서버로부터 Rooms 데이터 수신을 완료했을 때 실행됨
-void AMapGenerator::OnRep_Rooms()
+void AMapManager::OnRep_Rooms()
 {
+    UE_LOG(LogTemp, Warning, TEXT("Map Generated!"))
     // 데이터가 수신되었으므로 클라이언트 UI에 맵을 그리라고 알림
     OnMapGenerated.Broadcast(Rooms);
 }
