@@ -10,6 +10,8 @@
 #include "Camera/CameraActor.h"
 #include "Kismet/GameplayStatics.h"
 #include "Map/MapManager.h"
+#include "Dungeon/DungeonArea.h"
+#include "EngineUtils.h"
 
 
 void ATerminusPlayerController::BeginPlay()
@@ -62,6 +64,13 @@ void ATerminusPlayerController::AutoManageActiveCameraTarget(AActor* SuggestedTa
 		IsLocalController() ? 1 : 0,
 		*GetNameSafe(Fixed));
 	
+	// 구역에 들어가 있는 중이면 그 구역 카메라 유지 (재빙의로 지도 카메라에 뺏기지 않게)
+	if (ADungeonArea* Area = ViewedArea.Get())
+	{
+		SetViewTarget(Area);
+		return;
+	}
+
 	// 엔진은 빙의할 때마다 시점을 폰으로 잡으려함 -> 2.5D는 폰 말고 카메라를 봐야함
 	// 빙의마다 불려서 트래블로 레벨이 바뀌어도 다시 걸림. BeginPlay 처럼 한 번만 도는게 아님
 	if (Fixed)
@@ -125,6 +134,63 @@ void ATerminusPlayerController::Client_OnRoomSelectFailed_Implementation(const F
 {
 	UE_LOG(LogTemp, Warning, TEXT("[MapManager] 선택 실패: %s"), *ReasonMessage);
 	// TODO: 화면에 인원 초과/실패 팝업 UI 생성 및 메시지 출력
+}
+
+void ATerminusPlayerController::ViewDungeonArea(ADungeonArea* Area)
+{
+	if (!IsLocalController())
+	{
+		return;
+	}
+
+	ViewedArea = Area;
+
+	// 구역은 카메라 컴포넌트를 들고 있어서 액터 자체를 시점 대상으로 주면 그 카메라로 봄
+	if (Area)
+	{
+		SetViewTarget(Area);
+	}
+	else if (ACameraActor* Fixed = FindFixedCamera())
+	{
+		SetViewTarget(Fixed);
+	}
+
+	OnViewAreaChanged.Broadcast(Area);
+}
+
+void ATerminusPlayerController::DebugClearArea(bool bAll)
+{
+	Server_DebugClearArea(bAll);
+}
+
+void ATerminusPlayerController::Server_DebugClearArea_Implementation(bool bAll)
+{
+	if (bAll)
+	{
+		// 마지막 구역이 클리어되는 순간 전부 해제되므로 목록을 먼저 떠 둠
+		TArray<ADungeonArea*> InUse;
+		for (TActorIterator<ADungeonArea> It(GetWorld()); It; ++It)
+		{
+			if (It->IsInUse()) InUse.Add(*It);
+		}
+
+		for (ADungeonArea* Area : InUse)
+		{
+			Area->MarkCleared();
+		}
+		return;
+	}
+
+	const ATerminusPlayerState* PS = GetPlayerState<ATerminusPlayerState>();
+	ADungeonArea* Area = PS ? PS->GetCurrentArea() : nullptr;
+
+	if (!Area)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Debug] 구역에 들어가 있지 않음"));
+		return;
+	}
+
+	Area->MarkCleared();
 }
 
 void ATerminusPlayerController::Server_SelectCharacter_Implementation(ECharacterClass InClass)

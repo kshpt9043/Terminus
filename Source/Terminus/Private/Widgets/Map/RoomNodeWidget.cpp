@@ -31,12 +31,15 @@ void URoomNodeWidget::SetupRoomNode(const FRoomNode& InRoomData, const TMap<ERoo
 
 void URoomNodeWidget::SetRoomSelectable(bool bSelectable)
 {
-	if (RoomButton)
-	{
-		RoomButton->SetIsEnabled(bSelectable);
-		// 이동 불가능한 방은 투명도(Opacity)를 낮춰 어둡게 노출
-		SetRenderOpacity(bSelectable ? 1.0f : 0.3f);
-	}
+	if (!RoomButton) return;
+
+	// 이미 같은 상태면 건드리지 않음
+	if (AppliedSelectable.IsSet() && AppliedSelectable.GetValue() == bSelectable) return;
+	AppliedSelectable = bSelectable;
+
+	RoomButton->SetIsEnabled(bSelectable);
+	// 이동 불가능한 방은 투명도(Opacity)를 낮춰 어둡게 노출
+	SetRenderOpacity(bSelectable ? 1.0f : 0.3f);
 }
 
 void URoomNodeWidget::RefreshSelectionState(const TArray<ATerminusPlayerState*>& AllPlayerStates,
@@ -44,27 +47,43 @@ void URoomNodeWidget::RefreshSelectionState(const TArray<ATerminusPlayerState*>&
 {
 	if (!ProfileContainer || !SelectionBorder) return;
 
-	ProfileContainer->ClearChildren();
+	// 이 방을 고른 사람 목록부터 계산
+	TArray<TWeakObjectPtr<ATerminusPlayerState>> Selectors;
 	bool bIsSelectedByMe = false;
 
 	for (ATerminusPlayerState* PS : AllPlayerStates)
 	{
 		if (PS && PS->GetSelectedRoomId() == RoomId)
 		{
+			Selectors.Add(PS);
+
 			// 내가 고른 방인가 체크
 			if (PS == LocalPS)
 			{
 				bIsSelectedByMe = true;
 			}
+		}
+	}
 
-			// 선택한 플레이어의 스팀 아바타 초상화 추가
-			UImage* ProfileImg = NewObject<UImage>(this);
-			if (ProfileImg)
-			{
-				// TODO: Steam API를 통해 가져온 Avatar Texture 적용 (ProfileImg->SetBrushFromTexture)
-				ProfileImg->SetDesiredSizeOverride(FVector2D(28.0f, 28.0f));
-				ProfileContainer->AddChildToHorizontalBox(ProfileImg);
-			}
+	// 이 방의 선택 상태가 그대로면 다시 그리지 않음 -> 바뀐 방만 갱신됨
+	if (AppliedSelectedByMe.IsSet() && AppliedSelectedByMe.GetValue() == bIsSelectedByMe && AppliedSelectors == Selectors)
+	{
+		return;
+	}
+	AppliedSelectedByMe = bIsSelectedByMe;
+	AppliedSelectors = Selectors;
+
+	ProfileContainer->ClearChildren();
+
+	for (int32 i = 0; i < Selectors.Num(); ++i)
+	{
+		// 선택한 플레이어의 스팀 아바타 초상화 추가
+		UImage* ProfileImg = NewObject<UImage>(this);
+		if (ProfileImg)
+		{
+			// TODO: Steam API를 통해 가져온 Avatar Texture 적용 (ProfileImg->SetBrushFromTexture)
+			ProfileImg->SetDesiredSizeOverride(FVector2D(28.0f, 28.0f));
+			ProfileContainer->AddChildToHorizontalBox(ProfileImg);
 		}
 	}
 

@@ -81,12 +81,7 @@ public:
 	// 방 선택 요청 처리. 서버에서만 불림
 	// 클라 -> 자기 PC 의 Server_RequestSelectRoom -> 여기. (이 액터는 서버 소유라 RPC 를 직접 못 받음)
 	void HandleSelectRoomRequest(ATerminusPlayerController* Requester, int32 RoomId);
-	
-	// ★ [테스트] 켜면 방을 누르는 즉시 클리어 처리하고 끝. 정원 검사 / 전원 선택 / 던전 이동 없음
-	// 전투 맵이 생기면 끄면 원래 선택 흐름으로 돌아감
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map Settings|Test")
-	bool bTestInstantClear = true;
-	
+
 
 protected:
 	virtual void BeginPlay() override;
@@ -101,17 +96,30 @@ public:
 
 private:
 	FRoomNode CreateRoom(int32 RoomId, int32 Row, int32 Col, ERoomType Type = ERoomType::MONSTER, int32 MaxPlayers = 1);
-    
+
 	// 비율 기반 랜덤 방 타입 추첨 함수
 	ERoomType GetWeightedRandomRoomType();
+
+	// 방 타입별 최대 입장 인원.
+	// 기획: 인원 제한은 몬스터/가디언 방에만 붙는다("몬스터 방 [인원 제한 가능]").
+	// 휴식터/상점/이벤트/퀘스트/보스는 파티가 쪼개질 이유가 없으니 전원 수용
+	int32 GetRoomCapacity(ERoomType Type) const;
 
 	// 1레벨 -> 보스방 경로 존재 검증 (BFS)
 	bool ValidatePathToBoss(const TArray<FRoomNode>& InMap, int32 LastRowIndex);
 
-	// 몬스터/가디언 방 분기 시 입장 인원 합산 조건 검증
+	// 정원 때문에 파티가 갇히는 구간이 없는지 검증
 	bool ValidatePlayerCapacity(const TArray<FRoomNode>& InMap);
-	
+
 	bool IsValidNextRoom(const FRunState& PlayerRunState, const FRoomNode& TargetRoom);
-	
+
+	// 이번 런이 1인인가. 기획의 방 선택 규칙이 싱글/멀티로 갈린다
+	bool IsSinglePlayerRun() const;
+
+	// 각자 고른 방(SelectedRoomId)으로 입장. 방마다 던전 구역(ADungeonArea)을 배정해서 거기서 진행
+	// 레벨에 구역이 없으면(배치 전) 콘텐츠 없이 즉시 클리어 처리
+	void EnterSelectedRooms(const TArray<ATerminusPlayerState*>& Players);
+
+	// 멀티: 전원이 선택을 마쳤으면 각자 고른 방으로 입장시킨다
 	void CheckAllPlayersReadyAndStart();
 };

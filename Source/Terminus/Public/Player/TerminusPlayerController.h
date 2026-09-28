@@ -8,6 +8,9 @@
 #include "TerminusPlayerController.generated.h"
 
 class UTavernWidget;
+class ADungeonArea;
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnViewAreaChanged, ADungeonArea*, NewArea);
 
 /**
  * 
@@ -52,5 +55,30 @@ public:
 	// 방 선택 실패 알림. 같은 이유로 MapManager 가 아니라 PC 의 Client RPC
 	UFUNCTION(Client, Reliable)
 	void Client_OnRoomSelectFailed(const FString& ReasonMessage);
-	
+
+	// -------------------------------------------------------------
+	// [던전 구역]
+	// -------------------------------------------------------------
+
+	// 로컬 시점을 이 구역 카메라로. nullptr 이면 지도 고정 카메라로 복귀
+	// 지금은 내 PS 의 CurrentArea 가 바뀔 때 불림. 관전도 이걸로 남의 구역을 보면 됨
+	void ViewDungeonArea(ADungeonArea* Area);
+
+	UFUNCTION(BlueprintPure, Category = "Dungeon Area")
+	ADungeonArea* GetViewedArea() const { return ViewedArea.Get(); }
+
+	// 보고 있는 구역이 바뀜 (nullptr = 지도 화면). 지도 위젯 숨기기 / 전투 HUD 교체를 여기에 걸 것
+	UPROPERTY(BlueprintAssignable, Category = "Dungeon Area")
+	FOnViewAreaChanged OnViewAreaChanged;
+
+	// [테스트] 콘솔에서 DebugClearArea -> 내 구역 클리어 처리. 전투가 붙기 전까지 흐름 확인용
+	//   DebugClearArea 1  -> 진행 중인 모든 구역 클리어 (멀티 PIE 에서 창마다 안 쳐도 되게)
+	UFUNCTION(Exec)
+	void DebugClearArea(bool bAll = false);
+
+	UFUNCTION(Server, Reliable)
+	void Server_DebugClearArea(bool bAll);
+
+private:
+	TWeakObjectPtr<ADungeonArea> ViewedArea;
 };

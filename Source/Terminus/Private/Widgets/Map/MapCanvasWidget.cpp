@@ -17,6 +17,14 @@ void UMapCanvasWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
 
+    // 구역 진입 / 복귀에 맞춰 지도 숨기기
+    VisibleState = GetVisibility();
+    if (ATerminusPlayerController* PC = GetOwningPlayer<ATerminusPlayerController>())
+    {
+        PC->OnViewAreaChanged.AddUniqueDynamic(this, &UMapCanvasWidget::HandleViewAreaChanged);
+        HandleViewAreaChanged(PC->GetViewedArea());
+    }
+
     // MapManager / PlayerState 바인딩. 클라에선 둘 다 복제가 위젯 생성보다 늦을 수 있어서
     // 지금 한 번 + 0.5초마다 다시 훑어서 새로 도착한 것을 묶음 (인원 변동도 같이 커버)
     if (UWorld* World = GetWorld())
@@ -31,6 +39,11 @@ void UMapCanvasWidget::NativeConstruct()
 
 void UMapCanvasWidget::NativeDestruct()
 {
+    if (ATerminusPlayerController* PC = GetOwningPlayer<ATerminusPlayerController>())
+    {
+        PC->OnViewAreaChanged.RemoveAll(this);
+    }
+
     UWorld* World = GetWorld();
     if (World)
     {
@@ -101,7 +114,7 @@ void UMapCanvasWidget::TryBindPlayerStates()
 
     ATerminusPlayerState* LocalPS = GetOwningPlayer() ? GetOwningPlayer()->GetPlayerState<ATerminusPlayerState>() : nullptr;
 
-    // 내 PS: 도착하면 묶고 지도를 다시 그림
+    // 내 PS: 도착하면 묶고 방 상태를 갱신
     // (도착 전에 그린 지도는 현재 위치를 몰라서 Row 0 만 켜져 있음)
     if (LocalPS && !LocalPS->OnRunStateChanged.IsAlreadyBound(this, &UMapCanvasWidget::OnPlayerRunStateChanged))
     {
@@ -109,10 +122,7 @@ void UMapCanvasWidget::TryBindPlayerStates()
         LocalPS->OnRunStateChanged.RemoveDynamic(this, &UMapCanvasWidget::OnOtherRunStateChanged);
         LocalPS->OnRunStateChanged.AddDynamic(this, &UMapCanvasWidget::OnPlayerRunStateChanged);
 
-        if (CachedMapData.Num() > 0)
-        {
-            BuildMapUI(CachedMapData);
-        }
+        RefreshRoomStates();
     }
 
     // 다른 사람 PS: 선택 표시만 갱신하면 됨
@@ -139,9 +149,72 @@ void UMapCanvasWidget::TryBindPlayerStates()
     }
 }
 
+bool UMapCanvasWidget::IsSameMap(const TArray<FRoomNode>& A, const TArray<FRoomNode>& B)
+{
+    if (A.Num() != B.Num()) return false;
+
+    // 복제된 배열은 서버와 순서가 같으므로 인덱스끼리 비교하면 됨
+    for (int32 i = 0; i < A.Num(); ++i)
+    {
+        const FRoomNode& L = A[i];
+        const FRoomNode& R = B[i];
+
+        if (L.RoomId != R.RoomId || L.Row != R.Row || L.Col != R.Col || L.Type != R.Type
+            || L.MaxPlayers != R.MaxPlayers || L.ConnectedRoomIds != R.ConnectedRoomIds)
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool UMapCanvasWidget::IsRoomSelectable(const FRoomNode& Node, const ATerminusPlayerState* LocalPS) const
+{
+    // LocalPS 가 아직 도착 안 했거나, 1레벨(CurrentMapLevel == 0)일 때는 Row 0 (퀘스트방)만
+    if (!LocalPS || LocalPS->GetCurrentMapLevel() == 0)
+    {
+        return Node.Row == 0;
+    }
+
+    // 2레벨 이후: 현재 방과 연결된 방만
+    const int32 CurrentRoomId = LocalPS->GetCurrentRoomId();
+    const FRoomNode* CurrentRoom = CachedMapData.FindByPredicate([CurrentRoomId](const FRoomNode& N) {
+        return N.RoomId == CurrentRoomId;
+    });
+
+    return CurrentRoom && CurrentRoom->ConnectedRoomIds.Contains(Node.RoomId);
+}
+
+void UMapCanvasWidget::RefreshRoomStates()
+{
+    ATerminusPlayerState* LocalPS = GetOwningPlayer() ? GetOwningPlayer()->GetPlayerState<ATerminusPlayerState>() : nullptr;
+
+    // 위젯은 그대로 두고 상태만 넘김. 각 방 위젯이 자기 상태가 바뀌었을 때만 다시 그림
+    for (const FRoomNode& Node : CachedMapData)
+    {
+        if (URoomNodeWidget** RoomWidget = CreatedRoomWidgets.Find(Node.RoomId))
+        {
+            if (*RoomWidget)
+            {
+                (*RoomWidget)->SetRoomSelectable(IsRoomSelectable(Node, LocalPS));
+            }
+        }
+    }
+
+    RefreshAllRoomSelections();
+}
+
 void UMapCanvasWidget::BuildMapUI(const TArray<FRoomNode>& MapData)
 {
 if (!MapCanvasPanel || !RoomWidgetClass || MapData.Num() == 0) return;
+
+    // 같은 지도가 다시 들어온 경우(복제 재수신, 바인딩 시점 차이 등) 위젯을 새로 만들지 않음.
+    // 새로 만들면 스크롤 위치가 날아가고 전체가 깜빡임
+    if (CreatedRoomWidgets.Num() > 0 && IsSameMap(CachedMapData, MapData))
+    {
+        RefreshRoomStates();
+        return;
+    }
 
     MapCanvasPanel->ClearChildren();
     CreatedRoomWidgets.Empty();
@@ -162,9 +235,6 @@ if (!MapCanvasPanel || !RoomWidgetClass || MapData.Num() == 0) return;
     {
         RoomsByRow.FindOrAdd(Node.Row).Add(&Node);
     }
-
-    // 내 PlayerState 정보 가져오기
-    ATerminusPlayerState* LocalPS = GetOwningPlayer() ? GetOwningPlayer()->GetPlayerState<ATerminusPlayerState>() : nullptr;
 
     for (auto& Pair : RoomsByRow)
     {
@@ -189,28 +259,7 @@ if (!MapCanvasPanel || !RoomWidgetClass || MapData.Num() == 0) return;
             NewRoomWidget->SetupRoomNode(*Node, RoomTypeIcons);
             NewRoomWidget->OnRoomNodeClicked.AddDynamic(this, &UMapCanvasWidget::HandleRoomClicked);
 
-            // ★ [경로 제한] 이동 가능한 방인가 체크
-            bool bIsSelectable = false;
-
-            if (!LocalPS || LocalPS->GetCurrentMapLevel() == 0)
-            {
-                // LocalPS가 아직 도착 안 했거나, 1레벨(CurrentMapLevel == 0)일 때는 무조건 Row == 0 (퀘스트방) 활성화!
-                bIsSelectable = (Node->Row == 0);
-            }
-            else
-            {
-                // 2레벨 이후: 현재 방과 연결된 방만 활성화
-                const FRoomNode* CurrentRoom = MapData.FindByPredicate([LocalPS](const FRoomNode& N) {
-                    return N.RoomId == LocalPS->GetCurrentRoomId();
-                });
-
-                if (CurrentRoom)
-                {
-                    bIsSelectable = CurrentRoom->ConnectedRoomIds.Contains(Node->RoomId);
-                }
-            }
-
-            NewRoomWidget->SetRoomSelectable(bIsSelectable);
+            // 선택 가능 여부(경로 제한)는 아래 RefreshRoomStates 에서 한 번에 적용
 
             UCanvasPanelSlot* CanvasSlot = MapCanvasPanel->AddChildToCanvas(NewRoomWidget);
             if (CanvasSlot)
@@ -235,13 +284,18 @@ if (!MapCanvasPanel || !RoomWidgetClass || MapData.Num() == 0) return;
         }
     }
 
-    // 초기 선택 상태 동기화 갱신
-    RefreshAllRoomSelections();
+    // 경로 제한 + 선택 표시 초기 적용
+    RefreshRoomStates();
+
+    // 스크롤은 이 위젯이 처음 지도를 그릴 때만 맨 아래(시작 지점)로.
+    // 그 뒤로는 사용자가 보던 위치를 건드리지 않음
+    const bool bScrollToStart = !bInitialScrollDone;
+    bInitialScrollDone = true;
 
     // 약참조 람다. 다음 틱 전에 위젯이 사라지면 그냥 안 불림 ([this] 만 잡으면 댕글링)
-    GetWorld()->GetTimerManager().SetTimerForNextTick(FTimerDelegate::CreateWeakLambda(this, [this]()
+    GetWorld()->GetTimerManager().SetTimerForNextTick(FTimerDelegate::CreateWeakLambda(this, [this, bScrollToStart]()
     {
-        if (ScrollBox) ScrollBox->ScrollToEnd();
+        if (bScrollToStart && ScrollBox) ScrollBox->ScrollToEnd();
         InvalidateLayoutAndVolatility();
     }));
 }
@@ -283,8 +337,8 @@ void UMapCanvasWidget::HandleRoomClicked(int32 ClickedRoomId)
 
     // 서버 소유 액터(MapManager)엔 클라가 RPC 를 못 쏴서 내 PC 를 거쳐 감
     // Standalone 에서도 Server RPC 는 그냥 로컬에서 바로 실행되므로 경로를 하나로 합침
-    // 테스트용 즉시 클리어는 MapManager 의 bTestInstantClear 로 켜고 끔
-    // 지도 다시 그리기는 RunState 변경 -> OnPlayerRunStateChanged 가 알아서 함
+    // 싱글은 즉시 입장, 멀티는 전원 선택 대기 - 판단은 서버(MapManager)가 함
+    // 방 상태 갱신은 RunState 변경 -> OnPlayerRunStateChanged 가 알아서 함
     PC->Server_RequestSelectRoom(ClickedRoomId);
 }
 
@@ -293,17 +347,17 @@ void UMapCanvasWidget::OnOtherRunStateChanged(const FRunState& NewRunState)
     RefreshAllRoomSelections();
 }
 
+void UMapCanvasWidget::HandleViewAreaChanged(ADungeonArea* NewArea)
+{
+    // 숨기기만 하고 위젯은 그대로 -> 돌아왔을 때 스크롤 위치도 그대로
+    SetVisibility(NewArea ? ESlateVisibility::Collapsed : VisibleState);
+}
+
 void UMapCanvasWidget::OnPlayerRunStateChanged(const FRunState& NewRunState)
 {
-    // PlayerState 정보(CurrentMapLevel, CurrentRoomId 등)가 갱신되면 지도 다시 그리기
-    if (CachedMapData.Num() > 0)
-    {
-        BuildMapUI(CachedMapData);
-    }
-    else
-    {
-        RefreshAllRoomSelections();
-    }
+    // 현재 위치/선택이 바뀌어도 지도 모양은 그대로 -> 위젯 재생성 없이 상태만 갱신.
+    // (예전엔 여기서 BuildMapUI 로 전부 다시 만들어서 스크롤이 맨 아래로 튀었음)
+    RefreshRoomStates();
 }
 
 int32 UMapCanvasWidget::NativePaint(const FPaintArgs& Args, const FGeometry& AllottedGeometry,

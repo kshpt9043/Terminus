@@ -8,6 +8,8 @@
 
 struct FRoomNode;
 class AMapManager;
+class ADungeonArea;
+class ATerminusPlayerState;
 class UScrollBox;
 enum class ERoomType : uint8;
 class UCanvasPanel;
@@ -55,25 +57,36 @@ public:
 
 	virtual void NativeConstruct() override;
 	virtual void NativeDestruct() override;
-	// 전체 지도 세팅 함수
+	// 전체 지도 세팅 함수. 지도 데이터가 이미 그려진 것과 같으면 위젯은 그대로 두고 상태만 갱신
 	UFUNCTION(BlueprintCallable, Category = "Map")
 	void BuildMapUI(const TArray<FRoomNode>& MapData);
-	
+
 	// 전체 방 위젯들의 선택 상태 동기화 갱신
 	UFUNCTION(BlueprintCallable, Category = "Map")
 	void RefreshAllRoomSelections();
+
+	// 이미 만들어진 방 위젯들의 상태(선택 가능 여부 + 선택 표시)만 갱신. 위젯 재생성 / 스크롤 이동 없음
+	UFUNCTION(BlueprintCallable, Category = "Map")
+	void RefreshRoomStates();
 
 protected:
 	UFUNCTION()
 	void HandleRoomClicked(int32 ClickedRoomId);
 	
-	// 내 RunState 변경 -> 현재 위치가 바뀌었을 수 있으니 지도 다시 그림
+	// 내 RunState 변경 -> 현재 위치가 바뀌었을 수 있으니 방 상태 갱신 (지도 재생성 X)
 	UFUNCTION()
 	void OnPlayerRunStateChanged(const FRunState& NewRunState);
 	
 	// 다른 사람 RunState 변경 -> 선택 표시(초상화)만 갱신
 	UFUNCTION()
 	void OnOtherRunStateChanged(const FRunState& NewRunState);
+
+	// 던전 구역에 들어가면 지도를 숨기고, 지도로 돌아오면 다시 보임
+	UFUNCTION()
+	void HandleViewAreaChanged(ADungeonArea* NewArea);
+
+	// 숨겼다가 되돌릴 원래 가시성
+	ESlateVisibility VisibleState = ESlateVisibility::SelfHitTestInvisible;
 	
 	// PlayerState 들은 복제가 위젯보다 늦게 올 수 있어서 한 번에 못 묶음
 	// 타이머로 주기적으로 훑어서 새로 보이는 PS 에 바인딩함
@@ -98,5 +111,14 @@ private:
 	
 	// 맵 원본 데이터 저장 (OnPaint에서 선을 그릴 때 참조)
 	TArray<FRoomNode> CachedMapData;
-	
+
+	// 처음 그릴 때만 맨 아래(시작 지점)로 스크롤. 이후엔 사용자가 보던 위치 유지
+	bool bInitialScrollDone = false;
+
+	// 내 현재 위치 기준으로 이 방을 누를 수 있는가
+	bool IsRoomSelectable(const FRoomNode& Node, const ATerminusPlayerState* LocalPS) const;
+
+	// 새로 받은 지도가 지금 그려진 지도와 같은가 (같은 지도가 다시 복제돼 와도 재생성하지 않기 위해)
+	static bool IsSameMap(const TArray<FRoomNode>& A, const TArray<FRoomNode>& B);
+
 };

@@ -5,6 +5,7 @@
 #include "Player/TerminusPlayerState.h"
 #include "Player/TerminusPlayerController.h"
 #include "Game/TerminusRunSubsystem.h"
+#include "Dungeon/DungeonAreaSubsystem.h"
 #include "GameFramework/GameStateBase.h"
 #include "Engine/GameInstance.h"
 #include "Net/UnrealNetwork.h"
@@ -39,6 +40,16 @@ void AMapManager::HandleSelectRoomRequest(ATerminusPlayerController* Requester, 
 
     if (!TargetRoom) return;
 
+    // 0. 구역에서 방이 진행 중이면 지도 선택 불가 (전 구역이 끝나야 다음 선택)
+    if (const UDungeonAreaSubsystem* Areas = GetWorld()->GetSubsystem<UDungeonAreaSubsystem>())
+    {
+        if (Areas->IsAnyRoomInProgress())
+        {
+            Requester->Client_OnRoomSelectFailed(TEXT("방을 진행하는 중에는 다음 방을 고를 수 없습니다."));
+            return;
+        }
+    }
+
     // 1. 유효 노드 검증
     if (!IsValidNextRoom(RequestingPS->GetRunState(), *TargetRoom))
     {
@@ -46,22 +57,22 @@ void AMapManager::HandleSelectRoomRequest(ATerminusPlayerController* Requester, 
         return;
     }
 
-    // ★ [테스트] 클릭한 방을 즉시 클리어한 것으로 처리하고 끝. 아래 선택 흐름은 안 탐
-    if (bTestInstantClear)
+    // 2. 싱글은 기획상 "방을 선택할 경우 바로 입장한다". 정원/전원 대기는 멀티 규칙이라 안 탐
+    if (IsSinglePlayerRun())
     {
-        UE_LOG(LogTemp, Log, TEXT("[Test] Room %d (Row %d) Cleared! Moving to next level..."), RoomId, TargetRoom->Row);
-        RequestingPS->Test_ClearAndMoveToRoom(TargetRoom->RoomId, TargetRoom->Row);
+        RequestingPS->SetSelectedRoomId(RoomId);
+        EnterSelectedRooms({ RequestingPS });
         return;
     }
 
-    // 2. 토글 처리 (같은 방 다시 누르면 선택 취소)
+    // 3. 토글 처리 (같은 방 다시 누르면 선택 취소)
     if (RequestingPS->GetSelectedRoomId() == RoomId)
     {
         RequestingPS->SetSelectedRoomId(-1);
         return;
     }
 
-    // 3. 인원 수용 검증. 나를 뺀 나머지 중 이 방을 고른 사람 수
+    // 4. 인원 수용 검증. 나를 뺀 나머지 중 이 방을 고른 사람 수
     //    (다른 방에서 옮겨오는 경우 내 기존 선택은 세면 안 됨)
     int32 CurrentlySelectedCount = 0;
     if (const AGameStateBase* GS = GetWorld()->GetGameState())
@@ -82,10 +93,10 @@ void AMapManager::HandleSelectRoomRequest(ATerminusPlayerController* Requester, 
         return;
     }
 
-    // 4. 선택 완료
+    // 5. 선택 완료. 다른 플레이어 화면에도 이 선택이 표시된다(RunState 복제)
     RequestingPS->SetSelectedRoomId(RoomId);
 
-    // 5. 전원 확인 후 던전 진입
+    // 6. 전원 선택이 끝났으면 각자 고른 방으로 입장
     CheckAllPlayersReadyAndStart();
 }
 
@@ -142,7 +153,10 @@ TArray<FRoomNode> AMapManager::GenerateMap()
     TArray<FRoomNode> Map;
     bool bIsValidMap = false;
     int32 RetryCount = 0;
-    const int32 MaxRetries = 200;
+    // 정원을 랜덤으로 뽑고 조건에 맞을 때까지 다시 뽑는 방식이라 인원이 늘수록 성공률이 급락한다.
+    // 4인 기준 1회 성공률이 약 2% 라서 200회로는 1.8% 확률로 유효한 지도를 못 만든다(실측).
+    // 1000회면 실패가 사실상 사라지고(4000판 중 0회, 최대 458회 시도) 비용도 무시할 수준
+    const int32 MaxRetries = 1000;
 
     const int32 ValidTotalLevels = FMath::Max(2, TotalLevels);
     const int32 LastRowIndex = ValidTotalLevels - 1; // 보스방 Row
@@ -228,9 +242,8 @@ TArray<FRoomNode> AMapManager::GenerateMap()
                 if (FMath::RandRange(0.0f, 1.0f) > 0.6f)
                 {
                     ERoomType RoomType = (Row == 1) ? ERoomType::MONSTER : GetWeightedRandomRoomType();
-                    int32 RandomMaxPlayers = FMath::RandRange(1, CurrentPlayerCount);
 
-                    RowRooms.Add(CreateRoom(GlobalRoomId++, Row, Col, RoomType, RandomMaxPlayers));
+                    RowRooms.Add(CreateRoom(GlobalRoomId++, Row, Col, RoomType, GetRoomCapacity(RoomType)));
                 }
             }
 
@@ -246,9 +259,8 @@ TArray<FRoomNode> AMapManager::GenerateMap()
                 if (!bAlreadyExists)
                 {
                     ERoomType RoomType = (Row == 1) ? ERoomType::MONSTER : GetWeightedRandomRoomType();
-                    int32 RandomMaxPlayers = FMath::RandRange(1, CurrentPlayerCount);
 
-                    RowRooms.Add(CreateRoom(GlobalRoomId++, Row, RandomCol, RoomType, RandomMaxPlayers));
+                    RowRooms.Add(CreateRoom(GlobalRoomId++, Row, RandomCol, RoomType, GetRoomCapacity(RoomType)));
                 }
             }
 
@@ -392,6 +404,15 @@ ERoomType AMapManager::GetWeightedRandomRoomType()
     return ERoomType::MONSTER;
 }
 
+int32 AMapManager::GetRoomCapacity(ERoomType Type) const
+{
+    // 기획: 인원 제한은 몬스터/가디언 방에만 붙는다.
+    // 상점이나 휴식터에 정원 1 이 걸리면 파티가 아무 이유 없이 쪼개진다
+    const bool bLimited = (Type == ERoomType::MONSTER || Type == ERoomType::GUARDIAN);
+
+    return bLimited ? FMath::RandRange(1, CurrentPlayerCount) : CurrentPlayerCount;
+}
+
 bool AMapManager::ValidatePathToBoss(const TArray<FRoomNode>& InMap, int32 LastRowIndex)
 {
     if (InMap.Num() == 0) return false;
@@ -458,26 +479,37 @@ bool AMapManager::ValidatePlayerCapacity(const TArray<FRoomNode>& InMap)
         }
     }
 
+    // 방 단위: 그 방에 들어간 인원이 전원 다음 방으로 넘어갈 수 있어야 함
+    //
+    // 타입(몬스터/가디언)이나 분기 개수(2개 이상)로 거르면 구멍이 남는다.
+    // 연결이 1개뿐인 방도 검사해야 한다 - 정원 4인 방이 정원 1인 방 하나로만 이어지면 3명이 갇힌다
     for (const FRoomNode& SourceNode : InMap)
     {
-        if (SourceNode.Type == ERoomType::MONSTER || SourceNode.Type == ERoomType::GUARDIAN)
-        {
-            if (SourceNode.ConnectedRoomIds.Num() >= 2)
-            {
-                int32 CombinedCapacity = 0;
-                for (int32 TargetId : SourceNode.ConnectedRoomIds)
-                {
-                    if (const FRoomNode** TargetPtr = RoomLookup.Find(TargetId))
-                    {
-                        CombinedCapacity += (*TargetPtr)->MaxPlayers;
-                    }
-                }
+        // 보스방(마지막 레벨)은 나가는 길이 없는 게 정상
+        if (SourceNode.ConnectedRoomIds.Num() == 0) continue;
 
-                if (CombinedCapacity < CurrentPlayerCount)
-                {
-                    return false;
-                }
+        int32 CombinedCapacity = 0;
+        for (int32 TargetId : SourceNode.ConnectedRoomIds)
+        {
+            if (const FRoomNode** TargetPtr = RoomLookup.Find(TargetId))
+            {
+                CombinedCapacity += (*TargetPtr)->MaxPlayers;
             }
+        }
+
+        // 이 방에 실제로 들어올 수 있는 최대 인원만큼은 빠져나갈 수 있어야 한다
+        const int32 IncomingPlayers = FMath::Min(SourceNode.MaxPlayers, CurrentPlayerCount);
+
+        if (CombinedCapacity < IncomingPlayers)
+        {
+            return false;
+        }
+
+        // 기획: 길이 2개 이상으로 갈라질 때는 정원 합이 "인원보다 커야" 한다.
+        // 합이 인원과 같으면 분할이 한 가지로 강제되어 방을 고를 여지가 없어진다
+        if (SourceNode.ConnectedRoomIds.Num() >= 2 && CombinedCapacity <= CurrentPlayerCount)
+        {
+            return false;
         }
     }
 
@@ -502,6 +534,45 @@ bool AMapManager::IsValidNextRoom(const FRunState& PlayerRunState, const FRoomNo
     return CurrentRoom->ConnectedRoomIds.Contains(TargetRoom.RoomId);
 }
 
+bool AMapManager::IsSinglePlayerRun() const
+{
+    const AGameStateBase* GS = GetWorld() ? GetWorld()->GetGameState() : nullptr;
+
+    // GameState 가 아직 없으면 판단이 안 되니 멀티로 취급(전원 대기 쪽이 안전)
+    return GS ? GS->PlayerArray.Num() <= 1 : false;
+}
+
+void AMapManager::EnterSelectedRooms(const TArray<ATerminusPlayerState*>& Players)
+{
+    if (!HasAuthority()) return;
+
+    // 플레이어마다 다른 방일 수 있어서 ServerTravel(서버 전체 이동) 대신
+    // 한 레벨 안의 구역을 방마다 하나씩 배정한다
+    UDungeonAreaSubsystem* Areas = GetWorld()->GetSubsystem<UDungeonAreaSubsystem>();
+    if (Areas && Areas->HasAreas() && Areas->StartSelectedRooms(Players, Rooms))
+    {
+        return;
+    }
+
+    // 구역이 없는(또는 모자란) 레벨: 콘텐츠 없이 바로 클리어 처리. 구역 배치 전에도 지도 진행은 되게
+    for (ATerminusPlayerState* PS : Players)
+    {
+        if (!PS) continue;
+
+        const int32 SelectedId = PS->GetSelectedRoomId();
+        const FRoomNode* Room = Rooms.FindByPredicate([SelectedId](const FRoomNode& Node) {
+            return Node.RoomId == SelectedId;
+        });
+
+        if (!Room) continue;
+
+        UE_LOG(LogTemp, Log, TEXT("[Map] 구역 없음 -> %s 즉시 %d번 방(Row %d, %s) 클리어 처리"),
+            *PS->GetPlayerName(), Room->RoomId, Room->Row, *UEnum::GetValueAsString(Room->Type));
+
+        PS->AdvanceToRoom(Room->RoomId, Room->Row);
+    }
+}
+
 void AMapManager::CheckAllPlayersReadyAndStart()
 {
     if (!HasAuthority()) return;
@@ -509,23 +580,28 @@ void AMapManager::CheckAllPlayersReadyAndStart()
     const AGameStateBase* GS = GetWorld()->GetGameState();
     if (!GS) return;
 
-    int32 TotalPlayers = GS->PlayerArray.Num();
+    TArray<ATerminusPlayerState*> Players;
     int32 ReadyPlayers = 0;
 
     for (APlayerState* PS : GS->PlayerArray)
     {
-        const ATerminusPlayerState* TPS = Cast<ATerminusPlayerState>(PS);
-        if (TPS && TPS->GetSelectedRoomId() != -1)
+        if (ATerminusPlayerState* TPS = Cast<ATerminusPlayerState>(PS))
         {
-            ReadyPlayers++;
+            Players.Add(TPS);
+
+            if (TPS->GetSelectedRoomId() != -1)
+            {
+                ReadyPlayers++;
+            }
         }
     }
 
-    if (ReadyPlayers >= TotalPlayers && TotalPlayers > 0)
-    {
-        UE_LOG(LogTemp, Log, TEXT("모든 플레이어 방 선택 완료! 던전으로 이동합니다."));
-        GetWorld()->ServerTravel("/Game/Maps/Lv_DungeonPlay?listen");
-    }
+    if (Players.Num() == 0 || ReadyPlayers < Players.Num()) return;
+
+    UE_LOG(LogTemp, Log, TEXT("[Map] 전원 방 선택 완료(%d명). 각자 고른 방으로 입장"), Players.Num());
+
+    // 기획: "모든 플레이어가 선택을 완료 했을 경우, 각자가 선택한 방으로 입장하게 된다"
+    EnterSelectedRooms(Players);
 }
 
 // 네트워크 복제 속성 등록

@@ -61,7 +61,14 @@ protected:
 
 	UFUNCTION()
 	void OnButtonClicked();
-	
+
 private:
-	
+	// 마지막으로 적용한 상태. 같은 값이 다시 들어오면 아무것도 안 다시 그림
+	// (지도 갱신이 올 때마다 모든 방이 초상화를 지웠다 붙이지 않게)
+	TOptional<bool> AppliedSelectable;
+
+	TOptional<bool> AppliedSelectedByMe;
+
+	// 이 방을 고른 플레이어들 (PlayerArray 순서)
+	TArray<TWeakObjectPtr<ATerminusPlayerState>> AppliedSelectors;
 };

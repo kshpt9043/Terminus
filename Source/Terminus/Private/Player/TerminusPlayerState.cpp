@@ -5,13 +5,39 @@
 
 #include "Net/UnrealNetwork.h"
 #include "Data/TerminusDataSettings.h"
+#include "Dungeon/DungeonArea.h"
+#include "Player/TerminusPlayerController.h"
 
 void ATerminusPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-	
+
 	DOREPLIFETIME(ATerminusPlayerState, RunState);
 	DOREPLIFETIME(ATerminusPlayerState, bReady);
+	DOREPLIFETIME(ATerminusPlayerState, CurrentArea);
+}
+
+void ATerminusPlayerState::SetCurrentArea(ADungeonArea* InArea)
+{
+	if (!HasAuthority() || CurrentArea == InArea)
+	{
+		return;
+	}
+
+	CurrentArea = InArea;
+
+	// 리슨 서버 호스트는 OnRep 이 안 불려서 직접
+	OnRep_CurrentArea();
+}
+
+void ATerminusPlayerState::OnRep_CurrentArea()
+{
+	// PS 의 Owner 는 그 플레이어의 PC. 클라에선 자기 PC 만 존재하니 남의 PS 면 여기서 걸러짐
+	ATerminusPlayerController* PC = Cast<ATerminusPlayerController>(GetOwner());
+	if (PC && PC->IsLocalController())
+	{
+		PC->ViewDungeonArea(CurrentArea);
+	}
 }
 
 void ATerminusPlayerState::SetCharacterClass(ECharacterClass InClass)
@@ -60,7 +86,7 @@ void ATerminusPlayerState::BeginRun()
 	OnRep_RunState();
 }
 
-void ATerminusPlayerState::Test_ClearAndMoveToRoom(int32 TargetRoomId, int32 TargetRow)
+void ATerminusPlayerState::AdvanceToRoom(int32 TargetRoomId, int32 TargetRow)
 {
 	if (HasAuthority())
 	{
