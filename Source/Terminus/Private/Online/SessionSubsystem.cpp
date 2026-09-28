@@ -10,6 +10,8 @@
 #include "Engine/World.h"
 #include "Engine/Engine.h"          // GEngine (화면 출력)
 #include "Online/OnlineSessionNames.h"   // NAME_GameSession, SEARCH_LOBBIES
+#include "Kismet/GameplayStatics.h"
+#include "Interfaces/OnlineExternalUIInterface.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogTerminusSession, Log, All);
 
@@ -18,11 +20,32 @@ namespace
 	// 480 로비 오염 필터용 키. 이 값이 일치하는 세션만 검색
 	const FName KEY_BUILD_TAG(TEXT("TERMINUSBUILD"));
 	const FString VALUE_BUILD_TAG(TEXT("Dev"));
+	// 나가거나 끊겼을 때 돌아갈 곳. DefaultEngine.ini 의 GameDefaultMap 과 같아야 함
+	const FName MENU_MAP(TEXT("/Game/Maps/Lv_Lobby"));
 }
 
 void USessionSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
 	Super::Initialize(Collection);
+	
+	if (GEngine)
+	{
+		NetworkFailureHandle = GEngine->OnNetworkFailure().AddUObject(
+			this, &USessionSubsystem::HandleNetworkFailure);
+		TravelFailureHandle = GEngine->OnTravelFailure().AddUObject(
+			this, &USessionSubsystem::HandleTravelFailure);
+	}
+	
+	// 초대는 게임 시작 직후에도 올 수 있어서 월드 없이 기본 OSS 로 붙인다
+	if (IOnlineSubsystem* OSS = IOnlineSubsystem::Get())
+	{
+		if (IOnlineSessionPtr Session = OSS->GetSessionInterface())
+		{
+			InviteHandle = Session->AddOnSessionUserInviteAcceptedDelegate_Handle(
+				FOnSessionUserInviteAcceptedDelegate::CreateUObject(
+					this, &USessionSubsystem::HandleInviteAccepted));
+		}
+	}
 }
 
 void USessionSubsystem::Deinitialize()
@@ -36,6 +59,20 @@ void USessionSubsystem::Deinitialize()
 		Session->ClearOnDestroySessionCompleteDelegate_Handle(DestroyHandle);
 	}
 
+	if (GEngine)
+	{
+		GEngine->OnNetworkFailure().Remove(NetworkFailureHandle);
+		GEngine->OnTravelFailure().Remove(TravelFailureHandle);
+	}
+	
+	if (IOnlineSubsystem* OSS = IOnlineSubsystem::Get())
+	{
+		if (IOnlineSessionPtr Session = OSS->GetSessionInterface())
+		{
+			Session->ClearOnSessionUserInviteAcceptedDelegate_Handle(InviteHandle);
+		}
+	}
+	
 	Super::Deinitialize();
 }
 
@@ -67,7 +104,7 @@ void USessionSubsystem::HostSession(int32 MaxPlayers, const FString& MapPath)
 	{
 		PendingHostMap = MapPath;
 		PendingMaxPlayers = MaxPlayers;
-		bHostAfterDestroy = true;
+		AfterDestroy = EAfterDestroy::Host;
 		LeaveSession();
 		return;
 	}
@@ -79,7 +116,7 @@ void USessionSubsystem::HostSession(int32 MaxPlayers, const FString& MapPath)
 	Settings.NumPublicConnections   = MaxPlayers;
 	Settings.NumPrivateConnections  = 0;
 	Settings.bShouldAdvertise       = true;
-	Settings.bAllowJoinInProgress   = true;
+	Settings.bAllowJoinInProgress   = false; // 게임 중인 세션은 참가 x
 	Settings.bAllowJoinViaPresence  = true;
 	Settings.bUsesPresence          = true;
 	Settings.bAllowInvites          = true;
@@ -128,19 +165,14 @@ void USessionSubsystem::FindSessions(int32 MaxResults)
 
 void USessionSubsystem::JoinSessionByIndex(int32 Index)
 {
-	IOnlineSessionPtr Session = GetSessionInterface();
-	if (!Session.IsValid() || !LastSearch.IsValid()
-		|| !LastSearch->SearchResults.IsValidIndex(Index))
+	// 인덱스는 BP 목록용 창구일 뿐, 실제 참가는 결과 자체로 한다
+	if (!LastSearch.IsValid() || !LastSearch->SearchResults.IsValidIndex(Index))
 	{
 		OnJoinComplete.Broadcast(false);
 		return;
 	}
 
-	JoinHandle = Session->AddOnJoinSessionCompleteDelegate_Handle(
-		FOnJoinSessionCompleteDelegate::CreateUObject(
-			this, &USessionSubsystem::HandleJoinComplete));
-
-	Session->JoinSession(0, NAME_GameSession, LastSearch->SearchResults[Index]);
+	JoinSearchResult(LastSearch->SearchResults[Index]);
 }
 
 void USessionSubsystem::LeaveSession()
@@ -153,6 +185,57 @@ void USessionSubsystem::LeaveSession()
 			this, &USessionSubsystem::HandleDestroyComplete));
 
 	Session->DestroySession(NAME_GameSession);
+}
+
+void USessionSubsystem::LeaveToMenu()
+{
+	IOnlineSessionPtr Session = GetSessionInterface();
+
+	// 정리할 세션이 없으면 바로 이동
+	if (!Session.IsValid() || Session->GetNamedSession(NAME_GameSession) == nullptr)
+	{
+		TravelToMenu();
+		return;
+	}
+
+	AfterDestroy = EAfterDestroy::ToMenu;
+	LeaveSession();
+}
+
+FText USessionSubsystem::ConsumeDisconnectReason()
+{
+	FText Out = PendingDisconnectReason;
+	PendingDisconnectReason = FText::GetEmpty();
+	return Out;
+}
+
+void USessionSubsystem::StartRun()
+{
+	IOnlineSessionPtr Session = GetSessionInterface();
+	if (!Session.IsValid() || Session->GetNamedSession(NAME_GameSession) == nullptr)
+	{
+		return;
+	}
+	
+	UE_LOG(LogTerminusSession, Log, TEXT("StartRun: 세션 진행 중으로 전환"));
+	Session->StartSession(NAME_GameSession);
+}
+
+void USessionSubsystem::ShowInviteUI()
+{
+	IOnlineSubsystem* OSS = Online::GetSubsystem(GetWorld());
+	IOnlineExternalUIPtr UI = OSS ? OSS->GetExternalUIInterface() : nullptr;
+	if (!UI.IsValid())
+	{
+		UE_LOG(LogTerminusSession, Warning, TEXT("ShowInviteUI: 외부 UI 인터페이스 없음"));
+		return;
+	}
+
+	// 어느 세션으로 초대할지 넘겨야 스팀이 로비 초대 창을 띄운다
+	if (!UI->ShowInviteUI(0, NAME_GameSession))
+	{
+		UE_LOG(LogTerminusSession, Warning, TEXT("ShowInviteUI: 실패 (세션이 없거나 오버레이 꺼짐)"));
+	}
 }
 
 void USessionSubsystem::DumpSessionState()
@@ -304,24 +387,114 @@ void USessionSubsystem::HandleDestroyComplete(FName SessionName, bool bWasSucces
 
 	OnLeaveComplete.Broadcast(bWasSuccessful);
 
-	// "나갔다 다시 호스트" 경로.
-	// HostSession 은 기존 세션을 발견하면 LeaveSession() 만 부르고 리턴하므로,
-	// 파괴가 끝난 지금 여기서 다시 호스트해야 흐름이 이어진다.
-	if (bHostAfterDestroy)
+	// 재진입 전에 먼저 내려야 함. 안 그러면 Host -> Leave -> Host ... 무한 루프
+	const EAfterDestroy Next = AfterDestroy;
+	AfterDestroy = EAfterDestroy::None;
+
+	switch (Next)
 	{
-		bHostAfterDestroy = false;              // 재진입 전에 내려야 무한 루프를 피한다
-
-		const FString MapPath    = PendingHostMap;
-		const int32   MaxPlayers = PendingMaxPlayers;
-		PendingHostMap.Reset();
-
-		if (bWasSuccessful)
+	case EAfterDestroy::Host:
 		{
-			HostSession(MaxPlayers, MapPath);
+			const FString MapPath = PendingHostMap;
+			PendingHostMap.Reset();
+
+			if (bWasSuccessful) { HostSession(PendingMaxPlayers, MapPath); }
+			else                { OnHostComplete.Broadcast(false); }
+			break;
 		}
-		else
-		{
-			OnHostComplete.Broadcast(false);
-		}
+	case EAfterDestroy::Join:
+		// 파괴가 실패했는데 또 참가하면 세션이 그대로라 같은 곳을 무한히 돈다
+		if (bWasSuccessful) { JoinSearchResult(PendingJoinResult); }
+		else                { OnJoinComplete.Broadcast(false); }
+		break;
+
+	case EAfterDestroy::ToMenu:
+		TravelToMenu();
+		break;
+
+	default:
+		break;
 	}
+}
+
+void USessionSubsystem::JoinSearchResult(const FOnlineSessionSearchResult& Result)
+{
+	IOnlineSessionPtr Session = GetSessionInterface();
+	if (!Session.IsValid())
+	{
+		OnJoinComplete.Broadcast(false);
+		return;
+	}
+
+	// 이전 세션이 남아 있으면 스팀이 참가를 거절함 -> 먼저 부수고 이어서 참가
+	if (Session->GetNamedSession(NAME_GameSession) != nullptr)
+	{
+		PendingJoinResult = Result;
+		AfterDestroy = EAfterDestroy::Join;
+		LeaveSession();
+		return;
+	}
+
+	JoinHandle = Session->AddOnJoinSessionCompleteDelegate_Handle(
+		FOnJoinSessionCompleteDelegate::CreateUObject(
+			this, &USessionSubsystem::HandleJoinComplete));
+
+	Session->JoinSession(0, NAME_GameSession, Result);
+}
+
+void USessionSubsystem::TravelToMenu()
+{
+	// 호스트: 리슨 서버가 닫힘 / 클라: 연결이 끊김
+	UGameplayStatics::OpenLevel(GetWorld(), MENU_MAP);
+}
+
+void USessionSubsystem::HandleNetworkFailure(UWorld* World, UNetDriver* NetDriver, ENetworkFailure::Type FailureType,
+	const FString& ErrorString)
+{
+	// 전역 이벤트라 PIE 다중 창이면 남의 인스턴스 소식도 옴
+	if (World && World->GetGameInstance() != GetGameInstance()) { return; }
+
+	UE_LOG(LogTerminusSession, Warning, TEXT("NetworkFailure: %s / %s"),
+		ENetworkFailure::ToString(FailureType), *ErrorString);
+
+	CleanupAfterFailure(FText::FromString(TEXT("연결이 끊겼습니다.")));
+}
+
+void USessionSubsystem::HandleTravelFailure(UWorld* World, ETravelFailure::Type FailureType, const FString& ErrorString)
+{
+	if (World && World->GetGameInstance() != GetGameInstance()) { return; }
+
+	UE_LOG(LogTerminusSession, Warning, TEXT("TravelFailure: %s / %s"),
+		ETravelFailure::ToString(FailureType), *ErrorString);
+
+	CleanupAfterFailure(FText::FromString(TEXT("방에 들어가지 못했습니다.")));
+}
+
+void USessionSubsystem::CleanupAfterFailure(const FText& Reason)
+{
+	PendingDisconnectReason = Reason;
+
+	// 이동은 엔진이 기본 맵으로 해줌. 우리는 남은 세션만 치운다
+	IOnlineSessionPtr Session = GetSessionInterface();
+	if (Session.IsValid() && Session->GetNamedSession(NAME_GameSession) != nullptr)
+	{
+		AfterDestroy = EAfterDestroy::None;   // 끊긴 마당에 대기 중이던 Host/Join 은 취소
+		LeaveSession();
+	}
+}
+
+void USessionSubsystem::HandleInviteAccepted(const bool bWasSuccessful, const int32 ControllerId,
+	FUniqueNetIdPtr UserId, const FOnlineSessionSearchResult& InviteResult)
+{
+	UE_LOG(LogTerminusSession, Log, TEXT("InviteAccepted: ok=%d valid=%d"),
+		bWasSuccessful ? 1 : 0, InviteResult.IsValid() ? 1 : 0);
+
+	if (!bWasSuccessful || !InviteResult.IsValid())
+	{
+		OnJoinComplete.Broadcast(false);
+		return;
+	}
+
+	// 내 주점을 열어둔 상태여도 JoinSearchResult 가 먼저 정리하고 들어간다
+	JoinSearchResult(InviteResult);
 }

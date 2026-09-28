@@ -25,6 +25,9 @@ protected:
 	UPROPERTY(meta = (BindWidget)) TObjectPtr<UTextBlock> ClassNameText;
 	UPROPERTY(meta = (BindWidget)) TObjectPtr<UWidget>    ReadyMark;
 	UPROPERTY(meta = (BindWidget)) TObjectPtr<UWidget>    EmptyMark;
+	
+	// 내 좌석 전용 테두리
+	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UWidget> MineMark;
 
 public:
 	// PS 가 null 이면 빈 자리로 되돌린다

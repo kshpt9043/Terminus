@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
 #include "Data/CharacterTypes.h"
+#include "Styling/SlateTypes.h"
 #include "TavernWidget.generated.h"
 
 class UPlayerSlot;
@@ -41,6 +42,9 @@ protected:
 	UPROPERTY(meta = (BindWidget)) TObjectPtr<UTextBlock> DescriptionText;
 	UPROPERTY(meta = (BindWidget)) TObjectPtr<UTextBlock> PassiveText;
 	UPROPERTY(meta = (BindWidget)) TObjectPtr<UPanelWidget> ClassButtonBox;
+	
+	// 싱글, 멀티 다르게 타이틀 띄우기
+	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UTextBlock> TitleText;
 
 	// 선택한 캐릭터 이름을 따로 띄우고 싶을 때만
 	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UTextBlock> ClassTitleText;
@@ -66,8 +70,26 @@ protected:
 	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UButton>    ReadyButton;
 	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UTextBlock> ReadyButtonText;
 	
-	// 시작 버튼. 호스트만 봐야함
+	// 시작 버튼 호스트만 봐야함
 	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UButton> StartButton;
+	
+	// 나가기 버튼
+	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UButton> LeaveButton;
+	
+	// 초대 버튼
+	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UButton> InviteButton;
+	
+	// 클라이언트 전용 출발 대응 버튼
+	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UTextBlock> WaitText;
+	
+	// 세력 이름 (모험가 길드 등)
+	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UTextBlock> FactionText;
+
+	// 기본 스킬 3개 / 공격 방어 특수
+	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UTextBlock> SkillText;
+
+	UFUNCTION()
+	void HandleInviteClicked();
 	
 	UFUNCTION()
 	void HandleStartClicked();
@@ -76,6 +98,9 @@ protected:
 	
 	UFUNCTION()
 	void HandleReadyClicked();
+	
+	UFUNCTION()
+	void HandleLeaveClicked();
 
 private:
 	void CreateSlots();
@@ -84,4 +109,13 @@ private:
 	FTimerHandle RefreshTimer;
 	int32 LastPlayerCount = -1;
 	static constexpr int32 MaxSlots = 4;
+	
+	bool IsSolo() const;
+	void ApplySoloLayout();
+	
+	FButtonStyle ReadyStyle;
+	FButtonStyle CancelStyle;
+	
+	// 마지막으로 끼운 상태. -1 은 아직 안 끼움 -> 첫 폴링에서 반드시 한 번 넣게
+	int8 LastReadyShown = -1;
 };

@@ -29,6 +29,20 @@ enum class EFaction : uint8
 	Empire           UMETA(DisplayName = "황실")
 };
 
+// 화면에 띄울 세력 이름
+// UMETA DisplayName 은 에디터 전용이라 패키징하면 코드 이름이 나옴 -> 위에 열거형 번역본임
+inline FText GetFactionName(EFaction InFaction)
+{
+	switch (InFaction)
+	{
+	case EFaction::AdventurersGuild: return FText::FromString(TEXT("모험가 길드"));
+	case EFaction::MageTower:        return FText::FromString(TEXT("마탑"));
+	case EFaction::Religion:         return FText::FromString(TEXT("종교"));   // 이름 미정. 기획 확정되면 교체
+	case EFaction::Empire:           return FText::FromString(TEXT("황실"));
+	default:                         return FText::GetEmpty();
+	}
+}
+
 USTRUCT(BlueprintType)
 struct FCharacterClassRow : public FTableRowBase
 {

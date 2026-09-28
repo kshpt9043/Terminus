@@ -19,6 +19,9 @@
 #include "Player/TerminusPlayerController.h"
 #include "Player/TerminusPlayerState.h"
 #include "Data/TerminusDataSettings.h"
+#include "Online/SessionSubsystem.h"
+#include "Engine/GameInstance.h"
+#include "Widgets/TerminusUIColors.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogTerminusUI, Log, All);
 
@@ -35,6 +38,24 @@ void UTavernWidget::NativeOnInitialized()
 	{
 		StartButton->OnClicked.AddDynamic(this, &UTavernWidget::HandleStartClicked);
 	}
+	if (LeaveButton)
+	{
+		LeaveButton->OnClicked.AddDynamic(this, &UTavernWidget::HandleLeaveClicked);
+	}
+	if (InviteButton)
+	{
+		InviteButton->OnClicked.AddDynamic(this, &UTavernWidget::HandleInviteClicked);
+	}
+	
+	if (ReadyButton)
+	{
+		// WBP 에서 잡은 모양은 그대로 두고 색만 회색으로 바꾼 사본을 만든다
+		ReadyStyle  = ReadyButton->GetStyle();
+		CancelStyle = ReadyStyle;
+		CancelStyle.Normal.TintColor  = FSlateColor(TerminusUI::Hex(TEXT("3A3F4A")));
+		CancelStyle.Hovered.TintColor = FSlateColor(TerminusUI::Hex(TEXT("454B57")));
+		CancelStyle.Pressed.TintColor = FSlateColor(TerminusUI::Hex(TEXT("2E333D")));
+	}
 }
 
 void UTavernWidget::NativeConstruct()
@@ -46,6 +67,13 @@ void UTavernWidget::NativeConstruct()
 	CreateClassButtons();
 	ApplySelection(Selected);
 
+	// 타이머 폴링을 돌기 전에 리턴해야함
+	if (IsSolo())
+	{
+		ApplySoloLayout();
+		return;
+	}
+	
 	if (UWorld* World = GetWorld())
 	{
 		World->GetTimerManager().SetTimer(
@@ -122,6 +150,14 @@ void UTavernWidget::HandleClassChosen(ECharacterClass InClass)
 	}
 }
 
+void UTavernWidget::HandleInviteClicked()
+{
+	if (USessionSubsystem* Sessions = GetGameInstance()->GetSubsystem<USessionSubsystem>())
+	{
+		Sessions->ShowInviteUI();
+	}
+}
+
 void UTavernWidget::HandleStartClicked()
 {
 	ATerminusPlayerController* PC = GetOwningPlayer<ATerminusPlayerController>();
@@ -131,7 +167,8 @@ void UTavernWidget::HandleStartClicked()
 	}
 	
 	// 새로고침 풀링 간격 동안 레디를 풀었을수도 있으므로 검사
-	if (!AreAllPlayersReady())
+	// 싱글은 검사 안함
+	if (!IsSolo() && !AreAllPlayersReady())
 	{
 		return;
 	}
@@ -181,6 +218,17 @@ void UTavernWidget::HandleReadyClicked()
 	const bool bNext = PS ? !PS->IsReady() : true;
 	
 	PC->Server_SetReady(bNext);
+}
+
+void UTavernWidget::HandleLeaveClicked()
+{
+	USessionSubsystem* Sessions = GetGameInstance()->GetSubsystem<USessionSubsystem>();
+	if (!Sessions) { return; }
+
+	// 파괴는 비동기라 그 사이 연타하면 LeaveSession 이 겹쳐 불림
+	if (LeaveButton) { LeaveButton->SetIsEnabled(false); }
+
+	Sessions->LeaveToMenu();
 }
 
 void UTavernWidget::CreateSlots()
@@ -243,6 +291,23 @@ void UTavernWidget::ApplySelection(ECharacterClass InClass)
 	}
 	DescriptionText->SetText(Row->Description);
 	PassiveText->SetText(Row->PassiveText);
+	
+	if (FactionText)
+	{
+		FactionText->SetText(GetFactionName(Row->Faction));
+	}
+
+	if (SkillText)
+	{
+		// "이름, 설명" 한 줄씩. 설명 문구는 스킬 데이터의 Description_KR 그대로
+		TArray<FString> Lines;
+		for (const FSkillRow* Skill : UTerminusDataSettings::FindBasicSkills(InClass))
+		{
+			Lines.Add(FString::Printf(TEXT("%s · %s"),
+				*Skill->DisplayName_KR.ToString(), *Skill->Description_KR.ToString()));
+		}
+		SkillText->SetText(FText::FromString(FString::Join(Lines, TEXT("\n"))));
+	}
 
 	if (UTexture2D* Tex = Row->Illustration.LoadSynchronous())
 	{
@@ -268,14 +333,22 @@ void UTavernWidget::RefreshSlots()
 		return;
 	}
 
-	const TArray<TObjectPtr<APlayerState>>& Players = GS->PlayerArray;
+	TArray<APlayerState*> Players;
+	for (APlayerState* PS : GS->PlayerArray)
+	{
+		if (PS) { Players.Add(PS); }
+	}
+	Players.Sort([](const APlayerState& A, const APlayerState& B)
+	{
+		return A.GetPlayerId() < B.GetPlayerId();
+	});
 
 	for (int32 i = 0; i < Slots.Num(); ++i)
 	{
 		UPlayerSlot* SlotWidget = Slots[i];
 		if (!SlotWidget) { continue; }
 
-		APlayerState* PS = Players.IsValidIndex(i) ? Players[i].Get() : nullptr;
+		APlayerState* PS = Players.IsValidIndex(i) ? Players[i] : nullptr;
 		FText ClassName = FText::GetEmpty();
 		bool bReady = false;
 		if (const ATerminusPlayerState* TPS = Cast<ATerminusPlayerState>(PS))
@@ -300,6 +373,13 @@ void UTavernWidget::RefreshSlots()
 		ReadyButtonText->SetText(FText::FromString(bMyReady ? TEXT("준비 취소") : TEXT("준비 완료")));
 	}
 	
+	// 스타일은 준비 상태가 바뀐 순간에만. 매 폴링 넣으면 호버 중에 깜빡일 수 있다
+	if (ReadyButton && LastReadyShown != (int8)bMyReady)
+	{
+		ReadyButton->SetStyle(bMyReady ? CancelStyle : ReadyStyle);
+		LastReadyShown = (int8)bMyReady;
+	}
+	
 	// 준비 완료면 캐릭터 버튼 잠금
 	for (UClassButton* Btn : ClassButtons)
 	{
@@ -317,10 +397,43 @@ void UTavernWidget::RefreshSlots()
 		StartButton->SetIsEnabled(AreAllPlayersReady());
 	}
 	
+	if (WaitText)
+	{
+		WaitText->SetVisibility(bIsHost ? ESlateVisibility::Collapsed : ESlateVisibility::HitTestInvisible);
+		WaitText->SetText(FText::FromString(bMyReady
+			? TEXT("방장의 출발을 기다리는 중")
+			: TEXT("준비를 누르면 방장이 출발할 수 있습니다")));
+	}
+	
 	// 인원이 바뀔 때 알려주는 로그
 	if (Players.Num() != LastPlayerCount)
 	{
 		LastPlayerCount = Players.Num();
 		UE_LOG(LogTerminusUI, Log, TEXT("TavernWidget: 인원 %d"), LastPlayerCount);
 	}
+}
+
+bool UTavernWidget::IsSolo() const
+{
+	const UWorld* World = GetWorld();
+	return World && World->GetNetMode() == NM_Standalone;
+}
+
+void UTavernWidget::ApplySoloLayout()
+{
+	SlotPanel->SetVisibility(ESlateVisibility::Collapsed);
+	if (InviteButton) { InviteButton->SetVisibility(ESlateVisibility::Collapsed); }
+	if (ReadyButton)  { ReadyButton->SetVisibility(ESlateVisibility::Collapsed); }
+
+	// 기획서: 싱글은 던전 입장 -> 캐릭터 선택 화면
+	if (TitleText) { TitleText->SetText(FText::FromString(TEXT("캐릭터 선택"))); }
+
+	// 폴링이 안 도니 출발 버튼 상태를 여기서 한 번 정해둔다
+	if (StartButton)
+	{
+		StartButton->SetVisibility(ESlateVisibility::Visible);
+		StartButton->SetIsEnabled(true);
+	}
+	
+	if (WaitText) { WaitText->SetVisibility(ESlateVisibility::Collapsed); }
 }
