@@ -387,8 +387,6 @@ void USessionSubsystem::HandleDestroyComplete(FName SessionName, bool bWasSucces
 
 	OnLeaveComplete.Broadcast(bWasSuccessful);
 
-	OnLeaveComplete.Broadcast(bWasSuccessful);
-
 	// 재진입 전에 먼저 내려야 함. 안 그러면 Host -> Leave -> Host ... 무한 루프
 	const EAfterDestroy Next = AfterDestroy;
 	AfterDestroy = EAfterDestroy::None;
