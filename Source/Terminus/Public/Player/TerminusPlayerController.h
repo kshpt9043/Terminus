@@ -43,4 +43,14 @@ public:
 	UFUNCTION(Server, Reliable)
 	void Server_StartGame();
 	
+	// 지도 방 선택 요청. MapManager 는 서버 소유 액터라 클라가 거기에 Server RPC 를 쏘면
+	// "No owning connection" 으로 버려짐 -> 클라가 소유한 자기 PC 를 거쳐서 보냄
+	// 누가 보냈는지는 서버가 이 PC 로 판단하니 PlayerState 를 인자로 받지 않음
+	UFUNCTION(Server, Reliable)
+	void Server_RequestSelectRoom(int32 RoomId);
+	
+	// 방 선택 실패 알림. 같은 이유로 MapManager 가 아니라 PC 의 Client RPC
+	UFUNCTION(Client, Reliable)
+	void Client_OnRoomSelectFailed(const FString& ReasonMessage);
+	
 };

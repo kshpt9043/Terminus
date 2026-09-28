@@ -4,6 +4,7 @@
 #include "Player/TerminusPlayerState.h"
 
 #include "Net/UnrealNetwork.h"
+#include "Data/TerminusDataSettings.h"
 
 void ATerminusPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
@@ -31,6 +32,48 @@ void ATerminusPlayerState::SetReady(bool bInReady)
 	}
 	
 	bReady = bInReady;
+}
+
+void ATerminusPlayerState::BeginRun()
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+	
+	// 강화 전 기본 스텟에서 시작. 던전에서 늘어나는 값은 이후 여기(RunState.Stats)에 쌓임
+	if (const FCharacterClassRow* Row = UTerminusDataSettings::FindCharacterClassRow(RunState.CharacterClass))
+	{
+		RunState.Stats = Row->BaseStats;
+		RunState.bStatsInitialized = true;
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("PS: %s 행이 없어 런 스텟을 못 채움"),
+			*UEnum::GetValueAsString(RunState.CharacterClass));
+	}
+	
+	RunState.CurrentRoomId = -1;
+	RunState.CurrentMapLevel = 0;
+	RunState.SelectedRoomId = -1;
+	
+	OnRep_RunState();
+}
+
+void ATerminusPlayerState::Test_ClearAndMoveToRoom(int32 TargetRoomId, int32 TargetRow)
+{
+	if (HasAuthority())
+	{
+		// 1. 선택했던 다음 방 ID 초기화
+		RunState.SelectedRoomId = -1;
+
+		// 2. 현재 방 위치 및 진행 레벨(Row + 1) 업데이트
+		RunState.CurrentRoomId = TargetRoomId;
+		RunState.CurrentMapLevel = TargetRow + 1; // 방을 클리어했으므로 다음 레벨 진입 가능하게 함
+
+		// 3. 변경 사항 동기화 전파
+		OnRep_RunState();
+	}
 }
 
 void ATerminusPlayerState::CopyProperties(APlayerState* NewPS)

@@ -27,6 +27,12 @@ public:
 	
 	void SetReady(bool bInReady);
 	
+	// 주점에서 던전으로 출발할 때 서버가 부름. 클래스 기본 스텟을 런 스텟으로 복사하고 진행도 초기화
+	void BeginRun();
+	
+	// ★ [테스트용] 방을 클릭했을 때 바로 클리어 처리하여 위치 이동
+	void Test_ClearAndMoveToRoom(int32 TargetRoomId, int32 TargetRow);
+	
 	// Seamless Travel할 때 들고 가는게 아니라 복사시켜서 새로 만들어야 함
 	virtual void CopyProperties(APlayerState* NewPS) override;
 	
@@ -63,7 +69,8 @@ protected:
 	bool bReady = false;
 	
 	// 이동 간 유지되어야 할 데이터
-	UPROPERTY(Replicated)
+	// ReplicatedUsing 이어야 클라에서 OnRep_RunState 가 불림 -> 지도 UI 갱신이 여기에 걸려 있음
+	UPROPERTY(ReplicatedUsing = OnRep_RunState)
 	FRunState RunState;
 	
 	UFUNCTION()

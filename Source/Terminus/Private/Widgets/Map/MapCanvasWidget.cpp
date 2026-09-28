@@ -8,34 +8,134 @@
 #include "Kismet/GameplayStatics.h"
 #include "Widgets/Map/RoomNodeWidget.h"
 #include "Components/ScrollBox.h"
+#include "GameFramework/GameStateBase.h"
+#include "Player/TerminusPlayerController.h"
+#include "TimerManager.h"
+#include "EngineUtils.h"
 
 void UMapCanvasWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
 
-	// 월드에 존재하는 MapGenerator 액터를 찾아서 이벤트 연결
-	AMapManager* MapGen = Cast<AMapManager>(UGameplayStatics::GetActorOfClass(GetWorld(), AMapManager::StaticClass()));
-	if (MapGen)
-	{
-		// 맵 생성 완료 델리게이트 바인딩
-		MapGen->OnMapGenerated.AddDynamic(this, &UMapCanvasWidget::BuildMapUI);
-
-		// 만약 위젯이 늦게 생성되어 맵 데이터가 이미 들어와 있는 상태라면 바로 그리기
-		if (MapGen->Rooms.Num() > 0)
-		{
-			BuildMapUI(MapGen->Rooms);
-		}
-	}
-    
-    // 내 PlayerState의 RunState 변경 이벤트 바인딩
-    APlayerController* PC = GetOwningPlayer();
-    if (PC)
+    // MapManager / PlayerState 바인딩. 클라에선 둘 다 복제가 위젯 생성보다 늦을 수 있어서
+    // 지금 한 번 + 0.5초마다 다시 훑어서 새로 도착한 것을 묶음 (인원 변동도 같이 커버)
+    if (UWorld* World = GetWorld())
     {
-        ATerminusPlayerState* LocalPS = PC->GetPlayerState<ATerminusPlayerState>();
-        if (LocalPS)
+        World->GetTimerManager().SetTimer(
+            BindTimer, this, &UMapCanvasWidget::TryBindPlayerStates,
+            0.5f,   // 주기
+            true,   // 반복
+            0.f);   // 첫 호출은 바로
+    }
+}
+
+void UMapCanvasWidget::NativeDestruct()
+{
+    UWorld* World = GetWorld();
+    if (World)
+    {
+        World->GetTimerManager().ClearTimer(BindTimer);
+
+        // 위젯이 치워진 뒤에도 PS / MapManager 가 계속 이 위젯을 부르지 않게 풀어줌
+        if (const AGameStateBase* GS = World->GetGameState())
         {
-            LocalPS->OnRunStateChanged.AddDynamic(this, &UMapCanvasWidget::OnPlayerRunStateChanged);
+            for (APlayerState* PS : GS->PlayerArray)
+            {
+                if (ATerminusPlayerState* TPS = Cast<ATerminusPlayerState>(PS))
+                {
+                    TPS->OnRunStateChanged.RemoveAll(this);
+                }
+            }
         }
+
+        if (AMapManager* MapGen = BoundMapManager.Get())
+        {
+            MapGen->OnMapGenerated.RemoveAll(this);
+        }
+        BoundMapManager.Reset();
+    }
+
+    Super::NativeDestruct();
+}
+
+AMapManager* UMapCanvasWidget::FindMapManager() const
+{
+    UWorld* World = GetWorld();
+    if (!World) return nullptr;
+
+    const bool bIsClient = World->GetNetMode() == NM_Client;
+
+    for (TActorIterator<AMapManager> It(World); It; ++It)
+    {
+        AMapManager* Candidate = *It;
+        if (!IsValid(Candidate) || Candidate->IsActorBeingDestroyed()) continue;
+
+        // 클라에서 Authority 를 가진 MapManager = 클라가 직접 스폰한 로컬 액터 -> 서버 지도와 다름
+        if (bIsClient && Candidate->GetLocalRole() == ROLE_Authority) continue;
+
+        return Candidate;
+    }
+    return nullptr;
+}
+
+void UMapCanvasWidget::TryBindPlayerStates()
+{
+    UWorld* World = GetWorld();
+    if (!World) return;
+
+    // MapManager: 아직 못 묶었으면 찾아서 묶음
+    if (!BoundMapManager.IsValid())
+    {
+        if (AMapManager* MapGen = FindMapManager())
+        {
+            BoundMapManager = MapGen;
+            MapGen->OnMapGenerated.AddUniqueDynamic(this, &UMapCanvasWidget::BuildMapUI);
+
+            // 지도 데이터가 이미 와 있으면 바로 그리기 (OnRep 가 위젯 생성보다 먼저 끝난 경우)
+            if (MapGen->Rooms.Num() > 0)
+            {
+                BuildMapUI(MapGen->Rooms);
+            }
+        }
+    }
+
+    ATerminusPlayerState* LocalPS = GetOwningPlayer() ? GetOwningPlayer()->GetPlayerState<ATerminusPlayerState>() : nullptr;
+
+    // 내 PS: 도착하면 묶고 지도를 다시 그림
+    // (도착 전에 그린 지도는 현재 위치를 몰라서 Row 0 만 켜져 있음)
+    if (LocalPS && !LocalPS->OnRunStateChanged.IsAlreadyBound(this, &UMapCanvasWidget::OnPlayerRunStateChanged))
+    {
+        // 내 PS 가 늦게 확인돼서 먼저 "다른 사람" 으로 묶였을 수 있음 -> 그 바인딩은 풀기
+        LocalPS->OnRunStateChanged.RemoveDynamic(this, &UMapCanvasWidget::OnOtherRunStateChanged);
+        LocalPS->OnRunStateChanged.AddDynamic(this, &UMapCanvasWidget::OnPlayerRunStateChanged);
+
+        if (CachedMapData.Num() > 0)
+        {
+            BuildMapUI(CachedMapData);
+        }
+    }
+
+    // 다른 사람 PS: 선택 표시만 갱신하면 됨
+    const AGameStateBase* GS = World->GetGameState();
+    if (!GS) return;
+
+    bool bNewlyBound = false;
+    for (APlayerState* PS : GS->PlayerArray)
+    {
+        ATerminusPlayerState* TPS = Cast<ATerminusPlayerState>(PS);
+        if (!TPS || TPS == LocalPS) continue;
+
+        if (!TPS->OnRunStateChanged.IsAlreadyBound(this, &UMapCanvasWidget::OnOtherRunStateChanged))
+        {
+            TPS->OnRunStateChanged.AddDynamic(this, &UMapCanvasWidget::OnOtherRunStateChanged);
+            bNewlyBound = true;
+        }
+    }
+
+    // 새로 들어온 사람이 이미 방을 골라둔 상태일 수 있으니 한 번 갱신
+    if (bNewlyBound)
+    {
+        RefreshAllRoomSelections();
     }
 }
 
@@ -89,26 +189,24 @@ if (!MapCanvasPanel || !RoomWidgetClass || MapData.Num() == 0) return;
             NewRoomWidget->SetupRoomNode(*Node, RoomTypeIcons);
             NewRoomWidget->OnRoomNodeClicked.AddDynamic(this, &UMapCanvasWidget::HandleRoomClicked);
 
-            // ★ [경로 제한] 내가 이동할 수 있는 다음 방인가 체크
+            // ★ [경로 제한] 이동 가능한 방인가 체크
             bool bIsSelectable = false;
-            if (LocalPS)
-            {
-                if (LocalPS->GetCurrentMapLevel() == 0)
-                {
-                    // 시작(1레벨) 단계에서는 퀘스트방(Row == 0)만 선택 가능
-                    bIsSelectable = (Node->Row == 0);
-                }
-                else
-                {
-                    // 2레벨 이후: 현재 클리어한 방(CurrentRoomId)과 연결된 방(ConnectedRoomIds)만 활성화
-                    const FRoomNode* CurrentRoom = MapData.FindByPredicate([LocalPS](const FRoomNode& N) {
-                        return N.RoomId == LocalPS->GetCurrentRoomId();
-                    });
 
-                    if (CurrentRoom)
-                    {
-                        bIsSelectable = CurrentRoom->ConnectedRoomIds.Contains(Node->RoomId);
-                    }
+            if (!LocalPS || LocalPS->GetCurrentMapLevel() == 0)
+            {
+                // LocalPS가 아직 도착 안 했거나, 1레벨(CurrentMapLevel == 0)일 때는 무조건 Row == 0 (퀘스트방) 활성화!
+                bIsSelectable = (Node->Row == 0);
+            }
+            else
+            {
+                // 2레벨 이후: 현재 방과 연결된 방만 활성화
+                const FRoomNode* CurrentRoom = MapData.FindByPredicate([LocalPS](const FRoomNode& N) {
+                    return N.RoomId == LocalPS->GetCurrentRoomId();
+                });
+
+                if (CurrentRoom)
+                {
+                    bIsSelectable = CurrentRoom->ConnectedRoomIds.Contains(Node->RoomId);
                 }
             }
 
@@ -140,25 +238,26 @@ if (!MapCanvasPanel || !RoomWidgetClass || MapData.Num() == 0) return;
     // 초기 선택 상태 동기화 갱신
     RefreshAllRoomSelections();
 
-    GetWorld()->GetTimerManager().SetTimerForNextTick([this]()
+    // 약참조 람다. 다음 틱 전에 위젯이 사라지면 그냥 안 불림 ([this] 만 잡으면 댕글링)
+    GetWorld()->GetTimerManager().SetTimerForNextTick(FTimerDelegate::CreateWeakLambda(this, [this]()
     {
         if (ScrollBox) ScrollBox->ScrollToEnd();
         InvalidateLayoutAndVolatility();
-    });
+    }));
 }
 
 void UMapCanvasWidget::RefreshAllRoomSelections()
 {
-    // 월드 내 모든 PlayerState 모으기
+    // 모든 PlayerState 모으기
+    // PC 반복자는 클라에선 자기 PC 하나뿐이라 남의 선택이 안 보임 -> GameState 의 PlayerArray 는 전원 복제됨
     TArray<ATerminusPlayerState*> AllPlayerStates;
-    for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
+    if (const AGameStateBase* GS = GetWorld()->GetGameState())
     {
-        APlayerController* PC = It->Get();
-        if (PC && PC->PlayerState)
+        for (APlayerState* PS : GS->PlayerArray)
         {
-            if (ATerminusPlayerState* PS = Cast<ATerminusPlayerState>(PC->PlayerState))
+            if (ATerminusPlayerState* TPS = Cast<ATerminusPlayerState>(PS))
             {
-                AllPlayerStates.Add(PS);
+                AllPlayerStates.Add(TPS);
             }
         }
     }
@@ -179,28 +278,32 @@ void UMapCanvasWidget::HandleRoomClicked(int32 ClickedRoomId)
 {
 	UE_LOG(LogTemp, Log, TEXT("Room Clicked ID: %d"), ClickedRoomId);
 	
-    APlayerController* PC = GetOwningPlayer();
+    ATerminusPlayerController* PC = GetOwningPlayer<ATerminusPlayerController>();
     if (!PC) return;
 
-    ATerminusPlayerState* LocalPS = PC->GetPlayerState<ATerminusPlayerState>();
-    AMapManager* MapMgr = Cast<AMapManager>(UGameplayStatics::GetActorOfClass(GetWorld(), AMapManager::StaticClass()));
+    // 서버 소유 액터(MapManager)엔 클라가 RPC 를 못 쏴서 내 PC 를 거쳐 감
+    // Standalone 에서도 Server RPC 는 그냥 로컬에서 바로 실행되므로 경로를 하나로 합침
+    // 테스트용 즉시 클리어는 MapManager 의 bTestInstantClear 로 켜고 끔
+    // 지도 다시 그리기는 RunState 변경 -> OnPlayerRunStateChanged 가 알아서 함
+    PC->Server_RequestSelectRoom(ClickedRoomId);
+}
 
-    if (!LocalPS || !MapMgr) return;
-
-    // 싱글플레이 모드: 바로 이동
-    if (GetWorld()->GetNetMode() == ENetMode::NM_Standalone)
-    {
-        UGameplayStatics::OpenLevel(GetWorld(), "/Game/Maps/Lv_DungeonPlay");
-        return;
-    }
-
-    // 멀티플레이 모드: 서버 RPC 요청 (서버에서 인원 수 및 연결 상태 검증 후 복제)
-    MapMgr->Server_RequestSelectRoom(LocalPS, ClickedRoomId);
+void UMapCanvasWidget::OnOtherRunStateChanged(const FRunState& NewRunState)
+{
+    RefreshAllRoomSelections();
 }
 
 void UMapCanvasWidget::OnPlayerRunStateChanged(const FRunState& NewRunState)
 {
-    RefreshAllRoomSelections();
+    // PlayerState 정보(CurrentMapLevel, CurrentRoomId 등)가 갱신되면 지도 다시 그리기
+    if (CachedMapData.Num() > 0)
+    {
+        BuildMapUI(CachedMapData);
+    }
+    else
+    {
+        RefreshAllRoomSelections();
+    }
 }
 
 int32 UMapCanvasWidget::NativePaint(const FPaintArgs& Args, const FGeometry& AllottedGeometry,

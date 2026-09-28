@@ -181,7 +181,9 @@ void ATerminusBattler::PossessedBy(AController* NewController)
 
 	if (const ATerminusPlayerState* PS = GetPlayerState<ATerminusPlayerState>())
 	{
-		InitAsClass(PS->GetCharacterClass());
+		// 런 스텟이 채워져 있으면(주점 거쳐 옴) 그걸로. 아니면 클래스 기본값
+		const FRunState Run = PS->GetRunState();
+		InitAsClass(PS->GetCharacterClass(), Run.bStatsInitialized ? &Run.Stats : nullptr);
 	}
 }
 
@@ -206,7 +208,7 @@ void ATerminusBattler::BeginPlay()
 	}
 }
 
-void ATerminusBattler::InitAsClass(ECharacterClass InClass)
+void ATerminusBattler::InitAsClass(ECharacterClass InClass, const FCharacterStats* RunStats)
 {
 	const FCharacterClassRow* Row = UTerminusDataSettings::FindCharacterClassRow(InClass);
 	if (!Row)
@@ -218,7 +220,7 @@ void ATerminusBattler::InitAsClass(ECharacterClass InClass)
 	}
 
 	// 스텟은 서버만 정한다(InitFrom 안에 가드가 있음). 클라는 복제로 받음
-	CombatStats->InitFrom(Row->BaseStats);
+	CombatStats->InitFrom(RunStats ? *RunStats : Row->BaseStats);
 
 	// 외형은 복제가 안 되니 각 PC 가 스스로 적용해야 한다
 	if (!Row->AnimInstanceClass.IsNull())

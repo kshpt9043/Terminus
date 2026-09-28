@@ -77,7 +77,8 @@ protected:
 	virtual void BeginPlay() override;
 
 	// 클래스 하나로 스텟과 외형을 같이 세팅.
-	void InitAsClass(ECharacterClass InClass);
+	// RunStats 를 주면 스텟은 그걸 씀(던전에서 누적된 런 스텟). 없으면 클래스 기본 스텟
+	void InitAsClass(ECharacterClass InClass, const FCharacterStats* RunStats = nullptr);
 
 	// 레벨에 직접 배치해서 구도만 볼 때 체크. PlayerState 대신 아래 값을 쓴다
 	UPROPERTY(EditAnywhere, Category = "Terminus|Preview")

@@ -43,6 +43,8 @@ struct FRoomNode
 	TArray<int32> ConnectedRoomIds;
 };
 
+class ATerminusPlayerController;
+
 // 맵 데이터가 업데이트되었음을 UI 등에 알리기 위한 델리게이트
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMapGenerated, const TArray<FRoomNode>&, MapData);
 
@@ -76,13 +78,14 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map Settings")
 	TMap<ERoomType, float> RoomTypeWeights;
 	
-	// 클라이언트가 서버에 방 선택 요청
-	UFUNCTION(Server, Reliable, WithValidation)
-	void Server_RequestSelectRoom(ATerminusPlayerState* RequestingPS, int32 RoomId);
+	// 방 선택 요청 처리. 서버에서만 불림
+	// 클라 -> 자기 PC 의 Server_RequestSelectRoom -> 여기. (이 액터는 서버 소유라 RPC 를 직접 못 받음)
+	void HandleSelectRoomRequest(ATerminusPlayerController* Requester, int32 RoomId);
 	
-	// 실패 메시지 UI 알림 (Client RPC)
-	UFUNCTION(Client, Reliable)
-	void Client_OnRoomSelectFailed(const FString& ReasonMessage);
+	// ★ [테스트] 켜면 방을 누르는 즉시 클리어 처리하고 끝. 정원 검사 / 전원 선택 / 던전 이동 없음
+	// 전투 맵이 생기면 끄면 원래 선택 흐름으로 돌아감
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map Settings|Test")
+	bool bTestInstantClear = true;
 	
 
 protected:
