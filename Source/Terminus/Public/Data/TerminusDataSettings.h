@@ -53,4 +53,7 @@ public:
 	UPROPERTY(Config, EditAnywhere, Category = "Monster",
 		meta = (RequiredAssetDataTags = "RowStructure=/Script/Terminus.MonsterRow"))
 	TSoftObjectPtr<UDataTable> MonsterTable;
+	
+	// 직업의 기본 스킬. 공격 방어 특수 순서로 돌려준다 (데이터에 없는 칸은 빠짐)
+	static TArray<const FSkillRow*> FindBasicSkills(ECharacterClass InClass);
 };

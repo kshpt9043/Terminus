@@ -81,6 +81,12 @@ protected:
 	
 	// 클라이언트 전용 출발 대응 버튼
 	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UTextBlock> WaitText;
+	
+	// 세력 이름 (모험가 길드 등)
+	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UTextBlock> FactionText;
+
+	// 기본 스킬 3개 / 공격 방어 특수
+	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UTextBlock> SkillText;
 
 	UFUNCTION()
 	void HandleInviteClicked();

@@ -296,6 +296,23 @@ void UTavernWidget::ApplySelection(ECharacterClass InClass)
 	}
 	DescriptionText->SetText(Row->Description);
 	PassiveText->SetText(Row->PassiveText);
+	
+	if (FactionText)
+	{
+		FactionText->SetText(GetFactionName(Row->Faction));
+	}
+
+	if (SkillText)
+	{
+		// "이름, 설명" 한 줄씩. 설명 문구는 스킬 데이터의 Description_KR 그대로
+		TArray<FString> Lines;
+		for (const FSkillRow* Skill : UTerminusDataSettings::FindBasicSkills(InClass))
+		{
+			Lines.Add(FString::Printf(TEXT("%s · %s"),
+				*Skill->DisplayName_KR.ToString(), *Skill->Description_KR.ToString()));
+		}
+		SkillText->SetText(FText::FromString(FString::Join(Lines, TEXT("\n"))));
+	}
 
 	if (UTexture2D* Tex = Row->Illustration.LoadSynchronous())
 	{
