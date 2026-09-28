@@ -21,14 +21,9 @@
 #include "Data/TerminusDataSettings.h"
 #include "Online/SessionSubsystem.h"
 #include "Engine/GameInstance.h"
+#include "Widgets/TerminusUIColors.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogTerminusUI, Log, All);
-
-namespace
-{
-	// 1d 팔레트. FColor 는 sRGB 라 FLinearColor 로 바꾸면 에디터 Hex 칸과 같은 색
-	FLinearColor Hex(const TCHAR* InHex) { return FLinearColor(FColor::FromHex(InHex)); }
-}
 
 void UTavernWidget::NativeOnInitialized()
 {
@@ -57,9 +52,9 @@ void UTavernWidget::NativeOnInitialized()
 		// WBP 에서 잡은 모양은 그대로 두고 색만 회색으로 바꾼 사본을 만든다
 		ReadyStyle  = ReadyButton->GetStyle();
 		CancelStyle = ReadyStyle;
-		CancelStyle.Normal.TintColor  = FSlateColor(Hex(TEXT("3A3F4A")));
-		CancelStyle.Hovered.TintColor = FSlateColor(Hex(TEXT("454B57")));
-		CancelStyle.Pressed.TintColor = FSlateColor(Hex(TEXT("2E333D")));
+		CancelStyle.Normal.TintColor  = FSlateColor(TerminusUI::Hex(TEXT("3A3F4A")));
+		CancelStyle.Hovered.TintColor = FSlateColor(TerminusUI::Hex(TEXT("454B57")));
+		CancelStyle.Pressed.TintColor = FSlateColor(TerminusUI::Hex(TEXT("2E333D")));
 	}
 }
 

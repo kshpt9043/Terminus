@@ -45,7 +45,7 @@ void ATerminusPlayerController::EndPlay(const EEndPlayReason::Type EndPlayReason
 {
 	if (TavernWidget)
 	{
-		TavernWidget->RemoveFromViewport();
+		TavernWidget->RemoveFromParent();
 		TavernWidget = nullptr;
 	}
 	

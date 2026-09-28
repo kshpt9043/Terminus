@@ -6,15 +6,13 @@
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Online/SessionSubsystem.h"
+#include "Widgets/TerminusUIColors.h"
 
 namespace
 {
-	// 1d 팔레트. FColor 는 sRGB 라 FLinearColor 로 바꾸면 에디터 Hex 칸과 같은 색이 된다
-	FLinearColor Hex(const TCHAR* InHex) { return FLinearColor(FColor::FromHex(InHex)); }
-
-	const FLinearColor TextGold     = Hex(TEXT("E6C47A"));
-	const FLinearColor TextDim      = Hex(TEXT("8D8778"));   // 게임 종료 기본색
-	const FLinearColor TextDisabled = Hex(TEXT("5D5A52"));
+	const FLinearColor TextGold     = TerminusUI::Hex(TEXT("E6C47A"));
+	const FLinearColor TextDim      = TerminusUI::Hex(TEXT("8D8778"));   // 게임 종료 기본색
+	const FLinearColor TextDisabled = TerminusUI::Hex(TEXT("5D5A52"));
 }
 
 void UMainMenuWidget::NativeOnInitialized()
