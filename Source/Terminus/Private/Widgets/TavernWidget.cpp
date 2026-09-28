@@ -56,6 +56,13 @@ void UTavernWidget::NativeConstruct()
 	CreateClassButtons();
 	ApplySelection(Selected);
 
+	// 타이머 폴링을 돌기 전에 리턴해야함
+	if (IsSolo())
+	{
+		ApplySoloLayout();
+		return;
+	}
+	
 	if (UWorld* World = GetWorld())
 	{
 		World->GetTimerManager().SetTimer(
@@ -149,7 +156,8 @@ void UTavernWidget::HandleStartClicked()
 	}
 	
 	// 새로고침 풀링 간격 동안 레디를 풀었을수도 있으므로 검사
-	if (!AreAllPlayersReady())
+	// 싱글은 검사 안함
+	if (!IsSolo() && !AreAllPlayersReady())
 	{
 		return;
 	}
@@ -351,5 +359,28 @@ void UTavernWidget::RefreshSlots()
 	{
 		LastPlayerCount = Players.Num();
 		UE_LOG(LogTerminusUI, Log, TEXT("TavernWidget: 인원 %d"), LastPlayerCount);
+	}
+}
+
+bool UTavernWidget::IsSolo() const
+{
+	const UWorld* World = GetWorld();
+	return World && World->GetNetMode() == NM_Standalone;
+}
+
+void UTavernWidget::ApplySoloLayout()
+{
+	SlotPanel->SetVisibility(ESlateVisibility::Collapsed);
+	if (InviteButton) { InviteButton->SetVisibility(ESlateVisibility::Collapsed); }
+	if (ReadyButton)  { ReadyButton->SetVisibility(ESlateVisibility::Collapsed); }
+
+	// 기획서: 싱글은 던전 입장 -> 캐릭터 선택 화면
+	if (TitleText) { TitleText->SetText(FText::FromString(TEXT("캐릭터 선택"))); }
+
+	// 폴링이 안 도니 출발 버튼 상태를 여기서 한 번 정해둔다
+	if (StartButton)
+	{
+		StartButton->SetVisibility(ESlateVisibility::Visible);
+		StartButton->SetIsEnabled(true);
 	}
 }

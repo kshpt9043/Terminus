@@ -41,6 +41,9 @@ protected:
 	UPROPERTY(meta = (BindWidget)) TObjectPtr<UTextBlock> DescriptionText;
 	UPROPERTY(meta = (BindWidget)) TObjectPtr<UTextBlock> PassiveText;
 	UPROPERTY(meta = (BindWidget)) TObjectPtr<UPanelWidget> ClassButtonBox;
+	
+	// 싱글, 멀티 다르게 타이틀 띄우기
+	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UTextBlock> TitleText;
 
 	// 선택한 캐릭터 이름을 따로 띄우고 싶을 때만
 	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UTextBlock> ClassTitleText;
@@ -96,4 +99,7 @@ private:
 	FTimerHandle RefreshTimer;
 	int32 LastPlayerCount = -1;
 	static constexpr int32 MaxSlots = 4;
+	
+	bool IsSolo() const;
+	void ApplySoloLayout();
 };

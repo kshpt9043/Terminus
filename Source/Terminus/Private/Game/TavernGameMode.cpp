@@ -35,6 +35,12 @@ bool ATavernGameMode::AreAllPlayersReady() const
 		return false;
 	}
 	
+	// 싱글은 검사 안함
+	if (GetNetMode() == NM_Standalone)
+	{
+		return true;
+	}
+	
 	for (const APlayerState* PS : GameState->PlayerArray)
 	{
 		const ATerminusPlayerState* TPS = static_cast<const ATerminusPlayerState*>(PS);
