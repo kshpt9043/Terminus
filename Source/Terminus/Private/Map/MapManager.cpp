@@ -3,6 +3,10 @@
 
 #include "Map/MapManager.h"
 #include "Player/TerminusPlayerState.h"
+#include "Player/TerminusPlayerController.h"
+#include "Game/TerminusRunSubsystem.h"
+#include "GameFramework/GameStateBase.h"
+#include "Engine/GameInstance.h"
 #include "Net/UnrealNetwork.h"
 
 AMapManager::AMapManager()
@@ -21,9 +25,13 @@ AMapManager::AMapManager()
     RoomTypeWeights.Add(ERoomType::EVENT, 15.0f);
 }
 
-void AMapManager::Server_RequestSelectRoom_Implementation(ATerminusPlayerState* RequestingPS, int32 RoomId)
+void AMapManager::HandleSelectRoomRequest(ATerminusPlayerController* Requester, int32 RoomId)
 {
-    if (!HasAuthority() || !RequestingPS) return;
+    if (!HasAuthority() || !Requester) return;
+
+    // 요청자 PS 는 서버가 PC 에서 직접 꺼냄. 클라가 남의 PS 를 넘겨 조작하는 걸 막기 위해
+    ATerminusPlayerState* RequestingPS = Requester->GetPlayerState<ATerminusPlayerState>();
+    if (!RequestingPS) return;
 
     const FRoomNode* TargetRoom = Rooms.FindByPredicate([RoomId](const FRoomNode& Node) {
         return Node.RoomId == RoomId;
@@ -31,29 +39,37 @@ void AMapManager::Server_RequestSelectRoom_Implementation(ATerminusPlayerState* 
 
     if (!TargetRoom) return;
 
-    // 1. 유효 노드 검증 (Getter 사용)
+    // 1. 유효 노드 검증
     if (!IsValidNextRoom(RequestingPS->GetRunState(), *TargetRoom))
     {
-        Client_OnRoomSelectFailed(TEXT("이동할 수 없는 경로의 방입니다."));
+        Requester->Client_OnRoomSelectFailed(TEXT("이동할 수 없는 경로의 방입니다."));
         return;
     }
 
-    // 2. 토글 처리 (Getter 사용 및 Setter 호출)
+    // ★ [테스트] 클릭한 방을 즉시 클리어한 것으로 처리하고 끝. 아래 선택 흐름은 안 탐
+    if (bTestInstantClear)
+    {
+        UE_LOG(LogTemp, Log, TEXT("[Test] Room %d (Row %d) Cleared! Moving to next level..."), RoomId, TargetRoom->Row);
+        RequestingPS->Test_ClearAndMoveToRoom(TargetRoom->RoomId, TargetRoom->Row);
+        return;
+    }
+
+    // 2. 토글 처리 (같은 방 다시 누르면 선택 취소)
     if (RequestingPS->GetSelectedRoomId() == RoomId)
     {
         RequestingPS->SetSelectedRoomId(-1);
         return;
     }
 
-    // 3. 인원 수용 검증 (Getter 사용)
+    // 3. 인원 수용 검증. 나를 뺀 나머지 중 이 방을 고른 사람 수
+    //    (다른 방에서 옮겨오는 경우 내 기존 선택은 세면 안 됨)
     int32 CurrentlySelectedCount = 0;
-    for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
+    if (const AGameStateBase* GS = GetWorld()->GetGameState())
     {
-        APlayerController* PC = It->Get();
-        if (PC && PC->PlayerState)
+        for (APlayerState* PS : GS->PlayerArray)
         {
-            ATerminusPlayerState* PS = Cast<ATerminusPlayerState>(PC->PlayerState);
-            if (PS && PS->GetSelectedRoomId() == RoomId)
+            const ATerminusPlayerState* TPS = Cast<ATerminusPlayerState>(PS);
+            if (TPS && TPS != RequestingPS && TPS->GetSelectedRoomId() == RoomId)
             {
                 CurrentlySelectedCount++;
             }
@@ -62,36 +78,59 @@ void AMapManager::Server_RequestSelectRoom_Implementation(ATerminusPlayerState* 
 
     if (CurrentlySelectedCount >= TargetRoom->MaxPlayers)
     {
-        Client_OnRoomSelectFailed(TEXT("선택한 방의 정원이 가득 찼습니다!"));
+        Requester->Client_OnRoomSelectFailed(TEXT("선택한 방의 정원이 가득 찼습니다!"));
         return;
     }
 
-    // 4. 선택 완료 (Setter 호출)
+    // 4. 선택 완료
     RequestingPS->SetSelectedRoomId(RoomId);
 
     // 5. 전원 확인 후 던전 진입
     CheckAllPlayersReadyAndStart();
 }
 
-bool AMapManager::Server_RequestSelectRoom_Validate(ATerminusPlayerState* RequestingPS, int32 RoomId)
-{
-    return RequestingPS != nullptr;
-}
-
-void AMapManager::Client_OnRoomSelectFailed_Implementation(const FString& ReasonMessage)
-{
-    UE_LOG(LogTemp, Warning, TEXT("[MapManager] 선택 실패: %s"), *ReasonMessage);
-    // TODO: 화면에 인원 초과/실패 팝업 UI 생성 및 메시지 출력
-}
-
 void AMapManager::BeginPlay()
 {
     Super::BeginPlay();
     
+    // 클라가 자기 손으로 스폰한 MapManager 는 복제본이 아니라 클라 로컬 액터 -> 클라가 Authority 를 가짐
+    // 그대로 두면 클라가 자기 지도를 따로 뽑아서 서버 지도와 달라짐 (레벨 BP 가 서버/클라 양쪽에서 스폰할 때)
+    // 진짜는 서버가 스폰해서 복제로 내려오는 것 하나뿐이라 로컬 것은 치움
+    if (GetNetMode() == NM_Client && GetLocalRole() == ROLE_Authority)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[MapManager] 클라에서 로컬로 스폰된 MapManager 제거. 스폰은 서버에서만 할 것 (레벨 BP 에 Switch Has Authority)"));
+        Destroy();
+        return;
+    }
+    
     // ★ 오직 서버(Authority)에서만 맵을 생성합니다.
     if (HasAuthority())
     {
-        Rooms = GenerateMap();
+        // 지도 원본은 런 서브시스템(GameInstance)에 있음 -> 전투 갔다 돌아와도 같은 지도
+        UGameInstance* GI = GetGameInstance();
+        UTerminusRunSubsystem* Run = GI ? GI->GetSubsystem<UTerminusRunSubsystem>() : nullptr;
+
+        if (Run && Run->HasMap())
+        {
+            Rooms = Run->GetRooms();
+            UE_LOG(LogTemp, Log, TEXT("[MapGenerator] 이번 런의 기존 지도 재사용 (방 %d개)"), Rooms.Num());
+        }
+        else
+        {
+            // 주점에서 확정된 실제 인원. 주점을 안 거쳤으면(0) 디테일 패널 값 그대로
+            if (Run && Run->GetPartySize() > 0)
+            {
+                CurrentPlayerCount = Run->GetPartySize();
+            }
+            CurrentPlayerCount = FMath::Max(1, CurrentPlayerCount);
+
+            Rooms = GenerateMap();
+
+            if (Run)
+            {
+                Run->SetRooms(Rooms);
+            }
+        }
 
         // 서버 자신(Listen Server)의 UI 업데이트를 위해 델리게이트 알림
         OnMapGenerated.Broadcast(Rooms);
@@ -176,9 +215,9 @@ TArray<FRoomNode> AMapManager::GenerateMap()
             {
                 int32 RandomCol = FMath::RandRange(0, ValidMaxRooms - 1);
                 ERoomType RoomType = GetWeightedRandomRoomType();
-                int32 RandomMaxPlayers = FMath::RandRange(1, CurrentPlayerCount);
 
-                Map.Add(CreateRoom(GlobalRoomId++, Row, RandomCol, RoomType, RandomMaxPlayers));
+                // 이 층엔 방이 하나뿐이라 파티 전원이 여길 지나가야 함 -> 정원 = 전체 인원
+                Map.Add(CreateRoom(GlobalRoomId++, Row, RandomCol, RoomType, CurrentPlayerCount));
                 continue;
             }
 
@@ -302,6 +341,11 @@ TArray<FRoomNode> AMapManager::GenerateMap()
         bIsValidMap = bPathValid && bCapacityValid;
     }
 
+    if (!bIsValidMap)
+    {
+        UE_LOG(LogTemp, Error, TEXT("[MapGenerator] %d번 재시도해도 조건을 만족하는 지도를 못 만듦. 마지막 지도를 그대로 씀 (진행 불가 구간이 있을 수 있음)"), MaxRetries);
+    }
+
     FString SingleRowsStr = "";
     for (int32 SingleRow : ChosenSingleRoomRows)
     {
@@ -398,9 +442,20 @@ bool AMapManager::ValidatePathToBoss(const TArray<FRoomNode>& InMap, int32 LastR
 bool AMapManager::ValidatePlayerCapacity(const TArray<FRoomNode>& InMap)
 {
     TMap<int32, const FRoomNode*> RoomLookup;
+    TMap<int32, int32> CapacityByRow;
     for (const FRoomNode& Node : InMap)
     {
         RoomLookup.Add(Node.RoomId, &Node);
+        CapacityByRow.FindOrAdd(Node.Row) += Node.MaxPlayers;
+    }
+
+    // 층 단위: 한 층의 정원 합이 인원보다 적으면 누군가는 그 층을 못 지나감
+    for (const TPair<int32, int32>& Pair : CapacityByRow)
+    {
+        if (Pair.Value < CurrentPlayerCount)
+        {
+            return false;
+        }
     }
 
     for (const FRoomNode& SourceNode : InMap)
@@ -451,19 +506,18 @@ void AMapManager::CheckAllPlayersReadyAndStart()
 {
     if (!HasAuthority()) return;
 
-    int32 TotalPlayers = GetWorld()->GetNumPlayerControllers();
+    const AGameStateBase* GS = GetWorld()->GetGameState();
+    if (!GS) return;
+
+    int32 TotalPlayers = GS->PlayerArray.Num();
     int32 ReadyPlayers = 0;
 
-    for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
+    for (APlayerState* PS : GS->PlayerArray)
     {
-        APlayerController* PC = It->Get();
-        if (PC && PC->PlayerState)
+        const ATerminusPlayerState* TPS = Cast<ATerminusPlayerState>(PS);
+        if (TPS && TPS->GetSelectedRoomId() != -1)
         {
-            ATerminusPlayerState* PS = Cast<ATerminusPlayerState>(PC->PlayerState);
-            if (PS && PS->GetSelectedRoomId() != -1)
-            {
-                ReadyPlayers++;
-            }
+            ReadyPlayers++;
         }
     }
 

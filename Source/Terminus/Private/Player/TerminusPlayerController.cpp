@@ -9,6 +9,7 @@
 #include "Player/TerminusPlayerState.h"
 #include "Camera/CameraActor.h"
 #include "Kismet/GameplayStatics.h"
+#include "Map/MapManager.h"
 
 
 void ATerminusPlayerController::BeginPlay()
@@ -106,6 +107,24 @@ void ATerminusPlayerController::Server_StartGame_Implementation()
 	{
 		GM->TryStartGame();
 	}
+}
+
+void ATerminusPlayerController::Server_RequestSelectRoom_Implementation(int32 RoomId)
+{
+	AMapManager* MapMgr = Cast<AMapManager>(UGameplayStatics::GetActorOfClass(this, AMapManager::StaticClass()));
+	if (!MapMgr)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("PC: 방 선택 요청을 받았는데 레벨에 MapManager 가 없음"));
+		return;
+	}
+	
+	MapMgr->HandleSelectRoomRequest(this, RoomId);
+}
+
+void ATerminusPlayerController::Client_OnRoomSelectFailed_Implementation(const FString& ReasonMessage)
+{
+	UE_LOG(LogTemp, Warning, TEXT("[MapManager] 선택 실패: %s"), *ReasonMessage);
+	// TODO: 화면에 인원 초과/실패 팝업 UI 생성 및 메시지 출력
 }
 
 void ATerminusPlayerController::Server_SelectCharacter_Implementation(ECharacterClass InClass)

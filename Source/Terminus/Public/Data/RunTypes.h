@@ -18,6 +18,11 @@ struct FRunState
 	
 	UPROPERTY(BlueprintReadOnly)
 	FCharacterStats Stats;
+
+	// Stats 가 이번 런용으로 채워졌는지. 주점 출발(BeginRun) 때 true
+	// false 면 주점을 안 거친 것(던전 맵 바로 PIE) -> 배틀러가 클래스 기본 스텟을 씀
+	UPROPERTY(BlueprintReadOnly)
+	bool bStatsInitialized = false;
 	
 	// 맵 진행 및 선택 관련 추가 데이터
 	UPROPERTY(BlueprintReadWrite)
