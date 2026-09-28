@@ -24,6 +24,12 @@
 
 DEFINE_LOG_CATEGORY_STATIC(LogTerminusUI, Log, All);
 
+namespace
+{
+	// 1d 팔레트. FColor 는 sRGB 라 FLinearColor 로 바꾸면 에디터 Hex 칸과 같은 색
+	FLinearColor Hex(const TCHAR* InHex) { return FLinearColor(FColor::FromHex(InHex)); }
+}
+
 void UTavernWidget::NativeOnInitialized()
 {
 	Super::NativeOnInitialized();
@@ -44,6 +50,16 @@ void UTavernWidget::NativeOnInitialized()
 	if (InviteButton)
 	{
 		InviteButton->OnClicked.AddDynamic(this, &UTavernWidget::HandleInviteClicked);
+	}
+	
+	if (ReadyButton)
+	{
+		// WBP 에서 잡은 모양은 그대로 두고 색만 회색으로 바꾼 사본을 만든다
+		ReadyStyle  = ReadyButton->GetStyle();
+		CancelStyle = ReadyStyle;
+		CancelStyle.Normal.TintColor  = FSlateColor(Hex(TEXT("3A3F4A")));
+		CancelStyle.Hovered.TintColor = FSlateColor(Hex(TEXT("454B57")));
+		CancelStyle.Pressed.TintColor = FSlateColor(Hex(TEXT("2E333D")));
 	}
 }
 
@@ -345,6 +361,13 @@ void UTavernWidget::RefreshSlots()
 		ReadyButtonText->SetText(FText::FromString(bMyReady ? TEXT("준비 취소") : TEXT("준비 완료")));
 	}
 	
+	// 스타일은 준비 상태가 바뀐 순간에만. 매 폴링 넣으면 호버 중에 깜빡일 수 있다
+	if (ReadyButton && LastReadyShown != (int8)bMyReady)
+	{
+		ReadyButton->SetStyle(bMyReady ? CancelStyle : ReadyStyle);
+		LastReadyShown = (int8)bMyReady;
+	}
+	
 	// 준비 완료면 캐릭터 버튼 잠금
 	for (UClassButton* Btn : ClassButtons)
 	{
@@ -360,6 +383,14 @@ void UTavernWidget::RefreshSlots()
 			bIsHost ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
 		
 		StartButton->SetIsEnabled(AreAllPlayersReady());
+	}
+	
+	if (WaitText)
+	{
+		WaitText->SetVisibility(bIsHost ? ESlateVisibility::Collapsed : ESlateVisibility::HitTestInvisible);
+		WaitText->SetText(FText::FromString(bMyReady
+			? TEXT("방장의 출발을 기다리는 중")
+			: TEXT("준비를 누르면 방장이 출발할 수 있습니다")));
 	}
 	
 	// 인원이 바뀔 때 알려주는 로그
@@ -391,4 +422,6 @@ void UTavernWidget::ApplySoloLayout()
 		StartButton->SetVisibility(ESlateVisibility::Visible);
 		StartButton->SetIsEnabled(true);
 	}
+	
+	if (WaitText) { WaitText->SetVisibility(ESlateVisibility::Collapsed); }
 }

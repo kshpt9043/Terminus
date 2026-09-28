@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
 #include "Data/CharacterTypes.h"
+#include "Styling/SlateTypes.h"
 #include "TavernWidget.generated.h"
 
 class UPlayerSlot;
@@ -69,14 +70,17 @@ protected:
 	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UButton>    ReadyButton;
 	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UTextBlock> ReadyButtonText;
 	
-	// 시작 버튼. 호스트만 봐야함
+	// 시작 버튼 호스트만 봐야함
 	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UButton> StartButton;
 	
-	// 나가기 버튼.
+	// 나가기 버튼
 	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UButton> LeaveButton;
 	
-	// .h
+	// 초대 버튼
 	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UButton> InviteButton;
+	
+	// 클라이언트 전용 출발 대응 버튼
+	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UTextBlock> WaitText;
 
 	UFUNCTION()
 	void HandleInviteClicked();
@@ -102,4 +106,10 @@ private:
 	
 	bool IsSolo() const;
 	void ApplySoloLayout();
+	
+	FButtonStyle ReadyStyle;
+	FButtonStyle CancelStyle;
+	
+	// 마지막으로 끼운 상태. -1 은 아직 안 끼움 -> 첫 폴링에서 반드시 한 번 넣게
+	int8 LastReadyShown = -1;
 };
