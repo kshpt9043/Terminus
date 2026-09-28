@@ -305,14 +305,22 @@ void UTavernWidget::RefreshSlots()
 		return;
 	}
 
-	const TArray<TObjectPtr<APlayerState>>& Players = GS->PlayerArray;
+	TArray<APlayerState*> Players;
+	for (APlayerState* PS : GS->PlayerArray)
+	{
+		if (PS) { Players.Add(PS); }
+	}
+	Players.Sort([](const APlayerState& A, const APlayerState& B)
+	{
+		return A.GetPlayerId() < B.GetPlayerId();
+	});
 
 	for (int32 i = 0; i < Slots.Num(); ++i)
 	{
 		UPlayerSlot* SlotWidget = Slots[i];
 		if (!SlotWidget) { continue; }
 
-		APlayerState* PS = Players.IsValidIndex(i) ? Players[i].Get() : nullptr;
+		APlayerState* PS = Players.IsValidIndex(i) ? Players[i] : nullptr;
 		FText ClassName = FText::GetEmpty();
 		bool bReady = false;
 		if (const ATerminusPlayerState* TPS = Cast<ATerminusPlayerState>(PS))
