@@ -82,7 +82,8 @@ void ATerminusPlayerState::BeginRun()
 	RunState.CurrentRoomId = -1;
 	RunState.CurrentMapLevel = 0;
 	RunState.SelectedRoomId = -1;
-	
+	RunState.VisitedRoomIds.Reset();
+
 	OnRep_RunState();
 }
 
@@ -96,6 +97,7 @@ void ATerminusPlayerState::AdvanceToRoom(int32 TargetRoomId, int32 TargetRow)
 		// 2. 현재 방 위치 및 진행 레벨(Row + 1) 업데이트
 		RunState.CurrentRoomId = TargetRoomId;
 		RunState.CurrentMapLevel = TargetRow + 1; // 방을 클리어했으므로 다음 레벨 진입 가능하게 함
+		RunState.VisitedRoomIds.Add(TargetRoomId);   // 지도에 지나온 길 표시용
 
 		// 3. 변경 사항 동기화 전파
 		OnRep_RunState();

@@ -70,6 +70,18 @@ void FSkillExecutor::Execute(const FSkillRow& Skill,
 	}
 }
 
+int32 FSkillExecutor::PreviewAmount(const FSkillRow& Skill, const UCombatStatsComponent* Caster)
+{
+	if (!Caster)
+	{
+		return Skill.BaseValue;
+	}
+
+	// Execute 의 ① 과 같은 계산
+	const int32 Stat = GetEffectiveStat(Caster, Skill.ScalingStat);
+	return Skill.BaseValue + FMath::RoundToInt(Stat * Skill.ScalingRatio);
+}
+
 FSkillExecutor::FRecipe FSkillExecutor::GetRecipe(EActionKind Kind)
 {
 	FRecipe R;

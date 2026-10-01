@@ -12,6 +12,7 @@
 #include "PaperZDAnimInstance.h"
 #include "Character/TerminusMonster.h"
 #include "Kismet/GameplayStatics.h"
+#include "Net/UnrealNetwork.h"
 
 ATerminusBattler::ATerminusBattler()
 {
@@ -185,6 +186,43 @@ void ATerminusBattler::PossessedBy(AController* NewController)
 		const FRunState Run = PS->GetRunState();
 		InitAsClass(PS->GetCharacterClass(), Run.bStatsInitialized ? &Run.Stats : nullptr);
 	}
+}
+
+void ATerminusBattler::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	// 엔진 기본은 COND_SimulatedOrPhysics -> 이 폰을 조종하는 클라에는 위치가 안 감. 모두에게 보내도록
+	RESET_REPLIFETIME_CONDITION_FAST(AActor, ReplicatedMovement, COND_None);
+}
+
+void ATerminusBattler::OnRep_ReplicatedMovement()
+{
+	Super::OnRep_ReplicatedMovement();
+
+	// 엔진은 SimulatedProxy(남의 폰)에만 위치를 적용함. 자기 폰(AutonomousProxy)도 서버 위치를 따르게.
+	// PostNetReceiveLocationAndRotation 은 못 씀 - APawn 이 덮어쓴 버전도 SimulatedProxy 만 옮김 (Pawn.cpp)
+	if (GetLocalRole() != ROLE_AutonomousProxy || !IsReplicatingMovement())
+	{
+		return;
+	}
+
+	if (!GetRootComponent() || GetRootComponent()->GetAttachParent())
+	{
+		return;
+	}
+
+	const FRepMovement& Rep = GetReplicatedMovement();
+	const FVector NewLocation = FRepMovement::RebaseOntoLocalOrigin(Rep.Location, this);
+
+	if (NewLocation.Equals(GetActorLocation()) && Rep.Rotation.Equals(GetActorRotation()))
+	{
+		return;
+	}
+
+	SetActorLocationAndRotation(NewLocation, Rep.Rotation, false, nullptr, ETeleportType::TeleportPhysics);
+
+	UE_LOG(LogTemp, Log, TEXT("[Battler] %s 자기 폰에 서버 위치 적용 -> %s"), *GetName(), *NewLocation.ToCompactString());
 }
 
 void ATerminusBattler::OnRep_PlayerState()

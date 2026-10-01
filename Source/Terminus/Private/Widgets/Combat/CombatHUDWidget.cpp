@@ -1,0 +1,635 @@
+#include "Widgets/Combat/CombatHUDWidget.h"
+
+#include "Blueprint/WidgetLayoutLibrary.h"
+#include "Blueprint/WidgetTree.h"
+#include "Character/TerminusBattler.h"
+#include "Character/TerminusMonster.h"
+#include "Combat/CombatStatsComponent.h"
+#include "Components/Border.h"
+#include "Components/Button.h"
+#include "Components/CanvasPanel.h"
+#include "Components/CanvasPanelSlot.h"
+#include "Components/HorizontalBox.h"
+#include "Components/HorizontalBoxSlot.h"
+#include "Components/ProgressBar.h"
+#include "Components/TextBlock.h"
+#include "Components/VerticalBox.h"
+#include "Components/VerticalBoxSlot.h"
+#include "Data/TerminusDataSettings.h"
+#include "Dungeon/DungeonArea.h"
+#include "Dungeon/DungeonCombatComponent.h"
+#include "Player/TerminusPlayerController.h"
+#include "Player/TerminusPlayerState.h"
+
+namespace
+{
+	const FLinearColor PanelColor(0.f, 0.f, 0.f, 0.55f);
+	const FLinearColor EnergyColor(0.25f, 0.6f, 1.f);
+	const FLinearColor SkillEnergyColor(0.65f, 0.4f, 1.f);
+	const FLinearColor PlayerHealthColor(0.3f, 0.85f, 0.35f);   // 시안: 아군은 초록
+	const FLinearColor MonsterHealthColor(0.9f, 0.25f, 0.2f);   // 시안: 적은 빨강
+
+	UTextBlock* MakeText(UWidgetTree* Tree, const FString& Initial, int32 Size, const FLinearColor& Color = FLinearColor::White)
+	{
+		UTextBlock* Text = Tree->ConstructWidget<UTextBlock>();
+		Text->SetText(FText::FromString(Initial));
+		FSlateFontInfo Font = Text->GetFont();
+		Font.Size = Size;
+		Text->SetFont(Font);
+		Text->SetColorAndOpacity(FSlateColor(Color));
+		Text->SetShadowOffset(FVector2D(1.f, 1.f));
+		Text->SetShadowColorAndOpacity(FLinearColor(0.f, 0.f, 0.f, 0.85f));
+		return Text;
+	}
+
+	UBorder* MakePanel(UWidgetTree* Tree, UWidget* Content, const FMargin& Padding = FMargin(12.f, 8.f))
+	{
+		UBorder* Border = Tree->ConstructWidget<UBorder>();
+		Border->SetBrushColor(PanelColor);
+		Border->SetPadding(Padding);
+		Border->SetContent(Content);
+		return Border;
+	}
+
+	// 캔버스에 붙이고 앵커 / 정렬 지정. 크기는 내용에 맞춤
+	UCanvasPanelSlot* AddToCanvas(UCanvasPanel* Canvas, UWidget* Widget, const FAnchors& Anchors, const FVector2D& Alignment, const FVector2D& Position)
+	{
+		UCanvasPanelSlot* Slot = Canvas->AddChildToCanvas(Widget);
+		Slot->SetAnchors(Anchors);
+		Slot->SetAlignment(Alignment);
+		Slot->SetPosition(Position);
+		Slot->SetAutoSize(true);
+		return Slot;
+	}
+
+	FString IntentLabel(const FMonsterIntent& Intent)
+	{
+		// TODO: 기획은 아이콘. 아이콘 에셋이 생기면 이미지로
+		switch (Intent.Kind)
+		{
+		case EMonsterIntentKind::Attack:
+			return Intent.HitCount > 1
+				? FString::Printf(TEXT("공격 %dx%d"), Intent.Amount, Intent.HitCount)
+				: FString::Printf(TEXT("공격 %d"), Intent.Amount);
+		case EMonsterIntentKind::Defend: return TEXT("방어");
+		case EMonsterIntentKind::Buff:   return TEXT("버프");
+		default:                          return TEXT("디버프");
+		}
+	}
+
+	FString TargetLabel(ETargetType Type)
+	{
+		switch (Type)
+		{
+		case ETargetType::SingleEnemy: return TEXT("적 1명");
+		case ETargetType::AllEnemies:  return TEXT("적 전체");
+		case ETargetType::SingleAlly:  return TEXT("아군 1명");
+		case ETargetType::AllAllies:   return TEXT("아군 전체");
+		default:                       return TEXT("자신");
+		}
+	}
+}
+
+// =====================================================================
+// 초기화 / 배치
+// =====================================================================
+
+void UCombatHUDWidget::NativeOnInitialized()
+{
+	Super::NativeOnInitialized();
+
+	// WBP 없이 C++ 클래스로 만들었거나, WBP 에 필요한 위젯이 없으면 기본 배치
+	if (!WidgetTree->RootWidget || !TagLayer)
+	{
+		BuildDefaultLayout();
+	}
+
+	// NativeConstruct 는 여러 번 불릴 수 있어서 버튼 바인딩은 여기서 한 번만 (주점 / 메인 메뉴와 같은 규칙)
+	if (SkillButton0) SkillButton0->OnClicked.AddDynamic(this, &UCombatHUDWidget::HandleSkill0Clicked);
+	if (SkillButton1) SkillButton1->OnClicked.AddDynamic(this, &UCombatHUDWidget::HandleSkill1Clicked);
+	if (SkillButton2) SkillButton2->OnClicked.AddDynamic(this, &UCombatHUDWidget::HandleSkill2Clicked);
+	if (EndTurnButton) EndTurnButton->OnClicked.AddDynamic(this, &UCombatHUDWidget::HandleEndTurnClicked);
+
+	SetVisibility(ESlateVisibility::Collapsed);
+}
+
+void UCombatHUDWidget::BuildDefaultLayout()
+{
+	UCanvasPanel* Root = WidgetTree->ConstructWidget<UCanvasPanel>(UCanvasPanel::StaticClass(), TEXT("CombatRoot"));
+	WidgetTree->RootWidget = Root;
+
+	// 따라다니는 표시들 (전체 화면, 맨 뒤)
+	TagLayer = WidgetTree->ConstructWidget<UCanvasPanel>(UCanvasPanel::StaticClass(), TEXT("TagLayer"));
+	if (UCanvasPanelSlot* CanvasSlot = Root->AddChildToCanvas(TagLayer))
+	{
+		CanvasSlot->SetAnchors(FAnchors(0.f, 0.f, 1.f, 1.f));
+		CanvasSlot->SetOffsets(FMargin(0.f));
+	}
+
+	// ---- 위: 방 / 턴 안내
+	RoomText = MakeText(WidgetTree, TEXT(""), 20);
+	AddToCanvas(Root, MakePanel(WidgetTree, RoomText), FAnchors(0.f, 0.f), FVector2D(0.f, 0.f), FVector2D(24.f, 20.f));
+
+	PhaseText = MakeText(WidgetTree, TEXT(""), 26);
+	AddToCanvas(Root, MakePanel(WidgetTree, PhaseText, FMargin(20.f, 8.f)), FAnchors(0.5f, 0.f), FVector2D(0.5f, 0.f), FVector2D(0.f, 20.f));
+
+	HintText = MakeText(WidgetTree, TEXT(""), 20, FLinearColor(1.f, 0.9f, 0.4f));
+	AddToCanvas(Root, HintText, FAnchors(0.5f, 1.f), FVector2D(0.5f, 1.f), FVector2D(0.f, -200.f));
+
+	// ---- 왼쪽 아래: 에너지 + 기본 스킬 3개 / 강화 에너지
+	UVerticalBox* LeftBox = WidgetTree->ConstructWidget<UVerticalBox>();
+
+	UHorizontalBox* SkillRow = WidgetTree->ConstructWidget<UHorizontalBox>();
+	EnergyText = MakeText(WidgetTree, TEXT("에너지 0/0"), 22, EnergyColor);
+	if (UHorizontalBoxSlot* S = SkillRow->AddChildToHorizontalBox(EnergyText))
+	{
+		S->SetVerticalAlignment(VAlign_Center);
+		S->SetPadding(FMargin(0.f, 0.f, 16.f, 0.f));
+	}
+
+	auto MakeSkillButton = [&](TObjectPtr<UButton>& OutButton, TObjectPtr<UTextBlock>& OutLabel)
+	{
+		OutButton = WidgetTree->ConstructWidget<UButton>();
+		OutLabel = MakeText(WidgetTree, TEXT("-"), 16);
+		OutLabel->SetJustification(ETextJustify::Center);
+		OutButton->SetContent(OutLabel);
+		if (UHorizontalBoxSlot* S = SkillRow->AddChildToHorizontalBox(OutButton))
+		{
+			S->SetPadding(FMargin(4.f, 0.f));
+		}
+	};
+	MakeSkillButton(SkillButton0, SkillLabel0);
+	MakeSkillButton(SkillButton1, SkillLabel1);
+	MakeSkillButton(SkillButton2, SkillLabel2);
+
+	LeftBox->AddChildToVerticalBox(SkillRow);
+
+	SkillEnergyText = MakeText(WidgetTree, TEXT("강화 에너지 0/0  (강화 스킬: 준비 중)"), 18, SkillEnergyColor);
+	if (UVerticalBoxSlot* S = LeftBox->AddChildToVerticalBox(SkillEnergyText))
+	{
+		S->SetPadding(FMargin(0.f, 8.f, 0.f, 0.f));
+	}
+
+	AddToCanvas(Root, MakePanel(WidgetTree, LeftBox), FAnchors(0.f, 1.f), FVector2D(0.f, 1.f), FVector2D(24.f, -24.f));
+
+	// ---- 오른쪽 아래: 턴 종료 + 상태
+	UVerticalBox* RightBox = WidgetTree->ConstructWidget<UVerticalBox>();
+
+	EndTurnButton = WidgetTree->ConstructWidget<UButton>();
+	EndTurnButton->SetContent(MakeText(WidgetTree, TEXT("턴 종료"), 22));
+	if (UVerticalBoxSlot* S = RightBox->AddChildToVerticalBox(EndTurnButton))
+	{
+		S->SetHorizontalAlignment(HAlign_Right);
+	}
+
+	StatusText = MakeText(WidgetTree, TEXT(""), 18);
+	if (UVerticalBoxSlot* S = RightBox->AddChildToVerticalBox(StatusText))
+	{
+		S->SetPadding(FMargin(0.f, 8.f, 0.f, 0.f));
+		S->SetHorizontalAlignment(HAlign_Right);
+	}
+
+	AddToCanvas(Root, MakePanel(WidgetTree, RightBox), FAnchors(1.f, 1.f), FVector2D(1.f, 1.f), FVector2D(-24.f, -24.f));
+}
+
+// =====================================================================
+// 구역 / 표시
+// =====================================================================
+
+void UCombatHUDWidget::SetArea(ADungeonArea* InArea)
+{
+	Area = InArea;
+	CancelTargeting();
+	RebuildTags();
+
+	// 구역에 있는 동안 전투 진행 여부를 계속 보고 켜고 끔 (전투 방이 아니면 안 보임)
+	if (UWorld* World = GetWorld())
+	{
+		if (InArea)
+		{
+			World->GetTimerManager().SetTimer(VisibilityTimer, this, &UCombatHUDWidget::UpdateVisibility, 0.1f, true, 0.f);
+		}
+		else
+		{
+			World->GetTimerManager().ClearTimer(VisibilityTimer);
+		}
+	}
+
+	UpdateVisibility();
+}
+
+void UCombatHUDWidget::UpdateVisibility()
+{
+	ADungeonArea* CurrentArea = Area.Get();
+	const UDungeonCombatComponent* Combat = CurrentArea ? CurrentArea->GetCombat() : nullptr;
+	const bool bShow = Combat && Combat->IsInCombat();
+
+	// 평소엔 바탕이 클릭을 안 받게(버튼만 받음). 대상 고르는 중에만 바탕도 받아서 우클릭 취소가 오게
+	const ESlateVisibility Wanted = !bShow ? ESlateVisibility::Collapsed
+		: (PendingSkillIndex != INDEX_NONE ? ESlateVisibility::Visible : ESlateVisibility::SelfHitTestInvisible);
+
+	if (GetVisibility() != Wanted)
+	{
+		SetVisibility(Wanted);
+	}
+}
+
+void UCombatHUDWidget::NativeDestruct()
+{
+	if (UWorld* World = GetWorld())
+	{
+		World->GetTimerManager().ClearTimer(VisibilityTimer);
+	}
+
+	Super::NativeDestruct();
+}
+
+void UCombatHUDWidget::RebuildTags()
+{
+	// 내가 만든 표시만 지움. TagLayer 를 통째로 비우면(ClearChildren) WBP 에서 TagLayer 안에 배치한
+	// 방 이름 / 스킬 / 에너지 / 턴 종료 같은 위젯까지 사라짐 (TagLayer 를 루트로 쓰는 경우)
+	for (const FBattlerTag& Tag : Tags)
+	{
+		if (UTextBlock* Intent = Tag.IntentText.Get())   Intent->RemoveFromParent();
+		if (UVerticalBox* Box = Tag.HealthBox.Get())       Box->RemoveFromParent();
+		if (UButton* Target = Tag.TargetButton.Get())      Target->RemoveFromParent();
+	}
+	Tags.Reset();
+	TaggedBattlers.Reset();
+
+	ADungeonArea* CurrentArea = Area.Get();
+	UDungeonCombatComponent* Combat = CurrentArea ? CurrentArea->GetCombat() : nullptr;
+	if (!TagLayer || !Combat) return;
+
+	auto AddTag = [&](ATerminusBattler* Battler, bool bMonster, int32 Index)
+	{
+		if (!Battler) return;
+
+		FBattlerTag Tag;
+		Tag.Battler = Battler;
+		Tag.bMonster = bMonster;
+		Tag.Index = Index;
+
+		// 머리 위 행동 예고 (몬스터만)
+		if (bMonster)
+		{
+			UTextBlock* Intent = MakeText(WidgetTree, TEXT(""), 20, FLinearColor(1.f, 0.85f, 0.4f));
+			UCanvasPanelSlot* CanvasSlot = TagLayer->AddChildToCanvas(Intent);
+			CanvasSlot->SetAutoSize(true);
+			CanvasSlot->SetAlignment(FVector2D(0.5f, 1.f));
+			Tag.IntentText = Intent;
+		}
+
+		// 발밑 체력바 + 숫자
+		UVerticalBox* Box = WidgetTree->ConstructWidget<UVerticalBox>();
+		UProgressBar* Bar = WidgetTree->ConstructWidget<UProgressBar>();
+		Bar->SetFillColorAndOpacity(bMonster ? MonsterHealthColor : PlayerHealthColor);
+		if (UVerticalBoxSlot* S = Box->AddChildToVerticalBox(Bar))
+		{
+			S->SetHorizontalAlignment(HAlign_Fill);
+		}
+		UTextBlock* HpText = MakeText(WidgetTree, TEXT(""), 14);
+		HpText->SetJustification(ETextJustify::Center);
+		if (UVerticalBoxSlot* S = Box->AddChildToVerticalBox(HpText))
+		{
+			S->SetHorizontalAlignment(HAlign_Center);
+		}
+		UCanvasPanelSlot* BoxSlot = TagLayer->AddChildToCanvas(Box);
+		BoxSlot->SetAutoSize(false);
+		BoxSlot->SetSize(FVector2D(90.f, 34.f));
+		BoxSlot->SetAlignment(FVector2D(0.5f, 0.f));
+		Tag.HealthBox = Box;
+		Tag.HealthBar = Bar;
+		Tag.HealthText = HpText;
+
+		// 대상 선택 버튼 (대상 고르는 중일 때만 보임)
+		UButton* Target = WidgetTree->ConstructWidget<UButton>();
+		Target->SetBackgroundColor(FLinearColor(1.f, 0.85f, 0.3f, 0.35f));
+		Target->SetContent(MakeText(WidgetTree, TEXT("선택"), 16));
+		Target->OnClicked.AddDynamic(this, &UCombatHUDWidget::HandleTargetClicked);
+		UCanvasPanelSlot* TargetSlot = TagLayer->AddChildToCanvas(Target);
+		TargetSlot->SetAutoSize(false);
+		TargetSlot->SetSize(TargetButtonSize);
+		TargetSlot->SetAlignment(FVector2D(0.5f, 0.5f));
+		Target->SetVisibility(ESlateVisibility::Collapsed);
+		Tag.TargetButton = Target;
+
+		Tags.Add(Tag);
+		TaggedBattlers.Add(Battler);
+	};
+
+	const TArray<TObjectPtr<ATerminusMonster>>& Monsters = Combat->GetMonsters();
+	for (int32 i = 0; i < Monsters.Num(); ++i)
+	{
+		AddTag(Monsters[i], true, i);
+	}
+
+	const TArray<TObjectPtr<ATerminusPlayerState>>& Occupants = CurrentArea->GetOccupants();
+	for (int32 i = 0; i < Occupants.Num(); ++i)
+	{
+		AddTag(Occupants[i] ? Cast<ATerminusBattler>(Occupants[i]->GetPawn()) : nullptr, false, i);
+	}
+}
+
+void UCombatHUDWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
+{
+	Super::NativeTick(MyGeometry, InDeltaTime);
+
+	ADungeonArea* CurrentArea = Area.Get();
+	UDungeonCombatComponent* Combat = CurrentArea ? CurrentArea->GetCombat() : nullptr;
+
+	// 보이기 / 숨기기는 UpdateVisibility(타이머) 담당. 여긴 보이는 동안의 갱신만
+	if (!Combat || !Combat->IsInCombat()) return;
+
+	// 몬스터 / 플레이어 구성이 바뀌었으면(복제 도착, 새 방) 표시 다시 만들기
+	TArray<TWeakObjectPtr<ATerminusBattler>> Current;
+	for (ATerminusMonster* Monster : Combat->GetMonsters()) Current.Add(Monster);
+	for (ATerminusPlayerState* PS : CurrentArea->GetOccupants()) Current.Add(PS ? Cast<ATerminusBattler>(PS->GetPawn()) : nullptr);
+	if (Current != TaggedBattlers)
+	{
+		RebuildTags();
+	}
+
+	// 내 턴이 아니면 대상 고르기 취소
+	if (PendingSkillIndex != INDEX_NONE && Combat->GetPhase() != ECombatPhase::PlayerTurn)
+	{
+		CancelTargeting();
+	}
+
+	UpdateTags();
+	UpdatePanels();
+}
+
+void UCombatHUDWidget::UpdateTags()
+{
+	APlayerController* PC = GetOwningPlayer();
+	ADungeonArea* CurrentArea = Area.Get();
+	UDungeonCombatComponent* Combat = CurrentArea ? CurrentArea->GetCombat() : nullptr;
+	if (!PC || !Combat) return;
+
+	// 대상 고르는 중이면 어느 편을 고르는지
+	bool bPickEnemy = false;
+	bool bPickAlly = false;
+	if (PendingSkillIndex != INDEX_NONE)
+	{
+		const ATerminusPlayerState* LocalPS = PC->GetPlayerState<ATerminusPlayerState>();
+		const TArray<const FSkillRow*> Skills = LocalPS ? UTerminusDataSettings::FindBasicSkills(LocalPS->GetCharacterClass()) : TArray<const FSkillRow*>();
+		if (Skills.IsValidIndex(PendingSkillIndex) && Skills[PendingSkillIndex])
+		{
+			bPickEnemy = Skills[PendingSkillIndex]->TargetType == ETargetType::SingleEnemy;
+			bPickAlly = Skills[PendingSkillIndex]->TargetType == ETargetType::SingleAlly;
+		}
+	}
+
+	for (FBattlerTag& Tag : Tags)
+	{
+		ATerminusBattler* Battler = Tag.Battler.Get();
+		const UCombatStatsComponent* Stats = Battler ? Battler->GetCombatStats() : nullptr;
+		const bool bAlive = Stats && !Stats->IsDead() && !Battler->IsHidden();
+
+		// 캐릭터 발 + Height 높이를 화면 좌표로 바꿔 그 자리에 위젯을 놓음 (DPI 배율까지 반영된 위젯 좌표)
+		auto Place = [&](UWidget* Widget, float Height)
+		{
+			if (!Widget || !Battler) return;
+
+			FVector2D ScreenPos = FVector2D::ZeroVector;
+			UWidgetLayoutLibrary::ProjectWorldLocationToWidgetPosition(
+				PC, Battler->GetActorLocation() + FVector(0.f, 0.f, Height), ScreenPos, false);
+
+			if (UCanvasPanelSlot* CanvasSlot = Cast<UCanvasPanelSlot>(Widget->Slot))
+			{
+				CanvasSlot->SetPosition(ScreenPos);
+			}
+		};
+
+		// 머리 위 행동 예고
+		if (UTextBlock* Intent = Tag.IntentText.Get())
+		{
+			const FMonsterIntent* Found = Tag.bMonster ? Combat->FindIntent(Cast<ATerminusMonster>(Battler)) : nullptr;
+			const bool bVisible = bAlive && Found;
+			Intent->SetVisibility(bVisible ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Collapsed);
+			if (bVisible)
+			{
+				Intent->SetText(FText::FromString(IntentLabel(*Found)));
+				Place(Intent, HeadHeight);
+			}
+		}
+
+		// 발밑 체력
+		if (UVerticalBox* Box = Tag.HealthBox.Get())
+		{
+			Box->SetVisibility(bAlive ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Collapsed);
+			if (bAlive)
+			{
+				const FCombatState& State = Stats->GetCombatState();
+				const int32 MaxHealth = FMath::Max(1, Stats->GetStats().MaxHealth);
+				if (UProgressBar* Bar = Tag.HealthBar.Get())
+				{
+					Bar->SetPercent(static_cast<float>(State.Health) / MaxHealth);
+				}
+				if (UTextBlock* HpText = Tag.HealthText.Get())
+				{
+					FString Label = FString::Printf(TEXT("%d/%d"), State.Health, MaxHealth);
+					if (State.Shield > 0) Label += FString::Printf(TEXT("  +%d"), State.Shield);
+					HpText->SetText(FText::FromString(Label));
+				}
+				Place(Box, -4.f);
+			}
+		}
+
+		// 대상 선택 버튼
+		if (UButton* Target = Tag.TargetButton.Get())
+		{
+			const bool bSelectable = bAlive && ((bPickEnemy && Tag.bMonster) || (bPickAlly && !Tag.bMonster));
+			Target->SetVisibility(bSelectable ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
+			if (bSelectable)
+			{
+				Place(Target, BodyCenterHeight);
+			}
+		}
+	}
+}
+
+void UCombatHUDWidget::UpdatePanels()
+{
+	APlayerController* PC = GetOwningPlayer();
+	ADungeonArea* CurrentArea = Area.Get();
+	UDungeonCombatComponent* Combat = CurrentArea ? CurrentArea->GetCombat() : nullptr;
+	const ATerminusPlayerState* LocalPS = PC ? PC->GetPlayerState<ATerminusPlayerState>() : nullptr;
+	if (!Combat || !LocalPS) return;
+
+	const ATerminusBattler* MyBattler = Cast<ATerminusBattler>(LocalPS->GetPawn());
+	const UCombatStatsComponent* MyStats = MyBattler ? MyBattler->GetCombatStats() : nullptr;
+	const bool bMeAlive = MyStats && !MyStats->IsDead();
+
+	const ECombatPhase Phase = Combat->GetPhase();
+	const bool bMyTurn = Phase == ECombatPhase::PlayerTurn && bMeAlive && !Combat->HasEndedTurn(LocalPS);
+
+	// ---- 위
+	if (RoomText)
+	{
+		// TODO: 층 진행이 생기면 "n층 n번째 방" (기획 시안)
+		RoomText->SetText(FText::FromString(FString::Printf(TEXT("%d번째 방  ·  사이클 %d"),
+			CurrentArea->GetRoom().Row + 1, Combat->GetCycle())));
+	}
+
+	if (PhaseText)
+	{
+		FString Label;
+		switch (Phase)
+		{
+		case ECombatPhase::PlayerTurn:
+			Label = !bMeAlive ? TEXT("쓰러짐") : (bMyTurn ? TEXT("내 턴") : TEXT("다른 플레이어를 기다리는 중"));
+			break;
+		case ECombatPhase::MonsterTurn: Label = TEXT("적의 턴"); break;
+		case ECombatPhase::Victory:     Label = TEXT("승리!"); break;
+		case ECombatPhase::Defeat:      Label = TEXT("패배"); break;
+		default: break;
+		}
+		PhaseText->SetText(FText::FromString(Label));
+	}
+
+	if (HintText)
+	{
+		HintText->SetText(FText::FromString(PendingSkillIndex != INDEX_NONE ? TEXT("대상을 선택하세요  (우클릭: 취소)") : TEXT("")));
+	}
+
+	// ---- 왼쪽 아래: 에너지 + 스킬
+	if (MyStats)
+	{
+		const FCombatState& State = MyStats->GetCombatState();
+		const FCharacterStats& Stats = MyStats->GetStats();
+
+		if (EnergyText)
+		{
+			EnergyText->SetText(FText::FromString(FString::Printf(TEXT("에너지 %d/%d"), State.Energy, Stats.MaxEnergy)));
+		}
+		if (SkillEnergyText)
+		{
+			SkillEnergyText->SetText(FText::FromString(FString::Printf(TEXT("강화 에너지 %d/%d  (강화 스킬: 준비 중)"), State.SkillEnergy, Stats.MaxSkillEnergy)));
+		}
+
+		const TArray<const FSkillRow*> Skills = UTerminusDataSettings::FindBasicSkills(LocalPS->GetCharacterClass());
+		const TObjectPtr<UButton> Buttons[] = { SkillButton0, SkillButton1, SkillButton2 };
+		const TObjectPtr<UTextBlock> Labels[] = { SkillLabel0, SkillLabel1, SkillLabel2 };
+
+		for (int32 i = 0; i < 3; ++i)
+		{
+			const FSkillRow* Skill = Skills.IsValidIndex(i) ? Skills[i] : nullptr;
+
+			if (Labels[i])
+			{
+				Labels[i]->SetText(Skill
+					? FText::FromString(FString::Printf(TEXT("%s\n%s · 에너지 %d"), *Skill->DisplayName_KR.ToString(), *TargetLabel(Skill->TargetType), Skill->EnergyCost))
+					: FText::FromString(TEXT("-")));
+			}
+			if (Buttons[i])
+			{
+				Buttons[i]->SetIsEnabled(Skill && bMyTurn && State.Energy >= Skill->EnergyCost);
+
+				// 대상 고르는 중인 스킬은 강조
+				Buttons[i]->SetBackgroundColor(PendingSkillIndex == i ? FLinearColor(1.f, 0.85f, 0.3f) : FLinearColor::White);
+			}
+		}
+
+		// ---- 오른쪽 아래: 상태. 기획 시안 "체력 [최대/현재] 힘 방어 회피"
+		if (StatusText)
+		{
+			FString Label = FString::Printf(TEXT("체력 [%d/%d]"), Stats.MaxHealth, State.Health);
+			if (State.Shield > 0) Label += FString::Printf(TEXT("  보호막 %d"), State.Shield);
+			Label += FString::Printf(TEXT("   힘 %d  방어 %d  회피 %d"), Stats.Attack, Stats.Defense, Stats.Evasion);
+			StatusText->SetText(FText::FromString(Label));
+		}
+	}
+
+	if (EndTurnButton)
+	{
+		EndTurnButton->SetIsEnabled(bMyTurn);
+	}
+}
+
+// =====================================================================
+// 입력
+// =====================================================================
+
+void UCombatHUDWidget::OnSkillClicked(int32 SkillIndex)
+{
+	ATerminusPlayerController* PC = GetOwningPlayer<ATerminusPlayerController>();
+	const ATerminusPlayerState* LocalPS = PC ? PC->GetPlayerState<ATerminusPlayerState>() : nullptr;
+	if (!PC || !LocalPS) return;
+
+	// 같은 스킬을 다시 누르면 취소
+	if (PendingSkillIndex == SkillIndex)
+	{
+		CancelTargeting();
+		return;
+	}
+
+	const TArray<const FSkillRow*> Skills = UTerminusDataSettings::FindBasicSkills(LocalPS->GetCharacterClass());
+	if (!Skills.IsValidIndex(SkillIndex) || !Skills[SkillIndex]) return;
+
+	const ETargetType TargetType = Skills[SkillIndex]->TargetType;
+	if (TargetType == ETargetType::SingleEnemy || TargetType == ETargetType::SingleAlly)
+	{
+		// 대상을 골라야 하는 스킬 -> 대상 고르기 모드 (바탕이 우클릭을 받게 바로 전환)
+		PendingSkillIndex = SkillIndex;
+		UpdateVisibility();
+		return;
+	}
+
+	// 대상이 정해져 있는 스킬(자신 / 전체)은 바로 사용
+	CancelTargeting();
+	PC->Server_UseSkill(SkillIndex, INDEX_NONE);
+}
+
+void UCombatHUDWidget::CancelTargeting()
+{
+	if (PendingSkillIndex == INDEX_NONE) return;
+
+	PendingSkillIndex = INDEX_NONE;
+	UpdateVisibility();
+}
+
+void UCombatHUDWidget::HandleSkill0Clicked() { OnSkillClicked(0); }
+void UCombatHUDWidget::HandleSkill1Clicked() { OnSkillClicked(1); }
+void UCombatHUDWidget::HandleSkill2Clicked() { OnSkillClicked(2); }
+
+void UCombatHUDWidget::HandleEndTurnClicked()
+{
+	CancelTargeting();
+
+	if (ATerminusPlayerController* PC = GetOwningPlayer<ATerminusPlayerController>())
+	{
+		PC->Server_EndTurn();
+	}
+}
+
+void UCombatHUDWidget::HandleTargetClicked()
+{
+	ATerminusPlayerController* PC = GetOwningPlayer<ATerminusPlayerController>();
+	if (!PC || PendingSkillIndex == INDEX_NONE) return;
+
+	// 버튼 클릭 이벤트엔 누가 눌렸는지가 안 와서, 지금 마우스가 올라가 있는 대상 버튼으로 찾음
+	for (const FBattlerTag& Tag : Tags)
+	{
+		const UButton* Target = Tag.TargetButton.Get();
+		if (Target && Target->IsVisible() && Target->IsHovered())
+		{
+			PC->Server_UseSkill(PendingSkillIndex, Tag.Index);
+			CancelTargeting();
+			return;
+		}
+	}
+}
+
+FReply UCombatHUDWidget::NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)
+{
+	// 우클릭 = 대상 고르기 취소
+	if (InMouseEvent.GetEffectingButton() == EKeys::RightMouseButton && PendingSkillIndex != INDEX_NONE)
+	{
+		CancelTargeting();
+		return FReply::Handled();
+	}
+
+	return Super::NativeOnMouseButtonDown(InGeometry, InMouseEvent);
+}

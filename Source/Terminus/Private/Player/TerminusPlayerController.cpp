@@ -11,6 +11,8 @@
 #include "Kismet/GameplayStatics.h"
 #include "Map/MapManager.h"
 #include "Dungeon/DungeonArea.h"
+#include "Dungeon/DungeonCombatComponent.h"
+#include "Widgets/Combat/CombatHUDWidget.h"
 #include "EngineUtils.h"
 
 
@@ -155,7 +157,61 @@ void ATerminusPlayerController::ViewDungeonArea(ADungeonArea* Area)
 		SetViewTarget(Fixed);
 	}
 
+	// 전투 HUD: 구역에 들어가면 그 구역을 넘김. 전투 방일 때만 HUD 가 스스로 보임
+	if (Area && !CombatHUD)
+	{
+		TSubclassOf<UCombatHUDWidget> HUDClass = CombatHUDClass ? CombatHUDClass : TSubclassOf<UCombatHUDWidget>(UCombatHUDWidget::StaticClass());
+		CombatHUD = CreateWidget<UCombatHUDWidget>(this, HUDClass);
+		if (CombatHUD)
+		{
+			CombatHUD->AddToViewport(10);   // 지도 위젯보다 위
+		}
+	}
+	if (CombatHUD)
+	{
+		CombatHUD->SetArea(Area);
+	}
+
 	OnViewAreaChanged.Broadcast(Area);
+}
+
+void ATerminusPlayerController::Server_UseSkill_Implementation(int32 SkillIndex, int32 TargetIndex)
+{
+	ATerminusPlayerState* PS = GetPlayerState<ATerminusPlayerState>();
+	ADungeonArea* Area = PS ? PS->GetCurrentArea() : nullptr;
+	if (UDungeonCombatComponent* Combat = Area ? Area->GetCombat() : nullptr)
+	{
+		Combat->HandleUseSkill(PS, SkillIndex, TargetIndex);
+	}
+}
+
+void ATerminusPlayerController::Server_EndTurn_Implementation()
+{
+	ATerminusPlayerState* PS = GetPlayerState<ATerminusPlayerState>();
+	ADungeonArea* Area = PS ? PS->GetCurrentArea() : nullptr;
+	if (UDungeonCombatComponent* Combat = Area ? Area->GetCombat() : nullptr)
+	{
+		Combat->HandleEndTurn(PS);
+	}
+}
+
+void ATerminusPlayerController::DebugWinCombat()
+{
+	Server_DebugWinCombat();
+}
+
+void ATerminusPlayerController::Server_DebugWinCombat_Implementation()
+{
+	const ATerminusPlayerState* PS = GetPlayerState<ATerminusPlayerState>();
+	ADungeonArea* Area = PS ? PS->GetCurrentArea() : nullptr;
+	UDungeonCombatComponent* Combat = Area ? Area->GetCombat() : nullptr;
+	if (!Combat || !Combat->IsInCombat())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Debug] 전투 중이 아님"));
+		return;
+	}
+
+	Combat->DebugKillAllMonsters();
 }
 
 void ATerminusPlayerController::DebugClearArea(bool bAll)

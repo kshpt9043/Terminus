@@ -49,7 +49,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Room")
 	void SetupRoomNode(const FRoomNode& InRoomData, const TMap<ERoomType, UTexture2D*>& IconMap);
 	
-	// 버튼 활성화 / 비활성화 (이동 불가능한 방은 어둡게 비활성화)
+	// 누를 수 있는 방인가. 못 누르는 방도 똑같이 보이고, 호버 효과 / 클릭만 막힘
 	void SetRoomSelectable(bool bSelectable);
 
 	// 모든 PlayerState 수신하여 UI 선택 상태 갱신

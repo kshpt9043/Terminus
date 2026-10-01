@@ -6,6 +6,7 @@
 #include "Player/TerminusPlayerController.h"
 #include "Game/TerminusRunSubsystem.h"
 #include "Dungeon/DungeonAreaSubsystem.h"
+#include "Dungeon/DungeonThemeData.h"
 #include "GameFramework/GameStateBase.h"
 #include "Engine/GameInstance.h"
 #include "Net/UnrealNetwork.h"
@@ -206,7 +207,9 @@ TArray<FRoomNode> AMapManager::GenerateMap()
         }
 
         // ==========================================
-        // [Pass 1] TotalLevels(Row 0 ~ LastRowIndex) 방 생성
+        // [Pass 1] TotalLevels(Row 0 ~ LastRowIndex) 방 자리 생성
+        //  타입은 여기서 정하지 않음 -> Pass 1.5 에서 지도 전체를 보고 고르게 나눔
+        //  (방마다 따로 뽑으면 한쪽에 몰리거나 상점이 0개인 지도가 나옴)
         // ==========================================
         for (int32 Row = 0; Row < ValidTotalLevels; ++Row)
         {
@@ -227,23 +230,23 @@ TArray<FRoomNode> AMapManager::GenerateMap()
             // 3. [1개 방 레벨로 당첨된 레벨들]
             if (ChosenSingleRoomRows.Contains(Row))
             {
-                int32 RandomCol = FMath::RandRange(0, ValidMaxRooms - 1);
-                ERoomType RoomType = GetWeightedRandomRoomType();
+                // 가운데 열에. 위아래 줄의 방이 전부 이 방으로 모이는데, 끝 열에 있으면
+                // 반대쪽 끝에서 지도를 가로지르는 긴 선이 생김 (지도에서도 가운데에 그려짐)
+                const int32 MiddleCol = FMath::RandRange((ValidMaxRooms - 1) / 2, ValidMaxRooms / 2);
 
-                // 이 층엔 방이 하나뿐이라 파티 전원이 여길 지나가야 함 -> 정원 = 전체 인원
-                Map.Add(CreateRoom(GlobalRoomId++, Row, RandomCol, RoomType, CurrentPlayerCount));
+                // 타입 / 정원은 Pass 1.5 에서
+                Map.Add(CreateRoom(GlobalRoomId++, Row, MiddleCol));
                 continue;
             }
 
             // 4. [나머지 일반 레벨 (2레벨 포함): 최소 2개 이상 방 생성 보장]
+            // 2레벨(Row 1)은 몬스터방 고정. 나머지 타입 / 정원은 Pass 1.5 에서
             TArray<FRoomNode> RowRooms;
             for (int32 Col = 0; Col < ValidMaxRooms; ++Col)
             {
                 if (FMath::RandRange(0.0f, 1.0f) > 0.6f)
                 {
-                    ERoomType RoomType = (Row == 1) ? ERoomType::MONSTER : GetWeightedRandomRoomType();
-
-                    RowRooms.Add(CreateRoom(GlobalRoomId++, Row, Col, RoomType, GetRoomCapacity(RoomType)));
+                    RowRooms.Add(CreateRoom(GlobalRoomId++, Row, Col));
                 }
             }
 
@@ -258,9 +261,7 @@ TArray<FRoomNode> AMapManager::GenerateMap()
 
                 if (!bAlreadyExists)
                 {
-                    ERoomType RoomType = (Row == 1) ? ERoomType::MONSTER : GetWeightedRandomRoomType();
-
-                    RowRooms.Add(CreateRoom(GlobalRoomId++, Row, RandomCol, RoomType, GetRoomCapacity(RoomType)));
+                    RowRooms.Add(CreateRoom(GlobalRoomId++, Row, RandomCol));
                 }
             }
 
@@ -268,7 +269,10 @@ TArray<FRoomNode> AMapManager::GenerateMap()
         }
 
         // ==========================================
-        // [Pass 2] 레벨 간 연결(Edge) 구축
+        // [Pass 2] 레벨 간 연결(Edge) 구축. 선끼리 교차하지 않게
+        //  (예전 방식은 열 차이 1 이하를 전부 이어서 4장 중 3장꼴로 선이 엇갈렸음)
+        //  타입보다 먼저: 방 배치 규칙이 경로(앞뒤 방 / 갈림길)를 보고 정해지기 때문 (Slay the Spire 도 이 순서)
+        //  연결은 열 위치만 보므로 타입 없이 만들 수 있음
         // ==========================================
         for (int32 Row = 0; Row < LastRowIndex; ++Row)
         {
@@ -281,67 +285,38 @@ TArray<FRoomNode> AMapManager::GenerateMap()
                 else if (Map[i].Row == Row + 1) NextRowIndices.Add(i);
             }
 
-            // 정방향 연결
-            for (int32 CurrIdx : CurrentRowIndices)
+            ConnectRowsWithoutCrossing(Map, CurrentRowIndices, NextRowIndices);
+        }
+
+        // ==========================================
+        // [Pass 2.5] 방 타입 / 정원
+        // ==========================================
+        // 보스 직전 레벨은 전부 휴식터 (기획: UI 레퍼런스 "보스방 직전 방들은 휴식터"). 비율 배분에는 안 셈
+        // 배분보다 먼저 정해야 함 -> 배분이 경로 규칙을 검사할 때 이 줄도 보게
+        const int32 RestRow = LastRowIndex - 1;
+        const bool bHasRestRow = RestRow >= 2;   // 2레벨(Row 1)은 몬스터 고정이라 그보다 짧은 지도면 생략
+
+        if (bHasRestRow)
+        {
+            for (FRoomNode& Node : Map)
             {
-                bool bConnected = false;
-                for (int32 NextIdx : NextRowIndices)
-                {
-                    if (FMath::Abs(Map[CurrIdx].Col - Map[NextIdx].Col) <= 1)
-                    {
-                        Map[CurrIdx].ConnectedRoomIds.AddUnique(Map[NextIdx].RoomId);
-                        bConnected = true;
-                    }
-                }
-
-                if (!bConnected && NextRowIndices.Num() > 0)
-                {
-                    int32 ClosestNextIdx = NextRowIndices[0];
-                    int32 MinColDist = FMath::Abs(Map[CurrIdx].Col - Map[ClosestNextIdx].Col);
-
-                    for (int32 NextIdx : NextRowIndices)
-                    {
-                        int32 Dist = FMath::Abs(Map[CurrIdx].Col - Map[NextIdx].Col);
-                        if (Dist < MinColDist)
-                        {
-                            MinColDist = Dist;
-                            ClosestNextIdx = NextIdx;
-                        }
-                    }
-                    Map[CurrIdx].ConnectedRoomIds.AddUnique(Map[ClosestNextIdx].RoomId);
-                }
+                if (Node.Row == RestRow) Node.Type = ERoomType::BREAK;
             }
+        }
 
-            // 역방향 (고립 방 방지) 연결
-            for (int32 NextIdx : NextRowIndices)
-            {
-                bool bIsTargeted = false;
-                for (int32 CurrIdx : CurrentRowIndices)
-                {
-                    if (Map[CurrIdx].ConnectedRoomIds.Contains(Map[NextIdx].RoomId))
-                    {
-                        bIsTargeted = true;
-                        break;
-                    }
-                }
+        // 3레벨(Row 2) ~ 휴식터 줄 앞까지 비율대로 고르게 배분. 퀘스트 / 2레벨 몬스터 / 휴식터 줄 / 보스는 고정
+        // 휴식터 줄 바로 앞 줄에는 휴식터 금지 (Slay the Spire 14층 규칙과 같음)
+        DistributeRoomTypes(Map, 2, bHasRestRow ? RestRow - 1 : LastRowIndex - 1, bHasRestRow ? RestRow - 1 : INDEX_NONE);
 
-                if (!bIsTargeted && CurrentRowIndices.Num() > 0)
-                {
-                    int32 ClosestCurrIdx = CurrentRowIndices[0];
-                    int32 MinColDist = FMath::Abs(Map[NextIdx].Col - Map[ClosestCurrIdx].Col);
+        for (FRoomNode& Node : Map)
+        {
+            // 퀘스트 / 보스는 생성할 때 전원 수용으로 이미 정함
+            if (Node.Row == 0 || Node.Row == LastRowIndex) continue;
 
-                    for (int32 CurrIdx : CurrentRowIndices)
-                    {
-                        int32 Dist = FMath::Abs(Map[NextIdx].Col - Map[CurrIdx].Col);
-                        if (Dist < MinColDist)
-                        {
-                            MinColDist = Dist;
-                            ClosestCurrIdx = CurrIdx;
-                        }
-                    }
-                    Map[ClosestCurrIdx].ConnectedRoomIds.AddUnique(Map[NextIdx].RoomId);
-                }
-            }
+            // 방이 하나뿐인 층은 파티 전원이 여길 지나가야 함 -> 정원 = 전체 인원
+            Node.MaxPlayers = ChosenSingleRoomRows.Contains(Node.Row)
+                ? CurrentPlayerCount
+                : GetRoomCapacity(Node.Type);
         }
 
         // ==========================================
@@ -379,29 +354,415 @@ FRoomNode AMapManager::CreateRoom(int32 RoomId, int32 Row, int32 Col, ERoomType 
     return Room;
 }
 
-ERoomType AMapManager::GetWeightedRandomRoomType()
+void AMapManager::ConnectRowsWithoutCrossing(TArray<FRoomNode>& Map, TArray<int32> Lower, TArray<int32> Upper)
 {
-    float TotalWeight = 0.0f;
-    for (const auto& Pair : RoomTypeWeights)
+    if (Lower.Num() == 0 || Upper.Num() == 0) return;
+
+    // 두 줄을 열 순서로. 선 A(아래 a1 -> 위 b1), B(a2 -> b2) 는 a1 < a2 인데 b1 > b2 일 때만 교차한다
+    auto ByCol = [&Map](int32 A, int32 B) { return Map[A].Col < Map[B].Col; };
+    Lower.Sort(ByCol);
+    Upper.Sort(ByCol);
+
+    // ------------------------------------------------------------------
+    // 1. 계단식 연결: 양쪽 맨 왼쪽에서 출발해 "아래만 다음 / 위만 다음 / 둘 다 다음" 중
+    //    열 거리가 가까운 쪽으로 한 칸씩 나아가며 잇는다. 양쪽 맨 오른쪽에 닿으면 끝
+    //    -> 순서가 뒤집히는 일이 없으니 교차가 없고, 모든 방이 위아래로 최소 하나씩 연결됨
+    // ------------------------------------------------------------------
+    constexpr float StepRandomness = 0.6f;   // 열 거리가 비슷한 후보 사이에서 매번 같은 모양이 안 나오게
+
+    int32 i = 0, j = 0;
+    const int32 LastI = Lower.Num() - 1;
+    const int32 LastJ = Upper.Num() - 1;
+
+    while (true)
     {
-        TotalWeight += Pair.Value;
+        Map[Lower[i]].ConnectedRoomIds.AddUnique(Map[Upper[j]].RoomId);
+        if (i == LastI && j == LastJ) break;
+
+        int32 BestI = i, BestJ = j;
+        float BestScore = TNumericLimits<float>::Max();
+
+        auto Consider = [&](int32 NI, int32 NJ)
+        {
+            const float Score = FMath::Abs(Map[Lower[NI]].Col - Map[Upper[NJ]].Col) + FMath::FRandRange(0.f, StepRandomness);
+            if (Score < BestScore)
+            {
+                BestScore = Score;
+                BestI = NI;
+                BestJ = NJ;
+            }
+        };
+
+        if (i < LastI) Consider(i + 1, j);
+        if (j < LastJ) Consider(i, j + 1);
+        if (i < LastI && j < LastJ) Consider(i + 1, j + 1);
+
+        i = BestI;
+        j = BestJ;
     }
 
-    if (TotalWeight <= 0.0f) return ERoomType::MONSTER;
-
-    float RandomValue = FMath::RandRange(0.0f, TotalWeight);
-    float AccumulatedWeight = 0.0f;
-
-    for (const auto& Pair : RoomTypeWeights)
+    // ------------------------------------------------------------------
+    // 2. 갈림길 보강: 열 차이 1 이하인 방끼리, 기존 선과 교차하지 않으면 전부 추가 (순서는 랜덤)
+    //    계단식만 쓰면 갈림길이 29% 로 줄고 정원 조건 맞추기도 어려워짐 (시뮬레이션: 추가 후 39%)
+    // ------------------------------------------------------------------
+    TArray<TPair<int32, int32>> Candidates;
+    for (int32 A : Lower)
     {
-        AccumulatedWeight += Pair.Value;
-        if (RandomValue <= AccumulatedWeight)
+        for (int32 B : Upper)
         {
-            return Pair.Key;
+            if (FMath::Abs(Map[A].Col - Map[B].Col) <= 1 && !Map[A].ConnectedRoomIds.Contains(Map[B].RoomId))
+            {
+                Candidates.Add({ A, B });
+            }
         }
     }
 
-    return ERoomType::MONSTER;
+    for (int32 k = Candidates.Num() - 1; k > 0; --k)
+    {
+        Candidates.Swap(k, FMath::RandRange(0, k));
+    }
+
+    for (const TPair<int32, int32>& Cand : Candidates)
+    {
+        const int32 ACol = Map[Cand.Key].Col;
+        const int32 BCol = Map[Cand.Value].Col;
+
+        bool bCrosses = false;
+        for (int32 Src : Lower)
+        {
+            for (int32 DstId : Map[Src].ConnectedRoomIds)
+            {
+                const int32* DstIdx = Upper.FindByPredicate([&Map, DstId](int32 U) { return Map[U].RoomId == DstId; });
+                if (!DstIdx) continue;
+
+                if ((Map[Src].Col - ACol) * (Map[*DstIdx].Col - BCol) < 0)
+                {
+                    bCrosses = true;
+                    break;
+                }
+            }
+            if (bCrosses) break;
+        }
+
+        if (!bCrosses)
+        {
+            Map[Cand.Key].ConnectedRoomIds.Add(Map[Cand.Value].RoomId);
+        }
+    }
+}
+
+void AMapManager::DistributeRoomTypes(TArray<FRoomNode>& Map, int32 FirstRow, int32 LastRow, int32 NoRestRow)
+{
+    // 대상 방들을 층 순서로 줄 세움. 같은 층 안에서는 섞음 (늘 왼쪽 방부터 특수방이 되지 않게)
+    TArray<int32> Order;
+    for (int32 i = 0; i < Map.Num(); ++i)
+    {
+        if (Map[i].Row >= FirstRow && Map[i].Row <= LastRow)
+        {
+            Order.Add(i);
+        }
+    }
+
+    const int32 N = Order.Num();
+    if (N == 0) return;
+
+    for (int32 i = N - 1; i > 0; --i)
+    {
+        Order.Swap(i, FMath::RandRange(0, i));
+    }
+    Order.StableSort([&Map](int32 A, int32 B) { return Map[A].Row < Map[B].Row; });
+
+    // ------------------------------------------------------------------
+    // 1. 타입별 개수를 먼저 확정. 비율 × 방 수를 내림하고, 남는 칸은 소수부가 큰 타입부터
+    //    예) 방 21개 -> 몬스터 12 / 이벤트 3 / 휴식 2 / 상점 2 / 가디언 2
+    //    방마다 추첨하던 때는 상점 0개인 지도가 10% 가까이 나왔음
+    // ------------------------------------------------------------------
+    struct FQuota
+    {
+        ERoomType Type;
+        int32 Count;
+        float Remainder;
+        float TieBreak;     // 소수부가 같은 타입끼리(10% 셋) 순서를 랜덤으로
+    };
+
+    float TotalWeight = 0.0f;
+    for (const TPair<ERoomType, float>& Pair : RoomTypeWeights)
+    {
+        if (Pair.Value > 0.0f) TotalWeight += Pair.Value;
+    }
+
+    if (TotalWeight <= 0.0f)
+    {
+        for (int32 Idx : Order) Map[Idx].Type = ERoomType::MONSTER;
+        return;
+    }
+
+    TArray<FQuota> Quotas;
+    int32 Assigned = 0;
+    for (const TPair<ERoomType, float>& Pair : RoomTypeWeights)
+    {
+        if (Pair.Value <= 0.0f) continue;
+
+        const float Exact = N * Pair.Value / TotalWeight;
+        const int32 Count = FMath::FloorToInt(Exact);
+        Quotas.Add({ Pair.Key, Count, Exact - Count, FMath::FRand() });
+        Assigned += Count;
+    }
+
+    Quotas.Sort([](const FQuota& A, const FQuota& B)
+    {
+        return A.Remainder != B.Remainder ? A.Remainder > B.Remainder : A.TieBreak > B.TieBreak;
+    });
+
+    for (int32 i = 0; Assigned < N; i = (i + 1) % Quotas.Num())
+    {
+        Quotas[i].Count++;
+        Assigned++;
+    }
+
+    // ------------------------------------------------------------------
+    // 2. 타입마다 등간격으로 목표 위치를 잡음. 시작점은 타입마다 랜덤
+    //    - 등간격: 한 타입이 초반/후반 한쪽에 몰리지 않음
+    //    - 타입별 랜덤 시작점: 비율이 같은 타입들(휴식/상점/가디언)이 같은 층에 뭉치지 않고,
+    //      지도마다 위치가 달라짐 (시작점이 같으면 매번 4층, 8층에 상점이 나오는 식이 됨)
+    //    - 약간의 흔들림: 너무 규칙적이지 않게. 크게 주면 다시 몰림 (시뮬레이션으로 0.15 선택)
+    // ------------------------------------------------------------------
+    constexpr float SpreadJitter = 0.15f;
+
+    struct FTarget
+    {
+        float Position;
+        float TieBreak;
+        ERoomType Type;
+    };
+
+    TArray<FTarget> Targets;
+    for (const FQuota& Q : Quotas)
+    {
+        if (Q.Count <= 0) continue;
+
+        const float Spacing = static_cast<float>(N) / Q.Count;
+        const float Offset = FMath::FRand();
+
+        for (int32 k = 0; k < Q.Count; ++k)
+        {
+            const float Jitter = FMath::FRandRange(-SpreadJitter, SpreadJitter) * Spacing;
+            Targets.Add({ (k + Offset) * Spacing + Jitter, FMath::FRand(), Q.Type });
+        }
+    }
+
+    Targets.Sort([](const FTarget& A, const FTarget& B)
+    {
+        return A.Position != B.Position ? A.Position < B.Position : A.TieBreak < B.TieBreak;
+    });
+
+    // 3. 목표 위치 순서대로 아래층 방부터 배정 (개수 합 = 방 수라 딱 맞음)
+    for (int32 i = 0; i < N; ++i)
+    {
+        Map[Order[i]].Type = Targets[i].Type;
+    }
+
+    // ------------------------------------------------------------------
+    // 4. 경로 규칙 (Slay the Spire 와 같음. 초반 층 휴식/가디언 금지만 뺌)
+    //    - 연속 금지: 휴식/상점/가디언은 바로 앞 방이나 바로 다음 방이 같은 종류면 안 됨
+    //    - 갈림길 금지: 같은 방에서 갈라지는 방들끼리 휴식/상점/가디언/이벤트가 겹치면 안 됨
+    //    - 보스 직전 휴식터 줄의 바로 앞 줄(NoRestRow)에는 휴식터 금지
+    //    걸리는 특수방은 둬도 되는 가장 가까운 몬스터방과 맞바꿈
+    //    지도 전체 그래프를 봄 -> 배분 대상 밖의 보스 직전 휴식터 줄도 연속 검사에 걸림
+    // ------------------------------------------------------------------
+    TMap<int32, int32> IndexById;
+    for (int32 i = 0; i < Map.Num(); ++i)
+    {
+        IndexById.Add(Map[i].RoomId, i);
+    }
+
+    // 부모 = 나로 들어오는 방, 자식 = 내가 가는 방, 형제 = 같은 부모에서 갈라진 다른 방
+    TArray<TArray<int32>> ParentsOf, ChildrenOf, SiblingsOf;
+    ParentsOf.SetNum(Map.Num());
+    ChildrenOf.SetNum(Map.Num());
+    SiblingsOf.SetNum(Map.Num());
+
+    for (int32 i = 0; i < Map.Num(); ++i)
+    {
+        for (const int32 ToId : Map[i].ConnectedRoomIds)
+        {
+            if (const int32* To = IndexById.Find(ToId))
+            {
+                ChildrenOf[i].Add(*To);
+                ParentsOf[*To].Add(i);
+            }
+        }
+    }
+
+    for (int32 i = 0; i < Map.Num(); ++i)
+    {
+        for (const int32 P : ParentsOf[i])
+        {
+            for (const int32 C : ChildrenOf[P])
+            {
+                if (C != i) SiblingsOf[i].AddUnique(C);
+            }
+        }
+    }
+
+    auto IsNoRepeatType = [](ERoomType T)
+    {
+        return T == ERoomType::BREAK || T == ERoomType::STORE || T == ERoomType::GUARDIAN;
+    };
+    auto IsNoSiblingType = [](ERoomType T)
+    {
+        return T == ERoomType::BREAK || T == ERoomType::STORE || T == ERoomType::GUARDIAN || T == ERoomType::EVENT;
+    };
+
+    // At 자리에 Type 을 둬도 되는가. Ignore = 지금 옮기려는 방 자신 (자리를 비운다고 보고 검사에서 뺌)
+    auto IsAllowed = [&](ERoomType Type, int32 At, int32 Ignore)
+    {
+        if (Type == ERoomType::MONSTER) return true;   // 몬스터는 빈자리 채우는 용도라 늘 허용 (Slay the Spire 와 같음)
+
+        if (Type == ERoomType::BREAK && Map[At].Row == NoRestRow) return false;
+
+        if (IsNoRepeatType(Type))
+        {
+            for (const int32 O : ParentsOf[At])  { if (O != Ignore && Map[O].Type == Type) return false; }
+            for (const int32 O : ChildrenOf[At]) { if (O != Ignore && Map[O].Type == Type) return false; }
+        }
+
+        if (IsNoSiblingType(Type))
+        {
+            for (const int32 O : SiblingsOf[At]) { if (O != Ignore && Map[O].Type == Type) return false; }
+        }
+
+        return true;
+    };
+
+    for (int32 Pass = 0; Pass < 6; ++Pass)
+    {
+        bool bChanged = false;
+
+        for (int32 Pos = 0; Pos < N; ++Pos)
+        {
+            const int32 RoomIdx = Order[Pos];
+            const ERoomType Type = Map[RoomIdx].Type;
+            const int32 Row = Map[RoomIdx].Row;
+            if (IsAllowed(Type, RoomIdx, RoomIdx)) continue;
+
+            // 이 타입을 둬도 되는 몬스터방 중 가장 가까운 층 (같은 층도 됨)
+            TArray<int32> Candidates;
+            int32 BestDist = MAX_int32;
+            for (int32 CandIdx : Order)
+            {
+                const FRoomNode& Cand = Map[CandIdx];
+                if (CandIdx == RoomIdx || Cand.Type != ERoomType::MONSTER) continue;
+                if (!IsAllowed(Type, CandIdx, RoomIdx)) continue;
+
+                const int32 Dist = FMath::Abs(Cand.Row - Row);
+                if (Dist < BestDist)
+                {
+                    BestDist = Dist;
+                    Candidates.Reset();
+                }
+                if (Dist == BestDist)
+                {
+                    Candidates.Add(CandIdx);
+                }
+            }
+
+            if (Candidates.Num() > 0)
+            {
+                const int32 SwapIdx = Candidates[FMath::RandRange(0, Candidates.Num() - 1)];
+                Map[SwapIdx].Type = Type;
+            }
+            else
+            {
+                // 둘 곳이 아예 없으면 몬스터방으로 (그 타입 개수가 하나 줄어듦). 규칙 위반보다 낫다
+                UE_LOG(LogTemp, Log, TEXT("[MapGenerator] %s 를 규칙에 맞게 둘 곳이 없어 몬스터방으로 바꿈 (Row %d)"),
+                    *UEnum::GetValueAsString(Type), Row);
+            }
+
+            Map[RoomIdx].Type = ERoomType::MONSTER;
+            bChanged = true;
+        }
+
+        if (!bChanged) break;
+    }
+
+    // ------------------------------------------------------------------
+    // 5. 갈림길에서 몬스터끼리 겹치는 것 줄이기 ("몬스터 vs 몬스터" 선택지)
+    //    Slay the Spire 도 될 수 있으면 피하고 자리가 없으면 몬스터로 채움 -> 여기서도 가능할 때만
+    //    겹친 몬스터방을 2줄 이내의 특수방과 맞바꿔 보고, 규칙을 안 깨면서 겹침이 줄 때만 바꿈
+    //    (멀리서 끌어오면 위에서 고르게 퍼뜨린 분포가 무너짐. 시뮬레이션: 지도당 1.7쌍 -> 0.3쌍)
+    // ------------------------------------------------------------------
+    TSet<int32> InOrder(Order);
+
+    auto CountMonsterSiblingPairs = [&]()
+    {
+        int32 Pairs = 0;
+        for (const int32 Idx : Order)
+        {
+            if (Map[Idx].Type != ERoomType::MONSTER) continue;
+            for (const int32 S : SiblingsOf[Idx])
+            {
+                if (S > Idx && InOrder.Contains(S) && Map[S].Type == ERoomType::MONSTER) ++Pairs;
+            }
+        }
+        return Pairs;
+    };
+
+    constexpr int32 MaxSwapRowDistance = 2;
+
+    for (int32 Pass = 0; Pass < 3; ++Pass)
+    {
+        bool bImproved = false;
+
+        for (const int32 MonsterIdx : Order)
+        {
+            if (Map[MonsterIdx].Type != ERoomType::MONSTER) continue;
+
+            const bool bHasMonsterSibling = SiblingsOf[MonsterIdx].ContainsByPredicate([&](int32 S)
+            {
+                return InOrder.Contains(S) && Map[S].Type == ERoomType::MONSTER;
+            });
+            if (!bHasMonsterSibling) continue;
+
+            const int32 BasePairs = CountMonsterSiblingPairs();
+            int32 BestIdx = INDEX_NONE;
+            int32 BestGain = 0;
+            int32 BestDist = MAX_int32;
+
+            for (const int32 SpecialIdx : Order)
+            {
+                const ERoomType SpecialType = Map[SpecialIdx].Type;
+                if (SpecialType == ERoomType::MONSTER) continue;
+
+                const int32 Dist = FMath::Abs(Map[SpecialIdx].Row - Map[MonsterIdx].Row);
+                if (Dist > MaxSwapRowDistance) continue;
+                if (!IsAllowed(SpecialType, MonsterIdx, SpecialIdx)) continue;
+
+                // 맞바꿔 보고 겹침이 얼마나 주는지
+                Map[SpecialIdx].Type = ERoomType::MONSTER;
+                Map[MonsterIdx].Type = SpecialType;
+                const int32 Gain = BasePairs - CountMonsterSiblingPairs();
+                Map[SpecialIdx].Type = SpecialType;
+                Map[MonsterIdx].Type = ERoomType::MONSTER;
+
+                if (Gain > BestGain || (Gain > 0 && Gain == BestGain && Dist < BestDist))
+                {
+                    BestIdx = SpecialIdx;
+                    BestGain = Gain;
+                    BestDist = Dist;
+                }
+            }
+
+            if (BestIdx != INDEX_NONE)
+            {
+                Map[MonsterIdx].Type = Map[BestIdx].Type;
+                Map[BestIdx].Type = ERoomType::MONSTER;
+                bImproved = true;
+            }
+        }
+
+        if (!bImproved) break;
+    }
 }
 
 int32 AMapManager::GetRoomCapacity(ERoomType Type) const
@@ -549,7 +910,7 @@ void AMapManager::EnterSelectedRooms(const TArray<ATerminusPlayerState*>& Player
     // 플레이어마다 다른 방일 수 있어서 ServerTravel(서버 전체 이동) 대신
     // 한 레벨 안의 구역을 방마다 하나씩 배정한다
     UDungeonAreaSubsystem* Areas = GetWorld()->GetSubsystem<UDungeonAreaSubsystem>();
-    if (Areas && Areas->HasAreas() && Areas->StartSelectedRooms(Players, Rooms))
+    if (Areas && Areas->HasAreas() && Areas->StartSelectedRooms(Players, Rooms, FloorTheme))
     {
         return;
     }

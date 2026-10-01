@@ -44,6 +44,7 @@ struct FRoomNode
 };
 
 class ATerminusPlayerController;
+class UDungeonThemeData;
 
 // 맵 데이터가 업데이트되었음을 UI 등에 알리기 위한 델리게이트
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMapGenerated, const TArray<FRoomNode>&, MapData);
@@ -77,10 +78,17 @@ public:
 	// 일반 방 비율 설정 (기본값: 몬스터 55%, 휴식 10%, 상점 10%, 가디언 10%, 이벤트 15%)
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map Settings")
 	TMap<ERoomType, float> RoomTypeWeights;
-	
+
+	// 이 층(지도)의 테마. 방에 들어가면 구역에 이 테마의 무대가 뜬다
+	// TODO: 층 진행이 생기면 층마다 바꿀 것 (기획: 테마 하나가 2개 층)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map Settings|Theme")
+	TObjectPtr<UDungeonThemeData> FloorTheme;
+
 	// 방 선택 요청 처리. 서버에서만 불림
 	// 클라 -> 자기 PC 의 Server_RequestSelectRoom -> 여기. (이 액터는 서버 소유라 RPC 를 직접 못 받음)
 	void HandleSelectRoomRequest(ATerminusPlayerController* Requester, int32 RoomId);
+	
+	
 
 
 protected:
@@ -97,8 +105,17 @@ public:
 private:
 	FRoomNode CreateRoom(int32 RoomId, int32 Row, int32 Col, ERoomType Type = ERoomType::MONSTER, int32 MaxPlayers = 1);
 
-	// 비율 기반 랜덤 방 타입 추첨 함수
-	ERoomType GetWeightedRandomRoomType();
+	// 아래 줄(Lower) -> 위 줄(Upper) 연결. 선끼리 교차하지 않고 모든 방이 위아래로 최소 하나씩 이어짐
+	// 화면에서도 방이 열(Col) 위치에 그려지므로 교차가 없으면 지도에서도 선이 엇갈리지 않음
+	void ConnectRowsWithoutCrossing(TArray<FRoomNode>& Map, TArray<int32> Lower, TArray<int32> Upper);
+
+	// FirstRow ~ LastRow 방들의 타입을 RoomTypeWeights 비율대로 고르게 나눔.
+	// 개수를 먼저 확정하고(비율 × 방 수), 타입마다 층 전체에 등간격으로 퍼뜨림
+	// 배치 규칙은 Slay the Spire 와 같음 (초반 층 휴식/가디언 금지만 뺌). 연결이 먼저 만들어져 있어야 함
+	//  - 휴식/상점/가디언은 바로 앞뒤 방(경로상)과 같은 종류 금지
+	//  - 같은 방에서 갈라지는 방끼리 휴식/상점/가디언/이벤트 중복 금지, 몬스터 중복은 가능하면 피함
+	//  - NoRestRow 줄에는 휴식터 금지 (보스 직전 휴식터 줄의 바로 앞 줄. 없으면 INDEX_NONE)
+	void DistributeRoomTypes(TArray<FRoomNode>& Map, int32 FirstRow, int32 LastRow, int32 NoRestRow);
 
 	// 방 타입별 최대 입장 인원.
 	// 기획: 인원 제한은 몬스터/가디언 방에만 붙는다("몬스터 방 [인원 제한 가능]").

@@ -137,8 +137,30 @@ void UCombatStatsComponent::RefillEnergy()
 	{
 		return;
 	}
-	
+
 	State.Energy = Stats.MaxEnergy;
+	NotifyStateChanged();
+}
+
+void UCombatStatsComponent::DrainEnergy()
+{
+	if (!HasAuth() || State.Energy == 0)
+	{
+		return;
+	}
+
+	State.Energy = 0;
+	NotifyStateChanged();
+}
+
+void UCombatStatsComponent::ClearShield()
+{
+	if (!HasAuth() || State.Shield == 0)
+	{
+		return;
+	}
+
+	State.Shield = 0;
 	NotifyStateChanged();
 }
 

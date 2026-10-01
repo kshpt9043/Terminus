@@ -50,6 +50,10 @@ public:
 	void Heal(int32 Amount);
 	bool SpendEnergy(int32 Cost);
 	void RefillEnergy();
+	// 턴 끝에 남은 에너지 버림 (기획: 에너지는 매 턴 종료 시 0)
+	void DrainEnergy();
+	// 보호막 버림 (용어 설명: 보호막은 사이클 종료 시 사라진다). 언제 부를지는 전투 진행이 정함
+	void ClearShield();
 	void ApplyStatus(EStatusEffect Type, int32 Value, int32 Duration);
 
 	UFUNCTION(BlueprintPure, Category = "Terminus|Combat")

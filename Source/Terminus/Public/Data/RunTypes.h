@@ -33,4 +33,9 @@ struct FRunState
 
 	UPROPERTY(BlueprintReadWrite)
 	int32 SelectedRoomId = -1; // 선택한 다음 방 ID (-1: 선택 안 함)
+
+	// 이번 층에서 지나온 방들 (들어간 순서). 지도에 지나온 길을 진하게 그릴 때 씀
+	// TODO: 층을 내려갈 때(새 지도) 비울 것
+	UPROPERTY(BlueprintReadOnly)
+	TArray<int32> VisitedRoomIds;
 };

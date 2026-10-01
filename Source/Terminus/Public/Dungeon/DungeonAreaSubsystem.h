@@ -6,6 +6,7 @@
 
 class ADungeonArea;
 class ATerminusPlayerState;
+class UDungeonThemeData;
 struct FRoomNode;
 
 /**
@@ -33,8 +34,9 @@ public:
 	bool IsAnyRoomInProgress() const;
 
 	// [서버] 각 플레이어가 고른 방(SelectedRoomId)으로 입장시킨다. 같은 방 = 같은 구역
+	// Theme 은 이 층의 테마. 구역마다 이 테마의 무대를 띄움
 	// 구역이 없거나 모자라면 아무것도 안 하고 false -> 부른 쪽이 대체 처리
-	bool StartSelectedRooms(const TArray<ATerminusPlayerState*>& Players, const TArray<FRoomNode>& MapRooms);
+	bool StartSelectedRooms(const TArray<ATerminusPlayerState*>& Players, const TArray<FRoomNode>& MapRooms, const UDungeonThemeData* Theme);
 
 	// [서버] 구역 하나가 끝났을 때 구역이 부름. 전 구역이 끝났으면 전원 진행 + 지도로 복귀
 	void NotifyAreaCleared(ADungeonArea* Area);

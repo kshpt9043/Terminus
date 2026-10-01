@@ -8,6 +8,8 @@
 #include "Kismet/GameplayStatics.h"
 #include "Widgets/Map/RoomNodeWidget.h"
 #include "Components/ScrollBox.h"
+#include "Components/ScrollBoxSlot.h"
+#include "Components/OverlaySlot.h"
 #include "GameFramework/GameStateBase.h"
 #include "Player/TerminusPlayerController.h"
 #include "TimerManager.h"
@@ -16,6 +18,20 @@
 void UMapCanvasWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
+
+    // 지도(캔버스)를 가로 가운데로. 지도 폭은 고정이라 화면이 넓어져도 가운데 유지
+    // 지금 WBP 는 ScrollBox > Overlay > MapCanvasPanel 이라 Overlay 슬롯. 바로 ScrollBox 아래여도 되게 둘 다 처리
+    if (MapCanvasPanel)
+    {
+        if (UScrollBoxSlot* ScrollSlot = Cast<UScrollBoxSlot>(MapCanvasPanel->Slot))
+        {
+            ScrollSlot->SetHorizontalAlignment(HAlign_Center);
+        }
+        else if (UOverlaySlot* OverlaySlot = Cast<UOverlaySlot>(MapCanvasPanel->Slot))
+        {
+            OverlaySlot->SetHorizontalAlignment(HAlign_Center);
+        }
+    }
 
     // 구역 진입 / 복귀에 맞춰 지도 숨기기
     VisibleState = GetVisibility();
@@ -202,11 +218,138 @@ void UMapCanvasWidget::RefreshRoomStates()
     }
 
     RefreshAllRoomSelections();
+    RefreshEdges(LocalPS);
+}
+
+void UMapCanvasWidget::ComputeLayout(const TArray<FRoomNode>& MapData)
+{
+    RoomPositions.Reset();
+
+    int32 MaxRow = 0;
+    int32 MaxCol = 0;
+    TMap<int32, TArray<const FRoomNode*>> RowRooms;
+    for (const FRoomNode& Node : MapData)
+    {
+        MaxRow = FMath::Max(MaxRow, Node.Row);
+        MaxCol = FMath::Max(MaxCol, Node.Col);
+        RowRooms.FindOrAdd(Node.Row).Add(&Node);
+    }
+
+    // 격자 폭 / 높이. 방 중심이 놓이는 범위
+    const float GridWidth = MaxCol * ColumnSpacing;
+    const float GridHeight = MaxRow * RowSpacing;
+
+    // 흔들림 한도: 이웃 방과 아이콘이 겹치지 않을 만큼만 (양쪽이 서로 다가와도 틈이 남게)
+    const float JitterMaxX = FMath::Min(PositionJitter.X * ColumnSpacing, FMath::Max(0.f, (ColumnSpacing - RoomIconVisibleSize) * 0.5f - 10.f));
+    const float JitterMaxY = FMath::Min(PositionJitter.Y * RowSpacing, FMath::Max(0.f, (RowSpacing - RoomIconVisibleSize) * 0.5f - 20.f));
+
+    // 여백: 끝 열 방이 흔들려 나가도 아이콘 상자가 안 잘리게
+    const FVector2D EdgePadding(
+        FMath::Max(MapPadding.X, RoomIconCenter.X + JitterMaxX + 20.f),
+        FMath::Max(MapPadding.Y, RoomIconCenter.Y + JitterMaxY + 20.f));
+
+    MapContentSize = FVector2D(GridWidth, GridHeight) + EdgePadding * 2.f;
+
+    for (TPair<int32, TArray<const FRoomNode*>>& Pair : RowRooms)
+    {
+        const int32 Row = Pair.Key;
+        TArray<const FRoomNode*>& Rooms = Pair.Value;
+        Rooms.Sort([](const FRoomNode& A, const FRoomNode& B) { return A.Col < B.Col; });
+        const int32 Count = Rooms.Num();
+
+        // 퀘스트(맨 아래) / 보스(맨 위) 는 지도 한가운데, 흔들림 없음
+        const bool bAnchorRow = (Row == 0 || Row == MaxRow);
+
+        // 방이 하나뿐인 줄도 가로는 한가운데 (위아래 방이 전부 모이는 자리라 끝에 있으면 선이 길게 가로지름)
+        const bool bCenterX = bAnchorRow || Count == 1;
+
+        // 이 줄을 가운데 기준으로 고르게 펼쳤을 때의 폭. 방 수에 비례 (4개면 전체 폭, 2개면 한 칸)
+        const float SpreadSpan = (MaxCol > 0 && Count > 1) ? GridWidth * (Count - 1) / MaxCol : 0.f;
+
+        for (int32 i = 0; i < Count; ++i)
+        {
+            const FRoomNode& Node = *Rooms[i];
+
+            // 방마다 고정된 흔들림 -> 다시 그려도 같은 자리
+            FRandomStream Stream(Node.RoomId * 100 + Node.Row * 10 + Node.Col);
+            const float JitterX = bCenterX ? 0.f : Stream.FRandRange(-JitterMaxX, JitterMaxX);
+            const float JitterY = bAnchorRow ? 0.f : Stream.FRandRange(-JitterMaxY, JitterMaxY);
+
+            // 가로 = 열 위치와 "줄 가운데 기준 고른 간격" 사이. 둘 다 열 순서를 지키므로 선이 엇갈리지 않음
+            float X = GridWidth * 0.5f;
+            if (!bCenterX)
+            {
+                const float ColumnX = Node.Col * ColumnSpacing;
+                const float SpreadX = GridWidth * 0.5f - SpreadSpan * 0.5f + SpreadSpan * i / (Count - 1);
+                X = FMath::Lerp(ColumnX, SpreadX, RowSpread) + JitterX;
+            }
+
+            // 세로 = 아래가 1레벨
+            const float Y = (MaxRow - Row) * RowSpacing + JitterY;
+
+            RoomPositions.Add(Node.RoomId, FVector2D(X, Y) + EdgePadding);
+        }
+    }
+}
+
+void UMapCanvasWidget::RefreshEdges(const ATerminusPlayerState* LocalPS)
+{
+    if (!EdgeLayer) return;
+
+    // 지나온 길 = 방문 순서상 연속한 두 방 + 지금 고른 다음 방으로 가는 길
+    TSet<TPair<int32, int32>> TakenEdges;
+    int32 CurrentRoomId = INDEX_NONE;
+
+    if (LocalPS)
+    {
+        const FRunState Run = LocalPS->GetRunState();
+        for (int32 k = 0; k + 1 < Run.VisitedRoomIds.Num(); ++k)
+        {
+            TakenEdges.Add({ Run.VisitedRoomIds[k], Run.VisitedRoomIds[k + 1] });
+        }
+
+        if (Run.CurrentMapLevel > 0)
+        {
+            CurrentRoomId = Run.CurrentRoomId;
+            if (Run.SelectedRoomId != INDEX_NONE)
+            {
+                TakenEdges.Add({ Run.CurrentRoomId, Run.SelectedRoomId });
+            }
+        }
+    }
+
+    TArray<FMapEdgeDraw> Edges;
+    for (const FRoomNode& Node : CachedMapData)
+    {
+        const FVector2D* From = RoomPositions.Find(Node.RoomId);
+        if (!From) continue;
+
+        for (const int32 ToId : Node.ConnectedRoomIds)
+        {
+            const FVector2D* To = RoomPositions.Find(ToId);
+            if (!To) continue;
+
+            FMapEdgeDraw& Edge = Edges.AddDefaulted_GetRef();
+            Edge.From = *From;
+            Edge.To = *To;
+
+            if (TakenEdges.Contains({ Node.RoomId, ToId }))
+            {
+                Edge.State = EMapEdgeState::Taken;
+            }
+            else if (Node.RoomId == CurrentRoomId)
+            {
+                Edge.State = EMapEdgeState::Available;
+            }
+        }
+    }
+
+    EdgeLayer->SetEdges(MoveTemp(Edges));
 }
 
 void UMapCanvasWidget::BuildMapUI(const TArray<FRoomNode>& MapData)
 {
-if (!MapCanvasPanel || !RoomWidgetClass || MapData.Num() == 0) return;
+    if (!MapCanvasPanel || !RoomWidgetClass || MapData.Num() == 0) return;
 
     // 같은 지도가 다시 들어온 경우(복제 재수신, 바인딩 시점 차이 등) 위젯을 새로 만들지 않음.
     // 새로 만들면 스크롤 위치가 날아가고 전체가 깜빡임
@@ -220,84 +363,70 @@ if (!MapCanvasPanel || !RoomWidgetClass || MapData.Num() == 0) return;
     CreatedRoomWidgets.Empty();
     CachedMapData = MapData;
 
-    int32 MaxRow = 0;
-    for (const FRoomNode& Node : MapData)
+    ComputeLayout(MapData);
+
+    // ------------------------------------------------------------------
+    // 연결선 레이어: 캔버스 첫 자식(맨 뒤), 지도 전체 크기로 (0,0) 에.
+    // 캔버스는 자식 위치+크기로 자기 크기를 정하므로 이게 곧 캔버스 크기 = 스크롤 범위가 됨
+    // ------------------------------------------------------------------
+    EdgeLayer = CreateWidget<UMapEdgeLayer>(this, UMapEdgeLayer::StaticClass());
+    if (EdgeLayer)
     {
-        if (Node.Row > MaxRow) MaxRow = Node.Row;
-    }
+        EdgeLayer->SetEdgeStyle(EdgeStyle);
+        EdgeLayer->SetVisibility(ESlateVisibility::HitTestInvisible);   // 클릭은 방 아이콘이 받게
 
-    UCanvasPanelSlot* PanelSlot = Cast<UCanvasPanelSlot>(MapCanvasPanel->Slot);
-    float PanelWidth = (PanelSlot && PanelSlot->GetSize().X > 0.0f) ? PanelSlot->GetSize().X : 800.0f;
-    float CenterX = PanelWidth * 0.5f;
-
-    TMap<int32, TArray<const FRoomNode*>> RoomsByRow;
-    for (const FRoomNode& Node : MapData)
-    {
-        RoomsByRow.FindOrAdd(Node.Row).Add(&Node);
-    }
-
-    for (auto& Pair : RoomsByRow)
-    {
-        int32 Row = Pair.Key;
-        TArray<const FRoomNode*>& RowNodes = Pair.Value;
-
-        RowNodes.Sort([](const FRoomNode& A, const FRoomNode& B) { return A.Col < B.Col; });
-
-        int32 NodeCount = RowNodes.Num();
-        float SpacingX = CellSize.X;
-        float RowTotalWidth = (NodeCount - 1) * SpacingX;
-        float StartX = CenterX - (RowTotalWidth * 0.5f);
-
-        for (int32 Index = 0; Index < NodeCount; ++Index)
+        if (UCanvasPanelSlot* EdgeSlot = MapCanvasPanel->AddChildToCanvas(EdgeLayer))
         {
-            const FRoomNode* Node = RowNodes[Index];
-            if (!Node) continue;
-
-            URoomNodeWidget* NewRoomWidget = CreateWidget<URoomNodeWidget>(this, RoomWidgetClass);
-            if (!NewRoomWidget) continue;
-
-            NewRoomWidget->SetupRoomNode(*Node, RoomTypeIcons);
-            NewRoomWidget->OnRoomNodeClicked.AddDynamic(this, &UMapCanvasWidget::HandleRoomClicked);
-
-            // 선택 가능 여부(경로 제한)는 아래 RefreshRoomStates 에서 한 번에 적용
-
-            UCanvasPanelSlot* CanvasSlot = MapCanvasPanel->AddChildToCanvas(NewRoomWidget);
-            if (CanvasSlot)
-            {
-                FRandomStream RoomRandomStream(Node->RoomId * 100 + Node->Row * 10 + Node->Col);
-
-                float MaxOffsetX = CellSize.X * 0.25f;
-                float RandomOffsetX = (NodeCount > 1) ? RoomRandomStream.FRandRange(-MaxOffsetX, MaxOffsetX) : 0.0f;
-
-                float MaxOffsetY = CellSize.Y * 0.15f;
-                float RandomOffsetY = (Node->Row == 0 || Node->Row == MaxRow) ? 0.0f : RoomRandomStream.FRandRange(-MaxOffsetY, MaxOffsetY);
-
-                float PositionX = StartX + (Index * SpacingX) + RandomOffsetX;
-                float PositionY = (MaxRow - Node->Row) * CellSize.Y + CanvasOffset.Y + RandomOffsetY;
-
-                CanvasSlot->SetPosition(FVector2D(PositionX, PositionY));
-                CanvasSlot->SetAutoSize(true);
-                CanvasSlot->SetZOrder(1);
-            }
-
-            CreatedRoomWidgets.Add(Node->RoomId, NewRoomWidget);
+            EdgeSlot->SetAutoSize(false);
+            EdgeSlot->SetPosition(FVector2D::ZeroVector);
+            EdgeSlot->SetSize(MapContentSize);
+            EdgeSlot->SetZOrder(0);
         }
     }
 
-    // 경로 제한 + 선택 표시 초기 적용
+    // ------------------------------------------------------------------
+    // 방 아이콘: 계산해 둔 좌표에 위젯의 RoomWidgetAlignment 지점(기본 가운데)을 맞춤
+    // ------------------------------------------------------------------
+    for (const FRoomNode& Node : MapData)
+    {
+        const FVector2D* Position = RoomPositions.Find(Node.RoomId);
+        if (!Position) continue;
+
+        URoomNodeWidget* NewRoomWidget = CreateWidget<URoomNodeWidget>(this, RoomWidgetClass);
+        if (!NewRoomWidget) continue;
+
+        NewRoomWidget->SetupRoomNode(Node, RoomTypeIcons);
+        NewRoomWidget->OnRoomNodeClicked.AddDynamic(this, &UMapCanvasWidget::HandleRoomClicked);
+
+        // 선택 가능 여부(경로 제한)는 아래 RefreshRoomStates 에서 한 번에 적용
+
+        if (UCanvasPanelSlot* CanvasSlot = MapCanvasPanel->AddChildToCanvas(NewRoomWidget))
+        {
+            // 아이콘 중심이 방 좌표에 오게 왼쪽 위 기준으로 배치 (초상화가 붙어 폭이 늘어도 아이콘은 그대로)
+            CanvasSlot->SetAutoSize(true);
+            CanvasSlot->SetAlignment(FVector2D::ZeroVector);
+            CanvasSlot->SetPosition(*Position - RoomIconCenter);
+            CanvasSlot->SetZOrder(1);
+        }
+
+        CreatedRoomWidgets.Add(Node.RoomId, NewRoomWidget);
+    }
+
+    // 경로 제한 + 선택 표시 + 연결선 상태 초기 적용
     RefreshRoomStates();
 
     // 스크롤은 이 위젯이 처음 지도를 그릴 때만 맨 아래(시작 지점)로.
-    // 그 뒤로는 사용자가 보던 위치를 건드리지 않음
-    const bool bScrollToStart = !bInitialScrollDone;
-    bInitialScrollDone = true;
-
-    // 약참조 람다. 다음 틱 전에 위젯이 사라지면 그냥 안 불림 ([this] 만 잡으면 댕글링)
-    GetWorld()->GetTimerManager().SetTimerForNextTick(FTimerDelegate::CreateWeakLambda(this, [this, bScrollToStart]()
+    // 그 뒤로는 사용자가 보던 위치를 건드리지 않음. 레이아웃이 잡힌 다음 틱에
+    if (!bInitialScrollDone)
     {
-        if (bScrollToStart && ScrollBox) ScrollBox->ScrollToEnd();
-        InvalidateLayoutAndVolatility();
-    }));
+        bInitialScrollDone = true;
+
+        // 약참조 람다. 다음 틱 전에 위젯이 사라지면 그냥 안 불림 ([this] 만 잡으면 댕글링)
+        GetWorld()->GetTimerManager().SetTimerForNextTick(FTimerDelegate::CreateWeakLambda(this, [this]()
+        {
+            if (ScrollBox) ScrollBox->ScrollToEnd();
+        }));
+    }
 }
 
 void UMapCanvasWidget::RefreshAllRoomSelections()
@@ -358,59 +487,4 @@ void UMapCanvasWidget::OnPlayerRunStateChanged(const FRunState& NewRunState)
     // 현재 위치/선택이 바뀌어도 지도 모양은 그대로 -> 위젯 재생성 없이 상태만 갱신.
     // (예전엔 여기서 BuildMapUI 로 전부 다시 만들어서 스크롤이 맨 아래로 튀었음)
     RefreshRoomStates();
-}
-
-int32 UMapCanvasWidget::NativePaint(const FPaintArgs& Args, const FGeometry& AllottedGeometry,
-                                    const FSlateRect& MyCullingRect, FSlateWindowElementList& OutDrawElements, int32 LayerId,
-                                    const FWidgetStyle& InWidgetStyle, bool bParentEnabled) const
-{
-    // ★ 1. 자식 방 버튼들을 그리기 전 바탕 레이어에 선(Line)을 먼저 렌더링
-    if (CreatedRoomWidgets.Num() > 0 && CachedMapData.Num() > 0 && MapCanvasPanel)
-    {
-        FGeometry PanelGeometry = MapCanvasPanel->GetCachedGeometry();
-
-        if (PanelGeometry.GetLocalSize().X > 0.0f)
-        {
-            FLinearColor DrawLineColor = LineColor.A <= 0.0f ? FLinearColor::White : LineColor;
-            float DrawLineThickness = LineThickness <= 0.0f ? 3.0f : LineThickness;
-
-            for (const FRoomNode& SourceNode : CachedMapData)
-            {
-                URoomNodeWidget* const* SourceWidgetPtr = CreatedRoomWidgets.Find(SourceNode.RoomId);
-                if (!SourceWidgetPtr || !(*SourceWidgetPtr)) continue;
-
-                FGeometry SourceGeo = (*SourceWidgetPtr)->GetCachedGeometry();
-                FVector2D StartPos = PanelGeometry.AbsoluteToLocal(SourceGeo.GetAbsolutePositionAtCoordinates(FVector2D(0.5f, 0.5f)));
-
-                for (int32 TargetId : SourceNode.ConnectedRoomIds)
-                {
-                    URoomNodeWidget* const* TargetWidgetPtr = CreatedRoomWidgets.Find(TargetId);
-                    if (!TargetWidgetPtr || !(*TargetWidgetPtr)) continue;
-
-                    FGeometry TargetGeo = (*TargetWidgetPtr)->GetCachedGeometry();
-                    FVector2D EndPos = PanelGeometry.AbsoluteToLocal(TargetGeo.GetAbsolutePositionAtCoordinates(FVector2D(0.5f, 0.5f)));
-
-                    TArray<FVector2D> LinePoints;
-                    LinePoints.Add(StartPos);
-                    LinePoints.Add(EndPos);
-
-                    FSlateDrawElement::MakeLines(
-                        OutDrawElements,
-                        LayerId,
-                        PanelGeometry.ToPaintGeometry(),
-                        LinePoints,
-                        ESlateDrawEffect::None,
-                        DrawLineColor,
-                        true,
-                        DrawLineThickness
-                    );
-                }
-            }
-        }
-    }
-
-    // ★ 2. 선을 다 그린 뒤 Super::NativePaint를 호출하여 자식 위젯(방 버튼)들을 선 위에 올림
-    int32 MaxLayer = Super::NativePaint(Args, AllottedGeometry, MyCullingRect, OutDrawElements, LayerId, InWidgetStyle, bParentEnabled);
-
-    return MaxLayer;
 }

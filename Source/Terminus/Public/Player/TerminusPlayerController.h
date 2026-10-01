@@ -9,6 +9,7 @@
 
 class UTavernWidget;
 class ADungeonArea;
+class UCombatHUDWidget;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnViewAreaChanged, ADungeonArea*, NewArea);
 
@@ -78,6 +79,34 @@ public:
 
 	UFUNCTION(Server, Reliable)
 	void Server_DebugClearArea(bool bAll);
+
+	// -------------------------------------------------------------
+	// [전투]
+	// -------------------------------------------------------------
+
+	// 스킬 사용 요청. SkillIndex = 기본 스킬 0~2 (공격 방어 특수)
+	// TargetIndex = 적 1명 스킬이면 몬스터 인덱스, 아군 1명이면 구역 인원 인덱스, 나머지는 무시
+	// 판정은 서버에서 내가 들어가 있는 구역의 전투가 함
+	UFUNCTION(Server, Reliable)
+	void Server_UseSkill(int32 SkillIndex, int32 TargetIndex);
+
+	UFUNCTION(Server, Reliable)
+	void Server_EndTurn();
+
+	// [테스트] 콘솔에서 DebugWinCombat -> 내 구역 몬스터 전부 처치
+	UFUNCTION(Exec)
+	void DebugWinCombat();
+
+	UFUNCTION(Server, Reliable)
+	void Server_DebugWinCombat();
+
+protected:
+	// 전투 HUD 클래스. 비워 두면 C++ 기본 배치(UCombatHUDWidget)를 씀. WBP 를 만들면 BP_DungeonPC 에서 지정
+	UPROPERTY(EditDefaultsOnly, Category = "Terminus|UI")
+	TSubclassOf<UCombatHUDWidget> CombatHUDClass;
+
+	UPROPERTY()
+	TObjectPtr<UCombatHUDWidget> CombatHUD;
 
 private:
 	TWeakObjectPtr<ADungeonArea> ViewedArea;

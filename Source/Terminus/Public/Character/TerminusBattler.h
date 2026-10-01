@@ -70,6 +70,12 @@ protected:
 	virtual void OnConstruction(const FTransform& Transform) override;
 	virtual void PossessedBy(AController* NewController) override;
 	virtual void OnRep_PlayerState() override;
+
+	// 배틀러는 입력으로 안 움직이고 위치는 항상 서버가 정함 (던전 구역 이동 등).
+	// 그런데 엔진은 "자기 폰 위치는 자기 클라가 정한다"고 보고 자기 폰에는 위치를 복제하지 않음
+	// -> 서버가 옮겨도 그 플레이어 화면에서만 자기 배틀러가 원래 자리에 남아 있었음. 아래 둘로 풀어줌
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+	virtual void OnRep_ReplicatedMovement() override;
 	
 	// 호스트의 PossessedBy, 클라이언트의 OnRep에서 불릴 비주얼 적용 함수
 	// void ApplyClassVisual();

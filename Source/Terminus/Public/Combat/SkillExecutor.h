@@ -17,6 +17,9 @@ public:
 						UCombatStatsComponent* Caster,
 						const TArray<UCombatStatsComponent*>& Targets);
 
+	// 실행하지 않고 최종 수치만 (BaseValue + 스텟 보정). 몬스터 행동 예고에 "공격 7" 처럼 띄울 때
+	static int32 PreviewAmount(const FSkillRow& Skill, const UCombatStatsComponent* Caster);
+
 private:
 	// BaseValue 를 뭘로 쓰는지
 	enum class EValueUse : uint8

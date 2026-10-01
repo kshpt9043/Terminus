@@ -59,7 +59,7 @@ TArray<ADungeonArea*> UDungeonAreaSubsystem::GetSortedAreas() const
 	return Result;
 }
 
-bool UDungeonAreaSubsystem::StartSelectedRooms(const TArray<ATerminusPlayerState*>& Players, const TArray<FRoomNode>& MapRooms)
+bool UDungeonAreaSubsystem::StartSelectedRooms(const TArray<ATerminusPlayerState*>& Players, const TArray<FRoomNode>& MapRooms, const UDungeonThemeData* Theme)
 {
 	if (IsAnyRoomInProgress())
 	{
@@ -104,7 +104,7 @@ bool UDungeonAreaSubsystem::StartSelectedRooms(const TArray<ATerminusPlayerState
 
 		if (Room)
 		{
-			SortedAreas[i]->BeginRoom(*Room, PlayersByRoom[RoomId]);
+			SortedAreas[i]->BeginRoom(*Room, PlayersByRoom[RoomId], Theme);
 		}
 	}
 

@@ -6,7 +6,11 @@
 #include "DungeonArea.generated.h"
 
 class UCameraComponent;
+class UChildActorComponent;
 class ATerminusPlayerState;
+class ADungeonAreaSet;
+class UDungeonThemeData;
+class UDungeonCombatComponent;
 
 /**
  * 던전 구역. 지도의 방 하나가 실제로 펼쳐지는 무대.
@@ -37,8 +41,9 @@ public:
 	// [서버 전용]
 	// -------------------------------------------------------------
 
-	// 이 구역에서 방 하나를 시작. 플레이어들을 슬롯으로 옮기고 시점을 이 구역으로 돌린다
-	void BeginRoom(const FRoomNode& InRoom, const TArray<ATerminusPlayerState*>& InPlayers);
+	// 이 구역에서 방 하나를 시작. 테마에 맞는 무대를 띄우고, 플레이어들을 슬롯으로 옮기고, 시점을 이 구역으로 돌린다
+	// Theme 이 없으면 무대는 지금 떠 있는 것(레벨에서 지정한 미리보기) 그대로
+	void BeginRoom(const FRoomNode& InRoom, const TArray<ATerminusPlayerState*>& InPlayers, const UDungeonThemeData* Theme);
 
 	// 이 구역의 방을 끝냈다고 표시. 전 구역이 끝났는지는 서브시스템이 판단
 	void MarkCleared();
@@ -69,9 +74,22 @@ public:
 	int32 GetNumPlayerSlots() const { return PlayerSlots.Num(); }
 	int32 GetNumMonsterSlots() const { return MonsterSlots.Num(); }
 
+	// 구역 기준 상대 좌표 그대로. 무대 세트의 에디터 미리보기가 씀
+	const TArray<FVector>& GetPlayerSlots() const { return PlayerSlots; }
+	const TArray<FVector>& GetMonsterSlots() const { return MonsterSlots; }
+	const UCameraComponent* GetAreaCamera() const;
+
+	// 이 구역의 전투 진행. 전투 방이 아니면 IsInCombat() == false
+	UFUNCTION(BlueprintPure, Category = "Dungeon Area")
+	UDungeonCombatComponent* GetCombat() const { return Combat; }
+
 protected:
+	virtual void OnConstruction(const FTransform& Transform) override;
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+
+	// SetDisplay 를 구역 원점에 고정. 세트 좌표 = 구역 좌표라는 전제(슬롯 / 카메라 / 배경 맞춤)가 여기에 걸려 있음
+	void PinSetDisplayToOrigin();
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Dungeon Area")
 	TObjectPtr<USceneComponent> Root;
@@ -79,6 +97,17 @@ protected:
 	// 이 구역을 비추는 카메라. 플레이어 시점이 이 액터로 바뀌면 이 카메라로 보게 됨
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Dungeon Area")
 	TObjectPtr<UCameraComponent> AreaCamera;
+
+	// 전투 진행 (몬스터 스폰, 사이클, 승패). 몬스터 클래스 / 보정값은 여기 디테일에서
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Dungeon Area")
+	TObjectPtr<UDungeonCombatComponent> Combat;
+
+	// 무대(구역 세트)가 뜨는 자리. 방이 시작되면 테마에서 고른 세트로 바뀜
+	// 레벨에서 이 컴포넌트의 Child Actor Class 에 세트 BP 를 지정하면 에디터에서 미리 볼 수 있음
+	// (슬롯 기즈모 / 카메라와 같이 보면서 소품 배치를 맞출 때)
+	// 위치는 항상 구역 원점으로 고정됨. 무대를 옮기고 싶으면 세트 BP 안에서 옮길 것
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Dungeon Area")
+	TObjectPtr<UChildActorComponent> SetDisplay;
 
 	// 플레이어 서는 자리 (구역 기준 상대 좌표). 뷰포트에서 기즈모로 끌어서 옮길 수 있음
 	// 0번이 맨 왼쪽. 구역에 들어온 순서(PlayerArray 순)대로 채움
@@ -103,6 +132,14 @@ protected:
 	// 이 구역에 들어와 있는 플레이어들
 	UPROPERTY(Replicated, BlueprintReadOnly, Category = "Dungeon Area")
 	TArray<TObjectPtr<ATerminusPlayerState>> Occupants;
+
+	// 지금 띄울 무대. 서버가 고르고 클래스만 복제 -> 각 머신이 SetDisplay 로 로컬에 띄움
+	// (무대는 연출 전용이라 액터 자체는 복제하지 않음)
+	UPROPERTY(ReplicatedUsing = OnRep_CurrentSetClass)
+	TSubclassOf<ADungeonAreaSet> CurrentSetClass;
+
+	UFUNCTION()
+	void OnRep_CurrentSetClass();
 
 private:
 	// 들어오기 전 배틀러 위치. 구역을 비울 때 지도 화면의 원래 자리로 돌려놓기 위함 (서버만)

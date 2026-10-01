@@ -24,6 +24,7 @@ void URoomNodeWidget::SetupRoomNode(const FRoomNode& InRoomData, const TMap<ERoo
 			Style.Normal.SetResourceObject(*FoundTexture);
 			Style.Hovered.SetResourceObject(*FoundTexture);
 			Style.Pressed.SetResourceObject(*FoundTexture);
+			Style.Disabled.SetResourceObject(*FoundTexture);   // 혹시 비활성이 돼도 아이콘이 바뀌지 않게
 			RoomButton->SetStyle(Style);
 		}
 	}	
@@ -37,9 +38,11 @@ void URoomNodeWidget::SetRoomSelectable(bool bSelectable)
 	if (AppliedSelectable.IsSet() && AppliedSelectable.GetValue() == bSelectable) return;
 	AppliedSelectable = bSelectable;
 
-	RoomButton->SetIsEnabled(bSelectable);
-	// 이동 불가능한 방은 투명도(Opacity)를 낮춰 어둡게 노출
-	SetRenderOpacity(bSelectable ? 1.0f : 0.3f);
+	// 못 가는 방도 아이콘은 그대로 선명하게. 마우스만 통과시켜서 호버 효과 / 클릭이 안 생기게 함
+	// (SetIsEnabled(false) 를 쓰면 Slate 가 비활성 효과로 회색 처리해 버림)
+	RoomButton->SetIsEnabled(true);
+	RoomButton->SetVisibility(bSelectable ? ESlateVisibility::Visible : ESlateVisibility::HitTestInvisible);
+	SetRenderOpacity(1.0f);
 }
 
 void URoomNodeWidget::RefreshSelectionState(const TArray<ATerminusPlayerState*>& AllPlayerStates,
