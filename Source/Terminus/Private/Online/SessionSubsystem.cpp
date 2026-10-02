@@ -22,6 +22,12 @@ namespace
 	const FString VALUE_BUILD_TAG(TEXT("Dev"));
 	// 나가거나 끊겼을 때 돌아갈 곳. DefaultEngine.ini 의 GameDefaultMap 과 같아야 함
 	const FName MENU_MAP(TEXT("/Game/Maps/Lv_Lobby"));
+	
+	// 방 목록용 광고 키. 값은 전부 "1"/"0" 문자열 -> 빌드 태그와 같은 방식이라 스팀 필터가 확실히 먹는다
+	const FName KEY_ROOM_NAME(TEXT("ROOMNAME"));
+	const FName KEY_LOCKED(TEXT("LOCKED"));   // "1" 이면 비밀번호 방
+	const FName KEY_LISTED(TEXT("LISTED"));   // "0" 이면 초대 전용. 검색에서 거름
+	const FName KEY_INGAME(TEXT("INGAME"));   // "1" 이면 던전 진행 중. 검색에서 거름
 }
 
 void USessionSubsystem::Initialize(FSubsystemCollectionBase& Collection)
@@ -87,29 +93,38 @@ IOnlineSessionPtr USessionSubsystem::GetSessionInterface() const
 	return nullptr;
 }
 
-void USessionSubsystem::HostSession(int32 MaxPlayers, const FString& MapPath)
+void USessionSubsystem::HostSession(int32 MaxPlayers, const FString& MapPath, const FTerminusRoomOptions& Options)
 {
 	// 만들어둔 헬퍼 함수로 접근
 	IOnlineSessionPtr Session = GetSessionInterface();
-	
 	if (!Session.IsValid())
 	{
-		// 세션이 없으면 false로 완료 신호 보냄
 		OnHostComplete.Broadcast(false);
 		return;
 	}
-	
+
+	// 비밀번호는 비어 있거나(잠금 없음) 규칙에 맞아야 한다
+	if (!Options.Password.IsEmpty() && !IsValidRoomPassword(Options.Password))
+	{
+		UE_LOG(LogTerminusSession, Warning, TEXT("HostSession: 비밀번호 규칙 위반 (영문 숫자 1~16자)"));
+		OnHostComplete.Broadcast(false);
+		return;
+	}
+
 	// 이미 세션이 있으면 정리
 	if (Session->GetNamedSession(NAME_GameSession) != nullptr)
 	{
 		PendingHostMap = MapPath;
 		PendingMaxPlayers = MaxPlayers;
+		PendingRoomOptions = Options;
 		AfterDestroy = EAfterDestroy::Host;
 		LeaveSession();
 		return;
 	}
-	
+
 	PendingHostMap = MapPath;
+	HostPassword = Options.Password;
+	HostMaxPlayers = MaxPlayers;
 	
 	FOnlineSessionSettings Settings;
 	Settings.bIsLANMatch            = false;
@@ -125,12 +140,45 @@ void USessionSubsystem::HostSession(int32 MaxPlayers, const FString& MapPath)
 	Settings.Set(KEY_BUILD_TAG, VALUE_BUILD_TAG,
 				 EOnlineDataAdvertisementType::ViaOnlineServiceAndPing);
 	
+	// 방 목록용 광고. 비밀번호는 넣지 않고 잠김 여부만
+	const auto Ad = EOnlineDataAdvertisementType::ViaOnlineServiceAndPing;
+	if (!Options.RoomName.IsEmpty())
+	{
+		Settings.Set(KEY_ROOM_NAME, Options.RoomName.Left(24), Ad);
+	}
+	Settings.Set(KEY_LOCKED, FString(Options.Password.IsEmpty() ? TEXT("0") : TEXT("1")), Ad);
+	Settings.Set(KEY_LISTED, FString(Options.bListed ? TEXT("1") : TEXT("0")), Ad);
+	Settings.Set(KEY_INGAME, FString(TEXT("0")), Ad);
+	
 	CreateHandle = Session->AddOnCreateSessionCompleteDelegate_Handle(
 		FOnCreateSessionCompleteDelegate::CreateUObject(
 			this, &USessionSubsystem::HandleCreateComplete));
 
-	UE_LOG(LogTerminusSession, Log, TEXT("HostSession: MaxPlayers=%d, MapPath='%s'"), MaxPlayers, *MapPath);
+	UE_LOG(LogTerminusSession, Log, TEXT("HostSession: MaxPlayers=%d, MapPath='%s', Room='%s', Locked=%d, Listed=%d"),
+	MaxPlayers, *MapPath, *Options.RoomName, Options.Password.IsEmpty() ? 0 : 1, Options.bListed ? 1 : 0);
+	
 	Session->CreateSession(0, NAME_GameSession, Settings);
+}
+
+bool USessionSubsystem::IsValidRoomPassword(const FString& InPassword)
+{
+	// 접속 URL 옵션(?pw=...)으로 넘어가서 ? = & 공백이 섞이면 잘린다 -> 영문 숫자만
+	// FChar::IsAlnum 은 한글도 참이라 범위를 직접 본다
+	if (InPassword.Len() < 1 || InPassword.Len() > 16)
+	{
+		return false;
+	}
+	for (const TCHAR C : InPassword)
+	{
+		const bool bDigit = (C >= TEXT('0') && C <= TEXT('9'));
+		const bool bLower = (C >= TEXT('a') && C <= TEXT('z'));
+		const bool bUpper = (C >= TEXT('A') && C <= TEXT('Z'));
+		if (!bDigit && !bLower && !bUpper)
+		{
+			return false;
+		}
+	}
+	return true;
 }
 
 void USessionSubsystem::FindSessions(int32 MaxResults)
@@ -140,6 +188,13 @@ void USessionSubsystem::FindSessions(int32 MaxResults)
 	{
 		// 세션을 못 찾았으면 빈 배열과 false 반환
 		OnFindComplete.Broadcast(false, {});
+		return;
+	}
+	
+	// 검색 중에 또 부르면 무시. 겹치면 완료 델리게이트가 두 번 붙어서 이후 검색마다 결과가 두 번 온다
+	if (LastSearch.IsValid() && LastSearch->SearchState == EOnlineAsyncTaskState::InProgress)
+	{
+		UE_LOG(LogTerminusSession, Log, TEXT("FindSessions: 이미 검색 중이라 무시"));
 		return;
 	}
 	
@@ -153,6 +208,10 @@ void USessionSubsystem::FindSessions(int32 MaxResults)
 	{
 		LastSearch->QuerySettings.Set(KEY_BUILD_TAG, VALUE_BUILD_TAG, EOnlineComparisonOp::Equals);
 	}
+	
+	// 초대 전용 방과 던전 진행 중인 방은 스팀이 검색할 때 빼고 돌려준다
+	LastSearch->QuerySettings.Set(KEY_LISTED, FString(TEXT("1")), EOnlineComparisonOp::Equals);
+	LastSearch->QuerySettings.Set(KEY_INGAME, FString(TEXT("0")), EOnlineComparisonOp::Equals);
 
 	FindHandle = Session->AddOnFindSessionsCompleteDelegate_Handle(
 		FOnFindSessionsCompleteDelegate::CreateUObject(
@@ -163,7 +222,7 @@ void USessionSubsystem::FindSessions(int32 MaxResults)
 	Session->FindSessions(0, LastSearch.ToSharedRef());
 }
 
-void USessionSubsystem::JoinSessionByIndex(int32 Index)
+void USessionSubsystem::JoinSessionByIndex(int32 Index, const FString& Password)
 {
 	// 인덱스는 BP 목록용 창구일 뿐, 실제 참가는 결과 자체로 한다
 	if (!LastSearch.IsValid() || !LastSearch->SearchResults.IsValidIndex(Index))
@@ -172,7 +231,42 @@ void USessionSubsystem::JoinSessionByIndex(int32 Index)
 		return;
 	}
 
+	PendingTravelOptions = Password.IsEmpty() ? FString() : FString::Printf(TEXT("?pw=%s"), *Password);
+	
 	JoinSearchResult(LastSearch->SearchResults[Index]);
+}
+
+bool USessionSubsystem::CheckJoinRequest(const FString& Options, int32 CurrentPlayers, FString& OutError) const
+{
+	// 세션 없이 연 주점(솔로, PIE 에서 레벨 바로 열기)은 심사할 게 없다
+	if (HostMaxPlayers <= 0)
+	{
+		return true;
+	}
+
+	// 목록이 새로고침 전 정보일 수 있어서 누르는 순간 찼을 수도 있다
+	if (CurrentPlayers >= HostMaxPlayers)
+	{
+		OutError = TEXT("방이 가득 찼습니다.");
+		return false;
+	}
+
+	if (HostPassword.IsEmpty())
+	{
+		return true;
+	}
+
+	if (UGameplayStatics::HasOption(Options, TEXT("invited")))
+	{
+		return true;
+	}
+
+	if (UGameplayStatics::ParseOption(Options, TEXT("pw")) != HostPassword)
+	{
+		OutError = TEXT("비밀번호가 틀렸습니다.");
+		return false;
+	}
+	return true;
 }
 
 void USessionSubsystem::LeaveSession()
@@ -219,6 +313,12 @@ void USessionSubsystem::StartRun()
 	
 	UE_LOG(LogTerminusSession, Log, TEXT("StartRun: 세션 진행 중으로 전환"));
 	Session->StartSession(NAME_GameSession);
+	
+	if (FOnlineSessionSettings* Settings = Session->GetSessionSettings(NAME_GameSession))
+	{
+		Settings->Set(KEY_INGAME, FString(TEXT("1")), EOnlineDataAdvertisementType::ViaOnlineServiceAndPing);
+		Session->UpdateSession(NAME_GameSession, *Settings, true);
+	}
 }
 
 void USessionSubsystem::ShowInviteUI()
@@ -347,6 +447,14 @@ void USessionSubsystem::HandleFindComplete(bool bWasSuccessful)
 			Info.CurrentPlayers = Info.MaxPlayers - R.Session.NumOpenPublicConnections;
 			Info.PingMs         = R.PingInMs;
 			Info.HostName       = R.Session.OwningUserName;
+			FString RoomName, Locked;
+			R.Session.SessionSettings.Get(KEY_ROOM_NAME, RoomName);
+			R.Session.SessionSettings.Get(KEY_LOCKED, Locked);
+			Info.RoomName = RoomName.IsEmpty() ? FString::Printf(TEXT("%s의 주점"), *Info.HostName) : RoomName;
+			Info.bLocked  = (Locked == TEXT("1"));
+
+			UE_LOG(LogTerminusSession, Log, TEXT("  [%d] '%s' %d/%d locked=%d ping=%d"),
+				i, *Info.RoomName, Info.CurrentPlayers, Info.MaxPlayers, Info.bLocked ? 1 : 0, Info.PingMs);
 			Out.Add(Info);
 		}
 	}
@@ -366,16 +474,21 @@ void USessionSubsystem::HandleJoinComplete(FName SessionName, EOnJoinSessionComp
 
 	const bool bOk = (Result == EOnJoinSessionCompleteResult::Success);
 	OnJoinComplete.Broadcast(bOk);
-	if (!bOk || !Session.IsValid()) return;
+	if (!bOk || !Session.IsValid())
+	{
+		PendingTravelOptions.Reset();
+		return;
+	}
 
 	FString ConnectString;
 	if (Session->GetResolvedConnectString(NAME_GameSession, ConnectString))
 	{
 		if (APlayerController* PC = GetGameInstance()->GetFirstLocalPlayerController())
 		{
-			PC->ClientTravel(ConnectString, ETravelType::TRAVEL_Absolute);
+			PC->ClientTravel(ConnectString + PendingTravelOptions, ETravelType::TRAVEL_Absolute);
 		}
 	}
+	PendingTravelOptions.Reset();
 }
 
 void USessionSubsystem::HandleDestroyComplete(FName SessionName, bool bWasSuccessful)
@@ -387,6 +500,9 @@ void USessionSubsystem::HandleDestroyComplete(FName SessionName, bool bWasSucces
 
 	OnLeaveComplete.Broadcast(bWasSuccessful);
 
+	HostPassword.Reset();
+	HostMaxPlayers = 0;
+	
 	// 재진입 전에 먼저 내려야 함. 안 그러면 Host -> Leave -> Host ... 무한 루프
 	const EAfterDestroy Next = AfterDestroy;
 	AfterDestroy = EAfterDestroy::None;
@@ -398,7 +514,7 @@ void USessionSubsystem::HandleDestroyComplete(FName SessionName, bool bWasSucces
 			const FString MapPath = PendingHostMap;
 			PendingHostMap.Reset();
 
-			if (bWasSuccessful) { HostSession(PendingMaxPlayers, MapPath); }
+			if (bWasSuccessful) { HostSession(PendingMaxPlayers, MapPath, PendingRoomOptions); }
 			else                { OnHostComplete.Broadcast(false); }
 			break;
 		}
@@ -457,7 +573,11 @@ void USessionSubsystem::HandleNetworkFailure(UWorld* World, UNetDriver* NetDrive
 	UE_LOG(LogTerminusSession, Warning, TEXT("NetworkFailure: %s / %s"),
 		ENetworkFailure::ToString(FailureType), *ErrorString);
 
-	CleanupAfterFailure(FText::FromString(TEXT("연결이 끊겼습니다.")));
+	const FText Reason = (FailureType == ENetworkFailure::PendingConnectionFailure && !ErrorString.IsEmpty())
+		? FText::FromString(ErrorString)
+		: FText::FromString(TEXT("연결이 끊겼습니다."));
+
+	CleanupAfterFailure(Reason);
 }
 
 void USessionSubsystem::HandleTravelFailure(UWorld* World, ETravelFailure::Type FailureType, const FString& ErrorString)
@@ -494,6 +614,8 @@ void USessionSubsystem::HandleInviteAccepted(const bool bWasSuccessful, const in
 		OnJoinComplete.Broadcast(false);
 		return;
 	}
+	
+	PendingTravelOptions = TEXT("?invited=1");
 
 	// 내 주점을 열어둔 상태여도 JoinSearchResult 가 먼저 정리하고 들어간다
 	JoinSearchResult(InviteResult);

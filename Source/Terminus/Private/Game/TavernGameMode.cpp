@@ -43,6 +43,20 @@ void ATavernGameMode::TryStartGame()
 	GetWorld()->ServerTravel(DungeonMapPath);
 }
 
+void ATavernGameMode::PreLogin(const FString& Options, const FString& Address, const FUniqueNetIdRepl& UniqueId,
+	FString& ErrorMessage)
+{
+	Super::PreLogin(Options, Address, UniqueId, ErrorMessage);
+	
+	if (!ErrorMessage.IsEmpty()) { return; }   // 엔진이 이미 거절했으면 그대로
+
+	if (const USessionSubsystem* Sessions = GetGameInstance()->GetSubsystem<USessionSubsystem>())
+	{
+		// GetNumPlayers 는 호스트 포함 지금 주점에 있는 인원
+		Sessions->CheckJoinRequest(Options, GetNumPlayers(), ErrorMessage);
+	}
+}
+
 bool ATavernGameMode::AreAllPlayersReady() const
 {
 	if (!GameState || GameState->PlayerArray.Num() == 0)

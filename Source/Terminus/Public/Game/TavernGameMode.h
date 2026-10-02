@@ -18,6 +18,10 @@ public:
 	// 게임 시작 요청 호스트가 하는거
 	void TryStartGame();
 	
+	// 주점 입장
+	virtual void PreLogin(const FString& Options, const FString& Address,
+		const FUniqueNetIdRepl& UniqueId, FString& ErrorMessage) override;
+	
 protected:
 	bool AreAllPlayersReady() const;
 	

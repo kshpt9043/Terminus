@@ -7,6 +7,7 @@
 class UButton;
 class UTextBlock;
 class USessionSubsystem;
+class URoomListWidget;
 
 /**
  * 첫 화면. 버튼 다섯 개와 안내 팝업.
@@ -39,6 +40,9 @@ protected:
 	UPROPERTY(meta = (BindWidget)) TObjectPtr<UTextBlock> PopupBody;
 	UPROPERTY(meta = (BindWidget)) TObjectPtr<UButton>    Btn_PopupOK;
 	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UTextBlock> PopupTitle;
+
+	// 주점 리스트 찾기
+	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<URoomListWidget> RoomBrowser;
 
 	// 레벨 이름이 바뀌어도 코드 대신 BP 디폴트만 고치게
 	UPROPERTY(EditDefaultsOnly, Category = "Terminus|Flow")

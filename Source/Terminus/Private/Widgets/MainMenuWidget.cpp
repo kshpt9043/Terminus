@@ -7,6 +7,7 @@
 #include "Kismet/KismetSystemLibrary.h"
 #include "Online/SessionSubsystem.h"
 #include "Widgets/TerminusUIColors.h"
+#include "Widgets/RoomListWidget.h"
 
 namespace
 {
@@ -41,6 +42,7 @@ void UMainMenuWidget::NativeConstruct()
 	Super::NativeConstruct();
 
 	DisconnectPopup->SetVisibility(ESlateVisibility::Collapsed);
+	if (RoomBrowser) { RoomBrowser->Close(); }
 	SetButtonTextColor(Btn_Quit, TextDim);
 
 	USessionSubsystem* Sessions = GetSessions();
@@ -76,12 +78,18 @@ void UMainMenuWidget::HandleDungeonClicked()
 
 void UMainMenuWidget::HandleTavernClicked()
 {
+	if (RoomBrowser)
+	{
+		RoomBrowser->Open(MaxPartySize, TavernMapPath);
+		return;
+	}
+	
 	USessionSubsystem* Sessions = GetSessions();
 	if (!Sessions) { return; }
 
 	// 세션 생성은 비동기라 기다리는 동안 연타를 막는다
 	SetMenuEnabled(false);
-	Sessions->HostSession(MaxPartySize, TavernMapPath);
+	Sessions->HostSession(MaxPartySize, TavernMapPath, FTerminusRoomOptions());
 }
 
 void UMainMenuWidget::HandleHostComplete(bool bWasSuccessful)

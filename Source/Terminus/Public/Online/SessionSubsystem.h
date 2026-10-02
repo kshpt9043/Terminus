@@ -26,6 +26,19 @@ struct FTerminusSessionInfo
 	UPROPERTY(BlueprintReadOnly) int32 CurrentPlayers = 0;
 	UPROPERTY(BlueprintReadOnly) int32 MaxPlayers = 0;
 	UPROPERTY(BlueprintReadOnly) int32 PingMs = 0;
+	UPROPERTY(BlueprintReadOnly) FString RoomName;
+	// 비밀번호 걸림 여부
+	UPROPERTY(BlueprintReadOnly) bool bLocked = false;
+};
+
+USTRUCT(BlueprintType)
+struct FTerminusRoomOptions
+{
+	GENERATED_BODY()
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite) FString RoomName;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite) FString Password;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite) bool bListed = true;
 };
 
 // dynamic으로 BP 바인딩 + OSS는 비동기이므로 델리게이트 선언
@@ -48,14 +61,19 @@ public:
 	virtual void Deinitialize() override;
 	
 	UFUNCTION(BlueprintCallable, Category = "Terminus|Session")
-	void HostSession(int32 MaxPlayers, const FString& MapPath);
-
+	void HostSession(int32 MaxPlayers, const FString& MapPath, const FTerminusRoomOptions& Options);
+	
+	UFUNCTION(BlueprintPure, Category = "Terminus|Session")
+	static bool IsValidRoomPassword(const FString& InPassword);
+	
 	UFUNCTION(BlueprintCallable, Category = "Terminus|Session")
 	void FindSessions(int32 MaxResults = 200);
 
 	UFUNCTION(BlueprintCallable, Category = "Terminus|Session")
-	void JoinSessionByIndex(int32 Index);
+	void JoinSessionByIndex(int32 Index, const FString& Password = TEXT(""));
 
+	bool CheckJoinRequest(const FString& Options, int32 CurrentPlayers, FString& OutError) const;
+	
 	UFUNCTION(BlueprintCallable, Category = "Terminus|Session")
 	void LeaveSession();
 	
@@ -144,4 +162,14 @@ private:
 		FUniqueNetIdPtr UserId, const FOnlineSessionSearchResult& InviteResult);
 
 	FDelegateHandle InviteHandle;
+	
+	// 파괴 후 다시 호스트할 때 쓸 옵션
+	FTerminusRoomOptions PendingRoomOptions;
+
+	// 호스트만 들고 있는 비밀번호
+	FString HostPassword;
+	
+	int32 HostMaxPlayers = 0;
+
+	FString PendingTravelOptions;
 };
