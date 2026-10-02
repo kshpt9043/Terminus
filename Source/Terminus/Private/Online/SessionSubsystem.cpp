@@ -131,7 +131,9 @@ void USessionSubsystem::HostSession(int32 MaxPlayers, const FString& MapPath, co
 	Settings.NumPublicConnections   = MaxPlayers;
 	Settings.NumPrivateConnections  = 0;
 	Settings.bShouldAdvertise       = true;
-	Settings.bAllowJoinInProgress   = false; // 게임 중인 세션은 참가 x
+	// 스팀은 로비 인원이 바뀔 때마다 이 값으로 joinable 을 다시 계산한다 (false 면 검색, 초대 둘 다 막힘)
+	// 주점에 있는 동안은 열어 두고, 출발할 때 StartRun 에서 닫는다
+	Settings.bAllowJoinInProgress   = true;
 	Settings.bAllowJoinViaPresence  = true;
 	Settings.bUsesPresence          = true;
 	Settings.bAllowInvites          = true;
@@ -317,6 +319,10 @@ void USessionSubsystem::StartRun()
 	if (FOnlineSessionSettings* Settings = Session->GetSessionSettings(NAME_GameSession))
 	{
 		Settings->Set(KEY_INGAME, FString(TEXT("1")), EOnlineDataAdvertisementType::ViaOnlineServiceAndPing);
+
+		// 던전 중엔 로비도 닫는다. 이후 인원이 바뀌면 스팀이 이 값으로 joinable=false 를 유지
+		Settings->bAllowJoinInProgress = false;
+
 		Session->UpdateSession(NAME_GameSession, *Settings, true);
 	}
 }
