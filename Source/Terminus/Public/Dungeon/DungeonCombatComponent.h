@@ -90,7 +90,7 @@ public:
 	// 전투 정리 (몬스터 제거, 타이머 정지). 구역을 비울 때
 	void EndCombat();
 
-	// 플레이어 요청. SkillIndex = 기본 스킬 0~2 (공격 방어 특수)
+	// 플레이어 요청. SkillIndex = 기본 스킬 0~2 (공격 방어 특수), 강화 스킬 3~5 (장착 칸)
 	// TargetIndex = 적 1명 스킬이면 GetMonsters() 의 인덱스, 아군 1명 스킬이면 구역 Occupants 의 인덱스
 	void HandleUseSkill(ATerminusPlayerState* PS, int32 SkillIndex, int32 TargetIndex);
 	void HandleEndTurn(ATerminusPlayerState* PS);

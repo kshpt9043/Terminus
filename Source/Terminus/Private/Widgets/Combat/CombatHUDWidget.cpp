@@ -104,10 +104,19 @@ void UCombatHUDWidget::NativeOnInitialized()
 		BuildDefaultLayout();
 	}
 
+	// 강화 스킬 버튼은 나중에 생긴 칸이라 WBP 에 없을 수 있음 -> 임시 줄
+	if (!EnhanceButton0 && !EnhanceButton1 && !EnhanceButton2)
+	{
+		BuildEnhanceFallback();
+	}
+
 	// NativeConstruct 는 여러 번 불릴 수 있어서 버튼 바인딩은 여기서 한 번만 (주점 / 메인 메뉴와 같은 규칙)
 	if (SkillButton0) SkillButton0->OnClicked.AddDynamic(this, &UCombatHUDWidget::HandleSkill0Clicked);
 	if (SkillButton1) SkillButton1->OnClicked.AddDynamic(this, &UCombatHUDWidget::HandleSkill1Clicked);
 	if (SkillButton2) SkillButton2->OnClicked.AddDynamic(this, &UCombatHUDWidget::HandleSkill2Clicked);
+	if (EnhanceButton0) EnhanceButton0->OnClicked.AddDynamic(this, &UCombatHUDWidget::HandleEnhance0Clicked);
+	if (EnhanceButton1) EnhanceButton1->OnClicked.AddDynamic(this, &UCombatHUDWidget::HandleEnhance1Clicked);
+	if (EnhanceButton2) EnhanceButton2->OnClicked.AddDynamic(this, &UCombatHUDWidget::HandleEnhance2Clicked);
 	if (EndTurnButton) EndTurnButton->OnClicked.AddDynamic(this, &UCombatHUDWidget::HandleEndTurnClicked);
 
 	SetVisibility(ESlateVisibility::Collapsed);
@@ -164,8 +173,18 @@ void UCombatHUDWidget::BuildDefaultLayout()
 
 	LeftBox->AddChildToVerticalBox(SkillRow);
 
-	SkillEnergyText = MakeText(WidgetTree, TEXT("강화 에너지 0/0  (강화 스킬: 준비 중)"), 18, SkillEnergyColor);
-	if (UVerticalBoxSlot* S = LeftBox->AddChildToVerticalBox(SkillEnergyText))
+	UHorizontalBox* EnhanceRow = WidgetTree->ConstructWidget<UHorizontalBox>();
+	SkillEnergyText = MakeText(WidgetTree, TEXT("강화 에너지 0/0"), 18, SkillEnergyColor);
+	if (UHorizontalBoxSlot* S = EnhanceRow->AddChildToHorizontalBox(SkillEnergyText))
+	{
+		S->SetVerticalAlignment(VAlign_Center);
+		S->SetPadding(FMargin(0.f, 0.f, 16.f, 0.f));
+	}
+	MakeEnhanceButton(EnhanceRow, EnhanceButton0, EnhanceLabel0);
+	MakeEnhanceButton(EnhanceRow, EnhanceButton1, EnhanceLabel1);
+	MakeEnhanceButton(EnhanceRow, EnhanceButton2, EnhanceLabel2);
+
+	if (UVerticalBoxSlot* S = LeftBox->AddChildToVerticalBox(EnhanceRow))
 	{
 		S->SetPadding(FMargin(0.f, 8.f, 0.f, 0.f));
 	}
@@ -190,6 +209,30 @@ void UCombatHUDWidget::BuildDefaultLayout()
 	}
 
 	AddToCanvas(Root, MakePanel(WidgetTree, RightBox), FAnchors(1.f, 1.f), FVector2D(1.f, 1.f), FVector2D(-24.f, -24.f));
+}
+
+void UCombatHUDWidget::MakeEnhanceButton(UPanelWidget* Parent, TObjectPtr<UButton>& OutButton, TObjectPtr<UTextBlock>& OutLabel)
+{
+	OutButton = WidgetTree->ConstructWidget<UButton>();
+	OutLabel = MakeText(WidgetTree, TEXT("-"), 16);
+	OutLabel->SetJustification(ETextJustify::Center);
+	OutButton->SetContent(OutLabel);
+	if (UHorizontalBoxSlot* S = Cast<UHorizontalBoxSlot>(Parent->AddChild(OutButton)))
+	{
+		S->SetPadding(FMargin(4.f, 0.f));
+	}
+}
+
+void UCombatHUDWidget::BuildEnhanceFallback()
+{
+	if (!TagLayer) return;
+
+	UHorizontalBox* Row = WidgetTree->ConstructWidget<UHorizontalBox>();
+	MakeEnhanceButton(Row, EnhanceButton0, EnhanceLabel0);
+	MakeEnhanceButton(Row, EnhanceButton1, EnhanceLabel1);
+	MakeEnhanceButton(Row, EnhanceButton2, EnhanceLabel2);
+
+	AddToCanvas(TagLayer, MakePanel(WidgetTree, Row), FAnchors(0.5f, 1.f), FVector2D(0.5f, 1.f), FVector2D(0.f, -110.f));
 }
 
 // =====================================================================
@@ -373,11 +416,10 @@ void UCombatHUDWidget::UpdateTags()
 	if (PendingSkillIndex != INDEX_NONE)
 	{
 		const ATerminusPlayerState* LocalPS = PC->GetPlayerState<ATerminusPlayerState>();
-		const TArray<const FSkillRow*> Skills = LocalPS ? UTerminusDataSettings::FindBasicSkills(LocalPS->GetCharacterClass()) : TArray<const FSkillRow*>();
-		if (Skills.IsValidIndex(PendingSkillIndex) && Skills[PendingSkillIndex])
+		if (const FSkillRow* Pending = LocalPS ? LocalPS->GetCombatSkill(PendingSkillIndex) : nullptr)
 		{
-			bPickEnemy = Skills[PendingSkillIndex]->TargetType == ETargetType::SingleEnemy;
-			bPickAlly = Skills[PendingSkillIndex]->TargetType == ETargetType::SingleAlly;
+			bPickEnemy = Pending->TargetType == ETargetType::SingleEnemy;
+			bPickAlly = Pending->TargetType == ETargetType::SingleAlly;
 		}
 	}
 
@@ -506,26 +548,34 @@ void UCombatHUDWidget::UpdatePanels()
 		}
 		if (SkillEnergyText)
 		{
-			SkillEnergyText->SetText(FText::FromString(FString::Printf(TEXT("강화 에너지 %d/%d  (강화 스킬: 준비 중)"), State.SkillEnergy, Stats.MaxSkillEnergy)));
+			SkillEnergyText->SetText(FText::FromString(FString::Printf(TEXT("강화 에너지 %d/%d"), State.SkillEnergy, Stats.MaxSkillEnergy)));
 		}
 
-		const TArray<const FSkillRow*> Skills = UTerminusDataSettings::FindBasicSkills(LocalPS->GetCharacterClass());
-		const TObjectPtr<UButton> Buttons[] = { SkillButton0, SkillButton1, SkillButton2 };
-		const TObjectPtr<UTextBlock> Labels[] = { SkillLabel0, SkillLabel1, SkillLabel2 };
+		// 칸 0~2 기본 스킬, 3~5 강화 스킬
+		const TObjectPtr<UButton> Buttons[] = { SkillButton0, SkillButton1, SkillButton2, EnhanceButton0, EnhanceButton1, EnhanceButton2 };
+		const TObjectPtr<UTextBlock> Labels[] = { SkillLabel0, SkillLabel1, SkillLabel2, EnhanceLabel0, EnhanceLabel1, EnhanceLabel2 };
 
-		for (int32 i = 0; i < 3; ++i)
+		for (int32 i = 0; i < UE_ARRAY_COUNT(Buttons); ++i)
 		{
-			const FSkillRow* Skill = Skills.IsValidIndex(i) ? Skills[i] : nullptr;
+			const FSkillRow* Skill = LocalPS->GetCombatSkill(i);
+			const bool bEnhance = i >= ATerminusPlayerState::NumBasicSkills;
 
 			if (Labels[i])
 			{
-				Labels[i]->SetText(Skill
-					? FText::FromString(FString::Printf(TEXT("%s\n%s · 에너지 %d"), *Skill->DisplayName_KR.ToString(), *TargetLabel(Skill->TargetType), Skill->EnergyCost))
-					: FText::FromString(TEXT("-")));
+				FText Label = FText::FromString(bEnhance ? TEXT("빈 칸") : TEXT("-"));
+				if (Skill)
+				{
+					const FString Cost = bEnhance
+						? FString::Printf(TEXT("강화 %d"), Skill->SkillEnergyCost)
+						: FString::Printf(TEXT("에너지 %d"), Skill->EnergyCost);
+					Label = FText::FromString(FString::Printf(TEXT("%s\n%s · %s"), *Skill->DisplayName_KR.ToString(), *TargetLabel(Skill->TargetType), *Cost));
+				}
+				Labels[i]->SetText(Label);
 			}
 			if (Buttons[i])
 			{
-				Buttons[i]->SetIsEnabled(Skill && bMyTurn && State.Energy >= Skill->EnergyCost);
+				Buttons[i]->SetIsEnabled(Skill && bMyTurn
+					&& State.Energy >= Skill->EnergyCost && State.SkillEnergy >= Skill->SkillEnergyCost);
 
 				// 대상 고르는 중인 스킬은 강조
 				Buttons[i]->SetBackgroundColor(PendingSkillIndex == i ? FLinearColor(1.f, 0.85f, 0.3f) : FLinearColor::White);
@@ -565,10 +615,10 @@ void UCombatHUDWidget::OnSkillClicked(int32 SkillIndex)
 		return;
 	}
 
-	const TArray<const FSkillRow*> Skills = UTerminusDataSettings::FindBasicSkills(LocalPS->GetCharacterClass());
-	if (!Skills.IsValidIndex(SkillIndex) || !Skills[SkillIndex]) return;
+	const FSkillRow* Skill = LocalPS->GetCombatSkill(SkillIndex);
+	if (!Skill) return;
 
-	const ETargetType TargetType = Skills[SkillIndex]->TargetType;
+	const ETargetType TargetType = Skill->TargetType;
 	if (TargetType == ETargetType::SingleEnemy || TargetType == ETargetType::SingleAlly)
 	{
 		// 대상을 골라야 하는 스킬 -> 대상 고르기 모드 (바탕이 우클릭을 받게 바로 전환)
@@ -593,6 +643,9 @@ void UCombatHUDWidget::CancelTargeting()
 void UCombatHUDWidget::HandleSkill0Clicked() { OnSkillClicked(0); }
 void UCombatHUDWidget::HandleSkill1Clicked() { OnSkillClicked(1); }
 void UCombatHUDWidget::HandleSkill2Clicked() { OnSkillClicked(2); }
+void UCombatHUDWidget::HandleEnhance0Clicked() { OnSkillClicked(ATerminusPlayerState::NumBasicSkills + 0); }
+void UCombatHUDWidget::HandleEnhance1Clicked() { OnSkillClicked(ATerminusPlayerState::NumBasicSkills + 1); }
+void UCombatHUDWidget::HandleEnhance2Clicked() { OnSkillClicked(ATerminusPlayerState::NumBasicSkills + 2); }
 
 void UCombatHUDWidget::HandleEndTurnClicked()
 {

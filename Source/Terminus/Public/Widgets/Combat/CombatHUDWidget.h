@@ -60,6 +60,14 @@ protected:
 	UPROPERTY(meta = (BindWidget)) TObjectPtr<UTextBlock> SkillLabel1;
 	UPROPERTY(meta = (BindWidget)) TObjectPtr<UTextBlock> SkillLabel2;
 
+	// 장착한 강화 스킬 3칸 (강화 에너지로 사용). WBP 에 없으면 C++ 이 화면 아래 가운데에 임시로 만듦
+	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UButton> EnhanceButton0;
+	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UButton> EnhanceButton1;
+	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UButton> EnhanceButton2;
+	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UTextBlock> EnhanceLabel0;
+	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UTextBlock> EnhanceLabel1;
+	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UTextBlock> EnhanceLabel2;
+
 	UPROPERTY(meta = (BindWidget)) TObjectPtr<UButton> EndTurnButton;
 	UPROPERTY(meta = (BindWidget)) TObjectPtr<UTextBlock> StatusText;
 
@@ -95,7 +103,7 @@ private:
 	// 표시를 다시 만들어야 하는지 판단용 (몬스터 / 플레이어 구성이 바뀌면)
 	TArray<TWeakObjectPtr<ATerminusBattler>> TaggedBattlers;
 
-	// 대상을 고르는 중인 스킬 (INDEX_NONE = 아님)
+	// 대상을 고르는 중인 스킬 칸 (0~2 기본, 3~5 강화. INDEX_NONE = 아님)
 	int32 PendingSkillIndex = INDEX_NONE;
 
 	// 보일지 말지는 타이머가 정함. 숨긴(Collapsed) 위젯은 NativeTick 이 안 불려서 Tick 으로는 다시 못 켬
@@ -103,6 +111,12 @@ private:
 	void UpdateVisibility();
 
 	void BuildDefaultLayout();
+
+	// WBP 에 강화 스킬 버튼이 없을 때 임시 버튼 줄 (TagLayer 위, 화면 아래 가운데)
+	void BuildEnhanceFallback();
+
+	// 강화 스킬 버튼 하나 만들기 (기본 배치 / 임시 줄 공용)
+	void MakeEnhanceButton(class UPanelWidget* Parent, TObjectPtr<UButton>& OutButton, TObjectPtr<UTextBlock>& OutLabel);
 	void RebuildTags();
 	void UpdateTags();
 	void UpdatePanels();
@@ -113,6 +127,9 @@ private:
 	UFUNCTION() void HandleSkill0Clicked();
 	UFUNCTION() void HandleSkill1Clicked();
 	UFUNCTION() void HandleSkill2Clicked();
+	UFUNCTION() void HandleEnhance0Clicked();
+	UFUNCTION() void HandleEnhance1Clicked();
+	UFUNCTION() void HandleEnhance2Clicked();
 	UFUNCTION() void HandleEndTurnClicked();
 	UFUNCTION() void HandleTargetClicked();
 };

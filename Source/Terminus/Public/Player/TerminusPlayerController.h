@@ -10,6 +10,7 @@
 class UTavernWidget;
 class ADungeonArea;
 class UCombatHUDWidget;
+class UStartSkillPickWidget;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnViewAreaChanged, ADungeonArea*, NewArea);
 
@@ -100,6 +101,34 @@ public:
 	UFUNCTION(Server, Reliable)
 	void Server_DebugWinCombat();
 
+	// -------------------------------------------------------------
+	// [런 시작 강화 스킬]
+	// -------------------------------------------------------------
+
+	// 고른 강화 스킬 장착 요청. NAME_None = 보유 스킬이 없어 건너뜀
+	UFUNCTION(Server, Reliable)
+	void Server_ChooseStartSkill(FName SkillRow);
+
+	// [테스트] 보유 스킬(영구, 이 컴퓨터 세이브) 조작. 콘솔에서
+	//   DebugOwnSkill holy_charge  -> 그 스킬 보유
+	//   DebugOwnAllSkills          -> 강화 스킬로 쓸 수 있는 DT_Skill 행 전부 보유
+	//   DebugClearOwnedSkills      -> 보유 스킬 전부 삭제 (완전 첫판 상태)
+	//   DebugShowStartSkillPick    -> 장착을 비우고 고르기 화면 다시 띄우기
+	UFUNCTION(Exec)
+	void DebugOwnSkill(FName SkillRow);
+
+	UFUNCTION(Exec)
+	void DebugOwnAllSkills();
+
+	UFUNCTION(Exec)
+	void DebugClearOwnedSkills();
+
+	UFUNCTION(Exec)
+	void DebugShowStartSkillPick();
+
+	UFUNCTION(Server, Reliable)
+	void Server_DebugResetStartSkill();
+
 protected:
 	// 전투 HUD 클래스. 비워 두면 C++ 기본 배치(UCombatHUDWidget)를 씀. WBP 를 만들면 BP_DungeonPC 에서 지정
 	UPROPERTY(EditDefaultsOnly, Category = "Terminus|UI")
@@ -108,6 +137,22 @@ protected:
 	UPROPERTY()
 	TObjectPtr<UCombatHUDWidget> CombatHUD;
 
+	// 런 시작 강화 스킬 고르기 화면. 비워 두면 C++ 기본 모양(UStartSkillPickWidget)
+	UPROPERTY(EditDefaultsOnly, Category = "Terminus|UI")
+	TSubclassOf<UStartSkillPickWidget> StartSkillPickClass;
+
+	UPROPERTY()
+	TObjectPtr<UStartSkillPickWidget> StartSkillPick;
+
 private:
 	TWeakObjectPtr<ADungeonArea> ViewedArea;
+
+	// 던전에 들어와 내 PS 와 지도(MapManager)가 둘 다 보이면 고르기 화면을 띄울지 정함
+	// 클라에선 둘 다 복제로 늦게 와서 잠깐씩 다시 확인
+	FTimerHandle StartSkillCheckTimer;
+	int32 StartSkillCheckTries = 0;
+	void CheckStartSkillPick();
+
+	// 보유 스킬에서 최대 3장 뽑아 화면 띄우기. 보유 스킬이 없으면 "없음" 안내 화면 (아무 키 -> 지도)
+	void OpenStartSkillPick();
 };

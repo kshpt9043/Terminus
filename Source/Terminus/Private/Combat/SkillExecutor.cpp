@@ -51,6 +51,12 @@ void FSkillExecutor::Execute(const FSkillRow& Skill,
 		}
 	}
 
+	// 에너지 회복은 BaseValue 를 시전자 에너지로 (신의 축복 / 아드레날린)
+	if (Skill.ActionKind == EActionKind::GainEnergy)
+	{
+		Caster->AddEnergy(Amount);
+	}
+
 	// ④ 상태이상. 컬럼이 None 이 아니면 대상들한테
 	if (Skill.StatusEffect != EStatusEffect::None)
 	{
