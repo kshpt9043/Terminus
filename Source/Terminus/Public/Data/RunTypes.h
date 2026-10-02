@@ -32,6 +32,10 @@ struct FRunState
 	// false 인 동안은 지도에서 방을 못 고름
 	UPROPERTY(BlueprintReadOnly)
 	bool bStartSkillChosen = false;
+
+	// 던전 재화. 런 동안만 유효 (몬스터방 보상으로 얻고 상점에서 씀). 지금은 얻는 곳이 아직 없음
+	UPROPERTY(BlueprintReadOnly)
+	int32 Currency = 0;
 	
 	// 맵 진행 및 선택 관련 추가 데이터
 	UPROPERTY(BlueprintReadWrite)

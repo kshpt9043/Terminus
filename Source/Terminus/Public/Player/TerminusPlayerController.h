@@ -11,6 +11,9 @@ class UTavernWidget;
 class ADungeonArea;
 class UCombatHUDWidget;
 class UStartSkillPickWidget;
+class UMapScreenWidget;
+class UConfirmPopupWidget;
+struct FRunState;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnViewAreaChanged, ADungeonArea*, NewArea);
 
@@ -57,6 +60,15 @@ public:
 	// 방 선택 실패 알림. 같은 이유로 MapManager 가 아니라 PC 의 Client RPC
 	UFUNCTION(Client, Reliable)
 	void Client_OnRoomSelectFailed(const FString& ReasonMessage);
+
+	// -------------------------------------------------------------
+	// [팝업]
+	// -------------------------------------------------------------
+
+	// 범용 팝업 띄우기 (로컬 화면). CancelLabel 을 비우면 확인 버튼 하나짜리 알림
+	// 결과는 돌려받은 위젯의 OnConfirmed / OnCancelled (C++ 은 OnConfirmedNative / OnCancelledNative)
+	UFUNCTION(BlueprintCallable, Category = "Terminus|UI")
+	UConfirmPopupWidget* ShowPopup(const FText& Title, const FText& Message, const FText& ConfirmLabel, const FText& CancelLabel);
 
 	// -------------------------------------------------------------
 	// [던전 구역]
@@ -144,14 +156,34 @@ protected:
 	UPROPERTY()
 	TObjectPtr<UStartSkillPickWidget> StartSkillPick;
 
+	// 범용 팝업 클래스. 비워 두면 C++ 기본 모양(UConfirmPopupWidget)
+	UPROPERTY(EditDefaultsOnly, Category = "Terminus|UI")
+	TSubclassOf<UConfirmPopupWidget> PopupClass;
+
+	// 지도 화면 (WBP_MapScreen: 상단바 + 지도). 시작 스킬 고르기가 끝나면 뜸
+	// 지도 위젯은 RoomWidgetClass / 아이콘 같은 에셋 설정이 필요해서 C++ 기본 모양이 없음 -> 꼭 지정할 것
+	UPROPERTY(EditDefaultsOnly, Category = "Terminus|UI")
+	TSubclassOf<UMapScreenWidget> MapScreenClass;
+
+	UPROPERTY()
+	TObjectPtr<UMapScreenWidget> MapScreen;
+
 private:
 	TWeakObjectPtr<ADungeonArea> ViewedArea;
 
-	// 던전에 들어와 내 PS 와 지도(MapManager)가 둘 다 보이면 고르기 화면을 띄울지 정함
+	// 던전에 들어와 내 PS 와 지도(MapManager)가 둘 다 보이면 흐름 시작
+	// 게임 시작 -> (아직 안 골랐으면) 시작 스킬 고르기 -> 서버가 고르기 완료를 확인하면 지도 화면
 	// 클라에선 둘 다 복제로 늦게 와서 잠깐씩 다시 확인
 	FTimerHandle StartSkillCheckTimer;
 	int32 StartSkillCheckTries = 0;
 	void CheckStartSkillPick();
+
+	// 지도 화면 띄우기 (이미 떠 있으면 무시)
+	void OpenMapScreen();
+
+	// 내 RunState 가 바뀜 -> 시작 스킬 고르기가 끝났으면 지도 화면
+	UFUNCTION()
+	void HandleLocalRunStateChanged(const FRunState& NewRunState);
 
 	// 보유 스킬에서 최대 3장 뽑아 화면 띄우기. 보유 스킬이 없으면 "없음" 안내 화면 (아무 키 -> 지도)
 	void OpenStartSkillPick();

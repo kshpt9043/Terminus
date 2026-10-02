@@ -14,6 +14,8 @@
 #include "Dungeon/DungeonCombatComponent.h"
 #include "Widgets/Combat/CombatHUDWidget.h"
 #include "Widgets/Skill/StartSkillPickWidget.h"
+#include "Widgets/Map/MapScreenWidget.h"
+#include "Widgets/Common/ConfirmPopupWidget.h"
 #include "Game/TerminusProfileSubsystem.h"
 #include "Data/TerminusDataSettings.h"
 #include "TimerManager.h"
@@ -60,6 +62,17 @@ void ATerminusPlayerController::EndPlay(const EEndPlayReason::Type EndPlayReason
 	{
 		StartSkillPick->RemoveFromParent();
 		StartSkillPick = nullptr;
+	}
+
+	if (MapScreen)
+	{
+		MapScreen->RemoveFromParent();
+		MapScreen = nullptr;
+	}
+
+	if (ATerminusPlayerState* PS = GetPlayerState<ATerminusPlayerState>())
+	{
+		PS->OnRunStateChanged.RemoveAll(this);
 	}
 
 	if (TavernWidget)
@@ -150,7 +163,27 @@ void ATerminusPlayerController::Server_RequestSelectRoom_Implementation(int32 Ro
 void ATerminusPlayerController::Client_OnRoomSelectFailed_Implementation(const FString& ReasonMessage)
 {
 	UE_LOG(LogTemp, Warning, TEXT("[MapManager] 선택 실패: %s"), *ReasonMessage);
-	// TODO: 화면에 인원 초과/실패 팝업 UI 생성 및 메시지 출력
+	ShowPopup(FText::FromString(TEXT("방을 고를 수 없습니다")), FText::FromString(ReasonMessage), FText::FromString(TEXT("확인")), FText::GetEmpty());
+}
+
+UConfirmPopupWidget* ATerminusPlayerController::ShowPopup(const FText& Title, const FText& Message, const FText& ConfirmLabel, const FText& CancelLabel)
+{
+	if (!IsLocalController())
+	{
+		return nullptr;
+	}
+
+	const TSubclassOf<UConfirmPopupWidget> Class = PopupClass ? PopupClass : TSubclassOf<UConfirmPopupWidget>(UConfirmPopupWidget::StaticClass());
+	UConfirmPopupWidget* Popup = CreateWidget<UConfirmPopupWidget>(this, Class);
+	if (!Popup)
+	{
+		return nullptr;
+	}
+
+	Popup->Setup(Title, Message, ConfirmLabel, CancelLabel);
+	Popup->AddToViewport(50);   // 어떤 화면보다도 위
+	Popup->SetUserFocus(this);  // Enter / Esc
+	return Popup;
 }
 
 void ATerminusPlayerController::ViewDungeonArea(ADungeonArea* Area)
@@ -231,7 +264,7 @@ void ATerminusPlayerController::Server_DebugWinCombat_Implementation()
 
 void ATerminusPlayerController::CheckStartSkillPick()
 {
-	const ATerminusPlayerState* PS = GetPlayerState<ATerminusPlayerState>();
+	ATerminusPlayerState* PS = GetPlayerState<ATerminusPlayerState>();
 	const bool bInDungeon = UGameplayStatics::GetActorOfClass(this, AMapManager::StaticClass()) != nullptr;
 
 	if (!PS || !bInDungeon)
@@ -246,13 +279,48 @@ void ATerminusPlayerController::CheckStartSkillPick()
 
 	GetWorldTimerManager().ClearTimer(StartSkillCheckTimer);
 
-	// 이미 골랐거나 런 중간(방을 하나라도 지남)이면 안 띄움
+	// 이미 골랐거나 런 중간(방을 하나라도 지남)이면 바로 지도
 	if (PS->HasChosenStartSkill() || PS->GetCurrentMapLevel() > 0)
+	{
+		OpenMapScreen();
+		return;
+	}
+
+	// 고르기가 서버에서 확정되면(복제로 RunState 가 바뀌면) 지도를 띄움
+	PS->OnRunStateChanged.AddUniqueDynamic(this, &ATerminusPlayerController::HandleLocalRunStateChanged);
+	OpenStartSkillPick();
+}
+
+void ATerminusPlayerController::HandleLocalRunStateChanged(const FRunState& NewRunState)
+{
+	if (NewRunState.bStartSkillChosen)
+	{
+		OpenMapScreen();
+	}
+}
+
+void ATerminusPlayerController::OpenMapScreen()
+{
+	if (MapScreen)
 	{
 		return;
 	}
 
-	OpenStartSkillPick();
+	if (!MapScreenClass)
+	{
+		UE_LOG(LogTemp, Error, TEXT("PC: MapScreenClass 가 비어 있어 지도를 못 띄움. BP_DungeonPC 에서 WBP_MapScreen 을 지정할 것"));
+		if (GEngine)
+		{
+			GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, TEXT("BP_DungeonPC 의 Map Screen Class 가 비어 있음 (WBP_MapScreen 지정)"));
+		}
+		return;
+	}
+
+	MapScreen = CreateWidget<UMapScreenWidget>(this, MapScreenClass);
+	if (MapScreen)
+	{
+		MapScreen->AddToViewport(0);   // 맨 아래. 전투 HUD(10) / 고르기 화면(20) 이 위
+	}
 }
 
 void ATerminusPlayerController::OpenStartSkillPick()
@@ -263,7 +331,8 @@ void ATerminusPlayerController::OpenStartSkillPick()
 	}
 
 	const UTerminusProfileSubsystem* Profile = GetGameInstance() ? GetGameInstance()->GetSubsystem<UTerminusProfileSubsystem>() : nullptr;
-	TArray<FName> Pool = Profile ? Profile->GetUsableOwnedSkills() : TArray<FName>();
+	const ATerminusPlayerState* PS = GetPlayerState<ATerminusPlayerState>();
+	TArray<FName> Pool = (Profile && PS) ? Profile->GetUsableOwnedSkills(PS->GetCharacterClass()) : TArray<FName>();
 
 	// 3개 이상이면 그 중 3장, 1~2개면 전부
 	// 완전 첫판(보유 스킬 없음)이면 빈 채로 띄움 -> "보유한 스킬이 없습니다" 안내, 아무 키나 누르면 지도로

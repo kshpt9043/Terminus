@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/SaveGame.h"
 #include "Subsystems/GameInstanceSubsystem.h"
+#include "Data/CharacterTypes.h"
 #include "TerminusProfileSubsystem.generated.h"
 
 /**
@@ -35,16 +36,20 @@ public:
 	// 보유 스킬 전부 (저장된 그대로)
 	const TArray<FName>& GetOwnedSkills() const;
 
-	// 보유 스킬 중 지금 강화 스킬로 쓸 수 있는 것만 (DT 에서 지워졌거나 기본 스킬인 행은 뺌)
-	TArray<FName> GetUsableOwnedSkills() const;
+	// 보유 스킬 중 이 직업이 지금 강화 스킬로 장착할 수 있는 것만 (IsEquippableSkill)
+	TArray<FName> GetUsableOwnedSkills(ECharacterClass InClass) const;
 
-	// 영구 소유 추가. 이미 있거나 강화 스킬이 아니면 false
+	// 영구 소유 추가. 이미 있거나 보유할 수 있는 스킬이 아니면 false
 	bool AddOwnedSkill(FName SkillRow);
 
 	void ClearOwnedSkills();
 
-	// 강화 스킬로 장착할 수 있는 행인가 (DT 에 있고, 기본 스킬 / 몬스터 스킬이 아님)
-	static bool IsEnhanceSkill(FName SkillRow);
+	// 보유할 수 있는 스킬인가 (DT 에 있고, 기본 스킬 / 몬스터 스킬이 아님). 직업은 안 봄
+	static bool IsOwnableSkill(FName SkillRow);
+
+	// 이 직업이 런 시작 때 장착할 수 있는가
+	// 기획(UI 레퍼런스 > 게임 시작): 카테고리가 Common / Event 면 누구나, Personal 이면 OwnerClass 가 같을 때만
+	static bool IsEquippableSkill(FName SkillRow, ECharacterClass InClass);
 
 private:
 	void Save();

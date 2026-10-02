@@ -86,6 +86,7 @@ void ATerminusPlayerState::BeginRun()
 	RunState.VisitedRoomIds.Reset();
 	RunState.EnhanceSkills.Reset();
 	RunState.bStartSkillChosen = false;
+	RunState.Currency = 0;
 
 	OnRep_RunState();
 }
@@ -100,14 +101,14 @@ void ATerminusPlayerState::ChooseStartSkill(FName SkillRow)
 	// 보유 여부는 각자 컴퓨터의 세이브라 서버가 확인할 수 없음 -> 장착 가능한 스킬인지만 봄
 	if (!SkillRow.IsNone())
 	{
-		if (UTerminusProfileSubsystem::IsEnhanceSkill(SkillRow))
+		if (UTerminusProfileSubsystem::IsEquippableSkill(SkillRow, RunState.CharacterClass))
 		{
 			RunState.EnhanceSkills.Reset();
 			RunState.EnhanceSkills.Add(SkillRow);
 		}
 		else
 		{
-			UE_LOG(LogTemp, Warning, TEXT("PS: %s 가 강화 스킬이 아닌 '%s' 를 골라 장착 없이 넘어감"),
+			UE_LOG(LogTemp, Warning, TEXT("PS: %s 가 장착할 수 없는 '%s' 를 골라 장착 없이 넘어감"),
 				*GetPlayerName(), *SkillRow.ToString());
 		}
 	}

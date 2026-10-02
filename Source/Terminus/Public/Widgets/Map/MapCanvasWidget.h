@@ -9,7 +9,6 @@
 
 struct FRoomNode;
 class AMapManager;
-class ADungeonArea;
 class ATerminusPlayerState;
 class UScrollBox;
 enum class ERoomType : uint8;
@@ -110,12 +109,6 @@ protected:
 	UFUNCTION()
 	void OnOtherRunStateChanged(const FRunState& NewRunState);
 
-	// 던전 구역에 들어가면 지도를 숨기고, 지도로 돌아오면 다시 보임
-	UFUNCTION()
-	void HandleViewAreaChanged(ADungeonArea* NewArea);
-
-	// 숨겼다가 되돌릴 원래 가시성
-	ESlateVisibility VisibleState = ESlateVisibility::SelfHitTestInvisible;
 	
 	// PlayerState 들은 복제가 위젯보다 늦게 올 수 있어서 한 번에 못 묶음
 	// 타이머로 주기적으로 훑어서 새로 보이는 PS 에 바인딩함
