@@ -8,6 +8,7 @@
 #include "TerminusDataSettings.generated.h"
 
 class UDataTable;
+class UTexture2D;
 
 /**
  * 프로젝트에 하나뿐인 마스터 데이터 테이블을 가리키는 곳.
@@ -56,4 +57,18 @@ public:
 	
 	// 직업의 기본 스킬. 공격 방어 특수 순서로 돌려준다 (데이터에 없는 칸은 빠짐)
 	static TArray<const FSkillRow*> FindBasicSkills(ECharacterClass InClass);
+
+	/**
+	 * 스킬 아이콘. DT_Skill 의 IconID 로 SkillIcons 에서 찾고, 없으면 종류별 기본 아이콘(SkillTypeIcons).
+	 * 둘 다 없으면 nullptr
+	 */
+	static UTexture2D* FindSkillIcon(const FSkillRow& Skill);
+
+	// IconID -> 아이콘 텍스처
+	UPROPERTY(Config, EditAnywhere, Category = "Skill|Icon")
+	TMap<FName, TSoftObjectPtr<UTexture2D>> SkillIcons;
+
+	// IconID 가 비었거나 SkillIcons 에 없을 때 쓸 공격 / 방어 / 특수 기본 아이콘
+	UPROPERTY(Config, EditAnywhere, Category = "Skill|Icon")
+	TMap<ESkillType, TSoftObjectPtr<UTexture2D>> SkillTypeIcons;
 };

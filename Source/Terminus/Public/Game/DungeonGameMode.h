@@ -20,6 +20,9 @@ public:
 	virtual AActor* ChoosePlayerStart_Implementation(AController* Player) override;
 	
 	virtual void PreLogin(const FString& Options, const FString& Address, const FUniqueNetIdRepl& UniqueId, FString& ErrorMessage) override;
+
+	// 채팅창에 퇴장 안내 (던전은 중간 참가가 막혀 있어 입장 안내는 없음)
+	virtual void Logout(AController* Exiting) override;
 protected:
 	// 이미 배정한 자리. 같은 자리를 두 번 주지 않기 위함
 	UPROPERTY()

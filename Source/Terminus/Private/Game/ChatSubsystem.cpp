@@ -1,0 +1,121 @@
+#include "Game/ChatSubsystem.h"
+
+#include "Engine/GameInstance.h"
+#include "Engine/GameViewportClient.h"
+#include "Framework/Application/IInputProcessor.h"
+#include "Framework/Application/SlateApplication.h"
+#include "Widgets/Chat/ChatWidget.h"
+#include "Widgets/Common/EscapeStackSubsystem.h"
+#include "Widgets/SWindow.h"
+
+// Slate 가 키를 위젯에 나눠주기 전에 먼저 보는 곳. Enter 만 골라서 서브시스템에 넘김
+class FChatInputProcessor : public IInputProcessor
+{
+public:
+	explicit FChatInputProcessor(UChatSubsystem* InOwner) : Owner(InOwner) {}
+
+	virtual void Tick(const float DeltaTime, FSlateApplication& SlateApp, TSharedRef<ICursor> Cursor) override {}
+
+	virtual bool HandleKeyDownEvent(FSlateApplication& SlateApp, const FKeyEvent& InKeyEvent) override
+	{
+		const FKey Key = InKeyEvent.GetKey();
+		if (Key != EKeys::Enter || InKeyEvent.IsRepeat()) return false;
+
+		UChatSubsystem* Subsystem = Owner.Get();
+		return Subsystem && Subsystem->HandleEnter();   // true 면 키를 먹음
+	}
+
+	virtual const TCHAR* GetDebugName() const override { return TEXT("TerminusChat"); }
+
+private:
+	TWeakObjectPtr<UChatSubsystem> Owner;
+};
+
+void UChatSubsystem::Initialize(FSubsystemCollectionBase& Collection)
+{
+	Super::Initialize(Collection);
+
+	if (FSlateApplication::IsInitialized())
+	{
+		Processor = MakeShared<FChatInputProcessor>(this);
+		FSlateApplication::Get().RegisterInputPreProcessor(Processor);
+	}
+}
+
+void UChatSubsystem::Deinitialize()
+{
+	if (Processor.IsValid() && FSlateApplication::IsInitialized())
+	{
+		FSlateApplication::Get().UnregisterInputPreProcessor(Processor);
+	}
+	Processor.Reset();
+
+	Super::Deinitialize();
+}
+
+UChatSubsystem* UChatSubsystem::Get(const UObject* WorldContext)
+{
+	const UWorld* World = WorldContext ? WorldContext->GetWorld() : nullptr;
+	const UGameInstance* GI = World ? World->GetGameInstance() : nullptr;
+	return GI ? GI->GetSubsystem<UChatSubsystem>() : nullptr;
+}
+
+void UChatSubsystem::AddMessage(const FChatMessage& Message)
+{
+	History.Add(Message);
+	if (History.Num() > MaxHistory)
+	{
+		History.RemoveAt(0, History.Num() - MaxHistory);
+	}
+
+	OnMessageAdded.Broadcast(Message);
+}
+
+void UChatSubsystem::SetActiveWidget(UChatWidget* InWidget)
+{
+	ActiveWidget = InWidget;
+}
+
+void UChatSubsystem::ClearActiveWidget(UChatWidget* InWidget)
+{
+	if (ActiveWidget.Get() == InWidget)
+	{
+		ActiveWidget.Reset();
+	}
+}
+
+bool UChatSubsystem::HandleEnter()
+{
+	UChatWidget* Widget = ActiveWidget.Get();
+	if (!Widget || !Widget->IsInViewport() || !Widget->IsVisible() || Widget->IsInputOpen()) return false;
+	if (!IsOwnWindowActive()) return false;
+
+	// 다른 입력칸(주점 비밀번호 등)에 글을 쓰는 중이면 그쪽 Enter
+	const TSharedPtr<SWidget> Focused = FSlateApplication::Get().GetKeyboardFocusedWidget();
+	if (Focused.IsValid())
+	{
+		const FName Type = Focused->GetType();
+		if (Type == TEXT("SEditableText") || Type == TEXT("SMultiLineEditableText"))
+		{
+			return false;
+		}
+	}
+
+	// 팝업 / 창이 떠 있으면 그쪽 Enter (확인 버튼 등)
+	if (const UEscapeStackSubsystem* Escape = UEscapeStackSubsystem::Get(Widget); Escape && Escape->HasOpenEntry())
+	{
+		return false;
+	}
+
+	Widget->OpenInput();
+	return true;
+}
+
+bool UChatSubsystem::IsOwnWindowActive() const
+{
+	const UGameViewportClient* Viewport = GetGameInstance() ? GetGameInstance()->GetGameViewportClient() : nullptr;
+	const TSharedPtr<SWindow> Window = Viewport ? Viewport->GetWindow() : nullptr;
+	if (!Window.IsValid()) return true;
+
+	return FSlateApplication::Get().GetActiveTopLevelWindow() == Window;
+}

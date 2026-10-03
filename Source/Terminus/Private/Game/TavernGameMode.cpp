@@ -9,6 +9,7 @@
 #include "Engine/World.h"
 #include "Online/SessionSubsystem.h"
 #include "Engine/GameInstance.h"
+#include "Player/TerminusPlayerController.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogTerminusFlow, Log, All);
 
@@ -55,6 +56,32 @@ void ATavernGameMode::PreLogin(const FString& Options, const FString& Address, c
 		// GetNumPlayers 는 호스트 포함 지금 주점에 있는 인원
 		Sessions->CheckJoinRequest(Options, GetNumPlayers(), ErrorMessage);
 	}
+}
+
+void ATavernGameMode::PostLogin(APlayerController* NewPlayer)
+{
+	Super::PostLogin(NewPlayer);
+
+	if (NewPlayer && NewPlayer->PlayerState)
+	{
+		FChatMessage Notice;
+		Notice.Kind = EChatMessageKind::System;
+		Notice.Text = FString::Printf(TEXT("%s 님이 주점에 들어왔습니다."), *NewPlayer->PlayerState->GetPlayerName());
+		ATerminusPlayerController::BroadcastChat(GetWorld(), Notice);
+	}
+}
+
+void ATavernGameMode::Logout(AController* Exiting)
+{
+	if (Exiting && Exiting->PlayerState)
+	{
+		FChatMessage Notice;
+		Notice.Kind = EChatMessageKind::System;
+		Notice.Text = FString::Printf(TEXT("%s 님이 나갔습니다."), *Exiting->PlayerState->GetPlayerName());
+		ATerminusPlayerController::BroadcastChat(GetWorld(), Notice);
+	}
+
+	Super::Logout(Exiting);
 }
 
 bool ATavernGameMode::AreAllPlayersReady() const

@@ -15,7 +15,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnPopupAnswered);
  *  - 확인 하나   : 알림 (CancelLabel 을 비우면 취소 버튼이 숨음)
  *
  * 띄우는 건 PC 의 ShowPopup 으로 (PopupClass 에 지정한 WBP 를 씀). 버튼을 누르면 스스로 닫힘
- * 키보드: Enter = 확인, Esc = 취소 (취소 버튼이 없으면 Esc 도 확인)
+ * 키보드: Enter = 확인, ESC = 취소 (취소 버튼이 없으면 ESC 도 확인. ESC 는 UEscapeStackSubsystem 이 처리)
  *
  * WBP 로 꾸미려면 이 클래스를 부모로 WBP 를 만들고 아래 이름으로 위젯을 둘 것 (전부 선택 사항)
  */

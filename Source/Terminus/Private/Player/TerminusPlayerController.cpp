@@ -16,6 +16,7 @@
 #include "Widgets/Skill/StartSkillPickWidget.h"
 #include "Widgets/Map/MapScreenWidget.h"
 #include "Widgets/Common/ConfirmPopupWidget.h"
+#include "Widgets/Chat/ChatWidget.h"
 #include "Game/TerminusProfileSubsystem.h"
 #include "Data/TerminusDataSettings.h"
 #include "TimerManager.h"
@@ -34,6 +35,9 @@ void ATerminusPlayerController::BeginPlay()
 
 	// 던전이면 지도 보기 전에 강화 스킬 고르기. 주점에선 MapManager 가 없어 몇 초 확인하다 그만둠
 	GetWorldTimerManager().SetTimer(StartSkillCheckTimer, this, &ATerminusPlayerController::CheckStartSkillPick, 0.25f, true, 0.f);
+
+	// 주점 / 던전 어디서나 채팅 (멀티일 때만)
+	CreateChatWidget();
 	
 	if (!TavernWidgetClass)
 	{
@@ -68,6 +72,12 @@ void ATerminusPlayerController::EndPlay(const EEndPlayReason::Type EndPlayReason
 	{
 		MapScreen->RemoveFromParent();
 		MapScreen = nullptr;
+	}
+
+	if (ChatWidget)
+	{
+		ChatWidget->RemoveFromParent();
+		ChatWidget = nullptr;
 	}
 
 	if (ATerminusPlayerState* PS = GetPlayerState<ATerminusPlayerState>())
@@ -164,6 +174,62 @@ void ATerminusPlayerController::Client_OnRoomSelectFailed_Implementation(const F
 {
 	UE_LOG(LogTemp, Warning, TEXT("[MapManager] 선택 실패: %s"), *ReasonMessage);
 	ShowPopup(FText::FromString(TEXT("방을 고를 수 없습니다")), FText::FromString(ReasonMessage), FText::FromString(TEXT("확인")), FText::GetEmpty());
+}
+
+void ATerminusPlayerController::CreateChatWidget()
+{
+	if (ChatWidget || !IsLocalController()) return;
+
+	// 혼자 하는 오프라인(던전 입장 싱글)은 채팅할 사람이 없음
+	if (GetNetMode() == NM_Standalone) return;
+
+	const TSubclassOf<UChatWidget> Class = ChatWidgetClass ? ChatWidgetClass : TSubclassOf<UChatWidget>(UChatWidget::StaticClass());
+	ChatWidget = CreateWidget<UChatWidget>(this, Class);
+	if (ChatWidget)
+	{
+		ChatWidget->AddToViewport(25);   // 지도 / 전투 HUD / 스킬 고르기 위, 팝업(50) 아래
+	}
+}
+
+void ATerminusPlayerController::Server_SendChat_Implementation(const FString& Message)
+{
+	// 클라가 보낸 값은 서버가 다시 다듬음
+	FString Text = Message.TrimStartAndEnd().Left(200);
+	Text.ReplaceCharInline(TEXT('\n'), TEXT(' '));
+	Text.ReplaceCharInline(TEXT('\r'), TEXT(' '));
+	if (Text.IsEmpty()) return;
+
+	// 너무 빨리 연달아 보내면 버림 (도배 막기)
+	const double Now = GetWorld()->GetRealTimeSeconds();
+	if (LastChatTime >= 0.0 && Now - LastChatTime < 0.3) return;
+	LastChatTime = Now;
+
+	FChatMessage Chat;
+	Chat.Sender = PlayerState ? PlayerState->GetPlayerName() : TEXT("?");
+	Chat.Text = Text;
+	Chat.Kind = EChatMessageKind::Player;
+	BroadcastChat(GetWorld(), Chat);
+}
+
+void ATerminusPlayerController::BroadcastChat(UWorld* World, const FChatMessage& Message)
+{
+	if (!World) return;
+
+	for (FConstPlayerControllerIterator It = World->GetPlayerControllerIterator(); It; ++It)
+	{
+		if (ATerminusPlayerController* PC = Cast<ATerminusPlayerController>(It->Get()))
+		{
+			PC->Client_ReceiveChat(Message);
+		}
+	}
+}
+
+void ATerminusPlayerController::Client_ReceiveChat_Implementation(const FChatMessage& Message)
+{
+	if (UChatSubsystem* Chat = UChatSubsystem::Get(this))
+	{
+		Chat->AddMessage(Message);
+	}
 }
 
 UConfirmPopupWidget* ATerminusPlayerController::ShowPopup(const FText& Title, const FText& Message, const FText& ConfirmLabel, const FText& CancelLabel)
