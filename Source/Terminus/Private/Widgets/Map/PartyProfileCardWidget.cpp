@@ -17,7 +17,7 @@
 
 namespace
 {
-	UTextBlock* MakeCardText(UWidgetTree* Tree, int32 Size, const FLinearColor& Color)
+	UTextBlock* MakeProfileText(UWidgetTree* Tree, int32 Size, const FLinearColor& Color)
 	{
 		UTextBlock* Text = Tree->ConstructWidget<UTextBlock>();
 		FSlateFontInfo Font = Text->GetFont();
@@ -68,8 +68,8 @@ void UPartyProfileCardWidget::BuildDefaultLayout()
 		S->SetVerticalAlignment(VAlign_Center);
 	}
 
-	NameText = MakeCardText(WidgetTree, 15, FLinearColor::White);
-	ClassText = MakeCardText(WidgetTree, 12, FLinearColor(0.75f, 0.75f, 0.75f));
+	NameText = MakeProfileText(WidgetTree, 15, FLinearColor::White);
+	ClassText = MakeProfileText(WidgetTree, 12, FLinearColor(0.75f, 0.75f, 0.75f));
 	Info->AddChildToVerticalBox(NameText);
 	Info->AddChildToVerticalBox(ClassText);
 
@@ -80,7 +80,7 @@ void UPartyProfileCardWidget::BuildDefaultLayout()
 		S->SetPadding(FMargin(0.f, 4.f, 0.f, 0.f));
 	}
 
-	HealthText = MakeCardText(WidgetTree, 12, FLinearColor::White);
+	HealthText = MakeProfileText(WidgetTree, 12, FLinearColor::White);
 	Info->AddChildToVerticalBox(HealthText);
 }
 
