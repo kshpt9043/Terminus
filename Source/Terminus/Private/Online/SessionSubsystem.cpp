@@ -14,7 +14,6 @@
 #include "Interfaces/OnlineExternalUIInterface.h"
 #include "Misc/Base64.h"
 #include "Engine/GameInstance.h"
-#include "Engine/PendingNetGame.h"
 #include "TimerManager.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogTerminusSession, Log, All);
@@ -729,20 +728,24 @@ void USessionSubsystem::HandleJoinTimeout()
 {
 	UE_LOG(LogTerminusSession, Warning, TEXT("JoinTimeout: %.0f초 동안 주점에 도착하지 못함. 접속 취소"), JoinTimeoutSeconds);
 
-	// ClientTravel 뒤 호스트와 인사 중에 멈춰 있으면 엔진은 꽤 오래 기다린다 -> 우리가 끊는다
-	// 접속을 닫아야 호스트 쪽에도 대기 중인 연결이 남지 않는다
-	if (GEngine)
+	// 스팀 참가 응답이 늦게 오면 그때 ClientTravel 해 버리므로 먼저 끊어 둔다
+	if (IOnlineSessionPtr Session = GetSessionInterface())
 	{
-		if (FWorldContext* Context = GEngine->GetWorldContextFromWorld(GetWorld()))
-		{
-			if (Context->PendingNetGame)
-			{
-				GEngine->CancelPending(*Context);
-			}
-		}
+		Session->ClearOnJoinSessionCompleteDelegate_Handle(JoinHandle);
 	}
 
-	FailJoin(FText::FromString(TEXT("주점이 응답하지 않습니다. 잠시 후 다시 시도해 보세요.")));
+	const FText Reason = FText::FromString(TEXT("주점이 응답하지 않습니다. 잠시 후 다시 시도해 보세요."));
+
+	// 메뉴가 다시 뜰 때 팝업으로 보여줄 사유
+	PendingDisconnectReason = Reason;
+
+	// 로비에서 나오고 OnJoinComplete(false)
+	FailJoin(Reason);
+
+	// ClientTravel 뒤 호스트와 인사 중에 멈춰 있으면 엔진은 꽤 오래 기다린다 -> 우리가 끊는다
+	// 메뉴 맵을 다시 열면 엔진이 대기 중인 접속(PendingNetGame)을 알아서 취소한다
+	// CancelPending 은 UEngine 의 protected 라 직접 못 부름
+	TravelToMenu();
 }
 
 void USessionSubsystem::HandlePostLoadMap(UWorld* LoadedWorld)
