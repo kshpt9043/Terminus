@@ -20,6 +20,11 @@ void URoomListWidget::NativeOnInitialized()
 	Btn_CreateCancel->OnClicked.AddDynamic(this, &URoomListWidget::HandleCreateCancelClicked);
 	Btn_JoinConfirm->OnClicked.AddDynamic(this, &URoomListWidget::HandleJoinConfirmClicked);
 	Btn_JoinCancel->OnClicked.AddDynamic(this, &URoomListWidget::HandleJoinCancelClicked);
+
+	// 기본 스타일 글자가 회색이라 안 보임 -> 세 칸을 한 번에 칠한다
+	PaintInputText(RoomNameInput);
+	PaintInputText(PasswordInput);
+	PaintInputText(JoinPasswordInput);
 }
 
 void URoomListWidget::NativeConstruct()
@@ -255,6 +260,24 @@ void URoomListWidget::ShowPanel(UWidget* Panel, bool bShow)
 	{
 		Panel->SetVisibility(bShow ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
 	}
+}
+
+void URoomListWidget::PaintInputText(UEditableTextBox* Box) const
+{
+	if (!Box) { return; }
+
+	// 입력 중엔 FocusedForegroundColor 를 써서 SetForegroundColor 만으론 타이핑하는 동안 회색 그대로
+	FEditableTextBoxStyle Style = Box->GetWidgetStyle();
+	Style.SetForegroundColor(InputTextColor);
+	Style.SetFocusedForegroundColor(InputTextColor);
+	Style.SetReadOnlyForegroundColor(InputTextColor);
+	// WBP 에서 글자색을 직접 박아 두면 위 색이 안 먹으니 위 상태별 색을 따라가게
+	Style.TextStyle.SetColorAndOpacity(FSlateColor::UseForeground());
+
+	// SetWidgetStyle 은 넘긴 구조체의 주소를 Slate 에 그대로 넘긴다 -> 지역 변수면 함수가 끝나면 허공을 가리킴
+	// 한 번 더 불러서 위젯 멤버(GetWidgetStyle)를 가리키게 해 둔다
+	Box->SetWidgetStyle(Style);
+	Box->SetWidgetStyle(Box->GetWidgetStyle());
 }
 
 USessionSubsystem* URoomListWidget::GetSessions() const

@@ -12,6 +12,7 @@
 #include "Online/OnlineSessionNames.h"   // NAME_GameSession, SEARCH_LOBBIES
 #include "Kismet/GameplayStatics.h"
 #include "Interfaces/OnlineExternalUIInterface.h"
+#include "Misc/Base64.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogTerminusSession, Log, All);
 
@@ -28,6 +29,23 @@ namespace
 	const FName KEY_LOCKED(TEXT("LOCKED"));   // "1" 이면 비밀번호 방
 	const FName KEY_LISTED(TEXT("LISTED"));   // "0" 이면 초대 전용. 검색에서 거름
 	const FName KEY_INGAME(TEXT("INGAME"));   // "1" 이면 던전 진행 중. 검색에서 거름
+
+	// 스팀 OSS 는 로비 값을 UTF-8 로 쓰고 ANSI 로 읽는다 -> 한글이 깨짐 (영문은 둘이 같아서 멀쩡)
+	// 방 이름은 UTF-8 바이트를 Base64 로 감싸서 ASCII 만 오가게 한다
+	FString EncodeRoomNameForAd(const FString& InName)
+	{
+		const FTCHARToUTF8 Utf8(*InName);
+		return FBase64::Encode(reinterpret_cast<const uint8*>(Utf8.Get()), Utf8.Length());
+	}
+
+	FString DecodeRoomNameFromAd(const FString& InEncoded)
+	{
+		TArray<uint8> Bytes;
+		if (InEncoded.IsEmpty() || !FBase64::Decode(InEncoded, Bytes)) { return FString(); }
+
+		const FUTF8ToTCHAR Wide(reinterpret_cast<const ANSICHAR*>(Bytes.GetData()), Bytes.Num());
+		return FString(Wide.Length(), Wide.Get());
+	}
 }
 
 void USessionSubsystem::Initialize(FSubsystemCollectionBase& Collection)
@@ -146,7 +164,7 @@ void USessionSubsystem::HostSession(int32 MaxPlayers, const FString& MapPath, co
 	const auto Ad = EOnlineDataAdvertisementType::ViaOnlineServiceAndPing;
 	if (!Options.RoomName.IsEmpty())
 	{
-		Settings.Set(KEY_ROOM_NAME, Options.RoomName.Left(24), Ad);
+		Settings.Set(KEY_ROOM_NAME, EncodeRoomNameForAd(Options.RoomName.Left(24)), Ad);
 	}
 	Settings.Set(KEY_LOCKED, FString(Options.Password.IsEmpty() ? TEXT("0") : TEXT("1")), Ad);
 	Settings.Set(KEY_LISTED, FString(Options.bListed ? TEXT("1") : TEXT("0")), Ad);
@@ -453,9 +471,10 @@ void USessionSubsystem::HandleFindComplete(bool bWasSuccessful)
 			Info.CurrentPlayers = Info.MaxPlayers - R.Session.NumOpenPublicConnections;
 			Info.PingMs         = R.PingInMs;
 			Info.HostName       = R.Session.OwningUserName;
-			FString RoomName, Locked;
-			R.Session.SessionSettings.Get(KEY_ROOM_NAME, RoomName);
+			FString EncodedName, Locked;
+			R.Session.SessionSettings.Get(KEY_ROOM_NAME, EncodedName);
 			R.Session.SessionSettings.Get(KEY_LOCKED, Locked);
+			const FString RoomName = DecodeRoomNameFromAd(EncodedName);
 			Info.RoomName = RoomName.IsEmpty() ? FString::Printf(TEXT("%s의 주점"), *Info.HostName) : RoomName;
 			Info.bLocked  = (Locked == TEXT("1"));
 

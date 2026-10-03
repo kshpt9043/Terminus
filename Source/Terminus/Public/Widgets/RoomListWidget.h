@@ -41,6 +41,10 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Terminus|UI")
 	TSubclassOf<URoomEntryWidget> EntryClass;
 
+	// 입력칸 세 개(방 이름, 비밀번호, 참가 비밀번호) 글자색. 평소와 입력 중 모두 이 색
+	UPROPERTY(EditDefaultsOnly, Category = "Terminus|UI")
+	FLinearColor InputTextColor = FLinearColor::White;
+
 	// --- 주점 열기
 	UPROPERTY(meta = (BindWidget)) TObjectPtr<UWidget>          CreatePanel;
 	UPROPERTY(meta = (BindWidget)) TObjectPtr<UEditableTextBox> RoomNameInput;
@@ -76,6 +80,7 @@ private:
 	void SetStatus(const FString& InText);
 	void SetBusy(bool bBusy);
 	void ShowPanel(UWidget* Panel, bool bShow);
+	void PaintInputText(UEditableTextBox* Box) const;
 	USessionSubsystem* GetSessions() const;
 
 	int32   MaxPlayers = 4;
