@@ -13,6 +13,9 @@
 #include "Kismet/GameplayStatics.h"
 #include "Interfaces/OnlineExternalUIInterface.h"
 #include "Misc/Base64.h"
+#include "Engine/GameInstance.h"
+#include "Engine/PendingNetGame.h"
+#include "TimerManager.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogTerminusSession, Log, All);
 
@@ -46,6 +49,24 @@ namespace
 		const FUTF8ToTCHAR Wide(reinterpret_cast<const ANSICHAR*>(Bytes.GetData()), Bytes.Num());
 		return FString(Wide.Length(), Wide.Get());
 	}
+
+	// 스팀 로비 참가 결과 -> 화면에 띄울 사유
+	FText JoinResultToText(EOnJoinSessionCompleteResult::Type Result)
+	{
+		switch (Result)
+		{
+		case EOnJoinSessionCompleteResult::SessionIsFull:
+			return FText::FromString(TEXT("방이 가득 찼습니다."));
+		case EOnJoinSessionCompleteResult::SessionDoesNotExist:
+			return FText::FromString(TEXT("방이 사라졌습니다. 목록을 새로고침해 보세요."));
+		case EOnJoinSessionCompleteResult::CouldNotRetrieveAddress:
+			return FText::FromString(TEXT("주점 주소를 받지 못했습니다."));
+		case EOnJoinSessionCompleteResult::AlreadyInSession:
+			return FText::FromString(TEXT("이미 다른 방에 들어가 있습니다."));
+		default:
+			return FText::FromString(TEXT("주점에 들어가지 못했습니다."));
+		}
+	}
 }
 
 void USessionSubsystem::Initialize(FSubsystemCollectionBase& Collection)
@@ -59,7 +80,11 @@ void USessionSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 		TravelFailureHandle = GEngine->OnTravelFailure().AddUObject(
 			this, &USessionSubsystem::HandleTravelFailure);
 	}
-	
+
+	// 참가한 쪽이 주점 맵을 다 불러왔으면 도착한 것 -> 참가 타이머 해제
+	PostLoadMapHandle = FCoreUObjectDelegates::PostLoadMapWithWorld.AddUObject(
+		this, &USessionSubsystem::HandlePostLoadMap);
+
 	// 초대는 게임 시작 직후에도 올 수 있어서 월드 없이 기본 OSS 로 붙인다
 	if (IOnlineSubsystem* OSS = IOnlineSubsystem::Get())
 	{
@@ -88,7 +113,9 @@ void USessionSubsystem::Deinitialize()
 		GEngine->OnNetworkFailure().Remove(NetworkFailureHandle);
 		GEngine->OnTravelFailure().Remove(TravelFailureHandle);
 	}
-	
+
+	FCoreUObjectDelegates::PostLoadMapWithWorld.Remove(PostLoadMapHandle);
+
 	if (IOnlineSubsystem* OSS = IOnlineSubsystem::Get())
 	{
 		if (IOnlineSessionPtr Session = OSS->GetSessionInterface())
@@ -247,7 +274,7 @@ void USessionSubsystem::JoinSessionByIndex(int32 Index, const FString& Password)
 	// 인덱스는 BP 목록용 창구일 뿐, 실제 참가는 결과 자체로 한다
 	if (!LastSearch.IsValid() || !LastSearch->SearchResults.IsValidIndex(Index))
 	{
-		OnJoinComplete.Broadcast(false);
+		FailJoin(FText::FromString(TEXT("목록이 바뀌었습니다. 새로고침해 보세요.")), false);
 		return;
 	}
 
@@ -497,23 +524,30 @@ void USessionSubsystem::HandleJoinComplete(FName SessionName, EOnJoinSessionComp
 		Session->ClearOnJoinSessionCompleteDelegate_Handle(JoinHandle);
 	}
 
-	const bool bOk = (Result == EOnJoinSessionCompleteResult::Success);
-	OnJoinComplete.Broadcast(bOk);
-	if (!bOk || !Session.IsValid())
+	if (Result != EOnJoinSessionCompleteResult::Success || !Session.IsValid())
 	{
-		PendingTravelOptions.Reset();
+		FailJoin(JoinResultToText(Result));
 		return;
 	}
 
+	// 스팀 로비에는 들어갔다. 이제 호스트 주소로 접속해야 주점에 도착한다
 	FString ConnectString;
-	if (Session->GetResolvedConnectString(NAME_GameSession, ConnectString))
+	APlayerController* PC = GetGameInstance()->GetFirstLocalPlayerController();
+	if (!Session->GetResolvedConnectString(NAME_GameSession, ConnectString) || !PC)
 	{
-		if (APlayerController* PC = GetGameInstance()->GetFirstLocalPlayerController())
-		{
-			PC->ClientTravel(ConnectString + PendingTravelOptions, ETravelType::TRAVEL_Absolute);
-		}
+		// 예전엔 여기서 조용히 끝나서 목록 화면이 "들어가는 중" 에 그대로 멈춰 있었음
+		FailJoin(FText::FromString(TEXT("주점 주소를 받지 못했습니다. 다시 시도해 보세요.")));
+		return;
 	}
+
+	// 비밀번호가 붙은 옵션은 로그에 남기지 않는다
+	UE_LOG(LogTerminusSession, Log, TEXT("JoinComplete: %s 로 접속 시작"), *ConnectString);
+
+	OnJoinComplete.Broadcast(true);
+	PC->ClientTravel(ConnectString + PendingTravelOptions, ETravelType::TRAVEL_Absolute);
 	PendingTravelOptions.Reset();
+
+	// 타이머는 여기서 끄지 않는다. 접속 자체가 응답 없이 멈출 수 있어서 맵 로드(도착) 때 끈다
 }
 
 void USessionSubsystem::HandleDestroyComplete(FName SessionName, bool bWasSuccessful)
@@ -546,7 +580,7 @@ void USessionSubsystem::HandleDestroyComplete(FName SessionName, bool bWasSucces
 	case EAfterDestroy::Join:
 		// 파괴가 실패했는데 또 참가하면 세션이 그대로라 같은 곳을 무한히 돈다
 		if (bWasSuccessful) { JoinSearchResult(PendingJoinResult); }
-		else                { OnJoinComplete.Broadcast(false); }
+		else                { FailJoin(FText::FromString(TEXT("이전 방을 정리하지 못했습니다.")), false); }
 		break;
 
 	case EAfterDestroy::ToMenu:
@@ -563,7 +597,7 @@ void USessionSubsystem::JoinSearchResult(const FOnlineSessionSearchResult& Resul
 	IOnlineSessionPtr Session = GetSessionInterface();
 	if (!Session.IsValid())
 	{
-		OnJoinComplete.Broadcast(false);
+		FailJoin(FText::FromString(TEXT("Steam에 연결되어 있지 않습니다.")), false);
 		return;
 	}
 
@@ -580,6 +614,8 @@ void USessionSubsystem::JoinSearchResult(const FOnlineSessionSearchResult& Resul
 		FOnJoinSessionCompleteDelegate::CreateUObject(
 			this, &USessionSubsystem::HandleJoinComplete));
 
+	// 여기서부터 주점 도착까지 시간을 잰다 (이전 세션 정리 시간은 빼고)
+	StartJoinTimeout();
 	Session->JoinSession(0, NAME_GameSession, Result);
 }
 
@@ -617,6 +653,8 @@ void USessionSubsystem::HandleTravelFailure(UWorld* World, ETravelFailure::Type 
 
 void USessionSubsystem::CleanupAfterFailure(const FText& Reason)
 {
+	// 엔진이 실패를 알려 왔으니 참가 타이머는 더 볼 필요 없음
+	ClearJoinTimeout();
 	PendingDisconnectReason = Reason;
 
 	// 이동은 엔진이 기본 맵으로 해줌. 우리는 남은 세션만 치운다
@@ -636,7 +674,7 @@ void USessionSubsystem::HandleInviteAccepted(const bool bWasSuccessful, const in
 
 	if (!bWasSuccessful || !InviteResult.IsValid())
 	{
-		OnJoinComplete.Broadcast(false);
+		FailJoin(FText::FromString(TEXT("초대받은 방에 들어가지 못했습니다.")), false);
 		return;
 	}
 	
@@ -644,4 +682,73 @@ void USessionSubsystem::HandleInviteAccepted(const bool bWasSuccessful, const in
 
 	// 내 주점을 열어둔 상태여도 JoinSearchResult 가 먼저 정리하고 들어간다
 	JoinSearchResult(InviteResult);
+}
+
+void USessionSubsystem::FailJoin(const FText& Reason, bool bLeaveSession)
+{
+	ClearJoinTimeout();
+	PendingTravelOptions.Reset();
+	LastJoinError = Reason;
+
+	UE_LOG(LogTerminusSession, Warning, TEXT("JoinFailed: %s"), *Reason.ToString());
+
+	// 스팀 로비에는 들어가 있을 수 있음 -> 나와야 다음 참가가 막히지 않는다
+	if (bLeaveSession)
+	{
+		IOnlineSessionPtr Session = GetSessionInterface();
+		if (Session.IsValid() && Session->GetNamedSession(NAME_GameSession) != nullptr)
+		{
+			AfterDestroy = EAfterDestroy::None;
+			LeaveSession();
+		}
+	}
+
+	OnJoinComplete.Broadcast(false);
+}
+
+void USessionSubsystem::StartJoinTimeout()
+{
+	UGameInstance* GI = GetGameInstance();
+	if (!GI || JoinTimeoutSeconds <= 0.f) { return; }
+
+	// 게임 인스턴스 타이머라 맵이 바뀌어도 살아 있다. 다시 부르면 처음부터 다시 잰다
+	LastJoinError = FText::GetEmpty();
+	GI->GetTimerManager().SetTimer(JoinTimeoutTimer, this, &USessionSubsystem::HandleJoinTimeout,
+		JoinTimeoutSeconds, false);
+}
+
+void USessionSubsystem::ClearJoinTimeout()
+{
+	if (UGameInstance* GI = GetGameInstance())
+	{
+		GI->GetTimerManager().ClearTimer(JoinTimeoutTimer);
+	}
+}
+
+void USessionSubsystem::HandleJoinTimeout()
+{
+	UE_LOG(LogTerminusSession, Warning, TEXT("JoinTimeout: %.0f초 동안 주점에 도착하지 못함. 접속 취소"), JoinTimeoutSeconds);
+
+	// ClientTravel 뒤 호스트와 인사 중에 멈춰 있으면 엔진은 꽤 오래 기다린다 -> 우리가 끊는다
+	// 접속을 닫아야 호스트 쪽에도 대기 중인 연결이 남지 않는다
+	if (GEngine)
+	{
+		if (FWorldContext* Context = GEngine->GetWorldContextFromWorld(GetWorld()))
+		{
+			if (Context->PendingNetGame)
+			{
+				GEngine->CancelPending(*Context);
+			}
+		}
+	}
+
+	FailJoin(FText::FromString(TEXT("주점이 응답하지 않습니다. 잠시 후 다시 시도해 보세요.")));
+}
+
+void USessionSubsystem::HandlePostLoadMap(UWorld* LoadedWorld)
+{
+	// 전역 이벤트라 PIE 다중 창이면 남의 맵 로드도 옴
+	if (!LoadedWorld || LoadedWorld->GetGameInstance() != GetGameInstance()) { return; }
+
+	ClearJoinTimeout();
 }

@@ -215,8 +215,12 @@ void URoomListWidget::HandleJoinComplete(bool bWasSuccessful)
 	// 성공이면 곧 주점으로 이동한다. 비밀번호가 틀리면 호스트가 거절 -> 메인이 다시 뜨며 팝업
 	if (bWasSuccessful) { return; }
 
+	// 실패 사유(가득 참, 응답 없음 등)는 서브시스템이 남겨 둔다
+	const USessionSubsystem* Sessions = GetSessions();
+	const FText Reason = Sessions ? Sessions->GetLastJoinError() : FText::GetEmpty();
+
 	SetBusy(false);
-	SetStatus(TEXT("주점에 들어가지 못했습니다. 목록을 새로고침해 보세요."));
+	SetStatus(Reason.IsEmpty() ? FString(TEXT("주점에 들어가지 못했습니다. 목록을 새로고침해 보세요.")) : Reason.ToString());
 }
 
 // ---------- 주점 열기

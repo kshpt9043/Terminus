@@ -51,6 +51,7 @@ void UMainMenuWidget::NativeConstruct()
 
 	// 서브시스템은 위젯보다 오래 산다 -> Construct 마다 붙이고 Destruct 에서 뗀다
 	Sessions->OnHostComplete.AddUniqueDynamic(this, &UMainMenuWidget::HandleHostComplete);
+	Sessions->OnJoinComplete.AddUniqueDynamic(this, &UMainMenuWidget::HandleJoinComplete);
 
 	// 끊겨서 돌아온 거면 이유를 보여준다. 꺼내면 비워지므로 한 번만 뜬다
 	const FText Reason = Sessions->ConsumeDisconnectReason();
@@ -65,6 +66,7 @@ void UMainMenuWidget::NativeDestruct()
 	if (USessionSubsystem* Sessions = GetSessions())
 	{
 		Sessions->OnHostComplete.RemoveDynamic(this, &UMainMenuWidget::HandleHostComplete);
+		Sessions->OnJoinComplete.RemoveDynamic(this, &UMainMenuWidget::HandleJoinComplete);
 	}
 
 	Super::NativeDestruct();
@@ -101,6 +103,20 @@ void UMainMenuWidget::HandleHostComplete(bool bWasSuccessful)
 	SetMenuEnabled(true);
 	ShowPopup(FText::FromString(TEXT("주점을 열지 못했습니다.")),
 		FText::FromString(TEXT("Steam이 켜져 있는지 확인한 뒤 다시 시도하세요.")));
+}
+
+void UMainMenuWidget::HandleJoinComplete(bool bWasSuccessful)
+{
+	if (bWasSuccessful) { return; }
+
+	// 주점 목록이 열려 있으면 목록이 상태 줄에 사유를 띄운다. 여기선 초대로 들어가다 실패한 경우만
+	if (RoomBrowser && RoomBrowser->IsVisible()) { return; }
+
+	const USessionSubsystem* Sessions = GetSessions();
+	const FText Reason = Sessions ? Sessions->GetLastJoinError() : FText::GetEmpty();
+
+	ShowPopup(FText::FromString(TEXT("주점에 들어가지 못했습니다.")),
+		Reason.IsEmpty() ? FText::FromString(TEXT("잠시 후 다시 시도하세요.")) : Reason);
 }
 
 void UMainMenuWidget::HandleQuitClicked()
