@@ -96,6 +96,7 @@ private:
 	void ApplyBackground();
 
 	void AddLine(const FChatMessage& Message);
+	bool IsMyMessage(const FChatMessage& Message) const;
 	void HandleMessageAdded(const FChatMessage& Message);
 
 	// 화면 밖으로 안 나가게 맞춰서 옮기고 기억

@@ -139,15 +139,23 @@ void UChatWidget::NativeDestruct()
 
 void UChatWidget::HandleMessageAdded(const FChatMessage& Message)
 {
-	// 맨 아래를 보고 있을 때만 따라 내려감 (위로 올려 지난 대화를 읽는 중이면 그대로)
+	// 내가 보낸 건 항상 맨 아래로. 남이 보낸 건 맨 아래를 보고 있을 때만 따라 내려감
+	// (위로 올려 지난 대화를 읽는 중이면 화면이 튀지 않게 그대로)
 	const bool bWasAtEnd = !MessageList || MessageList->GetScrollOffset() >= MessageList->GetScrollOffsetOfEnd() - 1.f;
 
 	AddLine(Message);
 
-	if (MessageList && bWasAtEnd)
+	if (MessageList && (bWasAtEnd || IsMyMessage(Message)))
 	{
 		MessageList->ScrollToEnd();
 	}
+}
+
+bool UChatWidget::IsMyMessage(const FChatMessage& Message) const
+{
+	const APlayerController* PC = GetOwningPlayer();
+	return PC && PC->PlayerState && Message.Kind == EChatMessageKind::Player
+		&& Message.Sender == PC->PlayerState->GetPlayerName();
 }
 
 void UChatWidget::AddLine(const FChatMessage& Message)
@@ -160,9 +168,7 @@ void UChatWidget::AddLine(const FChatMessage& Message)
 		MessageList->RemoveChildAt(0);
 	}
 
-	const APlayerController* PC = GetOwningPlayer();
-	const bool bMine = PC && PC->PlayerState && Message.Kind == EChatMessageKind::Player
-		&& Message.Sender == PC->PlayerState->GetPlayerName();
+	const bool bMine = IsMyMessage(Message);
 
 	UTextBlock* Line = WidgetTree->ConstructWidget<UTextBlock>();
 	FSlateFontInfo Font = Line->GetFont();
@@ -197,6 +203,12 @@ void UChatWidget::OpenInput()
 
 	InputBox->SetText(FText::GetEmpty());
 	InputBox->SetVisibility(ESlateVisibility::Visible);
+
+	// 최신 대화를 보면서 입력하게
+	if (MessageList)
+	{
+		MessageList->ScrollToEnd();
+	}
 	InputBox->SetUserFocus(GetOwningPlayer());
 	InputBox->SetKeyboardFocus();
 
