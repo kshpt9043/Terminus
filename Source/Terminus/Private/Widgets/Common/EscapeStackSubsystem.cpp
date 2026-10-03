@@ -92,6 +92,16 @@ bool UEscapeStackSubsystem::HandleEscape()
 	return false;
 }
 
+bool UEscapeStackSubsystem::HasOpenEntry() const
+{
+	for (const FEntry& Entry : Stack)
+	{
+		const UWidget* Owner = Entry.Owner.Get();
+		if (Owner && Owner->IsVisible() && Owner->GetCachedWidget().IsValid()) return true;
+	}
+	return false;
+}
+
 bool UEscapeStackSubsystem::IsOwnWindowActive() const
 {
 	const UGameViewportClient* Viewport = GetGameInstance() ? GetGameInstance()->GetGameViewportClient() : nullptr;

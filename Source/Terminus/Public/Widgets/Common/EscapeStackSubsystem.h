@@ -34,6 +34,9 @@ public:
 	// ESC 처리. 닫은 창이 있으면 true
 	bool HandleEscape();
 
+	// 지금 화면에 열려 있는 창이 하나라도 있는가 (채팅 Enter 가 팝업 Enter 를 가로채지 않게)
+	bool HasOpenEntry() const;
+
 private:
 	struct FEntry
 	{

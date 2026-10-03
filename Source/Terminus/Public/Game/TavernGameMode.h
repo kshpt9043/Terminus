@@ -21,6 +21,10 @@ public:
 	// 주점 입장
 	virtual void PreLogin(const FString& Options, const FString& Address,
 		const FUniqueNetIdRepl& UniqueId, FString& ErrorMessage) override;
+
+	// 채팅창에 입장 / 퇴장 안내
+	virtual void PostLogin(APlayerController* NewPlayer) override;
+	virtual void Logout(AController* Exiting) override;
 	
 protected:
 	bool AreAllPlayersReady() const;

@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerController.h"
 #include "Data/CharacterTypes.h"
+#include "Game/ChatSubsystem.h"
 #include "TerminusPlayerController.generated.h"
 
 class UTavernWidget;
@@ -13,6 +14,7 @@ class UCombatHUDWidget;
 class UStartSkillPickWidget;
 class UMapScreenWidget;
 class UConfirmPopupWidget;
+class UChatWidget;
 struct FRunState;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnViewAreaChanged, ADungeonArea*, NewArea);
@@ -60,6 +62,21 @@ public:
 	// 방 선택 실패 알림. 같은 이유로 MapManager 가 아니라 PC 의 Client RPC
 	UFUNCTION(Client, Reliable)
 	void Client_OnRoomSelectFailed(const FString& ReasonMessage);
+
+	// -------------------------------------------------------------
+	// [채팅]
+	// -------------------------------------------------------------
+
+	// 채팅 보내기. 서버가 다듬어서(공백 / 길이 / 너무 잦은 전송) 모두에게 돌림
+	UFUNCTION(Server, Reliable)
+	void Server_SendChat(const FString& Message);
+
+	// 채팅 받기. 서버가 접속한 모든 PC 에 보냄 -> 로컬 채팅 기록에 추가
+	UFUNCTION(Client, Reliable)
+	void Client_ReceiveChat(const FChatMessage& Message);
+
+	// [서버] 모두에게 채팅 한 줄 (시스템 안내에도 씀)
+	static void BroadcastChat(UWorld* World, const FChatMessage& Message);
 
 	// -------------------------------------------------------------
 	// [팝업]
@@ -156,6 +173,13 @@ protected:
 	UPROPERTY()
 	TObjectPtr<UStartSkillPickWidget> StartSkillPick;
 
+	// 채팅창 클래스. 비워 두면 C++ 기본 모양(UChatWidget). 싱글(혼자 오프라인)이면 안 만듦
+	UPROPERTY(EditDefaultsOnly, Category = "Terminus|UI")
+	TSubclassOf<UChatWidget> ChatWidgetClass;
+
+	UPROPERTY()
+	TObjectPtr<UChatWidget> ChatWidget;
+
 	// 범용 팝업 클래스. 비워 두면 C++ 기본 모양(UConfirmPopupWidget)
 	UPROPERTY(EditDefaultsOnly, Category = "Terminus|UI")
 	TSubclassOf<UConfirmPopupWidget> PopupClass;
@@ -170,6 +194,12 @@ protected:
 
 private:
 	TWeakObjectPtr<ADungeonArea> ViewedArea;
+
+	// [서버] 마지막으로 채팅을 받은 시각 (도배 막기)
+	double LastChatTime = -1.0;
+
+	// 멀티면 채팅창 만들기
+	void CreateChatWidget();
 
 	// 던전에 들어와 내 PS 와 지도(MapManager)가 둘 다 보이면 흐름 시작
 	// 게임 시작 -> (아직 안 골랐으면) 시작 스킬 고르기 -> 서버가 고르기 완료를 확인하면 지도 화면

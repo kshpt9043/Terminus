@@ -4,6 +4,8 @@
 #include "Game/DungeonGameMode.h"
 
 #include "GameFramework/PlayerStart.h"
+#include "GameFramework/PlayerState.h"
+#include "Player/TerminusPlayerController.h"
 #include "Kismet/GameplayStatics.h"
 
 AActor* ADungeonGameMode::ChoosePlayerStart_Implementation(AController* Player)
@@ -45,4 +47,17 @@ void ADungeonGameMode::PreLogin(const FString& Options, const FString& Address, 
 
 	// 던전엔 주점에서 같이 넘어온 사람만. 심리스로 온 사람은 여기를 안 탐
 	ErrorMessage = TEXT("이미 던전이 진행 중입니다.");
+}
+
+void ADungeonGameMode::Logout(AController* Exiting)
+{
+	if (Exiting && Exiting->PlayerState)
+	{
+		FChatMessage Notice;
+		Notice.Kind = EChatMessageKind::System;
+		Notice.Text = FString::Printf(TEXT("%s 님이 나갔습니다."), *Exiting->PlayerState->GetPlayerName());
+		ATerminusPlayerController::BroadcastChat(GetWorld(), Notice);
+	}
+
+	Super::Logout(Exiting);
 }
