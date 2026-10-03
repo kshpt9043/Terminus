@@ -8,6 +8,7 @@
 #include "Online/OnlineSessionNames.h"
 #include "OnlineSessionSettings.h"
 #include "Engine/EngineBaseTypes.h"
+#include "Engine/TimerHandle.h"
 #include "SessionSubsystem.generated.h"
 
 class FOnlineSessionSearch;
@@ -95,6 +96,15 @@ public:
 	// 메뉴 화면이 켜질 때 한 번 꺼내 보는 용도. 꺼내면 비워진다
 	UFUNCTION(BlueprintCallable, Category = "Terminus|Session")
 	FText ConsumeDisconnectReason();
+
+	// 마지막 참가 실패 사유. OnJoinComplete(false) 를 받은 쪽이 화면에 띄울 때 읽는다
+	UFUNCTION(BlueprintPure, Category = "Terminus|Session")
+	FText GetLastJoinError() const { return LastJoinError; }
+
+	// 참가 요청부터 주점 도착(맵 로드)까지 기다리는 최대 시간(초)
+	// 넘으면 접속을 취소하고 실패로 알린다. 호스트가 응답 없이 멈춰도 "들어가는 중" 에 갇히지 않게
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Terminus|Session")
+	float JoinTimeoutSeconds = 20.f;
 	
 	// 호스트가 시작할 때 세션을 진행 중이라고 바꾸는 함수
 	void StartRun();
@@ -172,4 +182,21 @@ private:
 	int32 HostMaxPlayers = 0;
 
 	FString PendingTravelOptions;
+
+	// --- 참가 실패 / 타임아웃
+	// 참가 실패 공통 처리. 사유를 남기고 OnJoinComplete(false)
+	// bLeaveSession 이면 들어가 있던 스팀 로비도 나온다 (파괴 실패 경로에선 false -> 무한 반복 방지)
+	void FailJoin(const FText& Reason, bool bLeaveSession = true);
+
+	// 타이머는 JoinSession 요청 때 켜고, 주점 도착 / 실패 / 타임아웃 때 끈다
+	void StartJoinTimeout();
+	void ClearJoinTimeout();
+	void HandleJoinTimeout();
+
+	// 맵 로드가 끝남 = 주점 도착. 참가 타이머를 끄는 곳
+	void HandlePostLoadMap(UWorld* LoadedWorld);
+
+	FTimerHandle JoinTimeoutTimer;
+	FDelegateHandle PostLoadMapHandle;
+	FText LastJoinError;
 };

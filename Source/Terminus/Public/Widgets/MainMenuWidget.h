@@ -63,6 +63,7 @@ private:
 
 	// SessionSubsystem 의 비동기 결과
 	UFUNCTION() void HandleHostComplete(bool bWasSuccessful);
+	UFUNCTION() void HandleJoinComplete(bool bWasSuccessful);
 
 	void ShowPopup(const FText& Title, const FText& Body);
 	void SetMenuEnabled(bool bEnabled);
