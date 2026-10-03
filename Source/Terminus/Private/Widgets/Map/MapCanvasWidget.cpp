@@ -33,14 +33,6 @@ void UMapCanvasWidget::NativeConstruct()
         }
     }
 
-    // 구역 진입 / 복귀에 맞춰 지도 숨기기
-    VisibleState = GetVisibility();
-    if (ATerminusPlayerController* PC = GetOwningPlayer<ATerminusPlayerController>())
-    {
-        PC->OnViewAreaChanged.AddUniqueDynamic(this, &UMapCanvasWidget::HandleViewAreaChanged);
-        HandleViewAreaChanged(PC->GetViewedArea());
-    }
-
     // MapManager / PlayerState 바인딩. 클라에선 둘 다 복제가 위젯 생성보다 늦을 수 있어서
     // 지금 한 번 + 0.5초마다 다시 훑어서 새로 도착한 것을 묶음 (인원 변동도 같이 커버)
     if (UWorld* World = GetWorld())
@@ -55,11 +47,6 @@ void UMapCanvasWidget::NativeConstruct()
 
 void UMapCanvasWidget::NativeDestruct()
 {
-    if (ATerminusPlayerController* PC = GetOwningPlayer<ATerminusPlayerController>())
-    {
-        PC->OnViewAreaChanged.RemoveAll(this);
-    }
-
     UWorld* World = GetWorld();
     if (World)
     {
@@ -474,12 +461,6 @@ void UMapCanvasWidget::HandleRoomClicked(int32 ClickedRoomId)
 void UMapCanvasWidget::OnOtherRunStateChanged(const FRunState& NewRunState)
 {
     RefreshAllRoomSelections();
-}
-
-void UMapCanvasWidget::HandleViewAreaChanged(ADungeonArea* NewArea)
-{
-    // 숨기기만 하고 위젯은 그대로 -> 돌아왔을 때 스크롤 위치도 그대로
-    SetVisibility(NewArea ? ESlateVisibility::Collapsed : VisibleState);
 }
 
 void UMapCanvasWidget::OnPlayerRunStateChanged(const FRunState& NewRunState)

@@ -41,6 +41,13 @@ void AMapManager::HandleSelectRoomRequest(ATerminusPlayerController* Requester, 
 
     if (!TargetRoom) return;
 
+    // 런 시작 강화 스킬을 아직 안 골랐으면 출발 불가 (고르는 화면이 지도를 덮고 있지만 서버에서도 막음)
+    if (!RequestingPS->HasChosenStartSkill())
+    {
+        Requester->Client_OnRoomSelectFailed(TEXT("시작 강화 스킬을 먼저 골라야 합니다."));
+        return;
+    }
+
     // 0. 구역에서 방이 진행 중이면 지도 선택 불가 (전 구역이 끝나야 다음 선택)
     if (const UDungeonAreaSubsystem* Areas = GetWorld()->GetSubsystem<UDungeonAreaSubsystem>())
     {
@@ -971,6 +978,18 @@ void AMapManager::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifet
     Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
     DOREPLIFETIME(AMapManager, Rooms);
+    DOREPLIFETIME(AMapManager, CurrentFloor);
+}
+
+FText AMapManager::GetTierName(int32 Floor)
+{
+    // 테마 하나가 2개 층
+    switch ((FMath::Max(1, Floor) - 1) / 2)
+    {
+    case 0:  return FText::FromString(TEXT("표층"));
+    case 1:  return FText::FromString(TEXT("중층"));
+    default: return FText::FromString(TEXT("심층"));
+    }
 }
 
 // ★ 클라이언트가 서버로부터 Rooms 데이터 수신을 완료했을 때 실행됨

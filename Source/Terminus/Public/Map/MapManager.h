@@ -84,6 +84,14 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map Settings|Theme")
 	TObjectPtr<UDungeonThemeData> FloorTheme;
 
+	// 지금 층 (1~6). 기획: 1~2층 표층 / 3~4층 중층 / 5~6층 심층
+	// TODO: 층 진행이 생기면 보스방 클리어 때 올릴 것. 지금은 늘 1층
+	UPROPERTY(Replicated, EditAnywhere, BlueprintReadOnly, Category = "Map Settings", meta = (ClampMin = "1"))
+	int32 CurrentFloor = 1;
+
+	// 층 이름 "표층" / "중층" / "심층"
+	static FText GetTierName(int32 Floor);
+
 	// 방 선택 요청 처리. 서버에서만 불림
 	// 클라 -> 자기 PC 의 Server_RequestSelectRoom -> 여기. (이 액터는 서버 소유라 RPC 를 직접 못 받음)
 	void HandleSelectRoomRequest(ATerminusPlayerController* Requester, int32 RoomId);

@@ -131,6 +131,32 @@ bool UCombatStatsComponent::SpendEnergy(int32 Cost)
 	return true;
 }
 
+bool UCombatStatsComponent::SpendSkillEnergy(int32 Cost)
+{
+	if (!HasAuth() || Cost < 0 || State.SkillEnergy < Cost)
+	{
+		return false;
+	}
+
+	if (Cost > 0)
+	{
+		State.SkillEnergy -= Cost;
+		NotifyStateChanged();
+	}
+	return true;
+}
+
+void UCombatStatsComponent::AddEnergy(int32 Amount)
+{
+	if (!HasAuth() || Amount <= 0)
+	{
+		return;
+	}
+
+	State.Energy = FMath::Min(State.Energy + Amount, Stats.MaxEnergy);
+	NotifyStateChanged();
+}
+
 void UCombatStatsComponent::RefillEnergy()
 {
 	if (!HasAuth())

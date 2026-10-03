@@ -402,9 +402,10 @@ void UDungeonCombatComponent::HandleUseSkill(ATerminusPlayerState* PS, int32 Ski
 	UCombatStatsComponent* Caster = GetStats(PS);
 	if (!Caster || Caster->IsDead()) return;
 
-	const TArray<const FSkillRow*> Skills = UTerminusDataSettings::FindBasicSkills(PS->GetCharacterClass());
-	if (!Skills.IsValidIndex(SkillIndex) || !Skills[SkillIndex]) return;
-	const FSkillRow& Skill = *Skills[SkillIndex];
+	// 0~2 기본 스킬, 3~5 장착한 강화 스킬
+	const FSkillRow* SkillPtr = PS->GetCombatSkill(SkillIndex);
+	if (!SkillPtr) return;
+	const FSkillRow& Skill = *SkillPtr;
 
 	// 대상 먼저 확인 (에너지만 날리고 실패하지 않게)
 	TArray<UCombatStatsComponent*> Targets;
@@ -441,11 +442,15 @@ void UDungeonCombatComponent::HandleUseSkill(ATerminusPlayerState* PS, int32 Ski
 		return;
 	}
 
-	if (!Caster->SpendEnergy(Skill.EnergyCost))
+	// 비용은 둘 다 되는지 먼저 보고 나서 씀 (한쪽만 빠지지 않게)
+	const FCombatState& CasterState = Caster->GetCombatState();
+	if (CasterState.Energy < Skill.EnergyCost || CasterState.SkillEnergy < Skill.SkillEnergyCost)
 	{
 		UE_LOG(LogDungeonCombat, Log, TEXT("[Combat] %s: 에너지 부족 (%s)"), *PS->GetPlayerName(), *Skill.DisplayName_KR.ToString());
 		return;
 	}
+	Caster->SpendEnergy(Skill.EnergyCost);
+	Caster->SpendSkillEnergy(Skill.SkillEnergyCost);
 
 	FSkillExecutor::Execute(Skill, Caster, Targets);
 

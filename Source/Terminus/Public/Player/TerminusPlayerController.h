@@ -10,6 +10,10 @@
 class UTavernWidget;
 class ADungeonArea;
 class UCombatHUDWidget;
+class UStartSkillPickWidget;
+class UMapScreenWidget;
+class UConfirmPopupWidget;
+struct FRunState;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnViewAreaChanged, ADungeonArea*, NewArea);
 
@@ -58,6 +62,15 @@ public:
 	void Client_OnRoomSelectFailed(const FString& ReasonMessage);
 
 	// -------------------------------------------------------------
+	// [팝업]
+	// -------------------------------------------------------------
+
+	// 범용 팝업 띄우기 (로컬 화면). CancelLabel 을 비우면 확인 버튼 하나짜리 알림
+	// 결과는 돌려받은 위젯의 OnConfirmed / OnCancelled (C++ 은 OnConfirmedNative / OnCancelledNative)
+	UFUNCTION(BlueprintCallable, Category = "Terminus|UI")
+	UConfirmPopupWidget* ShowPopup(const FText& Title, const FText& Message, const FText& ConfirmLabel, const FText& CancelLabel);
+
+	// -------------------------------------------------------------
 	// [던전 구역]
 	// -------------------------------------------------------------
 
@@ -100,6 +113,34 @@ public:
 	UFUNCTION(Server, Reliable)
 	void Server_DebugWinCombat();
 
+	// -------------------------------------------------------------
+	// [런 시작 강화 스킬]
+	// -------------------------------------------------------------
+
+	// 고른 강화 스킬 장착 요청. NAME_None = 보유 스킬이 없어 건너뜀
+	UFUNCTION(Server, Reliable)
+	void Server_ChooseStartSkill(FName SkillRow);
+
+	// [테스트] 보유 스킬(영구, 이 컴퓨터 세이브) 조작. 콘솔에서
+	//   DebugOwnSkill holy_charge  -> 그 스킬 보유
+	//   DebugOwnAllSkills          -> 강화 스킬로 쓸 수 있는 DT_Skill 행 전부 보유
+	//   DebugClearOwnedSkills      -> 보유 스킬 전부 삭제 (완전 첫판 상태)
+	//   DebugShowStartSkillPick    -> 장착을 비우고 고르기 화면 다시 띄우기
+	UFUNCTION(Exec)
+	void DebugOwnSkill(FName SkillRow);
+
+	UFUNCTION(Exec)
+	void DebugOwnAllSkills();
+
+	UFUNCTION(Exec)
+	void DebugClearOwnedSkills();
+
+	UFUNCTION(Exec)
+	void DebugShowStartSkillPick();
+
+	UFUNCTION(Server, Reliable)
+	void Server_DebugResetStartSkill();
+
 protected:
 	// 전투 HUD 클래스. 비워 두면 C++ 기본 배치(UCombatHUDWidget)를 씀. WBP 를 만들면 BP_DungeonPC 에서 지정
 	UPROPERTY(EditDefaultsOnly, Category = "Terminus|UI")
@@ -108,6 +149,42 @@ protected:
 	UPROPERTY()
 	TObjectPtr<UCombatHUDWidget> CombatHUD;
 
+	// 런 시작 강화 스킬 고르기 화면. 비워 두면 C++ 기본 모양(UStartSkillPickWidget)
+	UPROPERTY(EditDefaultsOnly, Category = "Terminus|UI")
+	TSubclassOf<UStartSkillPickWidget> StartSkillPickClass;
+
+	UPROPERTY()
+	TObjectPtr<UStartSkillPickWidget> StartSkillPick;
+
+	// 범용 팝업 클래스. 비워 두면 C++ 기본 모양(UConfirmPopupWidget)
+	UPROPERTY(EditDefaultsOnly, Category = "Terminus|UI")
+	TSubclassOf<UConfirmPopupWidget> PopupClass;
+
+	// 지도 화면 (WBP_MapScreen: 상단바 + 지도). 시작 스킬 고르기가 끝나면 뜸
+	// 지도 위젯은 RoomWidgetClass / 아이콘 같은 에셋 설정이 필요해서 C++ 기본 모양이 없음 -> 꼭 지정할 것
+	UPROPERTY(EditDefaultsOnly, Category = "Terminus|UI")
+	TSubclassOf<UMapScreenWidget> MapScreenClass;
+
+	UPROPERTY()
+	TObjectPtr<UMapScreenWidget> MapScreen;
+
 private:
 	TWeakObjectPtr<ADungeonArea> ViewedArea;
+
+	// 던전에 들어와 내 PS 와 지도(MapManager)가 둘 다 보이면 흐름 시작
+	// 게임 시작 -> (아직 안 골랐으면) 시작 스킬 고르기 -> 서버가 고르기 완료를 확인하면 지도 화면
+	// 클라에선 둘 다 복제로 늦게 와서 잠깐씩 다시 확인
+	FTimerHandle StartSkillCheckTimer;
+	int32 StartSkillCheckTries = 0;
+	void CheckStartSkillPick();
+
+	// 지도 화면 띄우기 (이미 떠 있으면 무시)
+	void OpenMapScreen();
+
+	// 내 RunState 가 바뀜 -> 시작 스킬 고르기가 끝났으면 지도 화면
+	UFUNCTION()
+	void HandleLocalRunStateChanged(const FRunState& NewRunState);
+
+	// 보유 스킬에서 최대 3장 뽑아 화면 띄우기. 보유 스킬이 없으면 "없음" 안내 화면 (아무 키 -> 지도)
+	void OpenStartSkillPick();
 };

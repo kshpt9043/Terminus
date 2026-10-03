@@ -9,6 +9,7 @@
 #include "TerminusPlayerState.generated.h"
 
 class ADungeonArea;
+struct FSkillRow;
 
 /**
  * 
@@ -32,6 +33,21 @@ public:
 	// 주점에서 던전으로 출발할 때 서버가 부름. 클래스 기본 스텟을 런 스텟으로 복사하고 진행도 초기화
 	void BeginRun();
 	
+	// 런 시작 강화 스킬 장착. NAME_None 이면 고를 게 없어 건너뜀. 한 런에 한 번만 (서버만)
+	void ChooseStartSkill(FName SkillRow);
+
+	bool HasChosenStartSkill() const { return RunState.bStartSkillChosen; }
+
+	// [테스트] 시작 강화 스킬 고르기를 안 한 상태로 되돌림 (서버만)
+	void ResetStartSkill();
+
+	// 전투에서 쓰는 스킬 칸: 0~2 = 기본 스킬(공격 방어 특수), 3~5 = 장착한 강화 스킬
+	static constexpr int32 NumBasicSkills = 3;
+	static constexpr int32 NumEnhanceSkills = 3;
+
+	// 그 칸의 스킬. 비어 있으면 nullptr
+	const FSkillRow* GetCombatSkill(int32 SlotIndex) const;
+
 	// 방을 클리어하고 그 방으로 진행. 지도상 현재 위치와 진행 레벨을 갱신하고 선택을 비운다
 	void AdvanceToRoom(int32 TargetRoomId, int32 TargetRow);
 	

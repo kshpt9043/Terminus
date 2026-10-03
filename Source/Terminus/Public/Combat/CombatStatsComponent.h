@@ -49,6 +49,12 @@ public:
 	void AddShield(int32 Amount);
 	void Heal(int32 Amount);
 	bool SpendEnergy(int32 Cost);
+
+	// 강화 스킬 비용. 모자라면 false 하고 아무것도 안 함
+	bool SpendSkillEnergy(int32 Cost);
+
+	// 즉시 에너지 회복 (신의 축복 같은 스킬). 최대치는 안 넘김
+	void AddEnergy(int32 Amount);
 	void RefillEnergy();
 	// 턴 끝에 남은 에너지 버림 (기획: 에너지는 매 턴 종료 시 0)
 	void DrainEnergy();

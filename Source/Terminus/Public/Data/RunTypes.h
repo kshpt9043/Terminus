@@ -23,6 +23,19 @@ struct FRunState
 	// false 면 주점을 안 거친 것(던전 맵 바로 PIE) -> 배틀러가 클래스 기본 스텟을 씀
 	UPROPERTY(BlueprintReadOnly)
 	bool bStatsInitialized = false;
+
+	// 장착한 강화 스킬 (DT_Skill 행 이름). 강화 에너지로 씀. 최대 Stats.EnhanceSlots 칸
+	UPROPERTY(BlueprintReadOnly)
+	TArray<FName> EnhanceSkills;
+
+	// 런 시작 때 강화 스킬 고르기를 마쳤는지. 보유 스킬이 없어 건너뛴 경우도 true
+	// false 인 동안은 지도에서 방을 못 고름
+	UPROPERTY(BlueprintReadOnly)
+	bool bStartSkillChosen = false;
+
+	// 던전 재화. 런 동안만 유효 (몬스터방 보상으로 얻고 상점에서 씀). 지금은 얻는 곳이 아직 없음
+	UPROPERTY(BlueprintReadOnly)
+	int32 Currency = 0;
 	
 	// 맵 진행 및 선택 관련 추가 데이터
 	UPROPERTY(BlueprintReadWrite)

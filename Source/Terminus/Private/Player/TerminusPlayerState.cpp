@@ -6,6 +6,7 @@
 #include "Net/UnrealNetwork.h"
 #include "Data/TerminusDataSettings.h"
 #include "Dungeon/DungeonArea.h"
+#include "Game/TerminusProfileSubsystem.h"
 #include "Player/TerminusPlayerController.h"
 
 void ATerminusPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -83,8 +84,63 @@ void ATerminusPlayerState::BeginRun()
 	RunState.CurrentMapLevel = 0;
 	RunState.SelectedRoomId = -1;
 	RunState.VisitedRoomIds.Reset();
+	RunState.EnhanceSkills.Reset();
+	RunState.bStartSkillChosen = false;
+	RunState.Currency = 0;
 
 	OnRep_RunState();
+}
+
+void ATerminusPlayerState::ChooseStartSkill(FName SkillRow)
+{
+	if (!HasAuthority() || RunState.bStartSkillChosen)
+	{
+		return;
+	}
+
+	// 보유 여부는 각자 컴퓨터의 세이브라 서버가 확인할 수 없음 -> 장착 가능한 스킬인지만 봄
+	if (!SkillRow.IsNone())
+	{
+		if (UTerminusProfileSubsystem::IsEquippableSkill(SkillRow, RunState.CharacterClass))
+		{
+			RunState.EnhanceSkills.Reset();
+			RunState.EnhanceSkills.Add(SkillRow);
+		}
+		else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("PS: %s 가 장착할 수 없는 '%s' 를 골라 장착 없이 넘어감"),
+				*GetPlayerName(), *SkillRow.ToString());
+		}
+	}
+
+	RunState.bStartSkillChosen = true;
+	OnRep_RunState();
+}
+
+void ATerminusPlayerState::ResetStartSkill()
+{
+	if (!HasAuthority()) return;
+
+	RunState.EnhanceSkills.Reset();
+	RunState.bStartSkillChosen = false;
+	OnRep_RunState();
+}
+
+const FSkillRow* ATerminusPlayerState::GetCombatSkill(int32 SlotIndex) const
+{
+	if (SlotIndex >= 0 && SlotIndex < NumBasicSkills)
+	{
+		const TArray<const FSkillRow*> Basic = UTerminusDataSettings::FindBasicSkills(RunState.CharacterClass);
+		return Basic.IsValidIndex(SlotIndex) ? Basic[SlotIndex] : nullptr;
+	}
+
+	const int32 EnhanceIndex = SlotIndex - NumBasicSkills;
+	if (EnhanceIndex >= 0 && EnhanceIndex < NumEnhanceSkills && RunState.EnhanceSkills.IsValidIndex(EnhanceIndex))
+	{
+		return UTerminusDataSettings::FindSkillRow(RunState.EnhanceSkills[EnhanceIndex]);
+	}
+
+	return nullptr;
 }
 
 void ATerminusPlayerState::AdvanceToRoom(int32 TargetRoomId, int32 TargetRow)
