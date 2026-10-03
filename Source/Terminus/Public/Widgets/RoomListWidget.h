@@ -72,6 +72,9 @@ private:
 	UFUNCTION() void HandleHostComplete(bool bWasSuccessful);
 
 	void HandleEntryClicked(const FTerminusSessionInfo& Info);
+
+	// ESC 를 눌렀을 때 (UEscapeStackSubsystem)
+	void HandleEscape();
 	void Join(int32 Index, const FString& Password);
 	void SetStatus(const FString& InText);
 	void SetBusy(bool bBusy);

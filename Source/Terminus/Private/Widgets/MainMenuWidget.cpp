@@ -8,6 +8,7 @@
 #include "Online/SessionSubsystem.h"
 #include "Widgets/TerminusUIColors.h"
 #include "Widgets/RoomListWidget.h"
+#include "Widgets/Common/EscapeStackSubsystem.h"
 
 namespace
 {
@@ -110,6 +111,11 @@ void UMainMenuWidget::HandleQuitClicked()
 void UMainMenuWidget::HandlePopupOKClicked()
 {
 	DisconnectPopup->SetVisibility(ESlateVisibility::Collapsed);
+
+	if (UEscapeStackSubsystem* Escape = UEscapeStackSubsystem::Get(this))
+	{
+		Escape->Remove(DisconnectPopup);
+	}
 }
 
 void UMainMenuWidget::HandleQuitHovered()   { SetButtonTextColor(Btn_Quit, TextGold); }
@@ -122,6 +128,12 @@ void UMainMenuWidget::ShowPopup(const FText& Title, const FText& Body)
 
 	// 팝업 뒤를 덮는 검은 이미지가 클릭을 막아준다
 	DisconnectPopup->SetVisibility(ESlateVisibility::Visible);
+
+	// ESC = 확인
+	if (UEscapeStackSubsystem* Escape = UEscapeStackSubsystem::Get(this))
+	{
+		Escape->Push(DisconnectPopup, FSimpleDelegate::CreateUObject(this, &UMainMenuWidget::HandlePopupOKClicked));
+	}
 }
 
 void UMainMenuWidget::SetMenuEnabled(bool bEnabled)

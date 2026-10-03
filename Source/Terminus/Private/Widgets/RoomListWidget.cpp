@@ -7,6 +7,7 @@
 #include "Components/EditableTextBox.h"
 #include "Components/CheckBox.h"
 #include "Engine/GameInstance.h"
+#include "Widgets/Common/EscapeStackSubsystem.h"
 
 void URoomListWidget::NativeOnInitialized()
 {
@@ -60,12 +61,42 @@ void URoomListWidget::Open(int32 InMaxPlayers, const FString& InMapPath)
 	SetBusy(false);
 	SetVisibility(ESlateVisibility::Visible);
 
+	// ESC: 안쪽 창(비밀번호 / 주점 열기)부터 닫고, 없으면 리스트를 닫음
+	if (UEscapeStackSubsystem* Escape = UEscapeStackSubsystem::Get(this))
+	{
+		Escape->Push(this, FSimpleDelegate::CreateUObject(this, &URoomListWidget::HandleEscape));
+	}
+
 	// 열자마자 한 번 찾는다
 	HandleRefreshClicked();
 }
 
+void URoomListWidget::HandleEscape()
+{
+	// 참가 / 주점 열기를 기다리는 중이면 닫지 않음 (닫기 버튼도 막혀 있는 상태)
+	if (!Btn_Close->GetIsEnabled()) return;
+
+	if (PasswordPanel->IsVisible())
+	{
+		HandleJoinCancelClicked();
+	}
+	else if (CreatePanel->IsVisible())
+	{
+		HandleCreateCancelClicked();
+	}
+	else
+	{
+		Close();
+	}
+}
+
 void URoomListWidget::Close()
 {
+	if (UEscapeStackSubsystem* Escape = UEscapeStackSubsystem::Get(this))
+	{
+		Escape->Remove(this);
+	}
+
 	ShowPanel(CreatePanel, false);
 	ShowPanel(PasswordPanel, false);
 	PendingJoinIndex = INDEX_NONE;

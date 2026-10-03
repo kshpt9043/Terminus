@@ -1,6 +1,7 @@
 ﻿#include "Data/TerminusDataSettings.h"
 
 #include "Engine/DataTable.h"
+#include "Engine/Texture2D.h"
 
 namespace
 {
@@ -53,6 +54,28 @@ const FSkillRow* UTerminusDataSettings::FindSkillRow(FName RowName)
 	
 	static const FString Ctx(TEXT("FindSkillRow"));
 	return Table->FindRow<FSkillRow>(RowName, Ctx);
+}
+
+UTexture2D* UTerminusDataSettings::FindSkillIcon(const FSkillRow& Skill)
+{
+	const UTerminusDataSettings* Settings = Get();
+
+	if (!Skill.IconID.IsNone())
+	{
+		if (const TSoftObjectPtr<UTexture2D>* Found = Settings->SkillIcons.Find(Skill.IconID))
+		{
+			if (UTexture2D* Tex = Found->LoadSynchronous())
+			{
+				return Tex;
+			}
+		}
+	}
+
+	if (const TSoftObjectPtr<UTexture2D>* Found = Settings->SkillTypeIcons.Find(Skill.SkillType))
+	{
+		return Found->LoadSynchronous();
+	}
+	return nullptr;
 }
 
 const FMonsterRow* UTerminusDataSettings::FindMonsterRow(FName RowName)

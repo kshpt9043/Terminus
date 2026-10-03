@@ -9,6 +9,7 @@
 #include "Components/TextBlock.h"
 #include "Components/VerticalBox.h"
 #include "Components/VerticalBoxSlot.h"
+#include "Widgets/Common/EscapeStackSubsystem.h"
 
 namespace
 {
@@ -119,6 +120,12 @@ void UConfirmPopupWidget::Setup(const FText& InTitle, const FText& InMessage, co
 	{
 		CancelButton->SetVisibility(bHasCancel ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
 	}
+
+	// ESC = 취소 (알림처럼 취소 버튼이 없으면 확인)
+	if (UEscapeStackSubsystem* Escape = UEscapeStackSubsystem::Get(this))
+	{
+		Escape->Push(this, FSimpleDelegate::CreateWeakLambda(this, [this]() { Close(!bHasCancel); }));
+	}
 }
 
 FReply UConfirmPopupWidget::NativeOnKeyDown(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent)
@@ -127,11 +134,6 @@ FReply UConfirmPopupWidget::NativeOnKeyDown(const FGeometry& InGeometry, const F
 	if (Key == EKeys::Enter || Key == EKeys::SpaceBar)
 	{
 		Close(true);
-		return FReply::Handled();
-	}
-	if (Key == EKeys::Escape)
-	{
-		Close(!bHasCancel);   // 알림(버튼 하나)이면 Esc 도 확인
 		return FReply::Handled();
 	}
 	return Super::NativeOnKeyDown(InGeometry, InKeyEvent);
@@ -150,6 +152,11 @@ void UConfirmPopupWidget::Close(bool bConfirmed)
 {
 	if (bClosed) return;
 	bClosed = true;
+
+	if (UEscapeStackSubsystem* Escape = UEscapeStackSubsystem::Get(this))
+	{
+		Escape->Remove(this);
+	}
 
 	// 먼저 닫고 나서 알림 (알림을 받은 쪽이 레벨 이동 같은 걸 해도 안전하게)
 	RemoveFromParent();
