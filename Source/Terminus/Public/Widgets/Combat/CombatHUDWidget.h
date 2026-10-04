@@ -9,7 +9,7 @@ class ATerminusBattler;
 class UButton;
 class UCanvasPanel;
 class UPanelWidget;
-class USkillSlotWidget;
+class UItemSlotWidget;
 class URelicBarWidget;
 class UProgressBar;
 class UTextBlock;
@@ -82,9 +82,9 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Combat HUD")
 	FVector2D TargetButtonSize = FVector2D(90.f, 110.f);
 
-	// 스킬 칸 위젯. 비워 두면 C++ 기본 칸
+	// 스킬 칸 위젯 (공용 칸 UItemSlotWidget 또는 그걸 부모로 한 WBP). 비워 두면 C++ 기본 칸
 	UPROPERTY(EditAnywhere, Category = "Combat HUD")
-	TSubclassOf<USkillSlotWidget> SkillSlotClass;
+	TSubclassOf<UItemSlotWidget> SkillSlotClass;
 
 	// 칸 사이 간격 (상자가 가로 상자일 때)
 	UPROPERTY(EditAnywhere, Category = "Combat HUD")
@@ -116,7 +116,7 @@ private:
 
 	// 만든 칸들. 인덱스 = 칸 번호 (0~2 기본, 3~ 강화)
 	UPROPERTY()
-	TArray<TObjectPtr<USkillSlotWidget>> SkillSlots;
+	TArray<TObjectPtr<UItemSlotWidget>> SkillSlots;
 
 	// 지금 만들어 둔 강화 칸 수
 	int32 NumEnhanceSlots = INDEX_NONE;
@@ -129,7 +129,8 @@ private:
 
 	// 기본 칸 3개 + 강화 칸 EnhanceCount 개를 다시 만듦
 	void BuildSkillSlots(int32 EnhanceCount);
-	USkillSlotWidget* AddSkillSlot(UPanelWidget* Box, int32 SlotIndex, bool bFirst);
+	UItemSlotWidget* AddSkillSlot(UPanelWidget* Box, int32 SlotIndex, bool bFirst);
+	void HandleSkillSlotClicked(UItemSlotWidget* ClickedSlot);
 	void RebuildTags();
 	void UpdateTags();
 	void UpdatePanels();

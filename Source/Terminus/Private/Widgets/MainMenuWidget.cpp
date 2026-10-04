@@ -9,6 +9,7 @@
 #include "Widgets/TerminusUIColors.h"
 #include "Widgets/RoomListWidget.h"
 #include "Game/TerminusProfileSubsystem.h"
+#include "Widgets/Storage/StorageWidget.h"
 #include "Widgets/Common/EscapeStackSubsystem.h"
 
 namespace
@@ -29,6 +30,7 @@ void UMainMenuWidget::NativeOnInitialized()
 	Btn_Quit->OnHovered.AddDynamic(this, &UMainMenuWidget::HandleQuitHovered);
 	Btn_Quit->OnUnhovered.AddDynamic(this, &UMainMenuWidget::HandleQuitUnhovered);
 	Btn_PopupOK->OnClicked.AddDynamic(this, &UMainMenuWidget::HandlePopupOKClicked);
+	if (Btn_Storage) { Btn_Storage->OnClicked.AddDynamic(this, &UMainMenuWidget::HandleStorageClicked); }
 
 	// 아직 기능이 없는 건물은 자리만 두고 잠근다
 	for (UButton* Unready : { Btn_Tower.Get(), Btn_Training.Get() })
@@ -144,6 +146,25 @@ void UMainMenuWidget::HandlePopupOKClicked()
 	if (UEscapeStackSubsystem* Escape = UEscapeStackSubsystem::Get(this))
 	{
 		Escape->Remove(DisconnectPopup);
+	}
+}
+
+void UMainMenuWidget::HandleStorageClicked()
+{
+	// WBP 안에 둔 창이 없으면 처음 열 때 만들어서 메뉴 위에 띄움
+	if (!StorageWindow)
+	{
+		const TSubclassOf<UStorageWidget> Class = StorageWidgetClass ? StorageWidgetClass : TSubclassOf<UStorageWidget>(UStorageWidget::StaticClass());
+		StorageWindow = CreateWidget<UStorageWidget>(GetOwningPlayer(), Class);
+		if (StorageWindow)
+		{
+			StorageWindow->AddToViewport(40);
+		}
+	}
+
+	if (StorageWindow)
+	{
+		StorageWindow->Open();
 	}
 }
 

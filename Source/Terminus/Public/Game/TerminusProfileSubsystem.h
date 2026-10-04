@@ -24,6 +24,11 @@ public:
 	// 골드. 던전 밖 재화 (정산에서 얻고 훈련소 / 직업의 탑에서 씀). 던전 재화와 달리 판이 끝나도 남음
 	UPROPERTY()
 	int32 Gold = 0;
+
+	// 창고에 보관한 유물 (DT_Relic 행 이름). 정산에서 팔지 않고 '보유'를 고른 것
+	// 던전에 들어갈 때 이 중 1개를 들고 갈 수 있음 (기획 UI 레퍼런스 > 게임 시작)
+	UPROPERTY()
+	TArray<FName> StoredRelics;
 };
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnGoldChanged, int32, NewGold, int32, Delta);
@@ -69,6 +74,26 @@ public:
 
 	// [테스트] 골드를 이 값으로 (Terminus.SetGold 콘솔 명령)
 	void SetGoldForDebug(int32 NewGold);
+
+	// -------------------------------------------------------------
+	// [창고 유물]
+	// -------------------------------------------------------------
+
+	const TArray<FName>& GetStoredRelics() const;
+
+	// 창고에 넣기. 보관할 수 없는 유물(DT 에 없음 / 직업 기본 유물 / 몬스터 유물)이면 false. 같은 유물도 여러 개 보관 가능
+	bool AddStoredRelic(FName RelicRow);
+
+	// 창고에서 하나 빼기 (던전에 들고 갈 때 등)
+	bool RemoveStoredRelic(FName RelicRow);
+
+	void ClearStoredRelics();
+
+	static bool IsStorableRelic(FName RelicRow);
+
+	// 창고 내용(보유 스킬 / 보관 유물)이 바뀜. 창고 화면 갱신용
+	DECLARE_MULTICAST_DELEGATE(FOnStorageChanged);
+	FOnStorageChanged OnStorageChanged;
 
 	// 골드가 바뀜 (메인 메뉴 등 표시 갱신용)
 	UPROPERTY(BlueprintAssignable, Category = "Terminus|Gold")

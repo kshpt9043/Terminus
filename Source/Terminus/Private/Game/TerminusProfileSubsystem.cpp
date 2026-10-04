@@ -39,6 +39,68 @@ static FAutoConsoleCommandWithWorldAndArgs GSetGoldCommand(
 		}
 	}));
 
+// [테스트] 창고 콘솔 명령 (메인 메뉴에서도 됨)
+//   Terminus.StoreRelic RLC_Common_005 / Terminus.StoreAllRelics / Terminus.ClearStorage
+//   Terminus.OwnSkill holy_charge / Terminus.OwnAllSkills
+static UTerminusProfileSubsystem* GetProfileFromWorld(UWorld* World)
+{
+	UGameInstance* GI = World ? World->GetGameInstance() : nullptr;
+	return GI ? GI->GetSubsystem<UTerminusProfileSubsystem>() : nullptr;
+}
+
+static FAutoConsoleCommandWithWorldAndArgs GStoreRelicCommand(
+	TEXT("Terminus.StoreRelic"), TEXT("창고에 유물 넣기. 예: Terminus.StoreRelic RLC_Common_005"),
+	FConsoleCommandWithWorldAndArgsDelegate::CreateLambda([](const TArray<FString>& Args, UWorld* World)
+	{
+		if (UTerminusProfileSubsystem* Profile = GetProfileFromWorld(World); Profile && Args.Num() > 0)
+		{
+			Profile->AddStoredRelic(FName(*Args[0]));
+		}
+	}));
+
+static FAutoConsoleCommandWithWorld GStoreAllRelicsCommand(
+	TEXT("Terminus.StoreAllRelics"), TEXT("보관할 수 있는 유물을 하나씩 전부 창고에"),
+	FConsoleCommandWithWorldDelegate::CreateLambda([](UWorld* World)
+	{
+		UTerminusProfileSubsystem* Profile = GetProfileFromWorld(World);
+		const UDataTable* Table = UTerminusDataSettings::Get()->RelicTable.LoadSynchronous();
+		if (!Profile || !Table) return;
+		for (const FName& Row : Table->GetRowNames())
+		{
+			Profile->AddStoredRelic(Row);
+		}
+	}));
+
+static FAutoConsoleCommandWithWorld GClearStorageCommand(
+	TEXT("Terminus.ClearStorage"), TEXT("창고 유물 전부 비우기"),
+	FConsoleCommandWithWorldDelegate::CreateLambda([](UWorld* World)
+	{
+		if (UTerminusProfileSubsystem* Profile = GetProfileFromWorld(World)) Profile->ClearStoredRelics();
+	}));
+
+static FAutoConsoleCommandWithWorldAndArgs GOwnSkillCommand(
+	TEXT("Terminus.OwnSkill"), TEXT("보유 스킬 추가. 예: Terminus.OwnSkill holy_charge"),
+	FConsoleCommandWithWorldAndArgsDelegate::CreateLambda([](const TArray<FString>& Args, UWorld* World)
+	{
+		if (UTerminusProfileSubsystem* Profile = GetProfileFromWorld(World); Profile && Args.Num() > 0)
+		{
+			Profile->AddOwnedSkill(FName(*Args[0]));
+		}
+	}));
+
+static FAutoConsoleCommandWithWorld GOwnAllSkillsCommand(
+	TEXT("Terminus.OwnAllSkills"), TEXT("보유할 수 있는 스킬 전부 보유"),
+	FConsoleCommandWithWorldDelegate::CreateLambda([](UWorld* World)
+	{
+		UTerminusProfileSubsystem* Profile = GetProfileFromWorld(World);
+		const UDataTable* Table = UTerminusDataSettings::Get()->SkillTable.LoadSynchronous();
+		if (!Profile || !Table) return;
+		for (const FName& Row : Table->GetRowNames())
+		{
+			Profile->AddOwnedSkill(Row);
+		}
+	}));
+
 void UTerminusProfileSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
 	Super::Initialize(Collection);
@@ -82,6 +144,7 @@ bool UTerminusProfileSubsystem::AddOwnedSkill(FName SkillRow)
 
 	Profile->OwnedSkills.Add(SkillRow);
 	Save();
+	OnStorageChanged.Broadcast();
 	return true;
 }
 
@@ -91,6 +154,47 @@ void UTerminusProfileSubsystem::ClearOwnedSkills()
 
 	Profile->OwnedSkills.Reset();
 	Save();
+	OnStorageChanged.Broadcast();
+}
+
+const TArray<FName>& UTerminusProfileSubsystem::GetStoredRelics() const
+{
+	static const TArray<FName> Empty;
+	return Profile ? Profile->StoredRelics : Empty;
+}
+
+bool UTerminusProfileSubsystem::IsStorableRelic(FName RelicRow)
+{
+	const FRelicRow* Relic = RelicRow.IsNone() ? nullptr : UTerminusDataSettings::FindRelicRow(RelicRow);
+	return Relic && Relic->RelicTier != ERelicTier::Basic && Relic->OwnerClass != ESkillOwner::Monster;
+}
+
+bool UTerminusProfileSubsystem::AddStoredRelic(FName RelicRow)
+{
+	if (!Profile || !IsStorableRelic(RelicRow)) return false;
+
+	Profile->StoredRelics.Add(RelicRow);
+	Save();
+	OnStorageChanged.Broadcast();
+	return true;
+}
+
+bool UTerminusProfileSubsystem::RemoveStoredRelic(FName RelicRow)
+{
+	if (!Profile || !Profile->StoredRelics.RemoveSingle(RelicRow)) return false;
+
+	Save();
+	OnStorageChanged.Broadcast();
+	return true;
+}
+
+void UTerminusProfileSubsystem::ClearStoredRelics()
+{
+	if (!Profile) return;
+
+	Profile->StoredRelics.Reset();
+	Save();
+	OnStorageChanged.Broadcast();
 }
 
 int32 UTerminusProfileSubsystem::GetGold() const

@@ -8,6 +8,7 @@ class UButton;
 class UTextBlock;
 class USessionSubsystem;
 class URoomListWidget;
+class UStorageWidget;
 
 /**
  * 첫 화면. 버튼 다섯 개와 안내 팝업.
@@ -31,6 +32,16 @@ protected:
 	// 기능이 아직 없는 건물. 없어도 되게 Optional
 	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UButton> Btn_Tower;
 	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UButton> Btn_Training;
+
+	// 창고 (보관 유물 / 보유 스킬). 기획 UI 레퍼런스 > 건물 > 창고
+	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UButton> Btn_Storage;
+
+	// 창고 창. WBP 안에 같은 이름으로 넣어 두면 그걸 쓰고, 없으면 StorageWidgetClass 로 만들어 화면에 띄움
+	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UStorageWidget> StorageWindow;
+
+	// 창고 창 클래스 (WBP_Storage). 비워 두면 C++ 기본 모양
+	UPROPERTY(EditDefaultsOnly, Category = "Terminus|UI")
+	TSubclassOf<UStorageWidget> StorageWidgetClass;
 
 	// 보유 골드 (UTerminusProfileSubsystem). 바뀌면 바로 갱신
 	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UTextBlock> GoldText;
@@ -66,6 +77,7 @@ private:
 	UFUNCTION() void HandleQuitUnhovered();
 
 	UFUNCTION() void HandleGoldChanged(int32 NewGold, int32 Delta);
+	UFUNCTION() void HandleStorageClicked();
 	void RefreshGold();
 
 	// SessionSubsystem 의 비동기 결과

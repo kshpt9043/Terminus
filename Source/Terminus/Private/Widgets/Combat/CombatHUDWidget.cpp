@@ -18,7 +18,7 @@
 #include "Data/TerminusDataSettings.h"
 #include "Dungeon/DungeonArea.h"
 #include "Dungeon/DungeonCombatComponent.h"
-#include "Widgets/Combat/SkillSlotWidget.h"
+#include "Widgets/Common/ItemSlotWidget.h"
 #include "Widgets/Relic/RelicBarWidget.h"
 #include "Player/TerminusPlayerController.h"
 #include "Player/TerminusPlayerState.h"
@@ -189,6 +189,14 @@ void UCombatHUDWidget::BuildDefaultLayout()
 	AddToCanvas(Root, MakePanel(WidgetTree, RightBox), FAnchors(1.f, 1.f), FVector2D(1.f, 1.f), FVector2D(-24.f, -24.f));
 }
 
+void UCombatHUDWidget::HandleSkillSlotClicked(UItemSlotWidget* ClickedSlot)
+{
+	if (ClickedSlot)
+	{
+		OnSkillClicked(ClickedSlot->GetSlotIndex());
+	}
+}
+
 void UCombatHUDWidget::BuildSkillSlots(int32 EnhanceCount)
 {
 	EnhanceCount = FMath::Clamp(EnhanceCount, 0, ATerminusPlayerState::NumEnhanceSkills);
@@ -209,16 +217,20 @@ void UCombatHUDWidget::BuildSkillSlots(int32 EnhanceCount)
 	}
 }
 
-USkillSlotWidget* UCombatHUDWidget::AddSkillSlot(UPanelWidget* Box, int32 SlotIndex, bool bFirst)
+UItemSlotWidget* UCombatHUDWidget::AddSkillSlot(UPanelWidget* Box, int32 SlotIndex, bool bFirst)
 {
 	if (!Box) return nullptr;
 
-	const TSubclassOf<USkillSlotWidget> Class = SkillSlotClass ? SkillSlotClass : TSubclassOf<USkillSlotWidget>(USkillSlotWidget::StaticClass());
-	USkillSlotWidget* SkillSlot = CreateWidget<USkillSlotWidget>(this, Class);
+	const TSubclassOf<UItemSlotWidget> Class = SkillSlotClass ? SkillSlotClass : TSubclassOf<UItemSlotWidget>(UItemSlotWidget::StaticClass());
+	UItemSlotWidget* SkillSlot = CreateWidget<UItemSlotWidget>(this, Class);
 	if (!SkillSlot) return nullptr;
 
 	SkillSlot->SetSlotIndex(SlotIndex);
-	SkillSlot->OnSlotClicked.BindUObject(this, &UCombatHUDWidget::OnSkillClicked);
+	SkillSlot->OnSlotClicked.BindUObject(this, &UCombatHUDWidget::HandleSkillSlotClicked);
+	if (!SkillSlotClass)
+	{
+		SkillSlot->SetSlotSize(FVector2D(92.f, 84.f));   // C++ 기본 칸이면 전투용 크기
+	}
 
 	if (UHorizontalBoxSlot* HSlot = Cast<UHorizontalBoxSlot>(Box->AddChild(SkillSlot)))
 	{
@@ -547,15 +559,15 @@ void UCombatHUDWidget::UpdatePanels()
 		// 강화 칸 수가 캐릭터 스텟과 다르면 다시 만듦
 		BuildSkillSlots(Stats.EnhanceSlots);
 
-		for (USkillSlotWidget* SkillSlot : SkillSlots)
+		for (UItemSlotWidget* SkillSlot : SkillSlots)
 		{
 			if (!SkillSlot) continue;
 
 			const FSkillRow* Skill = LocalPS->GetCombatSkill(SkillSlot->GetSlotIndex());
-			SkillSlot->SetSkill(Skill);
+			SkillSlot->SetSkill(LocalPS->GetCombatSkillRow(SkillSlot->GetSlotIndex()));
 			SkillSlot->SetUsable(Skill && bMyTurn
 				&& State.Energy >= MyStats->GetEffectiveEnergyCost(Skill->EnergyCost) && State.SkillEnergy >= Skill->SkillEnergyCost);   // 과욕이면 +1
-			SkillSlot->SetPending(PendingSkillIndex == SkillSlot->GetSlotIndex());
+			SkillSlot->SetSelected(PendingSkillIndex == SkillSlot->GetSlotIndex());   // 대상 고르는 중인 칸 강조
 		}
 
 		// ---- 오른쪽 아래: 상태. 기획 시안 "체력 [최대/현재] 힘 방어 회피"
