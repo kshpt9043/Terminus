@@ -62,6 +62,11 @@ void ATavernGameMode::PostLogin(APlayerController* NewPlayer)
 {
 	Super::PostLogin(NewPlayer);
 
+	if (ATerminusPlayerState* TPS = NewPlayer ? NewPlayer->GetPlayerState<ATerminusPlayerState>() : nullptr)
+	{
+		TPS->SetHardMode(bHardMode);
+	}
+
 	if (NewPlayer && NewPlayer->PlayerState)
 	{
 		FChatMessage Notice;
@@ -82,6 +87,25 @@ void ATavernGameMode::Logout(AController* Exiting)
 	}
 
 	Super::Logout(Exiting);
+}
+
+void ATavernGameMode::SetHardMode(bool bInHardMode)
+{
+	bHardMode = bInHardMode;
+
+	for (APlayerState* PS : GameState->PlayerArray)
+	{
+		if (ATerminusPlayerState* TPS = Cast<ATerminusPlayerState>(PS))
+		{
+			TPS->SetHardMode(bInHardMode);
+		}
+	}
+
+	FChatMessage Notice;
+	Notice.Kind = EChatMessageKind::System;
+	Notice.Text = bInHardMode ? TEXT("하드 모드가 켜졌습니다. 던전에 들고 간 창고 유물은 창고에서 사라집니다.")
+	                          : TEXT("하드 모드가 꺼졌습니다.");
+	ATerminusPlayerController::BroadcastChat(GetWorld(), Notice);
 }
 
 bool ATavernGameMode::AreAllPlayersReady() const

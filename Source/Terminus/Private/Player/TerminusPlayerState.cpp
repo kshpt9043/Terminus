@@ -88,6 +88,7 @@ void ATerminusPlayerState::BeginRun()
 	RunState.VisitedRoomIds.Reset();
 	RunState.EnhanceSkills.Reset();
 	RunState.bStartSkillChosen = false;
+	RunState.bStartRelicsChosen = false;
 	RunState.Currency = 0;
 
 	// 직업 기본 유물 = 패시브. 데이터에 아직 없는 직업은 빈 채로
@@ -134,6 +135,52 @@ void ATerminusPlayerState::ResetStartSkill()
 	RunState.EnhanceSkills.Reset();
 	RunState.bStartSkillChosen = false;
 	OnRep_RunState();
+}
+
+void ATerminusPlayerState::ChooseStartRelics(const TArray<FName>& RelicRows)
+{
+	if (!HasAuthority() || RunState.bStartRelicsChosen) return;
+
+	// 보유 여부는 각자 컴퓨터의 창고라 서버가 확인할 수 없음 -> 보관 가능한 유물인지 / 이 직업이 가질 수 있는지만 봄
+	int32 Taken = 0;
+	for (const FName& Row : RelicRows)
+	{
+		if (Taken >= MaxStartRelics) break;
+		if (UTerminusProfileSubsystem::IsStorableRelic(Row) && GainRelic(Row))
+		{
+			++Taken;
+		}
+	}
+
+	UE_LOG(LogTemp, Log, TEXT("[Relic] %s 시작 유물 %d개 장착"), *GetPlayerName(), Taken);
+
+	RunState.bStartRelicsChosen = true;
+	OnRep_RunState();
+}
+
+void ATerminusPlayerState::SetHardMode(bool bInHardMode)
+{
+	if (!HasAuthority() || RunState.bHardMode == bInHardMode) return;
+
+	RunState.bHardMode = bInHardMode;
+	OnRep_RunState();
+}
+
+void ATerminusPlayerState::ResetStartRelics()
+{
+	if (!HasAuthority()) return;
+
+	RunState.bStartRelicsChosen = false;
+	OnRep_RunState();
+}
+
+bool ATerminusPlayerState::CanClassHoldRelic(ECharacterClass InClass, const FRelicRow& Relic)
+{
+	if (Relic.OwnerClass == ESkillOwner::Shared) return true;
+
+	const FString ClassName = StaticEnum<ECharacterClass>()->GetNameStringByValue(static_cast<int64>(InClass));
+	const FString OwnerName = StaticEnum<ESkillOwner>()->GetNameStringByValue(static_cast<int64>(Relic.OwnerClass));
+	return OwnerName == ClassName;
 }
 
 const FSkillRow* ATerminusPlayerState::GetCombatSkill(int32 SlotIndex) const
@@ -192,11 +239,9 @@ bool ATerminusPlayerState::GainRelic(FName RelicRow)
 	}
 
 	// 가질 수 있는 유물인가: 공용이거나 내 직업 것
-	const FString ClassName = StaticEnum<ECharacterClass>()->GetNameStringByValue(static_cast<int64>(RunState.CharacterClass));
-	const FString OwnerName = StaticEnum<ESkillOwner>()->GetNameStringByValue(static_cast<int64>(Relic->OwnerClass));
-	if (Relic->OwnerClass != ESkillOwner::Shared && OwnerName != ClassName)
+	if (!CanClassHoldRelic(RunState.CharacterClass, *Relic))
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[Relic] %s 는 %s 전용이라 %s 가 가질 수 없음"), *RelicRow.ToString(), *OwnerName, *ClassName);
+		UE_LOG(LogTemp, Warning, TEXT("[Relic] %s 는 다른 직업 / 몬스터 전용이라 가질 수 없음"), *RelicRow.ToString());
 		return false;
 	}
 

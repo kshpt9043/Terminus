@@ -42,6 +42,24 @@ public:
 	// [테스트] 시작 강화 스킬 고르기를 안 한 상태로 되돌림 (서버만)
 	void ResetStartSkill();
 
+	// 런 시작 때 창고에서 고른 유물 장착 (최대 MaxStartRelics 개, 비어도 됨). 한 런에 한 번 (서버만)
+	void ChooseStartRelics(const TArray<FName>& RelicRows);
+
+	bool HasChosenStartRelics() const { return RunState.bStartRelicsChosen; }
+
+	// 하드 모드 (서버만 바꿈. 주점 게임모드가 파티 전원에게 같은 값을 넣음)
+	void SetHardMode(bool bInHardMode);
+	bool IsHardMode() const { return RunState.bHardMode; }
+
+	// [테스트] 유물 고르기를 안 한 상태로 (이미 장착한 유물은 그대로)
+	void ResetStartRelics();
+
+	// 던전에 들고 갈 수 있는 유물 수
+	static constexpr int32 MaxStartRelics = 15;
+
+	// 이 직업이 가질 수 있는 유물인가 (공용이거나 그 직업 전용)
+	static bool CanClassHoldRelic(ECharacterClass InClass, const FRelicRow& Relic);
+
 	// 전투에서 쓰는 스킬 칸: 0~2 = 기본 스킬(공격 방어 특수), 3~5 = 장착한 강화 스킬
 	static constexpr int32 NumBasicSkills = 3;
 	static constexpr int32 NumEnhanceSkills = 3;

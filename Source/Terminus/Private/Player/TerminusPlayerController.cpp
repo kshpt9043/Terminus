@@ -17,6 +17,7 @@
 #include "Widgets/Map/MapScreenWidget.h"
 #include "Widgets/Common/ConfirmPopupWidget.h"
 #include "Widgets/Chat/ChatWidget.h"
+#include "Widgets/Relic/StartRelicPickWidget.h"
 #include "Game/TerminusProfileSubsystem.h"
 #include "Data/TerminusDataSettings.h"
 #include "TimerManager.h"
@@ -155,6 +156,17 @@ void ATerminusPlayerController::Server_StartGame_Implementation()
 	if (ATavernGameMode* GM = GetWorld()->GetAuthGameMode<ATavernGameMode>())
 	{
 		GM->TryStartGame();
+	}
+}
+
+void ATerminusPlayerController::Server_SetHardMode_Implementation(bool bInHardMode)
+{
+	// 방장 = 리슨 서버 자신의 PC (서버에서 로컬). 손님이 보낸 요청은 무시
+	if (!IsLocalController()) return;
+
+	if (ATavernGameMode* GM = GetWorld()->GetAuthGameMode<ATavernGameMode>())
+	{
+		GM->SetHardMode(bInHardMode);
 	}
 }
 
@@ -345,23 +357,92 @@ void ATerminusPlayerController::CheckStartSkillPick()
 
 	GetWorldTimerManager().ClearTimer(StartSkillCheckTimer);
 
-	// 이미 골랐거나 런 중간(방을 하나라도 지남)이면 바로 지도
-	if (PS->HasChosenStartSkill() || PS->GetCurrentMapLevel() > 0)
+	// 고르기가 서버에서 확정될 때마다(복제로 RunState 가 바뀌면) 다음 단계로
+	PS->OnRunStateChanged.AddUniqueDynamic(this, &ATerminusPlayerController::HandleLocalRunStateChanged);
+	ContinueStartFlow(PS->GetRunState());
+}
+
+void ATerminusPlayerController::HandleLocalRunStateChanged(const FRunState& NewRunState)
+{
+	ContinueStartFlow(NewRunState);
+}
+
+void ATerminusPlayerController::ContinueStartFlow(const FRunState& Run)
+{
+	// 런 중간(방을 하나라도 지남)이거나 둘 다 골랐으면 지도
+	if (Run.CurrentMapLevel > 0 || (Run.bStartSkillChosen && Run.bStartRelicsChosen))
 	{
 		OpenMapScreen();
 		return;
 	}
 
-	// 고르기가 서버에서 확정되면(복제로 RunState 가 바뀌면) 지도를 띄움
-	PS->OnRunStateChanged.AddUniqueDynamic(this, &ATerminusPlayerController::HandleLocalRunStateChanged);
-	OpenStartSkillPick();
+	if (!Run.bStartSkillChosen)
+	{
+		OpenStartSkillPick();
+		return;
+	}
+
+	OpenStartRelicPick();
 }
 
-void ATerminusPlayerController::HandleLocalRunStateChanged(const FRunState& NewRunState)
+void ATerminusPlayerController::OpenStartRelicPick()
 {
-	if (NewRunState.bStartSkillChosen)
+	if (bStartRelicPickOpened) return;
+	bStartRelicPickOpened = true;
+
+	const UTerminusProfileSubsystem* Profile = GetGameInstance() ? GetGameInstance()->GetSubsystem<UTerminusProfileSubsystem>() : nullptr;
+	const ATerminusPlayerState* PS = GetPlayerState<ATerminusPlayerState>();
+
+	// 보관한 유물이 하나도 없으면 고를 게 없음 -> 바로 '안 고름'
+	TArray<FName> Stored;
+	if (Profile)
 	{
-		OpenMapScreen();
+		for (const FName& Row : Profile->GetStoredRelics())
+		{
+			if (UTerminusProfileSubsystem::IsStorableRelic(Row)) Stored.Add(Row);
+		}
+	}
+	if (Stored.Num() == 0 || !PS)
+	{
+		Server_ChooseStartRelics({});
+		return;
+	}
+
+	const TSubclassOf<UStartRelicPickWidget> Class = StartRelicPickClass ? StartRelicPickClass : TSubclassOf<UStartRelicPickWidget>(UStartRelicPickWidget::StaticClass());
+	StartRelicPick = CreateWidget<UStartRelicPickWidget>(this, Class);
+	if (StartRelicPick)
+	{
+		StartRelicPick->SetCandidates(Stored, PS->GetCharacterClass(), PS->IsHardMode());
+		StartRelicPick->AddToViewport(20);   // 지도 / 전투 HUD 위
+	}
+}
+
+void ATerminusPlayerController::Server_ChooseStartRelics_Implementation(const TArray<FName>& RelicRows)
+{
+	if (ATerminusPlayerState* PS = GetPlayerState<ATerminusPlayerState>())
+	{
+		PS->ChooseStartRelics(RelicRows);
+	}
+}
+
+void ATerminusPlayerController::DebugShowStartRelicPick()
+{
+	if (StartRelicPick)
+	{
+		StartRelicPick->RemoveFromParent();
+		StartRelicPick = nullptr;
+	}
+	bStartRelicPickOpened = false;
+
+	// 같은 PC 의 Reliable RPC 라 순서 보장 -> 초기화 뒤 RunState 가 바뀌면 흐름이 다시 유물 고르기를 띄움
+	Server_DebugResetStartRelics();
+}
+
+void ATerminusPlayerController::Server_DebugResetStartRelics_Implementation()
+{
+	if (ATerminusPlayerState* PS = GetPlayerState<ATerminusPlayerState>())
+	{
+		PS->ResetStartRelics();
 	}
 }
 
@@ -391,7 +472,7 @@ void ATerminusPlayerController::OpenMapScreen()
 
 void ATerminusPlayerController::OpenStartSkillPick()
 {
-	if (StartSkillPick && StartSkillPick->IsInViewport())
+	if (StartSkillPick)
 	{
 		return;
 	}
@@ -472,6 +553,11 @@ void ATerminusPlayerController::DebugClearOwnedSkills()
 void ATerminusPlayerController::DebugShowStartSkillPick()
 {
 	// 같은 PC 의 Reliable RPC 라 순서가 지켜짐 -> 고른 결과는 초기화 뒤에 도착
+	if (StartSkillPick)
+	{
+		StartSkillPick->RemoveFromParent();
+		StartSkillPick = nullptr;
+	}
 	Server_DebugResetStartSkill();
 	OpenStartSkillPick();
 }

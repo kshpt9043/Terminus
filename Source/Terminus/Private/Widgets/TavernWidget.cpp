@@ -8,6 +8,7 @@
 #include "Components/Image.h"
 #include "Components/TextBlock.h"
 #include "Components/Button.h"
+#include "Components/CheckBox.h"
 #include "Engine/World.h"
 #include "Engine/DataTable.h"
 #include "Engine/Texture2D.h"
@@ -45,6 +46,10 @@ void UTavernWidget::NativeOnInitialized()
 	if (InviteButton)
 	{
 		InviteButton->OnClicked.AddDynamic(this, &UTavernWidget::HandleInviteClicked);
+	}
+	if (HardModeCheck)
+	{
+		HardModeCheck->OnCheckStateChanged.AddDynamic(this, &UTavernWidget::HandleHardModeChanged);
 	}
 	
 	if (ReadyButton)
@@ -397,6 +402,8 @@ void UTavernWidget::RefreshSlots()
 		StartButton->SetIsEnabled(AreAllPlayersReady());
 	}
 	
+	RefreshHardMode();
+
 	if (WaitText)
 	{
 		WaitText->SetVisibility(bIsHost ? ESlateVisibility::Collapsed : ESlateVisibility::HitTestInvisible);
@@ -436,4 +443,30 @@ void UTavernWidget::ApplySoloLayout()
 	}
 	
 	if (WaitText) { WaitText->SetVisibility(ESlateVisibility::Collapsed); }
+
+	RefreshHardMode();
+}
+
+void UTavernWidget::HandleHardModeChanged(bool bIsChecked)
+{
+	ATerminusPlayerController* PC = GetOwningPlayer<ATerminusPlayerController>();
+	if (!PC || !PC->HasAuthority()) return;   // 방장만
+
+	PC->Server_SetHardMode(bIsChecked);
+}
+
+void UTavernWidget::RefreshHardMode()
+{
+	if (!HardModeCheck) return;
+
+	const ATerminusPlayerController* PC = GetOwningPlayer<ATerminusPlayerController>();
+	const ATerminusPlayerState* PS = PC ? PC->GetPlayerState<ATerminusPlayerState>() : nullptr;
+
+	// 방장은 리슨 서버라 누르는 즉시 서버 값이 바뀜 -> 모두 자기 RunState 값을 그대로 보여주면 됨
+	const bool bIsHost = PC && PC->HasAuthority();
+	if (PS)
+	{
+		HardModeCheck->SetIsChecked(PS->IsHardMode());
+	}
+	HardModeCheck->SetIsEnabled(bIsHost);
 }

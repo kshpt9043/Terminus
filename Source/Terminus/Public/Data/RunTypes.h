@@ -33,6 +33,15 @@ struct FRunState
 	UPROPERTY(BlueprintReadOnly)
 	bool bStartSkillChosen = false;
 
+	// 런 시작 때 창고 유물 고르기를 마쳤는지 (안 고르고 시작해도 true). false 인 동안은 방을 못 고름
+	UPROPERTY(BlueprintReadOnly)
+	bool bStartRelicsChosen = false;
+
+	// 하드 모드 (판 전체 규칙, 주점에서 방장이 정함). 켜면 런 시작 때 들고 간 창고 유물이 창고에서 사라짐
+	// 파티 전원의 RunState 에 같은 값이 들어감. 런을 새로 시작해도 유지 (BeginRun 이 안 지움)
+	UPROPERTY(BlueprintReadOnly)
+	bool bHardMode = false;
+
 	// 던전 재화. 런 동안만 유효 (몬스터방 보상으로 얻고 상점에서 씀)
 	UPROPERTY(BlueprintReadOnly)
 	int32 Currency = 0;

@@ -14,6 +14,7 @@ class UImage;
 class UTextBlock;
 class UButton;
 class UClassButton;
+class UCheckBox;
 
 /**
  * 주점(멀티 로비) 화면. 슬롯 4개와 캐릭터 정보 패널을 들고 있다.
@@ -87,6 +88,15 @@ protected:
 
 	// 기본 스킬 3개 / 공격 방어 특수
 	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UTextBlock> SkillText;
+
+	// 하드 모드 (방장만 바꿀 수 있음, 손님은 보기만). 켜면 던전에 들고 간 창고 유물이 창고에서 사라짐
+	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UCheckBox> HardModeCheck;
+
+	UFUNCTION()
+	void HandleHardModeChanged(bool bIsChecked);
+
+	// 체크박스를 내 RunState 값에 맞추고, 방장만 누를 수 있게
+	void RefreshHardMode();
 
 	UFUNCTION()
 	void HandleInviteClicked();

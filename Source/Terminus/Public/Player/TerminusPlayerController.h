@@ -15,6 +15,7 @@ class UStartSkillPickWidget;
 class UMapScreenWidget;
 class UConfirmPopupWidget;
 class UChatWidget;
+class UStartRelicPickWidget;
 struct FRunState;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnViewAreaChanged, ADungeonArea*, NewArea);
@@ -52,6 +53,10 @@ public:
 	
 	UFUNCTION(Server, Reliable)
 	void Server_StartGame();
+
+	// 하드 모드 켜기 / 끄기 (주점, 방장만 받아들임)
+	UFUNCTION(Server, Reliable)
+	void Server_SetHardMode(bool bInHardMode);
 	
 	// 지도 방 선택 요청. MapManager 는 서버 소유 액터라 클라가 거기에 Server RPC 를 쏘면
 	// "No owning connection" 으로 버려짐 -> 클라가 소유한 자기 PC 를 거쳐서 보냄
@@ -138,6 +143,17 @@ public:
 	UFUNCTION(Server, Reliable)
 	void Server_ChooseStartSkill(FName SkillRow);
 
+	// 고른 창고 유물 장착 요청 (비어도 됨 = 안 들고 감)
+	UFUNCTION(Server, Reliable)
+	void Server_ChooseStartRelics(const TArray<FName>& RelicRows);
+
+	// [테스트] 유물 고르기 화면 다시 띄우기
+	UFUNCTION(Exec)
+	void DebugShowStartRelicPick();
+
+	UFUNCTION(Server, Reliable)
+	void Server_DebugResetStartRelics();
+
 	// [테스트] 보유 스킬(영구, 이 컴퓨터 세이브) 조작. 콘솔에서
 	//   DebugOwnSkill holy_charge  -> 그 스킬 보유
 	//   DebugOwnAllSkills          -> 강화 스킬로 쓸 수 있는 DT_Skill 행 전부 보유
@@ -193,6 +209,16 @@ protected:
 	UPROPERTY()
 	TObjectPtr<UStartSkillPickWidget> StartSkillPick;
 
+	// 런 시작 유물 고르기 화면. 비워 두면 C++ 기본 모양(UStartRelicPickWidget)
+	UPROPERTY(EditDefaultsOnly, Category = "Terminus|UI")
+	TSubclassOf<UStartRelicPickWidget> StartRelicPickClass;
+
+	UPROPERTY()
+	TObjectPtr<UStartRelicPickWidget> StartRelicPick;
+
+	// 유물 고르기를 이미 띄웠거나(또는 고를 게 없어 바로 보냈거나) -> 다시 띄우지 않게
+	bool bStartRelicPickOpened = false;
+
 	// 채팅창 클래스. 비워 두면 C++ 기본 모양(UChatWidget). 싱글(혼자 오프라인)이면 안 만듦
 	UPROPERTY(EditDefaultsOnly, Category = "Terminus|UI")
 	TSubclassOf<UChatWidget> ChatWidgetClass;
@@ -231,9 +257,15 @@ private:
 	// 지도 화면 띄우기 (이미 떠 있으면 무시)
 	void OpenMapScreen();
 
-	// 내 RunState 가 바뀜 -> 시작 스킬 고르기가 끝났으면 지도 화면
+	// 내 RunState 가 바뀜 -> 다음 단계로 (스킬 -> 유물 -> 지도)
 	UFUNCTION()
 	void HandleLocalRunStateChanged(const FRunState& NewRunState);
+
+	// 런 시작 흐름: 시작 스킬 -> 창고 유물 -> 지도. 지금 상태에 맞는 화면을 띄움
+	void ContinueStartFlow(const FRunState& Run);
+
+	// 창고 유물 고르기. 창고가 비어 있으면 화면 없이 '안 고름'으로 보냄
+	void OpenStartRelicPick();
 
 	// 보유 스킬에서 최대 3장 뽑아 화면 띄우기. 보유 스킬이 없으면 "없음" 안내 화면 (아무 키 -> 지도)
 	void OpenStartSkillPick();
