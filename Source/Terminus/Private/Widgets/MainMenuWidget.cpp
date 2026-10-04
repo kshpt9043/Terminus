@@ -8,6 +8,7 @@
 #include "Online/SessionSubsystem.h"
 #include "Widgets/TerminusUIColors.h"
 #include "Widgets/RoomListWidget.h"
+#include "Game/TerminusProfileSubsystem.h"
 #include "Widgets/Common/EscapeStackSubsystem.h"
 
 namespace
@@ -46,6 +47,13 @@ void UMainMenuWidget::NativeConstruct()
 	if (RoomBrowser) { RoomBrowser->Close(); }
 	SetButtonTextColor(Btn_Quit, TextDim);
 
+	// 골드 표시. 프로필은 위젯보다 오래 살아서 Construct 마다 붙이고 Destruct 에서 뗀다
+	if (UTerminusProfileSubsystem* Profile = GetGameInstance() ? GetGameInstance()->GetSubsystem<UTerminusProfileSubsystem>() : nullptr)
+	{
+		Profile->OnGoldChanged.AddUniqueDynamic(this, &UMainMenuWidget::HandleGoldChanged);
+	}
+	RefreshGold();
+
 	USessionSubsystem* Sessions = GetSessions();
 	if (!Sessions) { return; }
 
@@ -67,6 +75,11 @@ void UMainMenuWidget::NativeDestruct()
 	{
 		Sessions->OnHostComplete.RemoveDynamic(this, &UMainMenuWidget::HandleHostComplete);
 		Sessions->OnJoinComplete.RemoveDynamic(this, &UMainMenuWidget::HandleJoinComplete);
+	}
+
+	if (UTerminusProfileSubsystem* Profile = GetGameInstance() ? GetGameInstance()->GetSubsystem<UTerminusProfileSubsystem>() : nullptr)
+	{
+		Profile->OnGoldChanged.RemoveDynamic(this, &UMainMenuWidget::HandleGoldChanged);
 	}
 
 	Super::NativeDestruct();
@@ -132,6 +145,21 @@ void UMainMenuWidget::HandlePopupOKClicked()
 	{
 		Escape->Remove(DisconnectPopup);
 	}
+}
+
+void UMainMenuWidget::HandleGoldChanged(int32 NewGold, int32 Delta)
+{
+	RefreshGold();
+}
+
+void UMainMenuWidget::RefreshGold()
+{
+	if (!GoldText) return;
+
+	const UTerminusProfileSubsystem* Profile = GetGameInstance() ? GetGameInstance()->GetSubsystem<UTerminusProfileSubsystem>() : nullptr;
+	FFormatNamedArguments Args;
+	Args.Add(TEXT("Gold"), FText::AsNumber(Profile ? Profile->GetGold() : 0));
+	GoldText->SetText(FText::Format(GoldFormat, Args));
 }
 
 void UMainMenuWidget::HandleQuitHovered()   { SetButtonTextColor(Btn_Quit, TextGold); }

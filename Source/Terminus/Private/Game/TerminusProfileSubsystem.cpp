@@ -2,12 +2,42 @@
 
 #include "Data/TerminusDataSettings.h"
 #include "Kismet/GameplayStatics.h"
+#include "HAL/IConsoleManager.h"
+#include "Engine/GameInstance.h"
+#include "Engine/World.h"
 
 namespace
 {
 	const TCHAR* ProfileSlotName = TEXT("Profile");
 	constexpr int32 ProfileUserIndex = 0;
 }
+
+// [테스트] 콘솔: Terminus.AddGold 500 / Terminus.SetGold 0  (주점 / 메인 메뉴 / 던전 어디서나)
+static FAutoConsoleCommandWithWorldAndArgs GAddGoldCommand(
+	TEXT("Terminus.AddGold"), TEXT("골드를 더함. 예: Terminus.AddGold 500"),
+	FConsoleCommandWithWorldAndArgsDelegate::CreateLambda([](const TArray<FString>& Args, UWorld* World)
+	{
+		UGameInstance* GI = World ? World->GetGameInstance() : nullptr;
+		UTerminusProfileSubsystem* Profile = GI ? GI->GetSubsystem<UTerminusProfileSubsystem>() : nullptr;
+		if (Profile && Args.Num() > 0)
+		{
+			Profile->AddGold(FCString::Atoi(*Args[0]));
+			UE_LOG(LogTemp, Log, TEXT("[Debug] 골드 %d"), Profile->GetGold());
+		}
+	}));
+
+static FAutoConsoleCommandWithWorldAndArgs GSetGoldCommand(
+	TEXT("Terminus.SetGold"), TEXT("골드를 이 값으로. 예: Terminus.SetGold 0"),
+	FConsoleCommandWithWorldAndArgsDelegate::CreateLambda([](const TArray<FString>& Args, UWorld* World)
+	{
+		UGameInstance* GI = World ? World->GetGameInstance() : nullptr;
+		UTerminusProfileSubsystem* Profile = GI ? GI->GetSubsystem<UTerminusProfileSubsystem>() : nullptr;
+		if (Profile && Args.Num() > 0)
+		{
+			Profile->SetGoldForDebug(FCString::Atoi(*Args[0]));
+			UE_LOG(LogTemp, Log, TEXT("[Debug] 골드 %d"), Profile->GetGold());
+		}
+	}));
 
 void UTerminusProfileSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
@@ -61,6 +91,43 @@ void UTerminusProfileSubsystem::ClearOwnedSkills()
 
 	Profile->OwnedSkills.Reset();
 	Save();
+}
+
+int32 UTerminusProfileSubsystem::GetGold() const
+{
+	return Profile ? Profile->Gold : 0;
+}
+
+void UTerminusProfileSubsystem::AddGold(int32 Amount)
+{
+	if (!Profile || Amount <= 0) return;
+
+	// int32 넘침 방지
+	const int64 Sum = static_cast<int64>(Profile->Gold) + Amount;
+	Profile->Gold = static_cast<int32>(FMath::Min<int64>(Sum, MAX_int32));
+	Save();
+	OnGoldChanged.Broadcast(Profile->Gold, Amount);
+}
+
+bool UTerminusProfileSubsystem::TrySpendGold(int32 Cost)
+{
+	if (!Profile || Cost < 0 || Profile->Gold < Cost) return false;
+	if (Cost == 0) return true;
+
+	Profile->Gold -= Cost;
+	Save();
+	OnGoldChanged.Broadcast(Profile->Gold, -Cost);
+	return true;
+}
+
+void UTerminusProfileSubsystem::SetGoldForDebug(int32 NewGold)
+{
+	if (!Profile) return;
+
+	const int32 Delta = FMath::Max(0, NewGold) - Profile->Gold;
+	Profile->Gold = FMath::Max(0, NewGold);
+	Save();
+	OnGoldChanged.Broadcast(Profile->Gold, Delta);
 }
 
 bool UTerminusProfileSubsystem::IsOwnableSkill(FName SkillRow)

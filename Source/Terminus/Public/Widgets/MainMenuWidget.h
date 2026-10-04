@@ -32,8 +32,12 @@ protected:
 	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UButton> Btn_Tower;
 	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UButton> Btn_Training;
 
-	// 골드 데이터가 생기면 채운다. 지금은 WBP 의 고정 문구
+	// 보유 골드 (UTerminusProfileSubsystem). 바뀌면 바로 갱신
 	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UTextBlock> GoldText;
+
+	// 골드 표시 형식. {Gold} 자리에 천 단위 쉼표가 붙은 숫자
+	UPROPERTY(EditDefaultsOnly, Category = "Terminus|UI")
+	FText GoldFormat = INVTEXT("{Gold} G");
 
 	// --- 안내 팝업. 끊김과 주점 열기 실패에 같이 쓴다
 	UPROPERTY(meta = (BindWidget)) TObjectPtr<UWidget>    DisconnectPopup;
@@ -60,6 +64,9 @@ private:
 	// 글자 메뉴는 버튼 브러시가 없어서 호버를 글자 색으로 보여준다
 	UFUNCTION() void HandleQuitHovered();
 	UFUNCTION() void HandleQuitUnhovered();
+
+	UFUNCTION() void HandleGoldChanged(int32 NewGold, int32 Delta);
+	void RefreshGold();
 
 	// SessionSubsystem 의 비동기 결과
 	UFUNCTION() void HandleHostComplete(bool bWasSuccessful);
