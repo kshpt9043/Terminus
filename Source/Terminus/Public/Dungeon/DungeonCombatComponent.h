@@ -4,6 +4,7 @@
 #include "Components/ActorComponent.h"
 #include "Data/SkillTypes.h"
 #include "Map/MapManager.h"
+#include "Data/RelicTypes.h"
 #include "DungeonCombatComponent.generated.h"
 
 class ADungeonArea;
@@ -211,6 +212,45 @@ private:
 
 	// 승패 판정. 끝났으면 true (다음 진행 멈춤)
 	bool CheckCombatEnd();
+
+	// -------------------------------------------------------------
+	// 유물 (서버만). 전투에 참가한 쪽(플레이어 / 몬스터)마다 보유 유물을 들고, 전투 사건이 오면 발동 시점이 맞는 것을 실행
+	// -------------------------------------------------------------
+	struct FRelicHolder
+	{
+		TWeakObjectPtr<UCombatStatsComponent> Stats;
+		TWeakObjectPtr<ATerminusPlayerState> Player;   // 플레이어면 (던전 재화 / 최대 체력 같은 런 효과용)
+		bool bMonster = false;
+		TArray<FName> Relics;
+		TMap<FName, int32> UsesLeft;                    // 부활 같은 횟수 제한
+	};
+	TArray<FRelicHolder> Holders;
+
+	// 지금 방 종류 (가디언 / 보스 전투 시작 발동)
+	ERoomType CurrentRoomType = ERoomType::MONSTER;
+
+	// 유물 효과가 또 유물을 부르는 깊이 (무한 반복 방지)
+	int32 RelicDepth = 0;
+
+	void BuildRelicHolders();
+	void ClearRelicHolders();
+	int32 FindHolder(const UCombatStatsComponent* Stats) const;
+
+	// 그 쪽의 유물 중 Trigger 가 맞는 것 실행. Amount = 사건 수치 (깎인 체력 등), UsedSkill = OnSkillUsed 판정용
+	void FireRelics(int32 HolderIndex, ERelicTrigger Trigger, int32 Amount = 0, FName UsedSkill = NAME_None, const FSkillRow* UsedSkillRow = nullptr);
+	void FireRelicsForAll(ERelicTrigger Trigger, bool bPlayers, bool bMonsters);
+	void ExecuteRelic(int32 HolderIndex, const FRelicRow& Relic, int32 Amount);
+
+	TArray<UCombatStatsComponent*> GetSideStats(bool bMonsterSide) const;
+
+	// 전투 사건 (UCombatStatsComponent 알림)
+	void HandleStatsDamaged(UCombatStatsComponent* Self, int32 HealthLost, UCombatStatsComponent* Instigator);
+	void HandleShieldGained(UCombatStatsComponent* Self, int32 Amount);
+	void HandleHealed(UCombatStatsComponent* Self, int32 Amount);
+	void HandleEnergySpent(UCombatStatsComponent* Self, int32 Amount);
+	void HandleSkillEnergySpent(UCombatStatsComponent* Self, int32 Amount);
+	void HandleStatsDied(UCombatStatsComponent* Self);
+	bool HandlePreventDeath(UCombatStatsComponent* Self);
 	void HideDeadMonsters();
 	void FinishCombat(bool bVictory);
 };

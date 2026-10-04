@@ -476,6 +476,63 @@ void ATerminusPlayerController::DebugShowStartSkillPick()
 	OpenStartSkillPick();
 }
 
+void ATerminusPlayerController::DebugGainRelic(FName RelicRow)
+{
+	Server_DebugGainRelic(RelicRow);
+}
+
+void ATerminusPlayerController::Server_DebugGainRelic_Implementation(FName RelicRow)
+{
+	ATerminusPlayerState* PS = GetPlayerState<ATerminusPlayerState>();
+	if (!PS) return;
+
+	if (RelicRow != TEXT("All"))
+	{
+		PS->GainRelic(RelicRow);
+		return;
+	}
+
+	// 가질 수 있는 것 전부 (Basic 은 직업 시작 유물이라 뺌. GainRelic 이 다른 직업 / 몬스터 것을 거름)
+	if (const UDataTable* Table = UTerminusDataSettings::Get()->RelicTable.LoadSynchronous())
+	{
+		for (const FName& Row : Table->GetRowNames())
+		{
+			const FRelicRow* Relic = UTerminusDataSettings::FindRelicRow(Row);
+			if (Relic && Relic->RelicTier != ERelicTier::Basic && Relic->OwnerClass != ESkillOwner::Monster)
+			{
+				PS->GainRelic(Row);
+			}
+		}
+	}
+}
+
+void ATerminusPlayerController::DebugRemoveRelic(FName RelicRow)
+{
+	Server_DebugRemoveRelic(RelicRow);
+}
+
+void ATerminusPlayerController::Server_DebugRemoveRelic_Implementation(FName RelicRow)
+{
+	if (ATerminusPlayerState* PS = GetPlayerState<ATerminusPlayerState>())
+	{
+		PS->RemoveRelic(RelicRow);
+	}
+}
+
+void ATerminusPlayerController::DebugListRelics()
+{
+	const ATerminusPlayerState* PS = GetPlayerState<ATerminusPlayerState>();
+	if (!PS) return;
+
+	UE_LOG(LogTemp, Log, TEXT("[Debug] 보유 유물 %d개, 던전 재화 %d"), PS->GetRelics().Num(), PS->GetRunState().Currency);
+	for (const FName& Row : PS->GetRelics())
+	{
+		const FRelicRow* Relic = UTerminusDataSettings::FindRelicRow(Row);
+		UE_LOG(LogTemp, Log, TEXT("  %s  %s : %s"), *Row.ToString(),
+			Relic ? *Relic->RelicName.ToString() : TEXT("?"), Relic ? *Relic->RelicDesc.ToString() : TEXT(""));
+	}
+}
+
 void ATerminusPlayerController::Server_DebugResetStartSkill_Implementation()
 {
 	if (ATerminusPlayerState* PS = GetPlayerState<ATerminusPlayerState>())

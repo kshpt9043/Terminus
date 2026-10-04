@@ -33,9 +33,13 @@ struct FRunState
 	UPROPERTY(BlueprintReadOnly)
 	bool bStartSkillChosen = false;
 
-	// 던전 재화. 런 동안만 유효 (몬스터방 보상으로 얻고 상점에서 씀). 지금은 얻는 곳이 아직 없음
+	// 던전 재화. 런 동안만 유효 (몬스터방 보상으로 얻고 상점에서 씀)
 	UPROPERTY(BlueprintReadOnly)
 	int32 Currency = 0;
+
+	// 보유 유물 (DT_Relic 행 이름). 처음엔 직업 기본 유물(RLC_<직업>_001) 하나
+	UPROPERTY(BlueprintReadOnly)
+	TArray<FName> Relics;
 	
 	// 맵 진행 및 선택 관련 추가 데이터
 	UPROPERTY(BlueprintReadWrite)

@@ -10,6 +10,7 @@ class UButton;
 class UCanvasPanel;
 class UPanelWidget;
 class USkillSlotWidget;
+class URelicBarWidget;
 class UProgressBar;
 class UTextBlock;
 class UVerticalBox;
@@ -63,6 +64,9 @@ protected:
 
 	// 강화 스킬 칸이 들어갈 상자
 	UPROPERTY(meta = (BindWidget)) TObjectPtr<UPanelWidget> EnhanceSkillBox;
+
+	// 보유 유물 줄 (오른쪽 아래). WBP 에 없으면 C++ 이 턴 종료 위쪽에 만듦
+	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<URelicBarWidget> RelicBar;
 
 	UPROPERTY(meta = (BindWidget)) TObjectPtr<UButton> EndTurnButton;
 	UPROPERTY(meta = (BindWidget)) TObjectPtr<UTextBlock> StatusText;

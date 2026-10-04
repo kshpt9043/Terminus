@@ -6,6 +6,7 @@
 #include "Combat/SkillExecutor.h"
 #include "Data/MonsterTypes.h"
 #include "Data/TerminusDataSettings.h"
+#include "Data/RelicTypes.h"
 #include "Dungeon/DungeonArea.h"
 #include "Dungeon/DungeonThemeData.h"
 #include "Engine/DataTable.h"
@@ -145,7 +146,10 @@ void UDungeonCombatComponent::StartCombat(const FRoomNode& Room, const TArray<AT
 		if (PS) Players.Add(PS);
 	}
 
+	CurrentRoomType = Room.Type;
 	SpawnMonsters(Room, Theme);
+	BuildRelicHolders();
+
 
 	if (Monsters.Num() == 0)
 	{
@@ -168,10 +172,13 @@ void UDungeonCombatComponent::EndCombat()
 		World->GetTimerManager().ClearTimer(StepTimer);
 	}
 
+	ClearRelicHolders();
+
 	for (ATerminusMonster* Monster : Monsters)
 	{
 		if (IsValid(Monster)) Monster->Destroy();
 	}
+
 
 	Monsters.Reset();
 	MonsterRows.Reset();
@@ -361,8 +368,35 @@ void UDungeonCombatComponent::StartCycle()
 		}
 	}
 
-	ChooseIntents();
 	Phase = ECombatPhase::PlayerTurn;
+
+	// 전투 시작 유물은 첫 턴 에너지 회복 "뒤" (보조 배터리: 3 -> 4)
+	if (Cycle == 1)
+	{
+		FireRelicsForAll(ERelicTrigger::OnBattleStart, true, true);
+		if (CurrentRoomType == ERoomType::GUARDIAN) FireRelicsForAll(ERelicTrigger::OnGuardianBattleStart, true, true);
+		if (CurrentRoomType == ERoomType::BOSS)     FireRelicsForAll(ERelicTrigger::OnBossBattleStart, true, true);
+	}
+
+	// 플레이어 턴 시작: 활력(턴 시작 에너지 +수치) 다음 턴 시작 유물
+	for (const TWeakObjectPtr<ATerminusPlayerState>& PS : Players)
+	{
+		UCombatStatsComponent* Stats = GetStats(PS.Get());
+		if (!Stats || Stats->IsDead()) continue;
+
+		if (const int32 Vitality = Stats->GetStatusValue(EStatusEffect::Vitality); Vitality > 0)
+		{
+			Stats->AddEnergy(Vitality, true);
+		}
+		FireRelics(FindHolder(Stats), ERelicTrigger::OnTurnStart);
+	}
+
+	// 유탄 발사기처럼 시작하자마자 몬스터가 다 죽을 수도 있음
+	HideDeadMonsters();
+	if (CheckCombatEnd()) return;
+
+	ChooseIntents();
+
 
 	UE_LOG(LogDungeonCombat, Log, TEXT("[Combat] 사이클 %d 시작. 플레이어 턴"), Cycle);
 }
@@ -444,15 +478,18 @@ void UDungeonCombatComponent::HandleUseSkill(ATerminusPlayerState* PS, int32 Ski
 
 	// 비용은 둘 다 되는지 먼저 보고 나서 씀 (한쪽만 빠지지 않게)
 	const FCombatState& CasterState = Caster->GetCombatState();
-	if (CasterState.Energy < Skill.EnergyCost || CasterState.SkillEnergy < Skill.SkillEnergyCost)
+	const int32 EnergyCost = Caster->GetEffectiveEnergyCost(Skill.EnergyCost);   // 과욕(산성) +1
+	if (CasterState.Energy < EnergyCost || CasterState.SkillEnergy < Skill.SkillEnergyCost)
 	{
 		UE_LOG(LogDungeonCombat, Log, TEXT("[Combat] %s: 에너지 부족 (%s)"), *PS->GetPlayerName(), *Skill.DisplayName_KR.ToString());
 		return;
 	}
-	Caster->SpendEnergy(Skill.EnergyCost);
+	Caster->SpendEnergy(EnergyCost);
 	Caster->SpendSkillEnergy(Skill.SkillEnergyCost);
 
 	FSkillExecutor::Execute(Skill, Caster, Targets);
+	FireRelics(FindHolder(Caster), ERelicTrigger::OnSkillUsed, 0, PS->GetCombatSkillRow(SkillIndex), &Skill);
+
 
 	UE_LOG(LogDungeonCombat, Log, TEXT("[Combat] %s -> %s"), *PS->GetPlayerName(), *Skill.DisplayName_KR.ToString());
 
@@ -471,6 +508,7 @@ void UDungeonCombatComponent::HandleEndTurn(ATerminusPlayerState* PS)
 	{
 		Stats->OnTurnEnd();
 		Stats->DrainEnergy();
+		FireRelics(FindHolder(Stats), ERelicTrigger::OnTurnEnd);
 	}
 
 	if (CheckCombatEnd()) return;
@@ -521,6 +559,9 @@ void UDungeonCombatComponent::RunNextMonsterAction()
 
 		// 몬스터 보호막은 "다음 자기 턴이 돌아올 때까지" -> 행동 직전에 버림
 		Stats->ClearShield();
+		FireRelics(FindHolder(Stats), ERelicTrigger::OnTurnStart);
+		if (Stats->IsDead()) continue;
+
 
 		const FMonsterIntent* Intent = FindIntent(Monster);
 		const FSkillRow* Skill = Intent ? UTerminusDataSettings::FindSkillRow(Intent->SkillRow) : nullptr;
@@ -550,6 +591,7 @@ void UDungeonCombatComponent::FinishCycle()
 	for (UCombatStatsComponent* Stats : GetAliveMonsterStats())
 	{
 		Stats->OnTurnEnd();
+		FireRelics(FindHolder(Stats), ERelicTrigger::OnTurnEnd);
 	}
 
 	// 사이클 끝: 모두의 상태이상 지속시간 1 감소
@@ -609,6 +651,17 @@ void UDungeonCombatComponent::FinishCombat(bool bVictory)
 
 	UE_LOG(LogDungeonCombat, Log, TEXT("[Combat] 전투 %s (사이클 %d)"), bVictory ? TEXT("승리") : TEXT("패배"), Cycle);
 
+	// 살아 있는 플레이어의 전투 종료 유물 (재화 / 회복 / 최대 체력). 그다음 전투에서만 의미 있는 것들을 지움
+	FireRelicsForAll(ERelicTrigger::OnBattleEnd, true, false);
+	for (const TWeakObjectPtr<ATerminusPlayerState>& PS : Players)
+	{
+		if (UCombatStatsComponent* Stats = GetStats(PS.Get()))
+		{
+			Stats->ClearCombatEffects();
+		}
+	}
+
+
 	if (!bVictory)
 	{
 		// TODO: 사망 로직 (기획 사망 순서도: 멀티면 구출 / 난입, 싱글이면 유물만 판매하고 로비로)
@@ -639,4 +692,292 @@ void UDungeonCombatComponent::FinishCombat(bool bVictory)
 			Area->MarkCleared();
 		}
 	}), CombatEndDelay, false);
+}
+
+// =====================================================================
+// 유물
+// =====================================================================
+
+void UDungeonCombatComponent::BuildRelicHolders()
+{
+	ClearRelicHolders();
+
+	auto AddHolder = [this](UCombatStatsComponent* Stats, ATerminusPlayerState* PS, bool bMonster, const TArray<FName>& Relics)
+	{
+		if (!Stats) return;
+
+		FRelicHolder& Holder = Holders.AddDefaulted_GetRef();
+		Holder.Stats = Stats;
+		Holder.Player = PS;
+		Holder.bMonster = bMonster;
+		for (const FName& Row : Relics)
+		{
+			if (UTerminusDataSettings::FindRelicRow(Row)) Holder.Relics.Add(Row);
+		}
+
+		Stats->OnDamaged.AddUObject(this, &UDungeonCombatComponent::HandleStatsDamaged);
+		Stats->OnShieldGained.AddUObject(this, &UDungeonCombatComponent::HandleShieldGained);
+		Stats->OnHealed.AddUObject(this, &UDungeonCombatComponent::HandleHealed);
+		Stats->OnEnergySpent.AddUObject(this, &UDungeonCombatComponent::HandleEnergySpent);
+		Stats->OnSkillEnergySpent.AddUObject(this, &UDungeonCombatComponent::HandleSkillEnergySpent);
+		Stats->OnDiedNative.AddUObject(this, &UDungeonCombatComponent::HandleStatsDied);
+		Stats->PreventDeath.BindUObject(this, &UDungeonCombatComponent::HandlePreventDeath);
+	};
+
+	// 플레이어: 런 보유 유물 (직업 기본 유물 포함)
+	for (const TWeakObjectPtr<ATerminusPlayerState>& PS : Players)
+	{
+		if (ATerminusPlayerState* Player = PS.Get())
+		{
+			AddHolder(GetStats(Player), Player, false, Player->GetRelics());
+		}
+	}
+
+	// 몬스터: DT_Monster 의 PassiveID (세미콜론으로 여러 개). 유물 행 이름이 아닌 건 건너뜀
+	for (int32 i = 0; i < Monsters.Num(); ++i)
+	{
+		TArray<FName> Relics;
+		if (const FMonsterRow* Row = MonsterRows.IsValidIndex(i) ? UTerminusDataSettings::FindMonsterRow(MonsterRows[i]) : nullptr)
+		{
+			TArray<FString> Parts;
+			Row->PassiveID.ParseIntoArray(Parts, TEXT(";"));
+			for (FString& Part : Parts)
+			{
+				Part.TrimStartAndEndInline();
+				if (Part.IsEmpty()) continue;
+				if (UTerminusDataSettings::FindRelicRow(FName(*Part)))
+				{
+					Relics.Add(FName(*Part));
+				}
+				else
+				{
+					UE_LOG(LogDungeonCombat, Verbose, TEXT("[Relic] %s 의 PassiveID '%s' 는 유물이 아님 (DT_Relic 에 없음)"), *MonsterRows[i].ToString(), *Part);
+				}
+			}
+		}
+		AddHolder(Monsters[i] ? Monsters[i]->GetCombatStats() : nullptr, nullptr, true, Relics);
+	}
+}
+
+void UDungeonCombatComponent::ClearRelicHolders()
+{
+	for (const FRelicHolder& Holder : Holders)
+	{
+		if (UCombatStatsComponent* Stats = Holder.Stats.Get())
+		{
+			Stats->OnDamaged.RemoveAll(this);
+			Stats->OnShieldGained.RemoveAll(this);
+			Stats->OnHealed.RemoveAll(this);
+			Stats->OnEnergySpent.RemoveAll(this);
+			Stats->OnSkillEnergySpent.RemoveAll(this);
+			Stats->OnDiedNative.RemoveAll(this);
+			Stats->PreventDeath.Unbind();
+		}
+	}
+	Holders.Reset();
+	RelicDepth = 0;
+}
+
+int32 UDungeonCombatComponent::FindHolder(const UCombatStatsComponent* Stats) const
+{
+	return Holders.IndexOfByPredicate([Stats](const FRelicHolder& H) { return H.Stats.Get() == Stats; });
+}
+
+TArray<UCombatStatsComponent*> UDungeonCombatComponent::GetSideStats(bool bMonsterSide) const
+{
+	return bMonsterSide ? GetAliveMonsterStats() : GetAlivePlayerStats();
+}
+
+void UDungeonCombatComponent::FireRelicsForAll(ERelicTrigger Trigger, bool bPlayers, bool bMonsters)
+{
+	for (int32 i = 0; i < Holders.Num(); ++i)
+	{
+		if ((Holders[i].bMonster && bMonsters) || (!Holders[i].bMonster && bPlayers))
+		{
+			FireRelics(i, Trigger);
+		}
+	}
+}
+
+void UDungeonCombatComponent::FireRelics(int32 HolderIndex, ERelicTrigger Trigger, int32 Amount, FName UsedSkill, const FSkillRow* UsedSkillRow)
+{
+	if (!Holders.IsValidIndex(HolderIndex)) return;
+
+	// 유물 -> 사건 -> 유물 ... 이 끝없이 이어지지 않게
+	if (RelicDepth >= 8)
+	{
+		UE_LOG(LogDungeonCombat, Warning, TEXT("[Relic] 연쇄 발동이 너무 깊어 멈춤 (%s)"), *UEnum::GetValueAsString(Trigger));
+		return;
+	}
+
+	const UCombatStatsComponent* Owner = Holders[HolderIndex].Stats.Get();
+	if (!Owner || Owner->IsDead()) return;
+
+	const TArray<FName> Relics = Holders[HolderIndex].Relics;   // 실행 중 목록이 바뀌어도 안전하게 복사
+	for (const FName& Row : Relics)
+	{
+		const FRelicRow* Relic = UTerminusDataSettings::FindRelicRow(Row);
+		if (!Relic || Relic->TriggerTiming != Trigger) continue;
+
+		// OnSkillUsed: OnSkill 칸이 쓴 스킬의 행 이름이나 SkillID 와 같을 때만
+		if (Trigger == ERelicTrigger::OnSkillUsed)
+		{
+			const bool bMatch = !Relic->OnSkill.IsNone()
+				&& (Relic->OnSkill == UsedSkill || (UsedSkillRow && Relic->OnSkill.ToString() == UsedSkillRow->SkillID));
+			if (!bMatch) continue;
+		}
+
+		UE_LOG(LogDungeonCombat, Log, TEXT("[Relic] %s 발동 (%s)"), *Relic->RelicName.ToString(), *UEnum::GetValueAsString(Trigger));
+
+		++RelicDepth;
+		ExecuteRelic(HolderIndex, *Relic, Amount);
+		--RelicDepth;
+	}
+}
+
+void UDungeonCombatComponent::ExecuteRelic(int32 HolderIndex, const FRelicRow& Relic, int32 Amount)
+{
+	if (!Holders.IsValidIndex(HolderIndex)) return;
+	UCombatStatsComponent* Owner = Holders[HolderIndex].Stats.Get();
+	ATerminusPlayerState* Player = Holders[HolderIndex].Player.Get();
+	const bool bMonster = Holders[HolderIndex].bMonster;
+	if (!Owner || Owner->IsDead()) return;
+
+	switch (Relic.ActionKind)
+	{
+	// 부활은 죽는 순간(HandlePreventDeath)에서
+	case EActionKind::RevivalSelfAll:
+	case EActionKind::RevivalSelfHalf:
+		return;
+
+	// 런 전체에 남는 효과 (플레이어만)
+	case EActionKind::GainMoney:
+	case EActionKind::MaxHPUp:
+	case EActionKind::MaxHPDown:
+	case EActionKind::RandomUpgrade:
+		if (Player) Player->ApplyRelicMetaEffect(Relic);
+		return;
+
+	// 에너지는 최대치를 넘어도 됨 (보조 배터리: 3 -> 4)
+	case EActionKind::GainEnergy:
+		Owner->AddEnergy(Relic.BaseValue, true);
+		return;
+
+	// 아군이 죽으면 풀리는 불굴 (왕의 위엄). 풀어 주는 건 HandleStatsDied
+	case EActionKind::IndomitableSelfAllyDead:
+		Owner->ApplyStatus(EStatusEffect::Indomitable, Relic.StatusValue, Relic.StatusDuration != 0 ? Relic.StatusDuration : -1);
+		return;
+
+	default:
+		break;
+	}
+
+	// 나머지는 스킬과 같은 실행기로. 유물 칸을 스킬 행 모양으로 옮겨 담음
+	FSkillRow AsSkill;
+	AsSkill.DisplayName_KR = Relic.RelicName;
+	AsSkill.ActionKind = Relic.ActionKind;
+	AsSkill.TargetType = Relic.TargetType;
+	AsSkill.BaseValue = Relic.BaseValue;
+	AsSkill.ScalingStat = Relic.ScalingStat;
+	AsSkill.ScalingRatio = Relic.ScalingRatio;
+	AsSkill.HitCount = 1;
+	AsSkill.StatusEffect = Relic.StatusEffect;
+	AsSkill.StatusValue = Relic.StatusValue;
+	AsSkill.StatusDuration = Relic.StatusDuration;
+
+	// 대상: 유물 주인 기준 (몬스터 유물이면 적 = 플레이어)
+	const TArray<UCombatStatsComponent*> Opponents = GetSideStats(!bMonster);
+	const TArray<UCombatStatsComponent*> Allies = GetSideStats(bMonster);
+	TArray<UCombatStatsComponent*> Targets;
+	switch (Relic.TargetType)
+	{
+	case ETargetType::Self:        Targets.Add(Owner); break;
+	case ETargetType::AllEnemies:  Targets = Opponents; break;
+	case ETargetType::AllAllies:   Targets = Allies; break;
+	case ETargetType::SingleEnemy: if (Opponents.Num() > 0) Targets.Add(Opponents[FMath::RandRange(0, Opponents.Num() - 1)]); break;
+	case ETargetType::SingleAlly:  if (Allies.Num() > 0) Targets.Add(Allies[FMath::RandRange(0, Allies.Num() - 1)]); break;
+	}
+	if (Targets.Num() == 0) return;
+
+	FSkillExecutor::Execute(AsSkill, Owner, Targets);
+}
+
+// ---- 전투 사건 -> 유물
+
+void UDungeonCombatComponent::HandleStatsDamaged(UCombatStatsComponent* Self, int32 HealthLost, UCombatStatsComponent* Instigator)
+{
+	const int32 Victim = FindHolder(Self);
+	if (Victim == INDEX_NONE) return;
+
+	FireRelics(Victim, ERelicTrigger::OnTakeDamage, HealthLost);
+
+	// 때린 쪽 (상대편일 때만 '타격')
+	const int32 Attacker = FindHolder(Instigator);
+	if (Attacker != INDEX_NONE && Holders[Attacker].bMonster != Holders[Victim].bMonster)
+	{
+		FireRelics(Attacker, ERelicTrigger::OnHitEnemy, HealthLost);
+	}
+
+	// 같은 편 다른 사람
+	for (int32 i = 0; i < Holders.Num(); ++i)
+	{
+		if (i != Victim && Holders[i].bMonster == Holders[Victim].bMonster)
+		{
+			FireRelics(i, ERelicTrigger::OnAllyTakeDamage, HealthLost);
+		}
+	}
+}
+
+void UDungeonCombatComponent::HandleShieldGained(UCombatStatsComponent* Self, int32 Amount)     { FireRelics(FindHolder(Self), ERelicTrigger::OnGainShield, Amount); }
+void UDungeonCombatComponent::HandleHealed(UCombatStatsComponent* Self, int32 Amount)           { FireRelics(FindHolder(Self), ERelicTrigger::OnHealHP, Amount); }
+void UDungeonCombatComponent::HandleEnergySpent(UCombatStatsComponent* Self, int32 Amount)      { FireRelics(FindHolder(Self), ERelicTrigger::OnUseEnergy, Amount); }
+void UDungeonCombatComponent::HandleSkillEnergySpent(UCombatStatsComponent* Self, int32 Amount) { FireRelics(FindHolder(Self), ERelicTrigger::OnUseSkillEnergy, Amount); }
+
+void UDungeonCombatComponent::HandleStatsDied(UCombatStatsComponent* Self)
+{
+	const int32 Dead = FindHolder(Self);
+	if (Dead == INDEX_NONE) return;
+
+	// 같은 편이 죽으면 '아군 사망 시 해제' 불굴이 풀림 (왕의 위엄)
+	for (int32 i = 0; i < Holders.Num(); ++i)
+	{
+		if (i == Dead || Holders[i].bMonster != Holders[Dead].bMonster) continue;
+
+		UCombatStatsComponent* Ally = Holders[i].Stats.Get();
+		if (!Ally || Ally->IsDead()) continue;
+
+		for (const FName& Row : Holders[i].Relics)
+		{
+			const FRelicRow* Relic = UTerminusDataSettings::FindRelicRow(Row);
+			if (Relic && Relic->ActionKind == EActionKind::IndomitableSelfAllyDead)
+			{
+				Ally->RemoveStatus(EStatusEffect::Indomitable);
+				UE_LOG(LogDungeonCombat, Log, TEXT("[Relic] 아군이 쓰러져 %s 해제"), *Relic->RelicName.ToString());
+			}
+		}
+	}
+}
+
+bool UDungeonCombatComponent::HandlePreventDeath(UCombatStatsComponent* Self)
+{
+	const int32 Index = FindHolder(Self);
+	if (Index == INDEX_NONE) return false;
+
+	FRelicHolder& Holder = Holders[Index];
+	for (const FName& Row : Holder.Relics)
+	{
+		const FRelicRow* Relic = UTerminusDataSettings::FindRelicRow(Row);
+		if (!Relic || Relic->TriggerTiming != ERelicTrigger::OnDead) continue;
+		if (Relic->ActionKind != EActionKind::RevivalSelfAll && Relic->ActionKind != EActionKind::RevivalSelfHalf) continue;
+
+		// 부활 횟수 = BaseValue (Enum_Reference: "BaseValue 만큼 부활")
+		int32& Left = Holder.UsesLeft.FindOrAdd(Row, FMath::Max(1, Relic->BaseValue));
+		if (Left <= 0) continue;
+		--Left;
+
+		Self->Revive(Relic->ActionKind == EActionKind::RevivalSelfAll ? 1.f : 0.5f);
+		UE_LOG(LogDungeonCombat, Log, TEXT("[Relic] %s: 부활 (남은 횟수 %d)"), *Relic->RelicName.ToString(), Left);
+		return true;
+	}
+	return false;
 }

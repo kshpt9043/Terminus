@@ -7,6 +7,7 @@
 class ADungeonArea;
 class UMapCanvasWidget;
 class UMapTopBarWidget;
+class URelicBarWidget;
 
 /**
  * 지도 화면 전체. 상단바 + 지도를 한 화면에 담는 베이스 (WBP_MapScreen 의 부모)
@@ -28,11 +29,15 @@ public:
 	UMapTopBarWidget* GetMapTopBar() const { return MapTopBar; }
 
 protected:
+	virtual void NativeOnInitialized() override;
 	virtual void NativeConstruct() override;
 	virtual void NativeDestruct() override;
 
 	UPROPERTY(meta = (BindWidget)) TObjectPtr<UMapCanvasWidget> MapCanvas;
 	UPROPERTY(meta = (BindWidget)) TObjectPtr<UMapTopBarWidget> MapTopBar;
+
+	// 보유 유물 줄. 전투 HUD 와 같은 자리(오른쪽 아래). WBP 에 없으면 루트가 캔버스일 때 C++ 이 만듦
+	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<URelicBarWidget> RelicBar;
 
 private:
 	// 숨겼다가 되돌릴 원래 가시성

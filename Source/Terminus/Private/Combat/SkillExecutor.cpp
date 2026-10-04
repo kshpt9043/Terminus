@@ -37,7 +37,7 @@ void FSkillExecutor::Execute(const FSkillRow& Skill,
 		case EValueUse::Damage:
 			for (int32 i = 0; i < Skill.HitCount; ++i)
 			{
-				R->ApplyDamage(Amount);
+				R->ApplyDamage(Amount, Caster);   // 시전자 = 때린 쪽 (공포 / 반격 / 타격 판정)
 			}
 			break;
 		case EValueUse::Shield:
@@ -64,7 +64,11 @@ void FSkillExecutor::Execute(const FSkillRow& Skill,
 		{
 			if (T)
 			{
-				T->ApplyStatus(ResolveFusion(Skill.StatusEffect), Skill.StatusValue, Skill.StatusDuration);
+				// 반격은 반사 데미지가 SecondaryValue (+ 스텟 보정). Enum_State: "SecondaryValue 만큼의 데미지"
+				const int32 Value = Skill.StatusEffect == EStatusEffect::Counter
+					? Skill.SecondaryValue + FMath::RoundToInt(Stat * Skill.ScalingRatio)
+					: Skill.StatusValue;
+				T->ApplyStatus(ResolveFusion(Skill.StatusEffect), Value, Skill.StatusDuration);
 			}
 		}
 	}
@@ -133,6 +137,12 @@ FSkillExecutor::FRecipe FSkillExecutor::GetRecipe(EActionKind Kind)
 		R.Use = EValueUse::Heal;
 		break;
 
+		// 회복 -> 시전자 (유물)
+	case EActionKind::HealSelf:
+		R.Use = EValueUse::Heal;
+		R.bOnCaster = true;
+		break;
+
 		// 나머지 22개는 BaseValue 를 안 씀. 상태이상 반동은 컬럼이 따로 말해줌
 	default:
 		break;
@@ -155,6 +165,7 @@ int32 FSkillExecutor::GetEffectiveStat(const UCombatStatsComponent* Who, EScalin
 	case EScalingStat::DEF:
 		return Base.Defense
 			+ Who->GetStatusValue(EStatusEffect::Protection)
+			+ Who->GetStatusValue(EStatusEffect::Solid)
 			- Who->GetStatusValue(EStatusEffect::Lava);
 
 	default:

@@ -5,6 +5,7 @@
 #include "Data/CharacterTypes.h"
 #include "Data/SkillTypes.h"
 #include "Data/MonsterTypes.h"
+#include "Data/RelicTypes.h"
 #include "TerminusDataSettings.generated.h"
 
 class UDataTable;
@@ -54,6 +55,13 @@ public:
 	UPROPERTY(Config, EditAnywhere, Category = "Monster",
 		meta = (RequiredAssetDataTags = "RowStructure=/Script/Terminus.MonsterRow"))
 	TSoftObjectPtr<UDataTable> MonsterTable;
+
+	// 행 이름으로 유물 찾기 (RLC_Common_001 등). 스킬 / 몬스터와 같은 방식
+	static const FRelicRow* FindRelicRow(FName RowName);
+
+	UPROPERTY(Config, EditAnywhere, Category = "Relic",
+		meta = (RequiredAssetDataTags = "RowStructure=/Script/Terminus.RelicRow"))
+	TSoftObjectPtr<UDataTable> RelicTable;
 	
 	// 직업의 기본 스킬. 공격 방어 특수 순서로 돌려준다 (데이터에 없는 칸은 빠짐)
 	static TArray<const FSkillRow*> FindBasicSkills(ECharacterClass InClass);

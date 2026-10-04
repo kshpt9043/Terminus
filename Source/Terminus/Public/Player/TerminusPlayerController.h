@@ -158,6 +158,26 @@ public:
 	UFUNCTION(Server, Reliable)
 	void Server_DebugResetStartSkill();
 
+	// [테스트] 유물. 콘솔에서
+	//   DebugGainRelic RLC_Common_005  -> 그 유물 얻기 (다른 직업 / 몬스터 유물은 거절)
+	//   DebugGainRelic All             -> 내가 가질 수 있는 유물 전부 (Basic 제외)
+	//   DebugRemoveRelic RLC_Common_005
+	//   DebugListRelics                -> 보유 유물을 로그로
+	UFUNCTION(Exec)
+	void DebugGainRelic(FName RelicRow);
+
+	UFUNCTION(Server, Reliable)
+	void Server_DebugGainRelic(FName RelicRow);
+
+	UFUNCTION(Exec)
+	void DebugRemoveRelic(FName RelicRow);
+
+	UFUNCTION(Server, Reliable)
+	void Server_DebugRemoveRelic(FName RelicRow);
+
+	UFUNCTION(Exec)
+	void DebugListRelics();
+
 protected:
 	// 전투 HUD 클래스. 비워 두면 C++ 기본 배치(UCombatHUDWidget)를 씀. WBP 를 만들면 BP_DungeonPC 에서 지정
 	UPROPERTY(EditDefaultsOnly, Category = "Terminus|UI")

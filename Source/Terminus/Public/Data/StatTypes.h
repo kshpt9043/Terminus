@@ -50,6 +50,10 @@ struct FCharacterStats
 	// 강화 스킬을 낄 수 있는 칸 수
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	int32 EnhanceSlots = 3;
+
+	// 유물 보유 최대치 (기획: 훈련소 / 직업 사무소에서 강화). 0 = 제한 없음 (기본값이 아직 안 정해짐)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	int32 MaxRelics = 0;
 };
 
 

@@ -19,6 +19,7 @@
 #include "Dungeon/DungeonArea.h"
 #include "Dungeon/DungeonCombatComponent.h"
 #include "Widgets/Combat/SkillSlotWidget.h"
+#include "Widgets/Relic/RelicBarWidget.h"
 #include "Player/TerminusPlayerController.h"
 #include "Player/TerminusPlayerState.h"
 
@@ -95,6 +96,16 @@ void UCombatHUDWidget::NativeOnInitialized()
 
 	// 칸은 강화 칸 수를 알게 되면(내 배틀러 스텟) 다시 만듦. 우선 기본값으로
 	BuildSkillSlots(ATerminusPlayerState::NumEnhanceSkills);
+
+	// 보유 유물 줄이 WBP 에 없으면 오른쪽 아래(턴 종료 / 상태 위)에
+	if (!RelicBar && TagLayer)
+	{
+		RelicBar = CreateWidget<URelicBarWidget>(this, URelicBarWidget::StaticClass());
+		if (RelicBar)
+		{
+			AddToCanvas(TagLayer, RelicBar, FAnchors(1.f, 1.f), FVector2D(1.f, 1.f), FVector2D(-24.f, -130.f));
+		}
+	}
 
 	// NativeConstruct 는 여러 번 불릴 수 있어서 버튼 바인딩은 여기서 한 번만 (주점 / 메인 메뉴와 같은 규칙)
 	if (EndTurnButton) EndTurnButton->OnClicked.AddDynamic(this, &UCombatHUDWidget::HandleEndTurnClicked);
@@ -543,7 +554,7 @@ void UCombatHUDWidget::UpdatePanels()
 			const FSkillRow* Skill = LocalPS->GetCombatSkill(SkillSlot->GetSlotIndex());
 			SkillSlot->SetSkill(Skill);
 			SkillSlot->SetUsable(Skill && bMyTurn
-				&& State.Energy >= Skill->EnergyCost && State.SkillEnergy >= Skill->SkillEnergyCost);
+				&& State.Energy >= MyStats->GetEffectiveEnergyCost(Skill->EnergyCost) && State.SkillEnergy >= Skill->SkillEnergyCost);   // 과욕이면 +1
 			SkillSlot->SetPending(PendingSkillIndex == SkillSlot->GetSlotIndex());
 		}
 

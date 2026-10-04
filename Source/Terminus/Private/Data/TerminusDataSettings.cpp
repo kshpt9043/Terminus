@@ -78,6 +78,18 @@ UTexture2D* UTerminusDataSettings::FindSkillIcon(const FSkillRow& Skill)
 	return nullptr;
 }
 
+const FRelicRow* UTerminusDataSettings::FindRelicRow(FName RowName)
+{
+	const UDataTable* Table = Get()->RelicTable.LoadSynchronous();
+	if (!Table)
+	{
+		return nullptr;
+	}
+
+	static const FString Ctx(TEXT("FindRelicRow"));
+	return Table->FindRow<FRelicRow>(RowName, Ctx);
+}
+
 const FMonsterRow* UTerminusDataSettings::FindMonsterRow(FName RowName)
 {
 	const UDataTable* Table = Get()->MonsterTable.LoadSynchronous();

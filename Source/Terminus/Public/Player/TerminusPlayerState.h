@@ -10,6 +10,7 @@
 
 class ADungeonArea;
 struct FSkillRow;
+struct FRelicRow;
 
 /**
  * 
@@ -47,6 +48,30 @@ public:
 
 	// 그 칸의 스킬. 비어 있으면 nullptr
 	const FSkillRow* GetCombatSkill(int32 SlotIndex) const;
+
+	// 그 칸의 스킬 행 이름 (DT_Skill). 유물 OnSkillUsed 판정용
+	FName GetCombatSkillRow(int32 SlotIndex) const;
+
+	// -------------------------------------------------------------
+	// [유물] 서버만 바꿈. 목록은 RunState.Relics (모두에게 복제)
+	// -------------------------------------------------------------
+
+	// 유물 얻기. 못 가지는 유물(다른 직업 / 몬스터 / 이미 있음 / 칸 가득)이면 false
+	// Upgrade 등급이면 같은 직업의 Basic 유물을 뺌. OnGainRelic 효과(재화 / 최대 체력 등)는 여기서 바로 적용
+	bool GainRelic(FName RelicRow);
+
+	bool RemoveRelic(FName RelicRow);
+
+	const TArray<FName>& GetRelics() const { return RunState.Relics; }
+
+	// 직업 기본 유물 행 이름 (RLC_Fighter_001 등). 데이터에 없으면 NAME_None
+	static FName GetBasicRelicRow(ECharacterClass InClass);
+
+	// 전투 밖에서도 의미 있는 유물 효과 (던전 재화 / 최대 체력 / 픽업 스킬 강화). 전투 중 발동도 여기로
+	void ApplyRelicMetaEffect(const FRelicRow& Relic);
+
+	// 던전 재화. 음수면 깎음 (0 아래로는 안 내려감)
+	void AddCurrency(int32 Amount);
 
 	// 방을 클리어하고 그 방으로 진행. 지도상 현재 위치와 진행 레벨을 갱신하고 선택을 비운다
 	void AdvanceToRoom(int32 TargetRoomId, int32 TargetRow);

@@ -90,7 +90,11 @@ enum class EStatusEffect : uint8
 	Reflux,          // State_14  역류
 	InternalInjury,  // State_15  내상
 	Immortality,     // State_16  불사
-	Absorption       // State_17  흡수
+	Absorption,      // State_17  흡수
+	// 아래는 유물 데이터(Relic_DataTable)에서 추가. 기존 값이 밀리지 않게 맨 뒤에만 붙일 것
+	Solid,           // 견고. 방어가 수치만큼 오름 (가호와 같은 그룹, 이름만 다름)
+	Indomitable,     // 불굴. 한 사이클 동안 받는 데미지가 1 로 고정 (강철과 같은 그룹)
+	IronWall         // 철벽. 받는 데미지가 수치만큼 줄어듦
 };
 
 // 실제 효과를 실행하는 로직 종류. 엑셀 Enum_Reference 시트 그대로 44개
@@ -145,7 +149,21 @@ enum class EActionKind : uint8
 	StatusFusion,         // 적 1명 퓨전만 부여. 중독 용암 얼음 중 랜덤
 	StatusFusionAll,      // 적 전체 퓨전만 부여
 	HitAllEnemiesFusionAll, // 조합 -> HitAllEnemies + StatusFusionAll
-	HealAllBraveAll       // 조합 -> HealAll + BraveAll
+	HealAllBraveAll,      // 조합 -> HealAll + BraveAll
+
+	// 아래는 유물 데이터(Relic_DataTable)에서 추가. 맨 뒤에만 붙일 것
+	RevivalSelfAll,          // 자신 부활 (체력 100%). BaseValue 만큼 부활
+	RevivalSelfHalf,         // 자신 부활 (체력 50%). BaseValue 만큼 부활
+	IndomitableSelfAllyDead, // 자신 불굴. 아군이 죽으면 사라짐
+	HealSelf,                // 자신 회복
+	GainMoney,               // 던전 재화 획득
+	RandomUpgrade,           // 픽업 스킬 중 BaseValue 번 랜덤 +1 강화
+	IndomitableSelf,         // 자신 불굴
+	SolidSelf,               // 자신 견고 (방어 상승)
+	MaxHPUp,                 // 최대 체력 증가 (현재 체력도 같이)
+	MaxHPDown,               // 최대 체력 감소
+	StatusMarkAll,           // 적 전체 급소
+	IronWallSelf             // 자신 철벽
 };
 
 /**
