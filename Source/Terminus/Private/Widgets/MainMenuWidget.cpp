@@ -11,6 +11,8 @@
 #include "Game/TerminusProfileSubsystem.h"
 #include "Widgets/Storage/StorageWidget.h"
 #include "Widgets/Common/EscapeStackSubsystem.h"
+#include "Widgets/Save/RunSaveListWidget.h"
+#include "Game/TerminusSaveSubsystem.h"
 
 namespace
 {
@@ -31,6 +33,7 @@ void UMainMenuWidget::NativeOnInitialized()
 	Btn_Quit->OnUnhovered.AddDynamic(this, &UMainMenuWidget::HandleQuitUnhovered);
 	Btn_PopupOK->OnClicked.AddDynamic(this, &UMainMenuWidget::HandlePopupOKClicked);
 	if (Btn_Storage) { Btn_Storage->OnClicked.AddDynamic(this, &UMainMenuWidget::HandleStorageClicked); }
+	if (Btn_Continue) { Btn_Continue->OnClicked.AddDynamic(this, &UMainMenuWidget::HandleContinueClicked); }
 
 	// 아직 기능이 없는 건물은 자리만 두고 잠근다
 	for (UButton* Unready : { Btn_Tower.Get(), Btn_Training.Get() })
@@ -47,6 +50,9 @@ void UMainMenuWidget::NativeConstruct()
 
 	DisconnectPopup->SetVisibility(ESlateVisibility::Collapsed);
 	if (RoomBrowser) { RoomBrowser->Close(); }
+
+	// 메뉴로 돌아왔으면 이어하기 대기는 버림 (안 그러면 다음 주점이 이어하기로 열림)
+	ClearPendingContinue();
 	SetButtonTextColor(Btn_Quit, TextDim);
 
 	// 골드 표시. 프로필은 위젯보다 오래 살아서 Construct 마다 붙이고 Destruct 에서 뗀다
@@ -91,11 +97,14 @@ void UMainMenuWidget::HandleDungeonClicked()
 {
 	// 싱글은 세션 없이 주점 레벨을 연다 -> NM_Standalone.
 	// 주점을 거쳐야 ServerTravel(CopyProperties)로 RunState 가 던전까지 간다
+	ClearPendingContinue();
 	UGameplayStatics::OpenLevel(this, FName(*TavernMapPath));
 }
 
 void UMainMenuWidget::HandleTavernClicked()
 {
+	ClearPendingContinue();
+
 	if (RoomBrowser)
 	{
 		RoomBrowser->Open(MaxPartySize, TavernMapPath);
@@ -115,6 +124,7 @@ void UMainMenuWidget::HandleHostComplete(bool bWasSuccessful)
 	// 성공이면 서브시스템이 주점으로 ServerTravel 한다. 이 위젯은 곧 사라짐
 	if (bWasSuccessful) { return; }
 
+	ClearPendingContinue();
 	SetMenuEnabled(true);
 	ShowPopup(FText::FromString(TEXT("주점을 열지 못했습니다.")),
 		FText::FromString(TEXT("Steam이 켜져 있는지 확인한 뒤 다시 시도하세요.")));
@@ -165,6 +175,33 @@ void UMainMenuWidget::HandleStorageClicked()
 	if (StorageWindow)
 	{
 		StorageWindow->Open();
+	}
+}
+
+void UMainMenuWidget::HandleContinueClicked()
+{
+	// 창고와 같은 방식. WBP 안에 둔 창이 없으면 처음 열 때 만들어서 메뉴 위에 띄움
+	if (!SaveListWindow)
+	{
+		const TSubclassOf<URunSaveListWidget> Class = SaveListWidgetClass ? SaveListWidgetClass : TSubclassOf<URunSaveListWidget>(URunSaveListWidget::StaticClass());
+		SaveListWindow = CreateWidget<URunSaveListWidget>(GetOwningPlayer(), Class);
+		if (SaveListWindow)
+		{
+			SaveListWindow->AddToViewport(40);
+		}
+	}
+
+	if (SaveListWindow)
+	{
+		SaveListWindow->Open(TavernMapPath);
+	}
+}
+
+void UMainMenuWidget::ClearPendingContinue()
+{
+	if (UTerminusSaveSubsystem* Save = UTerminusSaveSubsystem::Get(this))
+	{
+		Save->ClearPendingLoad();
 	}
 }
 

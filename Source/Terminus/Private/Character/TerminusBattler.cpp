@@ -186,6 +186,17 @@ void ATerminusBattler::PossessedBy(AController* NewController)
 		const FRunState Run = PS->GetRunState();
 		InitAsClass(PS->GetCharacterClass(), Run.bStatsInitialized ? &Run.Stats : nullptr);
 	}
+
+	// 세이브에서 이어하는 런이면 저장 당시 체력으로 (한 번만 쓰고 비움)
+	if (ATerminusPlayerState* MutablePS = GetPlayerState<ATerminusPlayerState>())
+	{
+		const int32 SavedHealth = MutablePS->ConsumeSavedHealth();
+		const int32 MaxHealth = CombatStats ? CombatStats->GetStats().MaxHealth : 0;
+		if (SavedHealth > 0 && MaxHealth > 0 && SavedHealth < MaxHealth)
+		{
+			CombatStats->Revive(static_cast<float>(SavedHealth) / MaxHealth);
+		}
+	}
 }
 
 void ATerminusBattler::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const

@@ -64,4 +64,8 @@ struct FRunState
 	// TODO: 층을 내려갈 때(새 지도) 비울 것
 	UPROPERTY(BlueprintReadOnly)
 	TArray<int32> VisitedRoomIds;
+
+	// 세이브에서 이어할 때의 체력. 던전에서 배틀러가 처음 빙의될 때 적용하고 -1 로 비움 (-1 = 최대 체력으로 시작)
+	UPROPERTY(BlueprintReadOnly)
+	int32 SavedHealth = -1;
 };

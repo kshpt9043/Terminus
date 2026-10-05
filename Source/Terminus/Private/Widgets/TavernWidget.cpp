@@ -385,10 +385,17 @@ void UTavernWidget::RefreshSlots()
 		LastReadyShown = (int8)bMyReady;
 	}
 	
-	// 준비 완료면 캐릭터 버튼 잠금
+	// 이어하기면 세이브 당시 직업으로 고정 -> 화면도 그 직업으로 맞춤
+	const bool bClassLocked = MyPS && MyPS->IsClassLocked();
+	if (bClassLocked && Selected != MyPS->GetCharacterClass())
+	{
+		ApplySelection(MyPS->GetCharacterClass());
+	}
+
+	// 준비 완료거나 직업이 고정됐으면 캐릭터 버튼 잠금
 	for (UClassButton* Btn : ClassButtons)
 	{
-		if (Btn) { Btn->SetIsEnabled(!bMyReady); }
+		if (Btn) { Btn->SetIsEnabled(!bMyReady && !bClassLocked); }
 	}
 
 	const ATerminusPlayerController* PC = GetOwningPlayer<ATerminusPlayerController>();
@@ -468,5 +475,7 @@ void UTavernWidget::RefreshHardMode()
 	{
 		HardModeCheck->SetIsChecked(PS->IsHardMode());
 	}
-	HardModeCheck->SetIsEnabled(bIsHost);
+
+	// 이어하기는 세이브 당시 설정 그대로라 방장도 못 바꿈
+	HardModeCheck->SetIsEnabled(bIsHost && !(PS && PS->IsClassLocked()));
 }

@@ -132,6 +132,10 @@ void AMapManager::BeginPlay()
         if (Run && Run->HasMap())
         {
             Rooms = Run->GetRooms();
+            if (Run->GetFloor() > 0)
+            {
+                CurrentFloor = Run->GetFloor();   // 세이브에서 이어하는 런
+            }
             UE_LOG(LogTemp, Log, TEXT("[MapGenerator] 이번 런의 기존 지도 재사용 (방 %d개)"), Rooms.Num());
         }
         else

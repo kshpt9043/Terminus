@@ -26,6 +26,13 @@ public:
 	ECharacterClass GetCharacterClass() const { return RunState.CharacterClass; }
 	
 	void SetCharacterClass(ECharacterClass InClass);
+
+	// 이어하기 주점에서 세이브 당시 직업으로 고정 (서버만). 고정되면 직업 변경 요청을 무시
+	void LockClassFromSave(ECharacterClass InClass);
+	bool IsClassLocked() const { return bClassLocked; }
+
+	// 세이브에서 불러온 체력을 꺼내고 비움 (서버만). 없으면 -1
+	int32 ConsumeSavedHealth();
 	
 	bool IsReady() const { return bReady; }
 	
@@ -145,6 +152,10 @@ protected:
 	// 준비는 처음에 들어갈 때만 중요한 요소이므로 RunState에는 안들어감
 	UPROPERTY(Replicated)
 	bool bReady = false;
+
+	// 이어하기 주점에서 세이브 자리에 앉아 직업이 고정됐는가. 주점 화면이 직업 버튼을 잠글 때 씀
+	UPROPERTY(Replicated)
+	bool bClassLocked = false;
 	
 	// 이동 간 유지되어야 할 데이터
 	// ReplicatedUsing 이어야 클라에서 OnRep_RunState 가 불림 -> 지도 UI 갱신이 여기에 걸려 있음

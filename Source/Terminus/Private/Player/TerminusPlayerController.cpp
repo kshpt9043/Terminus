@@ -35,6 +35,9 @@ void ATerminusPlayerController::BeginPlay()
 		return;
 	}
 
+	// 커서: 화면 빈 곳을 눌러도 사라지지 않게 (레벨 BP 가 입력 모드를 안 정해 줘도)
+	ApplyUIInputMode();
+
 	// 던전이면 지도 보기 전에 강화 스킬 고르기. 주점에선 MapManager 가 없어 몇 초 확인하다 그만둠
 	GetWorldTimerManager().SetTimer(StartSkillCheckTimer, this, &ATerminusPlayerController::CheckStartSkillPick, 0.25f, true, 0.f);
 
@@ -56,6 +59,21 @@ void ATerminusPlayerController::BeginPlay()
 	TavernWidget->AddToViewport();
 	
 	FInputModeUIOnly Mode;
+	SetInputMode(Mode);
+	bShowMouseCursor = true;
+}
+
+void ATerminusPlayerController::ApplyUIInputMode(UWidget* FocusWidget)
+{
+	if (!IsLocalController()) return;
+
+	FInputModeGameAndUI Mode;
+	Mode.SetHideCursorDuringCapture(false);
+	Mode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+	if (FocusWidget)
+	{
+		Mode.SetWidgetToFocus(FocusWidget->TakeWidget());
+	}
 	SetInputMode(Mode);
 	bShowMouseCursor = true;
 }
@@ -525,11 +543,7 @@ void ATerminusPlayerController::OpenStartSkillPick()
 		StartSkillPick->AddToViewport(20);   // 지도 / 전투 HUD 보다 위
 
 		// 아무 키 입력이 이 화면으로 오게 포커스. 마우스 커서는 그대로 (지도는 클릭으로 씀)
-		FInputModeGameAndUI Mode;
-		Mode.SetWidgetToFocus(StartSkillPick->TakeWidget());
-		Mode.SetHideCursorDuringCapture(false);
-		SetInputMode(Mode);
-		bShowMouseCursor = true;
+		ApplyUIInputMode(StartSkillPick);
 	}
 }
 
@@ -703,8 +717,8 @@ void ATerminusPlayerController::Server_SelectCharacter_Implementation(ECharacter
 		return;
 	}
 	
-	// 준비 완료 상태면 캐릭터 변경 무시. 클라 UI 도 막지만 여기가 진짜 관문
-	if (PS->IsReady())
+	// 준비 완료 상태거나 이어하기로 직업이 고정됐으면 캐릭터 변경 무시. 클라 UI 도 막지만 여기가 진짜 관문
+	if (PS->IsReady() || PS->IsClassLocked())
 	{
 		return;
 	}

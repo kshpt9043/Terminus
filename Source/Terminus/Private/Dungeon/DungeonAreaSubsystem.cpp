@@ -1,6 +1,8 @@
 #include "Dungeon/DungeonAreaSubsystem.h"
 
 #include "Dungeon/DungeonArea.h"
+#include "Game/TerminusSaveSubsystem.h"
+#include "Player/TerminusPlayerController.h"
 #include "Map/MapManager.h"
 #include "Player/TerminusPlayerState.h"
 
@@ -145,5 +147,17 @@ void UDungeonAreaSubsystem::FinishAllRooms()
 		}
 
 		Area->Release();
+	}
+
+	// 자동 저장: 방이 끝나고 전원이 지도로 돌아온 지금 (보상까지 받은 뒤)
+	if (UTerminusSaveSubsystem* Save = UTerminusSaveSubsystem::Get(this))
+	{
+		if (Save->SaveCurrentRun(GetWorld()))
+		{
+			FChatMessage Notice;
+			Notice.Kind = EChatMessageKind::System;
+			Notice.Text = TEXT("진행 상황을 자동 저장했습니다.");
+			ATerminusPlayerController::BroadcastChat(GetWorld(), Notice);
+		}
 	}
 }

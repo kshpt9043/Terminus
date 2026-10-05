@@ -9,6 +9,7 @@
 #include "TerminusPlayerController.generated.h"
 
 class UTavernWidget;
+class UWidget;
 class ADungeonArea;
 class UCombatHUDWidget;
 class UStartSkillPickWidget;
@@ -31,6 +32,10 @@ class TERMINUS_API ATerminusPlayerController : public APlayerController
 	
 protected:
 	virtual void BeginPlay() override;
+
+	// 마우스로 하는 게임이라 늘 커서를 보이고, 화면을 눌러도 마우스를 잡거나(캡처) 숨기지 않게
+	// FocusWidget 이 있으면 키 입력이 그 위젯으로 감 (아무 키나 누르기 화면 등)
+	void ApplyUIInputMode(UWidget* FocusWidget = nullptr);
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	
 	UPROPERTY(EditDefaultsOnly, Category = "Terminus|UI")

@@ -9,6 +9,7 @@ class UTextBlock;
 class USessionSubsystem;
 class URoomListWidget;
 class UStorageWidget;
+class URunSaveListWidget;
 
 /**
  * 첫 화면. 버튼 다섯 개와 안내 팝업.
@@ -42,6 +43,16 @@ protected:
 	// 창고 창 클래스 (WBP_Storage). 비워 두면 C++ 기본 모양
 	UPROPERTY(EditDefaultsOnly, Category = "Terminus|UI")
 	TSubclassOf<UStorageWidget> StorageWidgetClass;
+
+	// 이어하기 (자동 저장된 런 목록). 기획: 메인 메뉴에서 세이브 불러오기
+	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UButton> Btn_Continue;
+
+	// 이어하기 창. WBP 안에 같은 이름으로 넣어 두면 그걸 쓰고, 없으면 SaveListWidgetClass 로 만들어 화면에 띄움
+	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<URunSaveListWidget> SaveListWindow;
+
+	// 이어하기 창 클래스 (WBP_SaveList). 비워 두면 C++ 기본 모양
+	UPROPERTY(EditDefaultsOnly, Category = "Terminus|UI")
+	TSubclassOf<URunSaveListWidget> SaveListWidgetClass;
 
 	// 보유 골드 (UTerminusProfileSubsystem). 바뀌면 바로 갱신
 	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UTextBlock> GoldText;
@@ -78,6 +89,10 @@ private:
 
 	UFUNCTION() void HandleGoldChanged(int32 NewGold, int32 Delta);
 	UFUNCTION() void HandleStorageClicked();
+	UFUNCTION() void HandleContinueClicked();
+
+	// 이어하기로 읽어 둔 세이브를 버림 (새 판을 시작하거나 메뉴로 돌아왔을 때)
+	void ClearPendingContinue();
 	void RefreshGold();
 
 	// SessionSubsystem 의 비동기 결과

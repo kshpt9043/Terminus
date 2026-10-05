@@ -17,6 +17,7 @@ void ATerminusPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>&
 
 	DOREPLIFETIME(ATerminusPlayerState, RunState);
 	DOREPLIFETIME(ATerminusPlayerState, bReady);
+	DOREPLIFETIME(ATerminusPlayerState, bClassLocked);
 	DOREPLIFETIME(ATerminusPlayerState, CurrentArea);
 }
 
@@ -51,6 +52,24 @@ void ATerminusPlayerState::SetCharacterClass(ECharacterClass InClass)
 	}
 	
 	RunState.CharacterClass = InClass;
+}
+
+void ATerminusPlayerState::LockClassFromSave(ECharacterClass InClass)
+{
+	if (!HasAuthority()) return;
+
+	RunState.CharacterClass = InClass;
+	bClassLocked = true;
+	OnRep_RunState();
+}
+
+int32 ATerminusPlayerState::ConsumeSavedHealth()
+{
+	if (!HasAuthority() || RunState.SavedHealth < 0) return -1;
+
+	const int32 Health = RunState.SavedHealth;
+	RunState.SavedHealth = -1;
+	return Health;
 }
 
 void ATerminusPlayerState::SetReady(bool bInReady)
@@ -90,6 +109,7 @@ void ATerminusPlayerState::BeginRun()
 	RunState.bStartSkillChosen = false;
 	RunState.bStartRelicsChosen = false;
 	RunState.Currency = 0;
+	RunState.SavedHealth = -1;
 
 	// 직업 기본 유물 = 패시브. 데이터에 아직 없는 직업은 빈 채로
 	RunState.Relics.Reset();
