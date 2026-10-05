@@ -177,6 +177,35 @@ void UDungeonCombatComponent::EndCombat()
 		World->GetTimerManager().ClearTimer(StepTimer);
 	}
 
+	// 싸우는 도중에 닫힘(누가 나가서 방 취소): 전투에서만 의미 있는 효과를 지우고, 쓰러진 사람은 체력 1 로
+	if (Phase == ECombatPhase::PlayerTurn || Phase == ECombatPhase::MonsterTurn)
+	{
+		for (const TWeakObjectPtr<ATerminusPlayerState>& PS : Players)
+		{
+			if (UCombatStatsComponent* Stats = GetStats(PS.Get()))
+			{
+				Stats->ClearCombatEffects();
+				if (Stats->IsDead())
+				{
+					const FCharacterStats Saved = Stats->GetStats();
+					Stats->InitFrom(Saved);
+					Stats->ApplyDamage(Saved.MaxHealth - 1);
+				}
+			}
+		}
+	}
+
+	// 보상 화면이 떠 있던 사람은 닫음
+	for (const TPair<TWeakObjectPtr<ATerminusPlayerState>, FPendingReward>& Pair : PendingRewards)
+	{
+		ATerminusPlayerState* PS = Pair.Key.Get();
+		ATerminusPlayerController* PC = PS ? Cast<ATerminusPlayerController>(PS->GetOwner()) : nullptr;
+		if (PC && !Pair.Value.bDone)
+		{
+			PC->Client_CloseMonsterReward();
+		}
+	}
+
 	ClearRelicHolders();
 
 	for (ATerminusMonster* Monster : Monsters)

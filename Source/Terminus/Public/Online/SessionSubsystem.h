@@ -30,6 +30,8 @@ struct FTerminusSessionInfo
 	UPROPERTY(BlueprintReadOnly) FString RoomName;
 	// 비밀번호 걸림 여부
 	UPROPERTY(BlueprintReadOnly) bool bLocked = false;
+	// 던전 진행 중에 누가 나가서 그 사람의 재합류를 기다리는 방 (이공간). 나갔던 사람만 들어갈 수 있음
+	UPROPERTY(BlueprintReadOnly) bool bRejoinWaiting = false;
 };
 
 USTRUCT(BlueprintType)
@@ -108,6 +110,10 @@ public:
 	
 	// 호스트가 시작할 때 세션을 진행 중이라고 바꾸는 함수
 	void StartRun();
+
+	// [방장] 이공간: 진행 중에 나간 사람이 주점 목록에서 찾아 다시 들어올 수 있게 세션을 목록에 다시 띄움 / 내림
+	// 들어오는 사람이 나갔던 사람인지는 던전 게임모드가 확인
+	void SetRejoinListing(bool bOpen);
 	
 	// 스팀 오버레이의 친구 초대 창을 연다. 세션에 들어가 있을 때만 의미 있음
 	UFUNCTION(BlueprintCallable, Category = "Terminus|Session")
@@ -143,6 +149,10 @@ private:
 	TSharedPtr<FOnlineSessionSearch> LastSearch;
 
 	FString PendingHostMap;
+
+	// 이공간으로 목록에 다시 띄운 상태인가 / 띄우기 전 LISTED 값 (닫을 때 되돌림)
+	bool bRejoinListed = false;
+	FString ListedBeforeRejoin;
 	int32   PendingMaxPlayers = 4;
 	
 	// 검색 결과, 초대 모두 이 함수를 타게 하기

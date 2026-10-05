@@ -31,6 +31,7 @@ namespace
 	const FName KEY_LOCKED(TEXT("LOCKED"));   // "1" 이면 비밀번호 방
 	const FName KEY_LISTED(TEXT("LISTED"));   // "0" 이면 초대 전용. 검색에서 거름
 	const FName KEY_INGAME(TEXT("INGAME"));   // "1" 이면 던전 진행 중. 검색에서 거름
+	const FName KEY_REJOIN(TEXT("REJOIN"));   // "1" 이면 이공간 (진행 중에 나간 사람의 재합류 대기). 목록에 뜸
 
 	// 스팀 OSS 는 로비 값을 UTF-8 로 쓰고 ANSI 로 읽는다 -> 한글이 깨짐 (영문은 둘이 같아서 멀쩡)
 	// 방 이름은 UTF-8 바이트를 Base64 로 감싸서 ASCII 만 오가게 한다
@@ -195,6 +196,8 @@ void USessionSubsystem::HostSession(int32 MaxPlayers, const FString& MapPath, co
 	Settings.Set(KEY_LOCKED, FString(Options.Password.IsEmpty() ? TEXT("0") : TEXT("1")), Ad);
 	Settings.Set(KEY_LISTED, FString(Options.bListed ? TEXT("1") : TEXT("0")), Ad);
 	Settings.Set(KEY_INGAME, FString(TEXT("0")), Ad);
+	Settings.Set(KEY_REJOIN, FString(TEXT("0")), Ad);
+	bRejoinListed = false;
 	
 	CreateHandle = Session->AddOnCreateSessionCompleteDelegate_Handle(
 		FOnCreateSessionCompleteDelegate::CreateUObject(
@@ -371,6 +374,38 @@ void USessionSubsystem::StartRun()
 	}
 }
 
+void USessionSubsystem::SetRejoinListing(bool bOpen)
+{
+	IOnlineSessionPtr Session = GetSessionInterface();
+	FOnlineSessionSettings* Settings = Session.IsValid() ? Session->GetSessionSettings(NAME_GameSession) : nullptr;
+	if (!Settings || bRejoinListed == bOpen)
+	{
+		return;
+	}
+
+	const auto Ad = EOnlineDataAdvertisementType::ViaOnlineServiceAndPing;
+	if (bOpen)
+	{
+		// 진행 중(INGAME=1)은 검색에서 빠지므로 0 으로, 초대 전용 방도 목록에 뜨게
+		Settings->Get(KEY_LISTED, ListedBeforeRejoin);
+		Settings->Set(KEY_LISTED, FString(TEXT("1")), Ad);
+		Settings->Set(KEY_INGAME, FString(TEXT("0")), Ad);
+		Settings->Set(KEY_REJOIN, FString(TEXT("1")), Ad);
+		Settings->bAllowJoinInProgress = true;
+	}
+	else
+	{
+		Settings->Set(KEY_LISTED, ListedBeforeRejoin.IsEmpty() ? FString(TEXT("1")) : ListedBeforeRejoin, Ad);
+		Settings->Set(KEY_INGAME, FString(TEXT("1")), Ad);
+		Settings->Set(KEY_REJOIN, FString(TEXT("0")), Ad);
+		Settings->bAllowJoinInProgress = false;
+	}
+
+	bRejoinListed = bOpen;
+	UE_LOG(LogTerminusSession, Log, TEXT("SetRejoinListing: %d"), bOpen ? 1 : 0);
+	Session->UpdateSession(NAME_GameSession, *Settings, true);
+}
+
 void USessionSubsystem::ShowInviteUI()
 {
 	IOnlineSubsystem* OSS = Online::GetSubsystem(GetWorld());
@@ -503,6 +538,16 @@ void USessionSubsystem::HandleFindComplete(bool bWasSuccessful)
 			const FString RoomName = DecodeRoomNameFromAd(EncodedName);
 			Info.RoomName = RoomName.IsEmpty() ? FString::Printf(TEXT("%s의 주점"), *Info.HostName) : RoomName;
 			Info.bLocked  = (Locked == TEXT("1"));
+
+			// 이공간: 나갔던 사람만 들어감 (던전 게임모드가 확인) -> 비밀번호는 묻지 않음
+			FString Rejoin;
+			R.Session.SessionSettings.Get(KEY_REJOIN, Rejoin);
+			if (Rejoin == TEXT("1"))
+			{
+				Info.bRejoinWaiting = true;
+				Info.bLocked = false;
+				Info.RoomName += TEXT(" (재합류 대기)");
+			}
 
 			UE_LOG(LogTerminusSession, Log, TEXT("  [%d] '%s' %d/%d locked=%d ping=%d"),
 				i, *Info.RoomName, Info.CurrentPlayers, Info.MaxPlayers, Info.bLocked ? 1 : 0, Info.PingMs);

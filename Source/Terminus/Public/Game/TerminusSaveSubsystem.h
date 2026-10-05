@@ -113,6 +113,11 @@ public:
 	// 세이브 목록 (최근 저장 먼저). 파일이 없어진 항목은 뺌
 	TArray<FRunSaveSummary> GetRunSaves();
 
+	bool HasRunSaves() { return GetRunSaves().Num() > 0; }
+
+	// 세이브가 생기거나 지워졌을 때 (메인 메뉴 이어하기 버튼 표시용)
+	FSimpleMulticastDelegate OnRunSavesChanged;
+
 	// 지금 런 저장 (서버만). 실패하면 false
 	bool SaveCurrentRun(UWorld* World);
 

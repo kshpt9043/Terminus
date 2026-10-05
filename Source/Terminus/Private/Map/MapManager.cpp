@@ -4,6 +4,7 @@
 #include "Map/MapManager.h"
 #include "Player/TerminusPlayerState.h"
 #include "Player/TerminusPlayerController.h"
+#include "Game/DungeonGameMode.h"
 #include "Game/TerminusRunSubsystem.h"
 #include "Dungeon/DungeonAreaSubsystem.h"
 #include "Dungeon/DungeonThemeData.h"
@@ -46,6 +47,16 @@ void AMapManager::HandleSelectRoomRequest(ATerminusPlayerController* Requester, 
     {
         Requester->Client_OnRoomSelectFailed(TEXT("시작 강화 스킬과 유물을 먼저 골라야 합니다."));
         return;
+    }
+
+    // 이공간(누가 나가서 돌아오길 기다리는 중)에선 방을 못 고름
+    if (const ADungeonGameMode* GM = GetWorld()->GetAuthGameMode<ADungeonGameMode>())
+    {
+        if (GM->HasDepartedPlayers())
+        {
+            Requester->Client_OnRoomSelectFailed(TEXT("나간 플레이어가 돌아올 때까지 방을 고를 수 없습니다."));
+            return;
+        }
     }
 
     // 0. 구역에서 방이 진행 중이면 지도 선택 불가 (전 구역이 끝나야 다음 선택)
@@ -910,6 +921,12 @@ bool AMapManager::IsSinglePlayerRun() const
 {
     const AGameStateBase* GS = GetWorld() ? GetWorld()->GetGameState() : nullptr;
 
+    // 멀티에서 누가 나가 혼자 남은 경우도 멀티 (나간 사람을 기다려야 함)
+    if (const ADungeonGameMode* GM = GetWorld() ? GetWorld()->GetAuthGameMode<ADungeonGameMode>() : nullptr)
+    {
+        if (GM->HasDepartedPlayers()) return false;
+    }
+
     // GameState 가 아직 없으면 판단이 안 되니 멀티로 취급(전원 대기 쪽이 안전)
     return GS ? GS->PlayerArray.Num() <= 1 : false;
 }
@@ -969,6 +986,19 @@ void AMapManager::CheckAllPlayersReadyAndStart()
     }
 
     if (Players.Num() == 0 || ReadyPlayers < Players.Num()) return;
+
+    // 진행 중에 나간 사람이 돌아올 때까지는 출발하지 않음 (돌아와서 방을 고르면 그때 다시 여기로 옴)
+    if (const ADungeonGameMode* GM = GetWorld()->GetAuthGameMode<ADungeonGameMode>())
+    {
+        if (GM->HasDepartedPlayers())
+        {
+            FChatMessage Notice;
+            Notice.Kind = EChatMessageKind::System;
+            Notice.Text = FString::Printf(TEXT("%s 님이 돌아올 때까지 출발할 수 없습니다."), *FString::Join(GM->GetDepartedNames(), TEXT(", ")));
+            ATerminusPlayerController::BroadcastChat(GetWorld(), Notice);
+            return;
+        }
+    }
 
     UE_LOG(LogTemp, Log, TEXT("[Map] 전원 방 선택 완료(%d명). 각자 고른 방으로 입장"), Players.Num());
 

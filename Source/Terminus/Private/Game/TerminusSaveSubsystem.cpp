@@ -5,6 +5,7 @@
 #include "Data/TerminusDataSettings.h"
 #include "Engine/GameInstance.h"
 #include "Engine/World.h"
+#include "Game/DungeonGameMode.h"
 #include "Game/TerminusRunSubsystem.h"
 #include "GameFramework/GameStateBase.h"
 #include "Kismet/GameplayStatics.h"
@@ -126,6 +127,22 @@ bool UTerminusSaveSubsystem::SaveCurrentRun(UWorld* World)
 		Save->Summary.bHardMode |= Entry.RunState.bHardMode;
 	}
 
+	// 진행 중에 나갔다가 아직 안 돌아온 사람도 세이브에 (이어하기 때 그 사람도 와야 출발)
+	if (const ADungeonGameMode* GM = World->GetAuthGameMode<ADungeonGameMode>())
+	{
+		for (const FDepartedPlayer& Departed : GM->GetDepartedPlayers())
+		{
+			FRunSavePlayer& Entry = Save->Players.AddDefaulted_GetRef();
+			Entry.PlayerId = Departed.PlayerId;
+			Entry.PlayerName = Departed.PlayerName;
+			Entry.RunState = Departed.RunState;
+
+			Save->Summary.PlayerNames.Add(Entry.PlayerName);
+			Save->Summary.PlayerClasses.Add(Entry.RunState.CharacterClass);
+			Save->Summary.RoomsCleared = FMath::Max(Save->Summary.RoomsCleared, Entry.RunState.VisitedRoomIds.Num());
+		}
+	}
+
 	if (Save->Players.Num() == 0) return false;
 
 	// 슬롯: 이 런의 슬롯을 계속 덮어씀. 주점을 안 거친 PIE 처럼 없으면 새로
@@ -154,6 +171,7 @@ bool UTerminusSaveSubsystem::SaveCurrentRun(UWorld* World)
 		Index->Entries.Add(Save->Summary);
 		SaveIndex(Index);
 	}
+	OnRunSavesChanged.Broadcast();
 
 	UE_LOG(LogTerminusSave, Log, TEXT("[Save] %s 저장 (플레이어 %d명, 방 %d개 지남)"), *Slot, Save->Players.Num(), Save->Summary.RoomsCleared);
 	return true;
@@ -185,6 +203,7 @@ bool UTerminusSaveSubsystem::DeleteRunSave(const FString& SlotName)
 	}
 
 	UE_LOG(LogTerminusSave, Log, TEXT("[Save] %s 삭제"), *SlotName);
+	OnRunSavesChanged.Broadcast();
 	return bDeleted;
 }
 

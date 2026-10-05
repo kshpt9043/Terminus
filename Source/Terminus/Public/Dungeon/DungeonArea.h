@@ -61,6 +61,9 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Dungeon Area")
 	bool IsCleared() const { return bCleared; }
 
+	// 싸움이 끝났는가 (클리어했거나, 승리 / 패배 후 결과·보상 화면). 싸우는 중이면 false
+	bool IsFightOver() const;
+
 	// 지금 이 구역에서 진행 중인 방. IsInUse 가 false 면 의미 없음
 	UFUNCTION(BlueprintPure, Category = "Dungeon Area")
 	const FRoomNode& GetRoom() const { return Room; }

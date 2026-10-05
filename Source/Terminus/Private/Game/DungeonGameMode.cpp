@@ -7,6 +7,12 @@
 #include "GameFramework/PlayerState.h"
 #include "Player/TerminusPlayerController.h"
 #include "Kismet/GameplayStatics.h"
+#include "Engine/World.h"
+#include "Character/TerminusBattler.h"
+#include "Combat/CombatStatsComponent.h"
+#include "Dungeon/DungeonAreaSubsystem.h"
+#include "Online/SessionSubsystem.h"
+#include "Player/TerminusPlayerState.h"
 
 AActor* ADungeonGameMode::ChoosePlayerStart_Implementation(AController* Player)
 {
@@ -26,6 +32,7 @@ AActor* ADungeonGameMode::ChoosePlayerStart_Implementation(AController* Player)
 		if (!AssignedStarts.Contains(Slot))
 		{
 			AssignedStarts.Add(Slot);
+			StartOwners.Add(Player, Slot);
 			return Slot;
 		}
 	}
@@ -45,13 +52,159 @@ void ADungeonGameMode::PreLogin(const FString& Options, const FString& Address, 
 	// PIE 는 심리스 트래블이 막혀서 클라가 재접속으로 넘어옴 -> 막으면 테스트 불가
 	if (GetWorld()->WorldType == EWorldType::PIE) { return; }
 
+	// 진행 중에 나갔던 사람은 다시 들어올 수 있음
+	const FString PlayerId = UniqueId.IsValid() ? UniqueId->ToString() : FString();
+	if (FindDeparted(PlayerId, FString()) != INDEX_NONE) { return; }
+
 	// 던전엔 주점에서 같이 넘어온 사람만. 심리스로 온 사람은 여기를 안 탐
 	ErrorMessage = TEXT("이미 던전이 진행 중입니다.");
 }
 
+void ADungeonGameMode::PostLogin(APlayerController* NewPlayer)
+{
+	// 배틀러는 Super::PostLogin 안에서 생김 -> 그 전에 RunState 를 되살려야 스텟 / 체력이 맞음
+	ATerminusPlayerState* TPS = NewPlayer ? NewPlayer->GetPlayerState<ATerminusPlayerState>() : nullptr;
+	bool bReturned = false;
+	if (TPS && DepartedPlayers.Num() > 0)
+	{
+		const FUniqueNetIdRepl& NetId = TPS->GetUniqueId();
+		const int32 Index = FindDeparted(NetId.IsValid() ? NetId->ToString() : FString(), TPS->GetPlayerName());
+		if (Index != INDEX_NONE)
+		{
+			FRunState Restored = DepartedPlayers[Index].RunState;
+			Restored.SelectedRoomId = -1;
+			TPS->SetRunState(Restored);
+			DepartedPlayers.RemoveAt(Index);
+			bReturned = true;
+		}
+	}
+
+	Super::PostLogin(NewPlayer);
+
+	if (!bReturned) return;
+
+	FChatMessage Notice;
+	Notice.Kind = EChatMessageKind::System;
+	Notice.Text = DepartedPlayers.Num() == 0
+		? FString::Printf(TEXT("%s 님이 돌아왔습니다. 이공간을 빠져나와 지도로 돌아갑니다."), *TPS->GetPlayerName())
+		: FString::Printf(TEXT("%s 님이 돌아왔습니다. 아직 기다리는 중: %s"), *TPS->GetPlayerName(), *FString::Join(GetDepartedNames(), TEXT(", ")));
+	ATerminusPlayerController::BroadcastChat(GetWorld(), Notice);
+
+	// 다 돌아왔으면 전원 지도로. 아직 남았으면 돌아온 사람도 이공간에
+	RefreshRift();
+}
+
+TArray<FString> ADungeonGameMode::GetDepartedNames() const
+{
+	TArray<FString> Names;
+	for (const FDepartedPlayer& Departed : DepartedPlayers)
+	{
+		Names.Add(Departed.PlayerName);
+	}
+	return Names;
+}
+
+bool ADungeonGameMode::UseLooseRejoinMatching() const
+{
+	const UWorld* World = GetWorld();
+	return World && World->WorldType == EWorldType::PIE;
+}
+
+int32 ADungeonGameMode::FindDeparted(const FString& PlayerId, const FString& PlayerName) const
+{
+	if (!PlayerId.IsEmpty())
+	{
+		for (int32 i = 0; i < DepartedPlayers.Num(); ++i)
+		{
+			if (DepartedPlayers[i].PlayerId == PlayerId) return i;
+		}
+	}
+
+	if (!UseLooseRejoinMatching()) return INDEX_NONE;
+
+	if (!PlayerName.IsEmpty())
+	{
+		for (int32 i = 0; i < DepartedPlayers.Num(); ++i)
+		{
+			if (DepartedPlayers[i].PlayerName == PlayerName) return i;
+		}
+	}
+	return DepartedPlayers.Num() > 0 ? 0 : INDEX_NONE;
+}
+
+void ADungeonGameMode::RefreshRift(const AController* Skip)
+{
+	const bool bOpen = DepartedPlayers.Num() > 0;
+
+	if (USessionSubsystem* Sessions = GetGameInstance() ? GetGameInstance()->GetSubsystem<USessionSubsystem>() : nullptr)
+	{
+		Sessions->SetRejoinListing(bOpen);
+	}
+
+	const TArray<FString> Waiting = GetDepartedNames();
+	for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
+	{
+		ATerminusPlayerController* PC = Cast<ATerminusPlayerController>(It->Get());
+		if (!PC || PC == Skip) continue;
+
+		if (bOpen)
+		{
+			PC->Client_EnterRift(Waiting);
+		}
+		else
+		{
+			PC->Client_LeaveRift();
+		}
+	}
+}
+
 void ADungeonGameMode::Logout(AController* Exiting)
 {
-	if (Exiting && Exiting->PlayerState)
+	ATerminusPlayerState* TPS = Exiting ? Exiting->GetPlayerState<ATerminusPlayerState>() : nullptr;
+
+	// 방장(리슨 서버 자신)이 나가면 세션이 끝남 -> 기다릴 것 없음. 월드를 닫는 중(PIE 종료 등)이어도 무시
+	const APlayerController* ExitingPC = Cast<APlayerController>(Exiting);
+	const bool bTearingDown = !GetWorld() || GetWorld()->bIsTearingDown;
+	const bool bGuestLeft = TPS && !bTearingDown && GetNetMode() != NM_Standalone && !(ExitingPC && ExitingPC->IsLocalController());
+
+	if (bGuestLeft)
+	{
+		// 1. 진행 중인 방 정리. 싸우는 중이면 이번 방은 무효 (전원 들어가기 전으로 롤백)
+		if (UDungeonAreaSubsystem* Areas = GetWorld()->GetSubsystem<UDungeonAreaSubsystem>())
+		{
+			Areas->HandlePlayerLeft(TPS);
+		}
+
+		// 2. 돌아오면 되살릴 상태 (롤백 / 진행이 반영된 뒤)
+		FDepartedPlayer& Departed = DepartedPlayers.AddDefaulted_GetRef();
+		const FUniqueNetIdRepl& NetId = TPS->GetUniqueId();
+		Departed.PlayerId = NetId.IsValid() ? NetId->ToString() : FString();
+		Departed.PlayerName = TPS->GetPlayerName();
+		Departed.RunState = TPS->GetRunState();
+		Departed.RunState.SelectedRoomId = -1;
+
+		const ATerminusBattler* Battler = Cast<ATerminusBattler>(TPS->GetPawn());
+		const UCombatStatsComponent* Stats = Battler ? Battler->GetCombatStats() : nullptr;
+		Departed.RunState.SavedHealth = Stats ? FMath::Max(1, Stats->GetCombatState().Health) : Departed.RunState.SavedHealth;
+
+		// 3. 그 사람 자리를 비워 둠 (돌아오면 다시 받게)
+		if (const TWeakObjectPtr<AActor>* Start = StartOwners.Find(Exiting))
+		{
+			AssignedStarts.Remove(Start->Get());
+			StartOwners.Remove(Exiting);
+		}
+
+		// 4. 남은 사람은 이공간으로, 세션은 주점 목록에 다시 띄움 (나간 사람이 찾아 돌아오게)
+		RefreshRift(Exiting);
+
+		FChatMessage Notice;
+		Notice.Kind = EChatMessageKind::System;
+		Notice.Text = FString::Printf(TEXT("%s 님이 나갔습니다. 돌아올 때까지 이공간에서 기다립니다."), *TPS->GetPlayerName());
+		ATerminusPlayerController::BroadcastChat(GetWorld(), Notice);
+
+		UE_LOG(LogTemp, Log, TEXT("[Dungeon] %s 나감 (아이디 %s). 돌아올 때까지 대기"), *Departed.PlayerName, *Departed.PlayerId);
+	}
+	else if (Exiting && Exiting->PlayerState)
 	{
 		FChatMessage Notice;
 		Notice.Kind = EChatMessageKind::System;

@@ -210,6 +210,14 @@ void ADungeonArea::MarkCleared()
 	}
 }
 
+bool ADungeonArea::IsFightOver() const
+{
+	if (bCleared) return true;
+
+	const ECombatPhase Phase = Combat ? Combat->GetPhase() : ECombatPhase::None;
+	return Phase == ECombatPhase::Victory || Phase == ECombatPhase::Defeat;
+}
+
 void ADungeonArea::Release()
 {
 	if (!HasAuthority()) return;

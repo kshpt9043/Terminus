@@ -19,6 +19,7 @@
 #include "Widgets/Chat/ChatWidget.h"
 #include "Widgets/Relic/StartRelicPickWidget.h"
 #include "Widgets/Reward/MonsterRewardWidget.h"
+#include "Widgets/Rift/RiftWidget.h"
 #include "Game/TerminusProfileSubsystem.h"
 #include "Data/TerminusDataSettings.h"
 #include "TimerManager.h"
@@ -337,6 +338,42 @@ void ATerminusPlayerController::Server_EndTurn_Implementation()
 	if (UDungeonCombatComponent* Combat = Area ? Area->GetCombat() : nullptr)
 	{
 		Combat->HandleEndTurn(PS);
+	}
+}
+
+void ATerminusPlayerController::Client_EnterRift_Implementation(const TArray<FString>& WaitingFor)
+{
+	if (!Rift)
+	{
+		const TSubclassOf<URiftWidget> Class = RiftClass ? RiftClass : TSubclassOf<URiftWidget>(URiftWidget::StaticClass());
+		Rift = CreateWidget<URiftWidget>(this, Class);
+		if (Rift)
+		{
+			Rift->AddToViewport(24);   // 지도 / 전투 HUD / 고르기 / 보상 위, 채팅(25) 아래 -> 기다리면서 채팅 가능
+		}
+	}
+
+	if (Rift)
+	{
+		Rift->SetWaiting(WaitingFor);
+	}
+}
+
+void ATerminusPlayerController::Client_LeaveRift_Implementation()
+{
+	if (Rift)
+	{
+		Rift->RemoveFromParent();
+		Rift = nullptr;
+	}
+}
+
+void ATerminusPlayerController::Client_CloseMonsterReward_Implementation()
+{
+	if (MonsterReward)
+	{
+		MonsterReward->RemoveFromParent();
+		MonsterReward = nullptr;
 	}
 }
 

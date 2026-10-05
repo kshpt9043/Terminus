@@ -93,6 +93,10 @@ private:
 
 	// 이어하기로 읽어 둔 세이브를 버림 (새 판을 시작하거나 메뉴로 돌아왔을 때)
 	void ClearPendingContinue();
+
+	// 이어하기 버튼은 세이브가 있을 때만 보임
+	void RefreshContinueButton();
+	FDelegateHandle RunSavesChangedHandle;
 	void RefreshGold();
 
 	// SessionSubsystem 의 비동기 결과

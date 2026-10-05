@@ -53,6 +53,14 @@ void UMainMenuWidget::NativeConstruct()
 
 	// 메뉴로 돌아왔으면 이어하기 대기는 버림 (안 그러면 다음 주점이 이어하기로 열림)
 	ClearPendingContinue();
+
+	// 이어하기 버튼: 세이브가 있을 때만. 목록에서 다 지우면 바로 숨김
+	if (UTerminusSaveSubsystem* Save = UTerminusSaveSubsystem::Get(this))
+	{
+		Save->OnRunSavesChanged.Remove(RunSavesChangedHandle);
+		RunSavesChangedHandle = Save->OnRunSavesChanged.AddUObject(this, &UMainMenuWidget::RefreshContinueButton);
+	}
+	RefreshContinueButton();
 	SetButtonTextColor(Btn_Quit, TextDim);
 
 	// 골드 표시. 프로필은 위젯보다 오래 살아서 Construct 마다 붙이고 Destruct 에서 뗀다
@@ -73,7 +81,7 @@ void UMainMenuWidget::NativeConstruct()
 	const FText Reason = Sessions->ConsumeDisconnectReason();
 	if (!Reason.IsEmpty())
 	{
-		ShowPopup(Reason, FText::FromString(TEXT("메인 화면으로 돌아왔습니다.")));
+		ShowPopup(Reason, FText::FromString(TEXT("메인 화면으로 돌아왔습니다. 진행 중이던 던전은 주점 목록의 '재합류 대기' 방으로 돌아갈 수 있습니다.")));
 	}
 }
 
@@ -88,6 +96,11 @@ void UMainMenuWidget::NativeDestruct()
 	if (UTerminusProfileSubsystem* Profile = GetGameInstance() ? GetGameInstance()->GetSubsystem<UTerminusProfileSubsystem>() : nullptr)
 	{
 		Profile->OnGoldChanged.RemoveDynamic(this, &UMainMenuWidget::HandleGoldChanged);
+	}
+
+	if (UTerminusSaveSubsystem* Save = UTerminusSaveSubsystem::Get(this))
+	{
+		Save->OnRunSavesChanged.Remove(RunSavesChangedHandle);
 	}
 
 	Super::NativeDestruct();
@@ -133,6 +146,7 @@ void UMainMenuWidget::HandleHostComplete(bool bWasSuccessful)
 void UMainMenuWidget::HandleJoinComplete(bool bWasSuccessful)
 {
 	if (bWasSuccessful) { return; }
+
 
 	// 주점 목록이 열려 있으면 목록이 상태 줄에 사유를 띄운다. 여기선 초대로 들어가다 실패한 경우만
 	if (RoomBrowser && RoomBrowser->IsVisible()) { return; }
@@ -194,6 +208,21 @@ void UMainMenuWidget::HandleContinueClicked()
 	if (SaveListWindow)
 	{
 		SaveListWindow->Open(TavernMapPath);
+	}
+}
+
+void UMainMenuWidget::RefreshContinueButton()
+{
+	if (!Btn_Continue) return;
+
+	UTerminusSaveSubsystem* Save = UTerminusSaveSubsystem::Get(this);
+	const bool bHasSaves = Save && Save->HasRunSaves();
+	Btn_Continue->SetVisibility(bHasSaves ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
+
+	// 마지막 세이브를 지웠으면 열려 있던 목록도 닫음
+	if (!bHasSaves && SaveListWindow)
+	{
+		SaveListWindow->Close();
 	}
 }
 

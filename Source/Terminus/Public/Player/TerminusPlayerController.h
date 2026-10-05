@@ -18,6 +18,7 @@ class UConfirmPopupWidget;
 class UChatWidget;
 class UStartRelicPickWidget;
 class UMonsterRewardWidget;
+class URiftWidget;
 struct FRunState;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnViewAreaChanged, ADungeonArea*, NewArea);
@@ -142,6 +143,18 @@ public:
 	UFUNCTION(Server, Reliable)
 	void Server_FinishMonsterReward(FName ChosenSkill, int32 ReplaceSlot);
 
+	// 보상 화면 닫기 (누가 나가서 방이 닫혔을 때)
+	UFUNCTION(Client, Reliable)
+	void Client_CloseMonsterReward();
+
+	// 이공간 (멀티에서 누가 나갔을 때). WaitingFor = 돌아오길 기다리는 사람. 이미 떠 있으면 명단만 갱신
+	UFUNCTION(Client, Reliable)
+	void Client_EnterRift(const TArray<FString>& WaitingFor);
+
+	// 이공간에서 나옴 (전원 돌아옴) -> 지도
+	UFUNCTION(Client, Reliable)
+	void Client_LeaveRift();
+
 	// [테스트] 콘솔에서 DebugWinCombat -> 내 구역 몬스터 전부 처치
 	UFUNCTION(Exec)
 	void DebugWinCombat();
@@ -239,6 +252,13 @@ protected:
 
 	UPROPERTY()
 	TObjectPtr<UChatWidget> ChatWidget;
+
+	// 이공간 화면. 비워 두면 C++ 기본 모양(URiftWidget)
+	UPROPERTY(EditDefaultsOnly, Category = "Terminus|UI")
+	TSubclassOf<URiftWidget> RiftClass;
+
+	UPROPERTY()
+	TObjectPtr<URiftWidget> Rift;
 
 	// 몬스터방 보상 화면. 비워 두면 C++ 기본 모양(UMonsterRewardWidget)
 	UPROPERTY(EditDefaultsOnly, Category = "Terminus|UI")

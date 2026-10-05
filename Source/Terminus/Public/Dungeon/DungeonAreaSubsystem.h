@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Subsystems/WorldSubsystem.h"
+#include "Data/RunTypes.h"
 #include "DungeonAreaSubsystem.generated.h"
 
 class ADungeonArea;
@@ -41,7 +42,24 @@ public:
 	// [서버] 구역 하나가 끝났을 때 구역이 부름. 전 구역이 끝났으면 전원 진행 + 지도로 복귀
 	void NotifyAreaCleared(ADungeonArea* Area);
 
+	// [서버] 누가 게임을 나갔을 때 (멀티). 끝나면 모든 구역이 닫혀 있음 (전원 이공간으로 가기 전 정리)
+	//  - 아직 싸우는 구역이 있으면: 이번 방은 무효 (롤백). 전원 방에 들어가기 직전 상태로 되돌림
+	//  - 모든 구역이 이미 이겼으면(보상 중): 결과는 인정하고 평소처럼 진행. 아직 안 고른 보상은 건너뜀
+	void HandlePlayerLeft(ATerminusPlayerState* Leaver);
+
 private:
+	// 방에 들어가기 직전 상태 (롤백용). 방이 정상으로 끝나면 비움
+	struct FRoomStartSnapshot
+	{
+		FRunState RunState;
+		FCharacterStats BattlerStats;   // 배틀러가 실제로 쓰던 스텟 (런 스텟이 없으면 클래스 기본값)
+		int32 Health = -1;
+	};
+	TMap<TWeakObjectPtr<ATerminusPlayerState>, FRoomStartSnapshot> RoomStartSnapshots;
+
+	void TakeRoomStartSnapshots(const TArray<ATerminusPlayerState*>& Players);
+	void RollbackToRoomStart();
+
 	// 번호순 정렬된 구역 목록
 	TArray<ADungeonArea*> GetSortedAreas() const;
 

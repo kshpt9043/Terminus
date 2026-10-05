@@ -5,6 +5,8 @@
 #include "Player/TerminusPlayerController.h"
 #include "Map/MapManager.h"
 #include "Player/TerminusPlayerState.h"
+#include "Character/TerminusBattler.h"
+#include "Combat/CombatStatsComponent.h"
 
 void UDungeonAreaSubsystem::RegisterArea(ADungeonArea* Area)
 {
@@ -96,6 +98,9 @@ bool UDungeonAreaSubsystem::StartSelectedRooms(const TArray<ATerminusPlayerState
 		return false;
 	}
 
+	// 누가 나가서 이번 방이 무효가 되면 여기로 되돌림
+	TakeRoomStartSnapshots(Players);
+
 	for (int32 i = 0; i < RoomOrder.Num(); ++i)
 	{
 		const int32 RoomId = RoomOrder[i];
@@ -128,6 +133,97 @@ void UDungeonAreaSubsystem::NotifyAreaCleared(ADungeonArea* Area)
 	FinishAllRooms();
 }
 
+void UDungeonAreaSubsystem::HandlePlayerLeft(ATerminusPlayerState* Leaver)
+{
+	bool bAnyInUse = false;
+	bool bAllFightsOver = true;
+	for (ADungeonArea* Area : GetSortedAreas())
+	{
+		if (!Area->IsInUse()) continue;
+		bAnyInUse = true;
+		bAllFightsOver &= Area->IsFightOver();
+	}
+
+	if (!bAnyInUse) return;
+
+	if (bAllFightsOver)
+	{
+		// 이미 이긴 방: 결과 인정. 나간 사람도 같이 진행 (보상 화면은 닫히고 안 고른 스킬은 건너뜀)
+		UE_LOG(LogTemp, Log, TEXT("[AreaSubsystem] %s 나감. 모든 방이 끝난 뒤라 결과를 인정하고 마무리"), Leaver ? *Leaver->GetPlayerName() : TEXT("?"));
+		FinishAllRooms();
+		return;
+	}
+
+	// 싸우는 중: 이번 방은 무효. 모든 구역을 닫고 방에 들어가기 전으로 (나간 사람 포함)
+	UE_LOG(LogTemp, Log, TEXT("[AreaSubsystem] %s 나감. 진행 중인 방을 무효로 하고 들어가기 전으로 되돌림"), Leaver ? *Leaver->GetPlayerName() : TEXT("?"));
+
+	for (ADungeonArea* Area : GetSortedAreas())
+	{
+		if (Area->IsInUse())
+		{
+			Area->Release();
+		}
+	}
+
+	RollbackToRoomStart();
+}
+
+void UDungeonAreaSubsystem::TakeRoomStartSnapshots(const TArray<ATerminusPlayerState*>& Players)
+{
+	RoomStartSnapshots.Reset();
+
+	for (ATerminusPlayerState* PS : Players)
+	{
+		if (!PS) continue;
+
+		FRoomStartSnapshot& Snapshot = RoomStartSnapshots.Add(PS);
+		Snapshot.RunState = PS->GetRunState();
+
+		const ATerminusBattler* Battler = Cast<ATerminusBattler>(PS->GetPawn());
+		if (const UCombatStatsComponent* Stats = Battler ? Battler->GetCombatStats() : nullptr)
+		{
+			Snapshot.BattlerStats = Stats->GetStats();
+			Snapshot.Health = Stats->GetCombatState().Health;
+		}
+		else
+		{
+			Snapshot.BattlerStats = Snapshot.RunState.Stats;
+		}
+	}
+}
+
+void UDungeonAreaSubsystem::RollbackToRoomStart()
+{
+	for (const TPair<TWeakObjectPtr<ATerminusPlayerState>, FRoomStartSnapshot>& Pair : RoomStartSnapshots)
+	{
+		ATerminusPlayerState* PS = Pair.Key.Get();
+		if (!PS) continue;
+
+		const FRoomStartSnapshot& Snapshot = Pair.Value;
+
+		// 런 상태 (재화 / 유물 / 강화 스킬 / 최대 체력 / 지도 위치). 고른 방은 비움
+		FRunState Restored = Snapshot.RunState;
+		Restored.SelectedRoomId = -1;
+		PS->SetRunState(Restored);
+
+		// 배틀러: 스텟 / 체력 / 에너지 / 상태 효과 모두 들어가기 전으로
+		const ATerminusBattler* Battler = Cast<ATerminusBattler>(PS->GetPawn());
+		if (UCombatStatsComponent* Stats = Battler ? Battler->GetCombatStats() : nullptr)
+		{
+			Stats->InitFrom(Snapshot.BattlerStats);
+			const int32 MaxHealth = Snapshot.BattlerStats.MaxHealth;
+			if (Snapshot.Health > 0 && MaxHealth > 0 && Snapshot.Health < MaxHealth)
+			{
+				Stats->Revive(static_cast<float>(Snapshot.Health) / MaxHealth);
+			}
+		}
+
+		UE_LOG(LogTemp, Log, TEXT("[AreaSubsystem] %s 롤백 (체력 %d)"), *PS->GetPlayerName(), Snapshot.Health);
+	}
+
+	RoomStartSnapshots.Reset();
+}
+
 void UDungeonAreaSubsystem::FinishAllRooms()
 {
 	UE_LOG(LogTemp, Log, TEXT("[AreaSubsystem] 모든 구역 종료. 지도로 복귀"));
@@ -148,6 +244,9 @@ void UDungeonAreaSubsystem::FinishAllRooms()
 
 		Area->Release();
 	}
+
+	// 방이 정상으로 끝났으니 롤백할 일 없음
+	RoomStartSnapshots.Reset();
 
 	// 자동 저장: 방이 끝나고 전원이 지도로 돌아온 지금 (보상까지 받은 뒤)
 	if (UTerminusSaveSubsystem* Save = UTerminusSaveSubsystem::Get(this))
