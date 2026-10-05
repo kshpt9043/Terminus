@@ -29,8 +29,11 @@ public:
 protected:
 	virtual void NativeOnInitialized() override;
 
-	// "멀티 3인 · 1층 표층 · 방 4개 지남"
+	// 방(던전) 이름 "배고픈 슬라임 원정대"
 	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UTextBlock> TitleText;
+
+	// "멀티 3인 · 1층 표층 · 방 4개 지남"
+	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UTextBlock> InfoText;
 
 	// "무도가 Joe, 성기사 Kim"
 	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UTextBlock> PlayersText;

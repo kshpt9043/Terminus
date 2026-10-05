@@ -15,6 +15,7 @@
 #include "Misc/Base64.h"
 #include "Engine/GameInstance.h"
 #include "TimerManager.h"
+#include "Game/TerminusRunSubsystem.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogTerminusSession, Log, All);
 
@@ -138,8 +139,20 @@ IOnlineSessionPtr USessionSubsystem::GetSessionInterface() const
 	return nullptr;
 }
 
-void USessionSubsystem::HostSession(int32 MaxPlayers, const FString& MapPath, const FTerminusRoomOptions& Options)
+void USessionSubsystem::HostSession(int32 MaxPlayers, const FString& MapPath, const FTerminusRoomOptions& InOptions)
 {
+	// 방 이름: 비었으면 랜덤. 런 서브시스템에 기억 -> 던전 / 세이브 / 이어하기까지 같은 이름
+	FTerminusRoomOptions Options = InOptions;
+	Options.RoomName = Options.RoomName.TrimStartAndEnd().Left(UTerminusRunSubsystem::MaxRoomNameLength);
+	if (Options.RoomName.IsEmpty())
+	{
+		Options.RoomName = UTerminusRunSubsystem::MakeRandomRoomName();
+	}
+	if (UTerminusRunSubsystem* Run = GetGameInstance()->GetSubsystem<UTerminusRunSubsystem>())
+	{
+		Run->SetRoomName(Options.RoomName);
+	}
+
 	// 만들어둔 헬퍼 함수로 접근
 	IOnlineSessionPtr Session = GetSessionInterface();
 	if (!Session.IsValid())

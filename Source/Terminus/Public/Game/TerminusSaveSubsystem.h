@@ -35,6 +35,10 @@ struct FRunSaveSummary
 	UPROPERTY(BlueprintReadOnly)
 	FString SlotName;
 
+	// 방(던전) 이름. 처음 주점을 열 때(싱글은 시작할 때) 정한 것
+	UPROPERTY(BlueprintReadOnly)
+	FString RoomName;
+
 	UPROPERTY(BlueprintReadOnly)
 	FDateTime SavedAt;
 

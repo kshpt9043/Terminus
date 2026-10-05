@@ -13,6 +13,8 @@
 #include "Widgets/Common/EscapeStackSubsystem.h"
 #include "Widgets/Save/RunSaveListWidget.h"
 #include "Game/TerminusSaveSubsystem.h"
+#include "Game/TerminusRunSubsystem.h"
+#include "Widgets/Common/TextInputPopupWidget.h"
 
 namespace
 {
@@ -111,6 +113,30 @@ void UMainMenuWidget::HandleDungeonClicked()
 	// 싱글은 세션 없이 주점 레벨을 연다 -> NM_Standalone.
 	// 주점을 거쳐야 ServerTravel(CopyProperties)로 RunState 가 던전까지 간다
 	ClearPendingContinue();
+
+	// 싱글도 던전 이름을 정함 (세이브 목록에 이 이름으로). 기본은 랜덤
+	const TSubclassOf<UTextInputPopupWidget> Class = NameInputPopupClass ? NameInputPopupClass : TSubclassOf<UTextInputPopupWidget>(UTextInputPopupWidget::StaticClass());
+	UTextInputPopupWidget* Popup = CreateWidget<UTextInputPopupWidget>(GetOwningPlayer(), Class);
+	if (!Popup)
+	{
+		StartSoloWithName(UTerminusRunSubsystem::MakeRandomRoomName());
+		return;
+	}
+
+	Popup->Setup(FText::FromString(TEXT("던전 이름")),
+		FText::FromString(TEXT("이번 탐험의 이름을 정하세요. 세이브 목록에 이 이름으로 남습니다.")),
+		UTerminusRunSubsystem::MakeRandomRoomName(), UTerminusRunSubsystem::MaxRoomNameLength);
+	Popup->SetRandomProvider([]() { return UTerminusRunSubsystem::MakeRandomRoomName(); });
+	Popup->OnConfirmedText.BindUObject(this, &UMainMenuWidget::StartSoloWithName);
+	Popup->AddToViewport(50);
+}
+
+void UMainMenuWidget::StartSoloWithName(const FString& RoomName)
+{
+	if (UTerminusRunSubsystem* Run = GetGameInstance() ? GetGameInstance()->GetSubsystem<UTerminusRunSubsystem>() : nullptr)
+	{
+		Run->SetRoomName(RoomName);
+	}
 	UGameplayStatics::OpenLevel(this, FName(*TavernMapPath));
 }
 

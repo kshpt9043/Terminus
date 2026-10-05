@@ -62,8 +62,11 @@ void URunSaveEntryWidget::BuildDefaultLayout()
 		S->SetVerticalAlignment(VAlign_Center);
 	}
 
-	TitleText = MakeSaveEntryText(WidgetTree, TEXT("TitleText"), 17, FLinearColor(1.f, 0.85f, 0.35f));
+	TitleText = MakeSaveEntryText(WidgetTree, TEXT("TitleText"), 18, FLinearColor(1.f, 0.85f, 0.35f));
 	Info->AddChildToVerticalBox(TitleText);
+
+	InfoText = MakeSaveEntryText(WidgetTree, TEXT("InfoText"), 14, FLinearColor(0.85f, 0.85f, 0.85f));
+	if (UVerticalBoxSlot* S = Info->AddChildToVerticalBox(InfoText)) S->SetPadding(FMargin(0.f, 4.f, 0.f, 0.f));
 
 	PlayersText = MakeSaveEntryText(WidgetTree, TEXT("PlayersText"), 14, FLinearColor::White);
 	if (UVerticalBoxSlot* S = Info->AddChildToVerticalBox(PlayersText)) S->SetPadding(FMargin(0.f, 4.f, 0.f, 0.f));
@@ -91,7 +94,8 @@ void URunSaveEntryWidget::Setup(const FRunSaveSummary& InSummary)
 {
 	SlotName = InSummary.SlotName;
 
-	if (TitleText)   TitleText->SetText(UTerminusSaveSubsystem::DescribeTitle(InSummary));
+	if (TitleText)   TitleText->SetText(FText::FromString(InSummary.RoomName.IsEmpty() ? TEXT("이름 없는 던전") : InSummary.RoomName));
+	if (InfoText)    InfoText->SetText(UTerminusSaveSubsystem::DescribeTitle(InSummary));
 	if (PlayersText) PlayersText->SetText(UTerminusSaveSubsystem::DescribePlayers(InSummary));
 	if (DateText)    DateText->SetText(FText::FromString(InSummary.SavedAt.ToString(TEXT("%Y-%m-%d %H:%M"))));
 }

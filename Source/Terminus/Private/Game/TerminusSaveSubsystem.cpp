@@ -154,6 +154,7 @@ bool UTerminusSaveSubsystem::SaveCurrentRun(UWorld* World)
 	}
 
 	Save->Summary.SlotName = Slot;
+	Save->Summary.RoomName = Run->GetRoomName();
 	Save->Summary.SavedAt = FDateTime::Now();
 	Save->Summary.bMultiplayer = World->GetNetMode() != NM_Standalone;
 	Save->Summary.Floor = Save->Floor;
@@ -222,6 +223,12 @@ bool UTerminusSaveSubsystem::ContinueRun(const UObject* WorldContext, const FStr
 
 	PendingLoad = Save;
 
+	// 이름은 세이브 당시 그대로
+	if (UTerminusRunSubsystem* Run = GetGameInstance()->GetSubsystem<UTerminusRunSubsystem>())
+	{
+		Run->SetRoomName(Save->Summary.RoomName);
+	}
+
 	if (!Save->Summary.bMultiplayer)
 	{
 		// 싱글: 세션 없이 주점 -> 주점 게임모드가 바로 출발시킴
@@ -239,7 +246,7 @@ bool UTerminusSaveSubsystem::ContinueRun(const UObject* WorldContext, const FStr
 	}
 
 	FTerminusRoomOptions Options;
-	Options.RoomName = TEXT("이어하기");
+	Options.RoomName = Save->Summary.RoomName;   // 비어 있으면 HostSession 이 랜덤
 	Sessions->HostSession(Save->Players.Num(), TavernMapPath, Options);
 	return true;
 }

@@ -36,6 +36,17 @@ public:
 	// 이 런의 층 (세이브에서 불러온 값). 0 이면 MapManager 디테일 값
 	int32 GetFloor() const { return Floor; }
 
+	// 방(던전) 이름. 처음 주점을 열 때(싱글은 시작할 때) 정한 이름이 런 끝까지 유지됨
+	// 주점 목록 / 재합류 대기 / 세이브 목록 / 이어하기로 연 주점에 모두 이 이름
+	const FString& GetRoomName() const { return RoomName; }
+	void SetRoomName(const FString& InName);
+
+	// 기본으로 넣어 줄 랜덤 이름 ("배고픈 슬라임 원정대")
+	static FString MakeRandomRoomName();
+
+	// 방 이름 최대 글자 수 (스팀 로비 광고 값 길이 때문)
+	static constexpr int32 MaxRoomNameLength = 24;
+
 	// 0 이면 주점을 안 거친 것 (던전 맵 바로 PIE). 이때는 MapManager 디테일 값을 씀
 	int32 GetPartySize() const { return PartySize; }
 
@@ -47,6 +58,7 @@ private:
 	int32 PartySize = 0;
 	int32 Floor = 0;
 	FString SaveSlot;
+	FString RoomName;
 
 	UPROPERTY()
 	TArray<FRoomNode> Rooms;

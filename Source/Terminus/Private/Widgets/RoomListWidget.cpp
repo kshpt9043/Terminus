@@ -8,6 +8,7 @@
 #include "Components/CheckBox.h"
 #include "Engine/GameInstance.h"
 #include "Widgets/Common/EscapeStackSubsystem.h"
+#include "Game/TerminusRunSubsystem.h"
 
 void URoomListWidget::NativeOnInitialized()
 {
@@ -227,7 +228,8 @@ void URoomListWidget::HandleJoinComplete(bool bWasSuccessful)
 
 void URoomListWidget::HandleOpenCreateClicked()
 {
-	RoomNameInput->SetText(FText::GetEmpty());
+	// 기본은 랜덤 이름 (지우면 열 때 다시 랜덤)
+	RoomNameInput->SetText(FText::FromString(UTerminusRunSubsystem::MakeRandomRoomName()));
 	PasswordInput->SetText(FText::GetEmpty());
 	if (PrivateCheck)    { PrivateCheck->SetIsChecked(false); }
 	if (CreateErrorText) { CreateErrorText->SetText(FText::GetEmpty()); }
