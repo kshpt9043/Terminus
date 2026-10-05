@@ -189,6 +189,36 @@ const FSkillRow* ATerminusPlayerState::GetCombatSkill(int32 SlotIndex) const
 	return Row.IsNone() ? nullptr : UTerminusDataSettings::FindSkillRow(Row);
 }
 
+int32 ATerminusPlayerState::GetEnhanceSlotCount() const
+{
+	// 런 스텟이 아직 없으면(던전 맵 바로 PIE) 기본 3칸
+	const int32 Slots = RunState.bStatsInitialized ? RunState.Stats.EnhanceSlots : NumEnhanceSkills;
+	return FMath::Clamp(Slots, 0, NumEnhanceSkills);
+}
+
+bool ATerminusPlayerState::EquipEnhanceSkill(FName SkillRow, int32 ReplaceIndex)
+{
+	if (!HasAuthority() || !UTerminusDataSettings::FindSkillRow(SkillRow)) return false;
+
+	if (RunState.EnhanceSkills.Num() < GetEnhanceSlotCount())
+	{
+		RunState.EnhanceSkills.Add(SkillRow);
+	}
+	else if (RunState.EnhanceSkills.IsValidIndex(ReplaceIndex))
+	{
+		UE_LOG(LogTemp, Log, TEXT("[Skill] %s: 강화 칸 %d %s -> %s"), *GetPlayerName(), ReplaceIndex,
+			*RunState.EnhanceSkills[ReplaceIndex].ToString(), *SkillRow.ToString());
+		RunState.EnhanceSkills[ReplaceIndex] = SkillRow;
+	}
+	else
+	{
+		return false;
+	}
+
+	OnRep_RunState();
+	return true;
+}
+
 FName ATerminusPlayerState::GetCombatSkillRow(int32 SlotIndex) const
 {
 	if (SlotIndex >= 0 && SlotIndex < NumBasicSkills)

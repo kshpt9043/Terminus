@@ -402,18 +402,76 @@ void UMapCanvasWidget::BuildMapUI(const TArray<FRoomNode>& MapData)
     // 경로 제한 + 선택 표시 + 연결선 상태 초기 적용
     RefreshRoomStates();
 
-    // 스크롤은 이 위젯이 처음 지도를 그릴 때만 맨 아래(시작 지점)로.
-    // 그 뒤로는 사용자가 보던 위치를 건드리지 않음. 레이아웃이 잡힌 다음 틱에
+    // 처음 그릴 때 고를 줄(시작이면 맨 아래 퀘스트방)이 가운데 오게.
+    // 그 뒤로는 방을 옮겼을 때만 다시 맞춤 (OnPlayerRunStateChanged / 지도 화면이 다시 보일 때)
     if (!bInitialScrollDone)
     {
         bInitialScrollDone = true;
-
-        // 약참조 람다. 다음 틱 전에 위젯이 사라지면 그냥 안 불림 ([this] 만 잡으면 댕글링)
-        GetWorld()->GetTimerManager().SetTimerForNextTick(FTimerDelegate::CreateWeakLambda(this, [this]()
-        {
-            if (ScrollBox) ScrollBox->ScrollToEnd();
-        }));
+        CenterOnSelectableRooms();
     }
+}
+
+void UMapCanvasWidget::CenterOnSelectableRooms()
+{
+    if (!GetWorld()) return;
+
+    // 약참조 람다. 다음 틱 전에 위젯이 사라지면 그냥 안 불림 ([this] 만 잡으면 댕글링)
+    GetWorld()->GetTimerManager().SetTimerForNextTick(FTimerDelegate::CreateWeakLambda(this, [this]()
+    {
+        ApplyCenterScroll(5);
+    }));
+}
+
+void UMapCanvasWidget::ApplyCenterScroll(int32 RetriesLeft)
+{
+    if (!ScrollBox || RoomPositions.Num() == 0) return;
+
+    // 스크롤 상자 크기를 아직 모르면 다음 틱에 다시
+    const float ViewHeight = ScrollBox->GetCachedGeometry().GetLocalSize().Y;
+    if (ViewHeight <= 0.f)
+    {
+        if (RetriesLeft > 0 && GetWorld())
+        {
+            GetWorld()->GetTimerManager().SetTimerForNextTick(FTimerDelegate::CreateWeakLambda(this, [this, RetriesLeft]()
+            {
+                ApplyCenterScroll(RetriesLeft - 1);
+            }));
+        }
+        return;
+    }
+
+    const ATerminusPlayerState* LocalPS = GetOwningPlayer() ? GetOwningPlayer()->GetPlayerState<ATerminusPlayerState>() : nullptr;
+
+    // 고를 수 있는 방들의 세로 평균 (같은 줄이라 흔들림 정도만 차이남)
+    float SumY = 0.f;
+    int32 Count = 0;
+    for (const FRoomNode& Node : CachedMapData)
+    {
+        const FVector2D* Position = RoomPositions.Find(Node.RoomId);
+        if (Position && IsRoomSelectable(Node, LocalPS))
+        {
+            SumY += Position->Y;
+            ++Count;
+        }
+    }
+
+    // 고를 방이 없으면(마지막 방 등) 지금 있는 방
+    if (Count == 0 && LocalPS)
+    {
+        if (const FVector2D* Position = RoomPositions.Find(LocalPS->GetCurrentRoomId()))
+        {
+            SumY = Position->Y;
+            Count = 1;
+        }
+    }
+    if (Count == 0) return;
+
+    LastCenteredRoomId = LocalPS ? LocalPS->GetCurrentRoomId() : INDEX_NONE;
+
+    // 방 좌표는 캔버스 기준 = 스크롤 내용 기준. 지도 끝을 넘지 않게
+    const float MaxOffset = FMath::Max(ScrollBox->GetScrollOffsetOfEnd(), MapContentSize.Y - ViewHeight);
+    const float Offset = FMath::Clamp(SumY / Count - ViewHeight * 0.5f, 0.f, FMath::Max(0.f, MaxOffset));
+    ScrollBox->SetScrollOffset(Offset);
 }
 
 void UMapCanvasWidget::RefreshAllRoomSelections()
@@ -468,4 +526,10 @@ void UMapCanvasWidget::OnPlayerRunStateChanged(const FRunState& NewRunState)
     // 현재 위치/선택이 바뀌어도 지도 모양은 그대로 -> 위젯 재생성 없이 상태만 갱신.
     // (예전엔 여기서 BuildMapUI 로 전부 다시 만들어서 스크롤이 맨 아래로 튀었음)
     RefreshRoomStates();
+
+    // 방을 옮겼으면 다음에 고를 줄을 가운데로
+    if (bInitialScrollDone && NewRunState.CurrentRoomId != LastCenteredRoomId)
+    {
+        CenterOnSelectableRooms();
+    }
 }

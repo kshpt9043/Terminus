@@ -18,6 +18,7 @@
 #include "Widgets/Common/ConfirmPopupWidget.h"
 #include "Widgets/Chat/ChatWidget.h"
 #include "Widgets/Relic/StartRelicPickWidget.h"
+#include "Widgets/Reward/MonsterRewardWidget.h"
 #include "Game/TerminusProfileSubsystem.h"
 #include "Data/TerminusDataSettings.h"
 #include "TimerManager.h"
@@ -318,6 +319,33 @@ void ATerminusPlayerController::Server_EndTurn_Implementation()
 	if (UDungeonCombatComponent* Combat = Area ? Area->GetCombat() : nullptr)
 	{
 		Combat->HandleEndTurn(PS);
+	}
+}
+
+void ATerminusPlayerController::Client_ShowMonsterReward_Implementation(int32 Currency, const TArray<FName>& SkillOffers)
+{
+	if (MonsterReward)
+	{
+		MonsterReward->RemoveFromParent();
+		MonsterReward = nullptr;
+	}
+
+	const TSubclassOf<UMonsterRewardWidget> Class = MonsterRewardClass ? MonsterRewardClass : TSubclassOf<UMonsterRewardWidget>(UMonsterRewardWidget::StaticClass());
+	MonsterReward = CreateWidget<UMonsterRewardWidget>(this, Class);
+	if (MonsterReward)
+	{
+		MonsterReward->Setup(Currency, SkillOffers);
+		MonsterReward->AddToViewport(22);   // 전투 HUD(10) / 스킬 고르기(20) 위, 채팅(25) 아래
+	}
+}
+
+void ATerminusPlayerController::Server_FinishMonsterReward_Implementation(FName ChosenSkill, int32 ReplaceSlot)
+{
+	ATerminusPlayerState* PS = GetPlayerState<ATerminusPlayerState>();
+	ADungeonArea* Area = PS ? PS->GetCurrentArea() : nullptr;
+	if (UDungeonCombatComponent* Combat = Area ? Area->GetCombat() : nullptr)
+	{
+		Combat->HandleRewardFinished(PS, ChosenSkill, ReplaceSlot);
 	}
 }
 

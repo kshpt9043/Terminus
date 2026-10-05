@@ -99,6 +99,10 @@ public:
 	// [테스트] 몬스터 전부 처치 -> 승리 (PC 의 DebugWinCombat)
 	void DebugKillAllMonsters();
 
+	// 몬스터방 보상을 마침 (플레이어가 '다음으로'). ChosenSkill = 고른 보상 스킬 (None = 안 고름), ReplaceSlot = 칸이 꽉 찼을 때 바꿀 칸
+	// 구역의 모든 플레이어가 마치면 구역 클리어 -> 지도
+	void HandleRewardFinished(ATerminusPlayerState* PS, FName ChosenSkill, int32 ReplaceSlot);
+
 	// -------------------------------------------------------------
 	// [조회] 클라 HUD 가 씀
 	// -------------------------------------------------------------
@@ -157,6 +161,32 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Combat|Timing")
 	float CombatEndDelay = 1.5f;
 
+	// ---- 몬스터방 보상 (기획: 던전 재화 + 랜덤 강화 스킬 2개 중 1개, 안 골라도 됨)
+
+	// 던전 재화 (최소, 최대). 기획에 수치가 없어 임시
+	UPROPERTY(EditAnywhere, Category = "Combat|Reward")
+	FIntPoint MonsterRewardCurrency = FIntPoint(15, 25);
+
+	// 보상 스킬 후보 수
+	UPROPERTY(EditAnywhere, Category = "Combat|Reward", meta = (ClampMin = "1"))
+	int32 RewardSkillChoices = 2;
+
+	// 이미 장착한 스킬도 후보에 넣을지 (넣으면 같은 스킬을 두 칸에 낄 수 있음)
+	UPROPERTY(EditAnywhere, Category = "Combat|Reward")
+	bool bRewardIncludeEquippedSkills = false;
+
+	// 지금 층보다 높은 티어 스킬은 뺄지 (표층 = 모든 층, 중층 = 3층~, 심층 = 5층~)
+	UPROPERTY(EditAnywhere, Category = "Combat|Reward")
+	bool bRewardExcludeHigherTier = true;
+
+	// 이벤트 스킬을 뺄지 (기획: 이벤트 스킬은 이벤트 방에서만)
+	UPROPERTY(EditAnywhere, Category = "Combat|Reward")
+	bool bRewardExcludeEventSkills = true;
+
+	// 승리 후 보상 화면을 띄우기까지 대기(초). 마지막 공격이 보이게
+	UPROPERTY(EditAnywhere, Category = "Combat|Reward")
+	float RewardDelay = 1.f;
+
 private:
 	// ---- 복제되는 진행 상태
 
@@ -212,6 +242,22 @@ private:
 
 	// 승패 판정. 끝났으면 true (다음 진행 멈춤)
 	bool CheckCombatEnd();
+
+	// ---- 몬스터방 보상 (서버만)
+	struct FPendingReward
+	{
+		TArray<FName> Offers;   // 보여 준 스킬 후보
+		bool bDone = false;
+	};
+	TMap<TWeakObjectPtr<ATerminusPlayerState>, FPendingReward> PendingRewards;
+
+	// 지금 방 번호 (로그용)
+	int32 CurrentRoomId = INDEX_NONE;
+
+	void StartMonsterRewards();
+	TArray<FName> PickRewardSkills(const ATerminusPlayerState* PS) const;
+	void FinishRewardsIfAllDone();
+	void ClearArea();
 
 	// -------------------------------------------------------------
 	// 유물 (서버만). 전투에 참가한 쪽(플레이어 / 몬스터)마다 보유 유물을 들고, 전투 사건이 오면 발동 시점이 맞는 것을 실행

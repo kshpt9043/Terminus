@@ -16,6 +16,7 @@ class UMapScreenWidget;
 class UConfirmPopupWidget;
 class UChatWidget;
 class UStartRelicPickWidget;
+class UMonsterRewardWidget;
 struct FRunState;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnViewAreaChanged, ADungeonArea*, NewArea);
@@ -128,6 +129,14 @@ public:
 	UFUNCTION(Server, Reliable)
 	void Server_EndTurn();
 
+	// 몬스터방 보상 화면 띄우기 (서버 -> 이 플레이어). Currency = 이미 받은 던전 재화, SkillOffers = 고를 수 있는 스킬
+	UFUNCTION(Client, Reliable)
+	void Client_ShowMonsterReward(int32 Currency, const TArray<FName>& SkillOffers);
+
+	// 보상 마침 ('다음으로'). ChosenSkill = None 이면 안 고름, ReplaceSlot = 칸이 꽉 찼을 때 바꿀 강화 칸
+	UFUNCTION(Server, Reliable)
+	void Server_FinishMonsterReward(FName ChosenSkill, int32 ReplaceSlot);
+
 	// [테스트] 콘솔에서 DebugWinCombat -> 내 구역 몬스터 전부 처치
 	UFUNCTION(Exec)
 	void DebugWinCombat();
@@ -225,6 +234,13 @@ protected:
 
 	UPROPERTY()
 	TObjectPtr<UChatWidget> ChatWidget;
+
+	// 몬스터방 보상 화면. 비워 두면 C++ 기본 모양(UMonsterRewardWidget)
+	UPROPERTY(EditDefaultsOnly, Category = "Terminus|UI")
+	TSubclassOf<UMonsterRewardWidget> MonsterRewardClass;
+
+	UPROPERTY()
+	TObjectPtr<UMonsterRewardWidget> MonsterReward;
 
 	// 범용 팝업 클래스. 비워 두면 C++ 기본 모양(UConfirmPopupWidget)
 	UPROPERTY(EditDefaultsOnly, Category = "Terminus|UI")

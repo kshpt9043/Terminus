@@ -60,5 +60,8 @@ void UMapScreenWidget::HandleViewAreaChanged(ADungeonArea* NewArea)
 	else
 	{
 		SetVisibility(VisibleState);
+
+		// 방을 끝내고 지도로 돌아오면 이제 고를 줄이 가운데 오게
+		if (MapCanvas) MapCanvas->CenterOnSelectableRooms();
 	}
 }

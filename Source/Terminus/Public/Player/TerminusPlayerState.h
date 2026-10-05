@@ -70,6 +70,12 @@ public:
 	// 그 칸의 스킬 행 이름 (DT_Skill). 유물 OnSkillUsed 판정용
 	FName GetCombatSkillRow(int32 SlotIndex) const;
 
+	// 강화 스킬 칸 수 (캐릭터 EnhanceSlots, 최대 NumEnhanceSkills)
+	int32 GetEnhanceSlotCount() const;
+
+	// 강화 스킬 장착 (서버만). 빈 칸이 있으면 거기에, 꽉 찼으면 ReplaceIndex 칸을 바꿈. 못 넣으면 false
+	bool EquipEnhanceSkill(FName SkillRow, int32 ReplaceIndex = INDEX_NONE);
+
 	// -------------------------------------------------------------
 	// [유물] 서버만 바꿈. 목록은 RunState.Relics (모두에게 복제)
 	// -------------------------------------------------------------

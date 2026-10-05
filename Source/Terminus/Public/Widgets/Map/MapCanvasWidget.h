@@ -97,6 +97,11 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Map")
 	void RefreshRoomStates();
 
+	// 지금 고를 수 있는 방들(다음에 갈 줄)이 화면 세로 가운데에 오게 스크롤. 지도 끝이면 끝까지만
+	// 고를 방이 없으면 지금 있는 방 기준. 레이아웃이 잡힌 다음 틱에 적용
+	UFUNCTION(BlueprintCallable, Category = "Map")
+	void CenterOnSelectableRooms();
+
 protected:
 	UFUNCTION()
 	void HandleRoomClicked(int32 ClickedRoomId);
@@ -149,6 +154,12 @@ private:
 
 	// 처음 그릴 때만 맨 아래(시작 지점)로 스크롤. 이후엔 사용자가 보던 위치 유지
 	bool bInitialScrollDone = false;
+
+	// 마지막으로 가운데 맞춘 현재 방. 방을 옮겼을 때만 다시 맞춤 (그 외엔 사용자가 보던 위치 유지)
+	int32 LastCenteredRoomId = INDEX_NONE - 1;
+
+	// 실제 스크롤. 스크롤 상자 크기를 아직 모르면(첫 표시 직후) 몇 틱 더 기다림
+	void ApplyCenterScroll(int32 RetriesLeft);
 
 	// 내 현재 위치 기준으로 이 방을 누를 수 있는가
 	bool IsRoomSelectable(const FRoomNode& Node, const ATerminusPlayerState* LocalPS) const;

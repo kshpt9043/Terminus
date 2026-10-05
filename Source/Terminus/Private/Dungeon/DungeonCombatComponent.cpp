@@ -13,6 +13,9 @@
 #include "Engine/World.h"
 #include "Net/UnrealNetwork.h"
 #include "Player/TerminusPlayerState.h"
+#include "Player/TerminusPlayerController.h"
+#include "Game/TerminusProfileSubsystem.h"
+#include "Kismet/GameplayStatics.h"
 #include "TimerManager.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogDungeonCombat, Log, All);
@@ -147,6 +150,8 @@ void UDungeonCombatComponent::StartCombat(const FRoomNode& Room, const TArray<AT
 	}
 
 	CurrentRoomType = Room.Type;
+	CurrentRoomId = Room.RoomId;
+	PendingRewards.Reset();
 	SpawnMonsters(Room, Theme);
 	BuildRelicHolders();
 
@@ -183,6 +188,7 @@ void UDungeonCombatComponent::EndCombat()
 	Monsters.Reset();
 	MonsterRows.Reset();
 	Intents.Reset();
+	PendingRewards.Reset();
 	EndedTurn.Reset();
 	Players.Reset();
 	Cycle = 0;
@@ -683,15 +689,124 @@ void UDungeonCombatComponent::FinishCombat(bool bVictory)
 		}
 	}
 
-	// 잠시 결과를 보여 준 뒤 구역 클리어 -> 모든 구역이 끝나면 지도로
-	TWeakObjectPtr<ADungeonArea> WeakArea = GetArea();
-	GetWorld()->GetTimerManager().SetTimer(StepTimer, FTimerDelegate::CreateWeakLambda(this, [WeakArea]()
+	// 몬스터방 승리: 잠시 뒤 각자 보상 화면 -> 전원 '다음으로' 를 누르면 구역 클리어
+	if (bVictory && CurrentRoomType == ERoomType::MONSTER && Players.Num() > 0)
 	{
-		if (ADungeonArea* Area = WeakArea.Get())
+		GetWorld()->GetTimerManager().SetTimer(StepTimer, this, &UDungeonCombatComponent::StartMonsterRewards, RewardDelay, false);
+		return;
+	}
+
+	// 그 외: 잠시 결과를 보여 준 뒤 구역 클리어 -> 모든 구역이 끝나면 지도로
+	GetWorld()->GetTimerManager().SetTimer(StepTimer, this, &UDungeonCombatComponent::ClearArea, CombatEndDelay, false);
+}
+
+void UDungeonCombatComponent::ClearArea()
+{
+	if (ADungeonArea* Area = GetArea())
+	{
+		Area->MarkCleared();
+	}
+}
+
+// =====================================================================
+// 몬스터방 보상
+// =====================================================================
+
+void UDungeonCombatComponent::StartMonsterRewards()
+{
+	PendingRewards.Reset();
+
+	for (const TWeakObjectPtr<ATerminusPlayerState>& Weak : Players)
+	{
+		ATerminusPlayerState* PS = Weak.Get();
+		ATerminusPlayerController* PC = PS ? Cast<ATerminusPlayerController>(PS->GetOwner()) : nullptr;
+		if (!PS || !PC) continue;
+
+		// 던전 재화는 바로 지급
+		const int32 Currency = FMath::RandRange(FMath::Min(MonsterRewardCurrency.X, MonsterRewardCurrency.Y), FMath::Max(MonsterRewardCurrency.X, MonsterRewardCurrency.Y));
+		PS->AddCurrency(Currency);
+
+		FPendingReward& Reward = PendingRewards.Add(PS);
+		Reward.Offers = PickRewardSkills(PS);
+
+		UE_LOG(LogDungeonCombat, Log, TEXT("[Reward] %d번 방 %s: 재화 %d, 스킬 후보 %d개"), CurrentRoomId, *PS->GetPlayerName(), Currency, Reward.Offers.Num());
+		PC->Client_ShowMonsterReward(Currency, Reward.Offers);
+	}
+
+	FinishRewardsIfAllDone();   // 받을 사람이 없으면 바로 끝
+}
+
+TArray<FName> UDungeonCombatComponent::PickRewardSkills(const ATerminusPlayerState* PS) const
+{
+	TArray<FName> Pool;
+	const UDataTable* Table = UTerminusDataSettings::Get()->SkillTable.LoadSynchronous();
+	if (!PS || !Table) return Pool;
+
+	// 지금 층의 티어 (테마 하나 = 2개 층: 1~2 표층, 3~4 중층, 5~6 심층)
+	const AMapManager* MapMgr = Cast<AMapManager>(UGameplayStatics::GetActorOfClass(this, AMapManager::StaticClass()));
+	const int32 Floor = MapMgr ? MapMgr->CurrentFloor : 1;
+	const ESkillTier MaxTier = Floor >= 5 ? ESkillTier::Deep : (Floor >= 3 ? ESkillTier::Mid : ESkillTier::Surface);
+
+	const TArray<FName>& Equipped = PS->GetRunState().EnhanceSkills;
+
+	for (const FName& Row : Table->GetRowNames())
+	{
+		const FSkillRow* Skill = UTerminusDataSettings::FindSkillRow(Row);
+		if (!Skill) continue;
+
+		// 기획: 공용 스킬 + 내 직업 전용 스킬 (기본 / 몬스터 스킬은 안 나옴)
+		if (!UTerminusProfileSubsystem::IsEquippableSkill(Row, PS->GetCharacterClass())) continue;
+		if (bRewardExcludeEventSkills && Skill->SkillCategory == ESkillCategory::Event) continue;
+		if (bRewardExcludeHigherTier && Skill->SkillTier > MaxTier) continue;
+		if (!bRewardIncludeEquippedSkills && Equipped.Contains(Row)) continue;
+
+		Pool.Add(Row);
+	}
+
+	// 섞어서 앞에서부터
+	for (int32 i = Pool.Num() - 1; i > 0; --i)
+	{
+		Pool.Swap(i, FMath::RandRange(0, i));
+	}
+	Pool.SetNum(FMath::Min(Pool.Num(), FMath::Max(1, RewardSkillChoices)));
+	return Pool;
+}
+
+void UDungeonCombatComponent::HandleRewardFinished(ATerminusPlayerState* PS, FName ChosenSkill, int32 ReplaceSlot)
+{
+	FPendingReward* Reward = PS ? PendingRewards.Find(PS) : nullptr;
+	if (!Reward || Reward->bDone) return;
+
+	// 보여 준 후보 중 하나만 인정
+	if (!ChosenSkill.IsNone())
+	{
+		if (Reward->Offers.Contains(ChosenSkill))
 		{
-			Area->MarkCleared();
+			if (!PS->EquipEnhanceSkill(ChosenSkill, ReplaceSlot))
+			{
+				UE_LOG(LogDungeonCombat, Warning, TEXT("[Reward] %s: 강화 칸이 꽉 찼는데 바꿀 칸이 없어 '%s' 를 못 넣음"), *PS->GetPlayerName(), *ChosenSkill.ToString());
+			}
 		}
-	}), CombatEndDelay, false);
+		else
+		{
+			UE_LOG(LogDungeonCombat, Warning, TEXT("[Reward] %s: 후보에 없던 스킬 '%s' 요청 무시"), *PS->GetPlayerName(), *ChosenSkill.ToString());
+		}
+	}
+
+	Reward->bDone = true;
+	FinishRewardsIfAllDone();
+}
+
+void UDungeonCombatComponent::FinishRewardsIfAllDone()
+{
+	for (const TPair<TWeakObjectPtr<ATerminusPlayerState>, FPendingReward>& Pair : PendingRewards)
+	{
+		// 나간 사람은 기다리지 않음
+		if (Pair.Key.IsValid() && !Pair.Value.bDone) return;
+	}
+
+	PendingRewards.Reset();
+	GetWorld()->GetTimerManager().SetTimer(StepTimer, this, &UDungeonCombatComponent::ClearArea, 0.3f, false);
 }
 
 // =====================================================================
