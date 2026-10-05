@@ -15,6 +15,7 @@
 #include "Game/TerminusSaveSubsystem.h"
 #include "Game/TerminusRunSubsystem.h"
 #include "Widgets/Common/TextInputPopupWidget.h"
+#include "Widgets/Base/BaseWidget.h"
 
 namespace
 {
@@ -37,12 +38,20 @@ void UMainMenuWidget::NativeOnInitialized()
 	if (Btn_Storage) { Btn_Storage->OnClicked.AddDynamic(this, &UMainMenuWidget::HandleStorageClicked); }
 	if (Btn_Continue) { Btn_Continue->OnClicked.AddDynamic(this, &UMainMenuWidget::HandleContinueClicked); }
 
-	// 아직 기능이 없는 건물은 자리만 두고 잠근다
-	for (UButton* Unready : { Btn_Tower.Get(), Btn_Training.Get() })
+	// 거점: Btn_Base, 없으면 예전 Btn_Tower 를 거점 버튼으로
+	if (UButton* BaseButton = Btn_Base ? Btn_Base.Get() : Btn_Tower.Get())
 	{
-		if (!Unready) { continue; }
-		Unready->SetIsEnabled(false);
-		SetButtonTextColor(Unready, TextDisabled);
+		BaseButton->OnClicked.AddDynamic(this, &UMainMenuWidget::HandleBaseClicked);
+	}
+	if (Btn_Base && Btn_Tower)
+	{
+		Btn_Tower->SetVisibility(ESlateVisibility::Collapsed);
+	}
+
+	// 훈련소는 거점 안으로 들어감 (시안: 메인 메뉴엔 거점 하나)
+	if (Btn_Training)
+	{
+		Btn_Training->SetVisibility(ESlateVisibility::Collapsed);
 	}
 }
 
@@ -257,6 +266,25 @@ void UMainMenuWidget::ClearPendingContinue()
 	if (UTerminusSaveSubsystem* Save = UTerminusSaveSubsystem::Get(this))
 	{
 		Save->ClearPendingLoad();
+	}
+}
+
+void UMainMenuWidget::HandleBaseClicked()
+{
+	// 창고와 같은 방식. WBP 안에 둔 창이 없으면 처음 열 때 만들어서 메뉴 위에 띄움
+	if (!BaseWindow)
+	{
+		const TSubclassOf<UBaseWidget> Class = BaseWidgetClass ? BaseWidgetClass : TSubclassOf<UBaseWidget>(UBaseWidget::StaticClass());
+		BaseWindow = CreateWidget<UBaseWidget>(GetOwningPlayer(), Class);
+		if (BaseWindow)
+		{
+			BaseWindow->AddToViewport(40);
+		}
+	}
+
+	if (BaseWindow)
+	{
+		BaseWindow->Open();
 	}
 }
 

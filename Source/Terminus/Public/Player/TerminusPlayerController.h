@@ -64,6 +64,10 @@ public:
 	// 하드 모드 켜기 / 끄기 (주점, 방장만 받아들임)
 	UFUNCTION(Server, Reliable)
 	void Server_SetHardMode(bool bInHardMode);
+
+	// 내 거점 강화(프로필, 이 컴퓨터에 저장)를 서버에 알림. 런 시작 때 서버가 런 스텟에 넣음
+	UFUNCTION(Server, Reliable)
+	void Server_ReportUpgrades(const TArray<FClassUpgrades>& Upgrades);
 	
 	// 지도 방 선택 요청. MapManager 는 서버 소유 액터라 클라가 거기에 Server RPC 를 쏘면
 	// "No owning connection" 으로 버려짐 -> 클라가 소유한 자기 PC 를 거쳐서 보냄

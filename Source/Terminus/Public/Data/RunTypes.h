@@ -65,6 +65,10 @@ struct FRunState
 	UPROPERTY(BlueprintReadOnly)
 	TArray<int32> VisitedRoomIds;
 
+	// 훈련소 기본 스킬 강화 단계 (0~2 칸). 런 시작 때 프로필에서 복사. 쓸 때 BaseValue(없으면 StatusValue)에 더함
+	UPROPERTY(BlueprintReadOnly)
+	TArray<int32> BasicSkillLevels;
+
 	// 세이브에서 이어할 때의 체력. 던전에서 배틀러가 처음 빙의될 때 적용하고 -1 로 비움 (-1 = 최대 체력으로 시작)
 	UPROPERTY(BlueprintReadOnly)
 	int32 SavedHealth = -1;

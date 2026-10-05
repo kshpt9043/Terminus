@@ -6,6 +6,7 @@
 #include "GameFramework/PlayerState.h"
 #include "Data/CharacterTypes.h"
 #include "Data/RunTypes.h"
+#include "Data/UpgradeTypes.h"
 #include "TerminusPlayerState.generated.h"
 
 class ADungeonArea;
@@ -76,7 +77,7 @@ public:
 
 	// 전투에서 쓰는 스킬 칸: 0~2 = 기본 스킬(공격 방어 특수), 3~5 = 장착한 강화 스킬
 	static constexpr int32 NumBasicSkills = 3;
-	static constexpr int32 NumEnhanceSkills = 3;
+	static constexpr int32 NumEnhanceSkills = 5;   // 기본 3 + 연무장 '픽업 스킬 칸' 강화 2
 
 	// 그 칸의 스킬. 비어 있으면 nullptr
 	const FSkillRow* GetCombatSkill(int32 SlotIndex) const;
@@ -86,6 +87,13 @@ public:
 
 	// 강화 스킬 칸 수 (캐릭터 EnhanceSlots, 최대 NumEnhanceSkills)
 	int32 GetEnhanceSlotCount() const;
+
+	// 거점 강화 (서버만 들고 있음). 손님은 자기 PC 의 Server_ReportUpgrades 로 알려 줌
+	// BeginRun 때 고른 직업의 강화를 런 스텟 / 기본 스킬 단계에 넣음
+	void SetReportedUpgrades(const TArray<FClassUpgrades>& InUpgrades) { ReportedUpgrades = InUpgrades; }
+
+	// 기본 스킬(0~2 칸)에 훈련소 강화를 더함. BaseValue 가 있으면 BaseValue, 없으면 StatusValue
+	void ApplyBasicSkillUpgrade(int32 SlotIndex, FSkillRow& InOutSkill) const;
 
 	// 강화 스킬 장착 (서버만). 빈 칸이 있으면 거기에, 꽉 찼으면 ReplaceIndex 칸을 바꿈. 못 넣으면 false
 	bool EquipEnhanceSkill(FName SkillRow, int32 ReplaceIndex = INDEX_NONE);
@@ -155,6 +163,9 @@ public:
 	ADungeonArea* GetCurrentArea() const { return CurrentArea; }
 
 protected:
+	// 거점 강화 (모든 직업). 서버만, 복제 안 함
+	TArray<FClassUpgrades> ReportedUpgrades;
+
 	// 준비 완료 여부. 서버만 바꾸고 클라는 복제로 받기만 함
 	// 준비는 처음에 들어갈 때만 중요한 요소이므로 RunState에는 안들어감
 	UPROPERTY(Replicated)

@@ -95,6 +95,18 @@ void ATerminusPlayerState::BeginRun()
 		RunState.Stats = Row->BaseStats;
 		RunState.bStatsInitialized = true;
 	}
+
+	// 거점 강화 (이 직업 것): 연무장 -> 런 스텟, 훈련소 -> 기본 스킬 단계
+	RunState.BasicSkillLevels.Reset();
+	const ECharacterClass MyClass = RunState.CharacterClass;
+	if (const FClassUpgrades* Upgrades = ReportedUpgrades.FindByPredicate([MyClass](const FClassUpgrades& U) { return U.Class == MyClass; }))
+	{
+		if (RunState.bStatsInitialized)
+		{
+			UTerminusUpgradeSettings::Get()->ApplyToStats(*Upgrades, RunState.Stats);
+		}
+		RunState.BasicSkillLevels = Upgrades->SkillLevels;
+	}
 	else
 	{
 		UE_LOG(LogTemp, Warning, TEXT("PS: %s 행이 없어 런 스텟을 못 채움"),
@@ -207,6 +219,23 @@ const FSkillRow* ATerminusPlayerState::GetCombatSkill(int32 SlotIndex) const
 {
 	const FName Row = GetCombatSkillRow(SlotIndex);
 	return Row.IsNone() ? nullptr : UTerminusDataSettings::FindSkillRow(Row);
+}
+
+void ATerminusPlayerState::ApplyBasicSkillUpgrade(int32 SlotIndex, FSkillRow& InOutSkill) const
+{
+	if (SlotIndex < 0 || SlotIndex >= NumBasicSkills) return;
+
+	const int32 Level = RunState.BasicSkillLevels.IsValidIndex(SlotIndex) ? RunState.BasicSkillLevels[SlotIndex] : 0;
+	if (Level <= 0) return;
+
+	if (InOutSkill.BaseValue != 0)
+	{
+		InOutSkill.BaseValue += Level;
+	}
+	else
+	{
+		InOutSkill.StatusValue += Level;
+	}
 }
 
 int32 ATerminusPlayerState::GetEnhanceSlotCount() const

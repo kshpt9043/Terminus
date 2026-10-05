@@ -5,6 +5,8 @@
 #include "Components/Button.h"
 #include "Components/HorizontalBox.h"
 #include "Components/HorizontalBoxSlot.h"
+#include "Components/Overlay.h"
+#include "Components/OverlaySlot.h"
 #include "Components/ScrollBox.h"
 #include "Components/SizeBox.h"
 #include "Components/TextBlock.h"
@@ -38,10 +40,37 @@ namespace
 		UTextBlock* Text = Tree->ConstructWidget<UTextBlock>();
 		Text->SetText(FText::FromString(Label));
 		FSlateFontInfo Font = Text->GetFont();
-		Font.Size = 15;
+		Font.Size = 16;
 		Text->SetFont(Font);
-		Text->SetColorAndOpacity(FSlateColor(FLinearColor::Black));
+		Text->SetColorAndOpacity(FSlateColor(FLinearColor::White));
+		Text->SetJustification(ETextJustify::Center);
 		Button->SetContent(Text);
+		Button->SetBackgroundColor(FLinearColor(0.18f, 0.18f, 0.18f));
+		return Button;
+	}
+
+	// 큰 카드 버튼 (시안의 회색 상자, 아래쪽에 이름)
+	UButton* MakeStorageCard(UWidgetTree* Tree, const FName& Name, const FString& Label)
+	{
+		UButton* Button = Tree->ConstructWidget<UButton>(UButton::StaticClass(), Name);
+		Button->SetBackgroundColor(FLinearColor(0.35f, 0.35f, 0.35f));
+
+		USizeBox* Size = Tree->ConstructWidget<USizeBox>();
+		Size->SetWidthOverride(220.f);
+		Size->SetHeightOverride(320.f);
+		Button->SetContent(Size);
+
+		UOverlay* Inner = Tree->ConstructWidget<UOverlay>();
+		Size->SetContent(Inner);
+
+		UTextBlock* Text = MakeStorageText(Tree, NAME_None, Label, 24, FLinearColor::White);
+		Text->SetJustification(ETextJustify::Center);
+		if (UOverlaySlot* S = Inner->AddChildToOverlay(Text))
+		{
+			S->SetHorizontalAlignment(HAlign_Center);
+			S->SetVerticalAlignment(VAlign_Bottom);
+			S->SetPadding(FMargin(0.f, 0.f, 0.f, 20.f));
+		}
 		return Button;
 	}
 
@@ -96,10 +125,13 @@ void UStorageWidget::NativeOnInitialized()
 	if (RelicTabButton) RelicTabButton->OnClicked.AddDynamic(this, &UStorageWidget::HandleRelicTab);
 	if (SkillTabButton) SkillTabButton->OnClicked.AddDynamic(this, &UStorageWidget::HandleSkillTab);
 	if (CloseButton)    CloseButton->OnClicked.AddDynamic(this, &UStorageWidget::HandleClose);
+	if (BackButton)     BackButton->OnClicked.AddDynamic(this, &UStorageWidget::HandleBack);
+	if (MainMenuButton) MainMenuButton->OnClicked.AddDynamic(this, &UStorageWidget::HandleClose);
 
 	if (UTerminusProfileSubsystem* Profile = GetGameInstance() ? GetGameInstance()->GetSubsystem<UTerminusProfileSubsystem>() : nullptr)
 	{
 		StorageChangedHandle = Profile->OnStorageChanged.AddUObject(this, &UStorageWidget::Refresh);
+		Profile->OnGoldChanged.AddUniqueDynamic(this, &UStorageWidget::HandleGoldChanged);
 	}
 
 	SetVisibility(ESlateVisibility::Collapsed);
@@ -110,6 +142,7 @@ void UStorageWidget::NativeDestruct()
 	if (UTerminusProfileSubsystem* Profile = GetGameInstance() ? GetGameInstance()->GetSubsystem<UTerminusProfileSubsystem>() : nullptr)
 	{
 		Profile->OnStorageChanged.Remove(StorageChangedHandle);
+		Profile->OnGoldChanged.RemoveDynamic(this, &UStorageWidget::HandleGoldChanged);
 	}
 	if (UEscapeStackSubsystem* Escape = UEscapeStackSubsystem::Get(this))
 	{
@@ -121,72 +154,105 @@ void UStorageWidget::NativeDestruct()
 
 void UStorageWidget::BuildDefaultLayout()
 {
-	// 화면 전체 어둡게 + 가운데 창
-	UBorder* Dim = WidgetTree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("StorageDim"));
-	Dim->SetBrushColor(FLinearColor(0.f, 0.f, 0.f, 0.7f));
-	Dim->SetHorizontalAlignment(HAlign_Center);
-	Dim->SetVerticalAlignment(VAlign_Center);
-	WidgetTree->RootWidget = Dim;
+	// 화면 전체 (시안: 회색 바탕, 가운데 제목, 우상단 골드 / 버튼)
+	UBorder* Background = WidgetTree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("StorageBackground"));
+	Background->SetBrushColor(FLinearColor(0.07f, 0.065f, 0.06f, 0.97f));
+	Background->SetPadding(FMargin(48.f, 32.f));
+	WidgetTree->RootWidget = Background;
 
-	USizeBox* WindowSize = WidgetTree->ConstructWidget<USizeBox>();
-	WindowSize->SetWidthOverride(980.f);
-	WindowSize->SetHeightOverride(640.f);
-	Dim->SetContent(WindowSize);
+	UOverlay* Stage = WidgetTree->ConstructWidget<UOverlay>();
+	Background->SetContent(Stage);
 
-	UBorder* Window = WidgetTree->ConstructWidget<UBorder>();
-	Window->SetBrushColor(FLinearColor(0.11f, 0.1f, 0.09f, 1.f));
-	Window->SetPadding(FMargin(20.f));
-	WindowSize->SetContent(Window);
-
-	UVerticalBox* Column = WidgetTree->ConstructWidget<UVerticalBox>();
-	Window->SetContent(Column);
-
-	// ---- 위: 제목 / 탭 / 개수 / 닫기
-	UHorizontalBox* Top = WidgetTree->ConstructWidget<UHorizontalBox>();
-	if (UVerticalBoxSlot* S = Column->AddChildToVerticalBox(Top))
+	// ---- 우상단: 보유 골드 + 버튼
+	UVerticalBox* Corner = WidgetTree->ConstructWidget<UVerticalBox>();
+	if (UOverlaySlot* S = Stage->AddChildToOverlay(Corner))
 	{
-		S->SetPadding(FMargin(0.f, 0.f, 0.f, 14.f));
+		S->SetHorizontalAlignment(HAlign_Right);
+		S->SetVerticalAlignment(VAlign_Top);
 	}
 
-	UTextBlock* Title = MakeStorageText(WidgetTree, TEXT("TitleText"), TEXT("창고"), 22, FLinearColor::White);
-	Title->SetAutoWrapText(false);
-	if (UHorizontalBoxSlot* S = Top->AddChildToHorizontalBox(Title))
+	GoldText = MakeStorageText(WidgetTree, TEXT("GoldText"), TEXT(""), 14, FLinearColor(1.f, 0.85f, 0.35f));
+	GoldText->SetAutoWrapText(false);
+	if (UVerticalBoxSlot* S = Corner->AddChildToVerticalBox(GoldText)) S->SetHorizontalAlignment(HAlign_Left);
+
+	auto AddCornerButton = [&](const FName& Name, const FString& Label) -> UButton*
 	{
+		UButton* Button = MakeStorageButton(WidgetTree, Name, Label);
+		USizeBox* Size = WidgetTree->ConstructWidget<USizeBox>();
+		Size->SetWidthOverride(170.f);
+		Size->SetHeightOverride(46.f);
+		Size->SetContent(Button);
+		if (UVerticalBoxSlot* S = Corner->AddChildToVerticalBox(Size)) S->SetPadding(FMargin(0.f, 10.f, 0.f, 0.f));
+		return Button;
+	};
+	CloseButton    = AddCornerButton(TEXT("CloseButton"), TEXT("돌아가기"));
+	BackButton     = AddCornerButton(TEXT("BackButton"), TEXT("돌아가기"));
+	MainMenuButton = AddCornerButton(TEXT("MainMenuButton"), TEXT("메인화면"));
+
+	// ---- 첫 화면: 제목 + 카드 두 장
+	UVerticalBox* Hub = WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), TEXT("HubPanel"));
+	HubPanel = Hub;
+	if (UOverlaySlot* S = Stage->AddChildToOverlay(Hub))
+	{
+		S->SetHorizontalAlignment(HAlign_Center);
+		S->SetVerticalAlignment(VAlign_Fill);
+	}
+
+	UTextBlock* HubTitle = MakeStorageText(WidgetTree, NAME_None, TEXT("창고"), 30, FLinearColor::White);
+	HubTitle->SetAutoWrapText(false);
+	if (UVerticalBoxSlot* S = Hub->AddChildToVerticalBox(HubTitle)) S->SetHorizontalAlignment(HAlign_Center);
+
+	UHorizontalBox* Cards = WidgetTree->ConstructWidget<UHorizontalBox>();
+	if (UVerticalBoxSlot* S = Hub->AddChildToVerticalBox(Cards))
+	{
+		S->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+		S->SetHorizontalAlignment(HAlign_Center);
 		S->SetVerticalAlignment(VAlign_Center);
-		S->SetPadding(FMargin(0.f, 0.f, 24.f, 0.f));
+	}
+	RelicTabButton = MakeStorageCard(WidgetTree, TEXT("RelicTabButton"), TEXT("유물 창고"));
+	SkillTabButton = MakeStorageCard(WidgetTree, TEXT("SkillTabButton"), TEXT("스킬 창고"));
+	if (UHorizontalBoxSlot* S = Cards->AddChildToHorizontalBox(RelicTabButton)) S->SetPadding(FMargin(0.f, 0.f, 40.f, 0.f));
+	Cards->AddChildToHorizontalBox(SkillTabButton);
+
+	// ---- 목록 화면: 제목 / 개수 + 격자 | 상세
+	UVerticalBox* List = WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), TEXT("ListPanel"));
+	ListPanel = List;
+	if (UOverlaySlot* S = Stage->AddChildToOverlay(List))
+	{
+		S->SetHorizontalAlignment(HAlign_Center);
+		S->SetVerticalAlignment(VAlign_Fill);
 	}
 
-	RelicTabButton = MakeStorageButton(WidgetTree, TEXT("RelicTabButton"), TEXT("  유물  "));
-	SkillTabButton = MakeStorageButton(WidgetTree, TEXT("SkillTabButton"), TEXT("  스킬  "));
-	if (UHorizontalBoxSlot* S = Top->AddChildToHorizontalBox(RelicTabButton)) S->SetPadding(FMargin(0.f, 0.f, 6.f, 0.f));
-	Top->AddChildToHorizontalBox(SkillTabButton);
+	ListTitleText = MakeStorageText(WidgetTree, TEXT("ListTitleText"), TEXT(""), 30, FLinearColor::White);
+	ListTitleText->SetAutoWrapText(false);
+	if (UVerticalBoxSlot* S = List->AddChildToVerticalBox(ListTitleText)) S->SetHorizontalAlignment(HAlign_Center);
 
 	CountText = MakeStorageText(WidgetTree, TEXT("CountText"), TEXT(""), 14, FLinearColor(0.75f, 0.75f, 0.75f));
 	CountText->SetAutoWrapText(false);
-	if (UHorizontalBoxSlot* S = Top->AddChildToHorizontalBox(CountText))
+	if (UVerticalBoxSlot* S = List->AddChildToVerticalBox(CountText))
 	{
-		S->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
-		S->SetVerticalAlignment(VAlign_Center);
-		S->SetPadding(FMargin(16.f, 0.f));
+		S->SetHorizontalAlignment(HAlign_Center);
+		S->SetPadding(FMargin(0.f, 6.f, 0.f, 18.f));
 	}
 
-	CloseButton = MakeStorageButton(WidgetTree, TEXT("CloseButton"), TEXT("닫기"));
-	Top->AddChildToHorizontalBox(CloseButton);
-
-	// ---- 아래: 격자 (스크롤) | 상세
 	UHorizontalBox* Body = WidgetTree->ConstructWidget<UHorizontalBox>();
-	if (UVerticalBoxSlot* S = Column->AddChildToVerticalBox(Body))
+	if (UVerticalBoxSlot* S = List->AddChildToVerticalBox(Body))
 	{
 		S->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+		S->SetHorizontalAlignment(HAlign_Center);
+		S->SetPadding(FMargin(0.f, 0.f, 0.f, 24.f));
 	}
+
+	UBorder* GridBox = WidgetTree->ConstructWidget<UBorder>();
+	GridBox->SetBrushColor(FLinearColor(0.3f, 0.3f, 0.3f, 1.f));
+	GridBox->SetPadding(FMargin(16.f));
+	Body->AddChildToHorizontalBox(GridBox);
 
 	UScrollBox* Scroll = WidgetTree->ConstructWidget<UScrollBox>();
-	if (UHorizontalBoxSlot* S = Body->AddChildToHorizontalBox(Scroll))
-	{
-		S->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
-	}
+	Scroll->SetAlwaysShowScrollbar(true);
+	GridBox->SetContent(Scroll);
 	ItemGrid = WidgetTree->ConstructWidget<UUniformGridPanel>(UUniformGridPanel::StaticClass(), TEXT("ItemGrid"));
-	ItemGrid->SetSlotPadding(FMargin(4.f));
+	ItemGrid->SetSlotPadding(FMargin(6.f));
 	Scroll->AddChild(ItemGrid);
 
 	USizeBox* DetailSize = WidgetTree->ConstructWidget<USizeBox>();
@@ -211,17 +277,20 @@ void UStorageWidget::BuildDefaultLayout()
 }
 
 // =====================================================================
-// 열기 / 탭 / 갱신
+// 열기 / 화면 전환
 // =====================================================================
 
 void UStorageWidget::Open(EStorageTab Tab)
 {
 	SetVisibility(ESlateVisibility::Visible);
-	SetTab(Tab);
+	RefreshGold();
+
+	if (UsesHub()) ShowHub();
+	else           ShowList(Tab);
 
 	if (UEscapeStackSubsystem* Escape = UEscapeStackSubsystem::Get(this))
 	{
-		Escape->Push(this, FSimpleDelegate::CreateUObject(this, &UStorageWidget::Close));
+		Escape->Push(this, FSimpleDelegate::CreateUObject(this, &UStorageWidget::HandleEscape));
 	}
 }
 
@@ -235,15 +304,74 @@ void UStorageWidget::Close()
 	}
 }
 
-void UStorageWidget::SetTab(EStorageTab Tab)
+void UStorageWidget::HandleEscape()
 {
+	// 목록이면 첫 화면으로, 첫 화면이면 닫기 (스택 항목은 Close 에서 빠짐)
+	if (bInList && UsesHub())
+	{
+		ShowHub();
+		return;
+	}
+	Close();
+}
+
+void UStorageWidget::ShowHub()
+{
+	bInList = false;
+
+	if (HubPanel)       HubPanel->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
+	if (ListPanel)      ListPanel->SetVisibility(ESlateVisibility::Collapsed);
+	if (CloseButton)    CloseButton->SetVisibility(ESlateVisibility::Visible);
+	if (BackButton)     BackButton->SetVisibility(ESlateVisibility::Collapsed);
+	if (MainMenuButton) MainMenuButton->SetVisibility(ESlateVisibility::Collapsed);
+}
+
+void UStorageWidget::ShowList(EStorageTab Tab)
+{
+	bInList = true;
 	CurrentTab = Tab;
 
-	if (RelicTabButton) RelicTabButton->SetBackgroundColor(Tab == EStorageTab::Relic ? ActiveTabColor : InactiveTabColor);
-	if (SkillTabButton) SkillTabButton->SetBackgroundColor(Tab == EStorageTab::Skill ? ActiveTabColor : InactiveTabColor);
+	if (UsesHub())
+	{
+		HubPanel->SetVisibility(ESlateVisibility::Collapsed);
+		if (CloseButton)    CloseButton->SetVisibility(ESlateVisibility::Collapsed);
+		if (BackButton)     BackButton->SetVisibility(ESlateVisibility::Visible);
+		if (MainMenuButton) MainMenuButton->SetVisibility(ESlateVisibility::Visible);
+	}
+	else
+	{
+		// 예전 탭 방식: 고른 탭에 색
+		if (RelicTabButton) RelicTabButton->SetBackgroundColor(Tab == EStorageTab::Relic ? ActiveTabColor : InactiveTabColor);
+		if (SkillTabButton) SkillTabButton->SetBackgroundColor(Tab == EStorageTab::Skill ? ActiveTabColor : InactiveTabColor);
+	}
+
+	if (ListPanel)     ListPanel->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
+	if (ListTitleText) ListTitleText->SetText(FText::FromString(Tab == EStorageTab::Relic ? TEXT("유물 창고") : TEXT("스킬 창고")));
 
 	Refresh();
 }
+
+void UStorageWidget::HandleRelicTab() { ShowList(EStorageTab::Relic); }
+void UStorageWidget::HandleSkillTab() { ShowList(EStorageTab::Skill); }
+void UStorageWidget::HandleClose()    { Close(); }
+void UStorageWidget::HandleBack()     { if (UsesHub()) ShowHub(); else Close(); }
+
+void UStorageWidget::HandleGoldChanged(int32 NewGold, int32 Delta)
+{
+	RefreshGold();
+}
+
+void UStorageWidget::RefreshGold()
+{
+	if (!GoldText) return;
+
+	const UTerminusProfileSubsystem* Profile = GetGameInstance() ? GetGameInstance()->GetSubsystem<UTerminusProfileSubsystem>() : nullptr;
+	GoldText->SetText(FText::Format(FText::FromString(TEXT("보유 골드: {0}")), FText::AsNumber(Profile ? Profile->GetGold() : 0)));
+}
+
+// =====================================================================
+// 목록 갱신 / 상세
+// =====================================================================
 
 void UStorageWidget::Refresh()
 {
@@ -346,7 +474,3 @@ void UStorageWidget::ShowDetail(const UItemSlotWidget* InSlot)
 	if (DetailInfo) DetailInfo->SetText(FText::FromString(Info));
 	if (DetailDesc) DetailDesc->SetText(FText::FromString(Desc));
 }
-
-void UStorageWidget::HandleRelicTab() { SetTab(EStorageTab::Relic); }
-void UStorageWidget::HandleSkillTab() { SetTab(EStorageTab::Skill); }
-void UStorageWidget::HandleClose()    { Close(); }

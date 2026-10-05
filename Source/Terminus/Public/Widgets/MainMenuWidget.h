@@ -11,6 +11,7 @@ class URoomListWidget;
 class UStorageWidget;
 class URunSaveListWidget;
 class UTextInputPopupWidget;
+class UBaseWidget;
 
 /**
  * 첫 화면. 버튼 다섯 개와 안내 팝업.
@@ -31,9 +32,19 @@ protected:
 	UPROPERTY(meta = (BindWidget)) TObjectPtr<UButton> Btn_Tavern;
 	UPROPERTY(meta = (BindWidget)) TObjectPtr<UButton> Btn_Quit;
 
-	// 기능이 아직 없는 건물. 없어도 되게 Optional
+	// 거점 (직업의 탑: 세력 -> 직업 -> 연무장 / 훈련소). 기획 UI 레퍼런스 > 메인 화면
+	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UButton> Btn_Base;
+
+	// 예전 이름. Btn_Base 가 없으면 Btn_Tower 가 거점 버튼. Btn_Training 은 거점 안으로 들어가서 숨김
 	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UButton> Btn_Tower;
 	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UButton> Btn_Training;
+
+	// 거점 창. WBP 안에 같은 이름으로 넣어 두면 그걸 쓰고, 없으면 BaseWidgetClass 로 만들어 화면에 띄움
+	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UBaseWidget> BaseWindow;
+
+	// 거점 창 클래스 (WBP_Base). 비워 두면 C++ 기본 모양
+	UPROPERTY(EditDefaultsOnly, Category = "Terminus|UI")
+	TSubclassOf<UBaseWidget> BaseWidgetClass;
 
 	// 창고 (보관 유물 / 보유 스킬). 기획 UI 레퍼런스 > 건물 > 창고
 	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UButton> Btn_Storage;
@@ -95,6 +106,7 @@ private:
 	UFUNCTION() void HandleGoldChanged(int32 NewGold, int32 Delta);
 	UFUNCTION() void HandleStorageClicked();
 	UFUNCTION() void HandleContinueClicked();
+	UFUNCTION() void HandleBaseClicked();
 
 	// 싱글: 이름을 정하면 주점(캐릭터 선택)으로
 	void StartSoloWithName(const FString& RoomName);

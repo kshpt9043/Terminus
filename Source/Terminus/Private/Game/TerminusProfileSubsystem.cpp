@@ -78,6 +78,13 @@ static FAutoConsoleCommandWithWorld GClearStorageCommand(
 		if (UTerminusProfileSubsystem* Profile = GetProfileFromWorld(World)) Profile->ClearStoredRelics();
 	}));
 
+static FAutoConsoleCommandWithWorld GResetUpgradesCommand(
+	TEXT("Terminus.ResetUpgrades"), TEXT("거점 강화(연무장 / 훈련소) 전부 0 으로"),
+	FConsoleCommandWithWorldDelegate::CreateLambda([](UWorld* World)
+	{
+		if (UTerminusProfileSubsystem* Profile = GetProfileFromWorld(World)) Profile->ResetUpgrades();
+	}));
+
 static FAutoConsoleCommandWithWorldAndArgs GOwnSkillCommand(
 	TEXT("Terminus.OwnSkill"), TEXT("보유 스킬 추가. 예: Terminus.OwnSkill holy_charge"),
 	FConsoleCommandWithWorldAndArgsDelegate::CreateLambda([](const TArray<FString>& Args, UWorld* World)
@@ -224,6 +231,93 @@ void UTerminusProfileSubsystem::AddGold(int32 Amount)
 	Profile->Gold = static_cast<int32>(FMath::Min<int64>(Sum, MAX_int32));
 	Save();
 	OnGoldChanged.Broadcast(Profile->Gold, Amount);
+}
+
+// =====================================================================
+// 거점 강화
+// =====================================================================
+
+FClassUpgrades UTerminusProfileSubsystem::GetClassUpgrades(ECharacterClass InClass) const
+{
+	if (Profile)
+	{
+		if (const FClassUpgrades* Found = Profile->Upgrades.FindByPredicate([InClass](const FClassUpgrades& U) { return U.Class == InClass; }))
+		{
+			return *Found;
+		}
+	}
+
+	FClassUpgrades Empty;
+	Empty.Class = InClass;
+	return Empty;
+}
+
+const TArray<FClassUpgrades>& UTerminusProfileSubsystem::GetAllUpgrades() const
+{
+	static const TArray<FClassUpgrades> Empty;
+	return Profile ? Profile->Upgrades : Empty;
+}
+
+FClassUpgrades& UTerminusProfileSubsystem::FindOrAddUpgrades(ECharacterClass InClass)
+{
+	if (FClassUpgrades* Found = Profile->Upgrades.FindByPredicate([InClass](const FClassUpgrades& U) { return U.Class == InClass; }))
+	{
+		return *Found;
+	}
+
+	FClassUpgrades& Added = Profile->Upgrades.AddDefaulted_GetRef();
+	Added.Class = InClass;
+	return Added;
+}
+
+bool UTerminusProfileSubsystem::TryUpgradeStat(ECharacterClass InClass, EStatUpgrade Stat)
+{
+	if (!Profile || Stat >= EStatUpgrade::MAX) return false;
+
+	const FClassUpgrades Current = GetClassUpgrades(InClass);
+	const int32 Cost = UTerminusUpgradeSettings::Get()->GetStatCost(Stat, Current.GetStatLevel(Stat));
+	if (Cost < 0 || !TrySpendGold(Cost)) return false;
+
+	FClassUpgrades& Upgrades = FindOrAddUpgrades(InClass);
+	const int32 Index = static_cast<int32>(Stat);
+	if (Upgrades.StatLevels.Num() <= Index)
+	{
+		Upgrades.StatLevels.SetNumZeroed(static_cast<int32>(EStatUpgrade::MAX));
+	}
+	++Upgrades.StatLevels[Index];
+
+	Save();
+	OnUpgradesChanged.Broadcast();
+	return true;
+}
+
+bool UTerminusProfileSubsystem::TryUpgradeSkill(ECharacterClass InClass, int32 SkillIndex)
+{
+	if (!Profile || SkillIndex < 0 || SkillIndex >= 3) return false;
+
+	const FClassUpgrades Current = GetClassUpgrades(InClass);
+	const int32 Cost = UTerminusUpgradeSettings::Get()->GetSkillCost(Current.GetSkillLevel(SkillIndex));
+	if (Cost < 0 || !TrySpendGold(Cost)) return false;
+
+	FClassUpgrades& Upgrades = FindOrAddUpgrades(InClass);
+	if (Upgrades.SkillLevels.Num() <= SkillIndex)
+	{
+		Upgrades.SkillLevels.SetNumZeroed(3);
+	}
+	++Upgrades.SkillLevels[SkillIndex];
+
+	Save();
+	OnUpgradesChanged.Broadcast();
+	return true;
+}
+
+void UTerminusProfileSubsystem::ResetUpgrades()
+{
+	if (!Profile) return;
+
+	Profile->Upgrades.Reset();
+	Save();
+	OnUpgradesChanged.Broadcast();
 }
 
 bool UTerminusProfileSubsystem::TrySpendGold(int32 Cost)

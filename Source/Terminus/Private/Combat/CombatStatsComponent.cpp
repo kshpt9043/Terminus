@@ -27,8 +27,9 @@ void UCombatStatsComponent::InitFrom(const FCharacterStats& InStats)
 	State.Health = Stats.MaxHealth;
 	State.Energy = Stats.MaxEnergy;
 	
-	State.SkillEnergy = 0;
-	
+	// 연무장 '스킬에너지' 강화만큼 갖고 시작
+	State.SkillEnergy = FMath::Clamp(Stats.StartSkillEnergy, 0, FMath::Max(0, Stats.MaxSkillEnergy));
+
 	NotifyStateChanged();
 }
 

@@ -43,9 +43,13 @@ struct FCharacterStats
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	int32 MaxEnergy = 3;
 
-	// 획득 스킬용 자원의 상한. 시작 보유량은 0이라 여기 최대치만 들어감
+	// 획득 스킬용 자원의 상한
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	int32 MaxSkillEnergy = 2;
+
+	// 전투 시작 때 갖고 시작하는 스킬 에너지 (기본 0, 연무장 '스킬에너지' 강화로 늘어남)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	int32 StartSkillEnergy = 0;
 
 	// 강화 스킬을 낄 수 있는 칸 수
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)

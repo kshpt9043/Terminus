@@ -39,6 +39,12 @@ void ATerminusPlayerController::BeginPlay()
 	// 커서: 화면 빈 곳을 눌러도 사라지지 않게 (레벨 BP 가 입력 모드를 안 정해 줘도)
 	ApplyUIInputMode();
 
+	// 거점 강화는 각자 컴퓨터의 프로필에 있음 -> 서버(방장)에 알려야 런 스텟에 들어감
+	if (const UTerminusProfileSubsystem* Profile = GetGameInstance() ? GetGameInstance()->GetSubsystem<UTerminusProfileSubsystem>() : nullptr)
+	{
+		Server_ReportUpgrades(Profile->GetAllUpgrades());
+	}
+
 	// 던전이면 지도 보기 전에 강화 스킬 고르기. 주점에선 MapManager 가 없어 몇 초 확인하다 그만둠
 	GetWorldTimerManager().SetTimer(StartSkillCheckTimer, this, &ATerminusPlayerController::CheckStartSkillPick, 0.25f, true, 0.f);
 
@@ -177,6 +183,20 @@ void ATerminusPlayerController::Server_StartGame_Implementation()
 	{
 		GM->TryStartGame();
 	}
+}
+
+void ATerminusPlayerController::Server_ReportUpgrades_Implementation(const TArray<FClassUpgrades>& Upgrades)
+{
+	ATerminusPlayerState* PS = GetPlayerState<ATerminusPlayerState>();
+	if (!PS) return;
+
+	// 손님이 보낸 값은 한도 안으로 자름
+	TArray<FClassUpgrades> Clean;
+	for (const FClassUpgrades& Entry : Upgrades.Num() > 16 ? TArray<FClassUpgrades>() : Upgrades)
+	{
+		Clean.Add(UTerminusUpgradeSettings::Get()->Sanitize(Entry));
+	}
+	PS->SetReportedUpgrades(Clean);
 }
 
 void ATerminusPlayerController::Server_SetHardMode_Implementation(bool bInHardMode)

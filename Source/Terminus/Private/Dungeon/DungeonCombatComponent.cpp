@@ -474,7 +474,10 @@ void UDungeonCombatComponent::HandleUseSkill(ATerminusPlayerState* PS, int32 Ski
 	// 0~2 기본 스킬, 3~5 장착한 강화 스킬
 	const FSkillRow* SkillPtr = PS->GetCombatSkill(SkillIndex);
 	if (!SkillPtr) return;
-	const FSkillRow& Skill = *SkillPtr;
+
+	// 기본 스킬은 훈련소 강화만큼 수치가 오름 (복사본에만)
+	FSkillRow Skill = *SkillPtr;
+	PS->ApplyBasicSkillUpgrade(SkillIndex, Skill);
 
 	// 대상 먼저 확인 (에너지만 날리고 실패하지 않게)
 	TArray<UCombatStatsComponent*> Targets;

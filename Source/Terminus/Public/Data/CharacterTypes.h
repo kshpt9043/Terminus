@@ -25,7 +25,7 @@ enum class EFaction : uint8
 {
 	AdventurersGuild UMETA(DisplayName = "모험가 길드"),
 	MageTower        UMETA(DisplayName = "마탑"),
-	Religion         UMETA(DisplayName = "종교 (이름 미정)"),
+	Religion         UMETA(DisplayName = "테르미누스"),
 	Empire           UMETA(DisplayName = "황실")
 };
 
@@ -37,7 +37,7 @@ inline FText GetFactionName(EFaction InFaction)
 	{
 	case EFaction::AdventurersGuild: return FText::FromString(TEXT("모험가 길드"));
 	case EFaction::MageTower:        return FText::FromString(TEXT("마탑"));
-	case EFaction::Religion:         return FText::FromString(TEXT("종교"));   // 이름 미정. 기획 확정되면 교체
+	case EFaction::Religion:         return FText::FromString(TEXT("테르미누스"));   // 종교 세력 (기획 거점 시안에서 확정)
 	case EFaction::Empire:           return FText::FromString(TEXT("황실"));
 	default:                         return FText::GetEmpty();
 	}

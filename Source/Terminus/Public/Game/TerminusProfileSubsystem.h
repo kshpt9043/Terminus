@@ -4,6 +4,7 @@
 #include "GameFramework/SaveGame.h"
 #include "Subsystems/GameInstanceSubsystem.h"
 #include "Data/CharacterTypes.h"
+#include "Data/UpgradeTypes.h"
 #include "TerminusProfileSubsystem.generated.h"
 
 /**
@@ -29,6 +30,10 @@ public:
 	// 도감처럼 개수 제한 없이 종류별로 하나씩. 던전에 들어갈 때 이 중 1개를 들고 갈 수 있음 (기획 UI 레퍼런스 > 게임 시작)
 	UPROPERTY()
 	TArray<FName> StoredRelics;
+
+	// 거점 강화 (직업마다). 연무장 스텟 / 훈련소 기본 스킬 단계
+	UPROPERTY()
+	TArray<FClassUpgrades> Upgrades;
 };
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnGoldChanged, int32, NewGold, int32, Delta);
@@ -92,6 +97,26 @@ public:
 
 	static bool IsStorableRelic(FName RelicRow);
 
+	// -------------------------------------------------------------
+	// [거점 강화] 직업마다 따로. 골드로 사고 바로 저장
+	// -------------------------------------------------------------
+
+	// 이 직업의 강화 단계 (없으면 전부 0)
+	FClassUpgrades GetClassUpgrades(ECharacterClass InClass) const;
+
+	// 모든 직업의 강화 (멀티에서 서버에 알릴 때)
+	const TArray<FClassUpgrades>& GetAllUpgrades() const;
+
+	// 연무장 / 훈련소 한 단계 올리기. 골드가 모자라거나 최대면 false
+	bool TryUpgradeStat(ECharacterClass InClass, EStatUpgrade Stat);
+	bool TryUpgradeSkill(ECharacterClass InClass, int32 SkillIndex);
+
+	// [테스트] 강화 전부 0 으로
+	void ResetUpgrades();
+
+	DECLARE_MULTICAST_DELEGATE(FOnUpgradesChanged);
+	FOnUpgradesChanged OnUpgradesChanged;
+
 	// 창고 내용(보유 스킬 / 보관 유물)이 바뀜. 창고 화면 갱신용
 	DECLARE_MULTICAST_DELEGATE(FOnStorageChanged);
 	FOnStorageChanged OnStorageChanged;
@@ -109,6 +134,8 @@ public:
 
 private:
 	void Save();
+
+	FClassUpgrades& FindOrAddUpgrades(ECharacterClass InClass);
 
 	UPROPERTY()
 	TObjectPtr<UTerminusProfileSave> Profile;
