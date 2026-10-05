@@ -111,6 +111,7 @@ void UStartRelicPickWidget::SetCandidates(const TArray<FName>& StoredRelics, ECh
 	PlayerClass = InClass;
 	bHardMode = bInHardMode;
 	SelectedIndices.Reset();
+	MaxSelect = FMath::Clamp(MaxSelect, 1, ATerminusPlayerState::MaxStartRelics);
 
 	if (ModeText)
 	{
@@ -122,7 +123,9 @@ void UStartRelicPickWidget::SetCandidates(const TArray<FName>& StoredRelics, ECh
 
 	if (TitleText)
 	{
-		TitleText->SetText(FText::FromString(FString::Printf(TEXT("던전에 들고 갈 유물을 고르세요 (최대 %d개)"), MaxSelect)));
+		TitleText->SetText(FText::FromString(MaxSelect == 1
+			? FString(TEXT("던전에 들고 갈 유물을 1개 고르세요 (안 골라도 됩니다)"))
+			: FString::Printf(TEXT("던전에 들고 갈 유물을 고르세요 (최대 %d개)"), MaxSelect)));
 	}
 
 	if (!ItemGrid) return;
@@ -181,8 +184,8 @@ void UStartRelicPickWidget::RefreshStates()
 		const bool bSelected = SelectedIndices.Contains(i);
 		const FName Row = ItemSlot->GetItemRow();
 
-		// 고른 칸은 언제나 눌러서 해제 가능. 안 고른 칸은: 장착 가능 + 같은 유물을 아직 안 골랐음 + 자리가 남음
-		const bool bUsable = bSelected || (CanEquip(Row) && !IsRowSelected(Row) && !bFull);
+		// 고른 칸은 언제나 눌러서 해제 가능. 안 고른 칸은: 장착 가능 + 같은 유물을 아직 안 골랐음 + 자리가 남음 (1개만 고르면 바꾸기 가능)
+		const bool bUsable = bSelected || (CanEquip(Row) && !IsRowSelected(Row) && (!bFull || MaxSelect == 1));
 		ItemSlot->SetSelected(bSelected);
 		ItemSlot->SetUsable(bUsable);
 	}
@@ -202,9 +205,18 @@ void UStartRelicPickWidget::HandleSlotClicked(UItemSlotWidget* ClickedSlot)
 	{
 		SelectedIndices.Remove(Index);
 	}
-	else if (SelectedIndices.Num() < MaxSelect && CanEquip(ClickedSlot->GetItemRow()) && !IsRowSelected(ClickedSlot->GetItemRow()))
+	else if (CanEquip(ClickedSlot->GetItemRow()) && !IsRowSelected(ClickedSlot->GetItemRow()))
 	{
-		SelectedIndices.Add(Index);
+		// 1개만 고르면 바꾸기, 여러 개면 자리가 남을 때만
+		if (MaxSelect == 1)
+		{
+			SelectedIndices.Reset();
+			SelectedIndices.Add(Index);
+		}
+		else if (SelectedIndices.Num() < MaxSelect)
+		{
+			SelectedIndices.Add(Index);
+		}
 	}
 
 	RefreshStates();

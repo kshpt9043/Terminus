@@ -114,6 +114,18 @@ void UTerminusProfileSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 	{
 		Profile = Cast<UTerminusProfileSave>(UGameplayStatics::CreateSaveGameObject(UTerminusProfileSave::StaticClass()));
 	}
+
+	// 예전 세이브엔 같은 유물이 여러 개 있을 수 있음 -> 도감처럼 하나씩만
+	TArray<FName> Unique;
+	for (const FName& Row : Profile->StoredRelics)
+	{
+		Unique.AddUnique(Row);
+	}
+	if (Unique.Num() != Profile->StoredRelics.Num())
+	{
+		Profile->StoredRelics = MoveTemp(Unique);
+		Save();
+	}
 }
 
 const TArray<FName>& UTerminusProfileSubsystem::GetOwnedSkills() const
@@ -171,7 +183,8 @@ bool UTerminusProfileSubsystem::IsStorableRelic(FName RelicRow)
 
 bool UTerminusProfileSubsystem::AddStoredRelic(FName RelicRow)
 {
-	if (!Profile || !IsStorableRelic(RelicRow)) return false;
+	// 창고 = 도감: 개수 제한 없음, 같은 유물은 한 번만
+	if (!Profile || !IsStorableRelic(RelicRow) || Profile->StoredRelics.Contains(RelicRow)) return false;
 
 	Profile->StoredRelics.Add(RelicRow);
 	Save();

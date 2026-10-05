@@ -61,8 +61,15 @@ public:
 	// [테스트] 유물 고르기를 안 한 상태로 (이미 장착한 유물은 그대로)
 	void ResetStartRelics();
 
-	// 던전에 들고 갈 수 있는 유물 수
-	static constexpr int32 MaxStartRelics = 15;
+	// 던전에 들고 갈 수 있는 창고 유물 수 (기획: 창고 유물 중 1개, 안 골라도 됨)
+	static constexpr int32 MaxStartRelics = 1;
+
+	// 인게임 유물 칸 (패시브 + 시작 유물 포함). 기본 6, 연무장 '유물 최대치' 강화로 최대 15 (중간 수치 미정)
+	static constexpr int32 BaseRelicCapacity = 6;
+	static constexpr int32 MaxRelicCapacity = 15;
+
+	// 지금 가질 수 있는 유물 수 (런 스텟 MaxRelics, 없으면 기본 6)
+	int32 GetRelicCapacity() const;
 
 	// 이 직업이 가질 수 있는 유물인가 (공용이거나 그 직업 전용)
 	static bool CanClassHoldRelic(ECharacterClass InClass, const FRelicRow& Relic);

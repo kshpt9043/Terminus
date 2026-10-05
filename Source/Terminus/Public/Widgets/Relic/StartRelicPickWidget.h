@@ -13,7 +13,8 @@ class UItemSlotWidget;
 /**
  * 런 시작 유물 고르기. 시작 스킬 고르기 다음, 지도 보기 전에 화면 전체를 덮고 뜸
  *
- * 창고(보관 유물)를 격자로 보여주고, 누를 때마다 고름 / 해제. 최대 MaxSelect 개 (안 골라도 됨)
+ * 창고(보관 유물)를 격자로 보여주고, 누를 때마다 고름 / 해제. 최대 MaxSelect 개 (기획: 1개, 안 골라도 됨)
+ * 1개만 고를 때는 다른 칸을 누르면 그쪽으로 바뀜
  * 시작을 누르면 서버에 장착 요청 -> 화면이 닫힘
  * 창고 유물은 영구 소유라 그대로 남음. 하드 모드(주점에서 방장이 켬)일 때만 들고 간 유물이 창고에서 사라짐
  *
@@ -57,9 +58,9 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Start Relic")
 	int32 MinSlots = 18;
 
-	// 고를 수 있는 최대 개수
+	// 고를 수 있는 최대 개수 (서버 한도 ATerminusPlayerState::MaxStartRelics 를 넘을 수 없음)
 	UPROPERTY(EditAnywhere, Category = "Start Relic")
-	int32 MaxSelect = 15;
+	int32 MaxSelect = 1;
 
 private:
 	ECharacterClass PlayerClass = ECharacterClass::Fighter;

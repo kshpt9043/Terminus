@@ -297,9 +297,15 @@ bool ATerminusPlayerState::GainRelic(FName RelicRow)
 
 	if (RunState.Relics.Contains(RelicRow)) return false;
 
-	if (RunState.Stats.MaxRelics > 0 && RunState.Relics.Num() >= RunState.Stats.MaxRelics)
+	// 칸 수 확인. 업그레이드 유물은 기본 유물(패시브)을 대체하므로 꽉 차 있어도 됨
+	const bool bReplacesBasic = Relic->RelicTier == ERelicTier::Upgrade && RunState.Relics.ContainsByPredicate([Relic](const FName& Owned)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[Relic] 유물 칸이 가득 참 (%d)"), RunState.Stats.MaxRelics);
+		const FRelicRow* Other = UTerminusDataSettings::FindRelicRow(Owned);
+		return Other && Other->RelicTier == ERelicTier::Basic && Other->OwnerClass == Relic->OwnerClass;
+	});
+	if (!bReplacesBasic && RunState.Relics.Num() >= GetRelicCapacity())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Relic] 유물 칸이 가득 참 (%d / %d)"), RunState.Relics.Num(), GetRelicCapacity());
 		return false;
 	}
 
@@ -324,6 +330,12 @@ bool ATerminusPlayerState::GainRelic(FName RelicRow)
 
 	OnRep_RunState();
 	return true;
+}
+
+int32 ATerminusPlayerState::GetRelicCapacity() const
+{
+	const int32 FromStats = RunState.Stats.MaxRelics > 0 ? RunState.Stats.MaxRelics : BaseRelicCapacity;
+	return FMath::Clamp(FromStats, 1, MaxRelicCapacity);
 }
 
 bool ATerminusPlayerState::RemoveRelic(FName RelicRow)

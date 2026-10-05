@@ -26,7 +26,7 @@ public:
 	int32 Gold = 0;
 
 	// 창고에 보관한 유물 (DT_Relic 행 이름). 정산에서 팔지 않고 '보유'를 고른 것
-	// 던전에 들어갈 때 이 중 1개를 들고 갈 수 있음 (기획 UI 레퍼런스 > 게임 시작)
+	// 도감처럼 개수 제한 없이 종류별로 하나씩. 던전에 들어갈 때 이 중 1개를 들고 갈 수 있음 (기획 UI 레퍼런스 > 게임 시작)
 	UPROPERTY()
 	TArray<FName> StoredRelics;
 };
@@ -81,7 +81,8 @@ public:
 
 	const TArray<FName>& GetStoredRelics() const;
 
-	// 창고에 넣기. 보관할 수 없는 유물(DT 에 없음 / 직업 기본 유물 / 몬스터 유물)이면 false. 같은 유물도 여러 개 보관 가능
+	// 창고에 넣기. 개수 제한 없음, 같은 유물은 한 번만 (도감)
+	// 보관할 수 없는 유물(DT 에 없음 / 직업 기본 유물 / 몬스터 유물)이거나 이미 있으면 false
 	bool AddStoredRelic(FName RelicRow);
 
 	// 창고에서 하나 빼기 (던전에 들고 갈 때 등)

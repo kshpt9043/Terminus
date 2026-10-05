@@ -51,9 +51,10 @@ struct FCharacterStats
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	int32 EnhanceSlots = 3;
 
-	// 유물 보유 최대치 (기획: 훈련소 / 직업 사무소에서 강화). 0 = 제한 없음 (기본값이 아직 안 정해짐)
+	// 인게임 유물 보유 최대치 (직업 패시브 + 시작 때 고른 유물 포함). 기본 6, 연무장 강화로 최대 15
+	// 0 이하(예전 데이터)면 기본 6 으로 취급. 실제 칸 수는 ATerminusPlayerState::GetRelicCapacity
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	int32 MaxRelics = 0;
+	int32 MaxRelics = 6;
 };
 
 
