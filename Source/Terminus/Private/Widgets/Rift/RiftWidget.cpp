@@ -82,6 +82,15 @@ void URiftWidget::BuildDefaultLayout()
 	AddRiftCentered(Column, LeaveButton, 32.f);
 }
 
+void URiftWidget::SetFromSave(bool bFromSave)
+{
+	if (!MessageText) return;
+
+	MessageText->SetText(FText::FromString(bFromSave
+		? TEXT("세이브를 불러와 이공간에서 동료를 기다립니다.\n세이브 당시 동료가 모두 들어오면 지도로 갑니다.")
+		: TEXT("동료와의 연결이 끊겨 이공간에 빠졌습니다.\n싸우던 방은 없던 일이 되었습니다. 동료가 돌아오면 지도로 돌아갑니다.")));
+}
+
 void URiftWidget::SetWaiting(const TArray<FString>& WaitingFor)
 {
 	if (WaitingText)

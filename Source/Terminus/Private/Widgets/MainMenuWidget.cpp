@@ -16,6 +16,7 @@
 #include "Game/TerminusRunSubsystem.h"
 #include "Widgets/Common/TextInputPopupWidget.h"
 #include "Widgets/Base/BaseWidget.h"
+#include "Game/LoadingScreenSubsystem.h"
 
 namespace
 {
@@ -64,6 +65,12 @@ void UMainMenuWidget::NativeConstruct()
 
 	// 메뉴로 돌아왔으면 이어하기 대기는 버림 (안 그러면 다음 주점이 이어하기로 열림)
 	ClearPendingContinue();
+
+	// 메인 화면 준비 완료 -> 로딩 화면 걷기
+	if (ULoadingScreenSubsystem* Loading = ULoadingScreenSubsystem::Get(this))
+	{
+		Loading->Hide();
+	}
 
 	// 이어하기 버튼: 세이브가 있을 때만. 목록에서 다 지우면 바로 숨김
 	if (UTerminusSaveSubsystem* Save = UTerminusSaveSubsystem::Get(this))
@@ -145,6 +152,10 @@ void UMainMenuWidget::StartSoloWithName(const FString& RoomName)
 	if (UTerminusRunSubsystem* Run = GetGameInstance() ? GetGameInstance()->GetSubsystem<UTerminusRunSubsystem>() : nullptr)
 	{
 		Run->SetRoomName(RoomName);
+	}
+	if (ULoadingScreenSubsystem* Loading = ULoadingScreenSubsystem::Get(this))
+	{
+		Loading->Show(FText::FromString(TEXT("캐릭터 선택으로 가는 중...")));
 	}
 	UGameplayStatics::OpenLevel(this, FName(*TavernMapPath));
 }

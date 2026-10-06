@@ -6,6 +6,7 @@
 #include "Engine/GameInstance.h"
 #include "Engine/World.h"
 #include "Game/DungeonGameMode.h"
+#include "Game/LoadingScreenSubsystem.h"
 #include "Game/TerminusRunSubsystem.h"
 #include "GameFramework/GameStateBase.h"
 #include "Kismet/GameplayStatics.h"
@@ -212,7 +213,7 @@ bool UTerminusSaveSubsystem::DeleteRunSave(const FString& SlotName)
 // 이어하기
 // =====================================================================
 
-bool UTerminusSaveSubsystem::ContinueRun(const UObject* WorldContext, const FString& SlotName, const FString& TavernMapPath, FText& OutError)
+bool UTerminusSaveSubsystem::ContinueRun(const UObject* WorldContext, const FString& SlotName, const FString& TavernMapPath, const FString& DungeonMapPath, FText& OutError)
 {
 	UTerminusRunSave* Save = LoadRunSave(SlotName);
 	if (!Save || Save->Players.Num() == 0 || Save->Rooms.Num() == 0)
@@ -222,6 +223,11 @@ bool UTerminusSaveSubsystem::ContinueRun(const UObject* WorldContext, const FStr
 	}
 
 	PendingLoad = Save;
+
+	if (ULoadingScreenSubsystem* Loading = GetGameInstance()->GetSubsystem<ULoadingScreenSubsystem>())
+	{
+		Loading->Show(FText::FromString(TEXT("세이브를 불러오는 중...")));
+	}
 
 	// 이름은 세이브 당시 그대로
 	if (UTerminusRunSubsystem* Run = GetGameInstance()->GetSubsystem<UTerminusRunSubsystem>())
@@ -236,7 +242,7 @@ bool UTerminusSaveSubsystem::ContinueRun(const UObject* WorldContext, const FStr
 		return true;
 	}
 
-	// 멀티: 세이브 인원만큼만 들어올 수 있는 주점
+	// 멀티: 세이브 인원만큼만 들어올 수 있는 세션을 열고 던전으로 바로 -> 다 모일 때까지 이공간
 	USessionSubsystem* Sessions = GetGameInstance()->GetSubsystem<USessionSubsystem>();
 	if (!Sessions)
 	{
@@ -247,7 +253,7 @@ bool UTerminusSaveSubsystem::ContinueRun(const UObject* WorldContext, const FStr
 
 	FTerminusRoomOptions Options;
 	Options.RoomName = Save->Summary.RoomName;   // 비어 있으면 HostSession 이 랜덤
-	Sessions->HostSession(Save->Players.Num(), TavernMapPath, Options);
+	Sessions->HostSession(Save->Players.Num(), DungeonMapPath, Options);
 	return true;
 }
 

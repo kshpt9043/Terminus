@@ -13,6 +13,8 @@
 #include "Dungeon/DungeonAreaSubsystem.h"
 #include "Online/SessionSubsystem.h"
 #include "Player/TerminusPlayerState.h"
+#include "Game/TerminusRunSubsystem.h"
+#include "Game/TerminusSaveSubsystem.h"
 
 AActor* ADungeonGameMode::ChoosePlayerStart_Implementation(AController* Player)
 {
@@ -60,6 +62,36 @@ void ADungeonGameMode::PreLogin(const FString& Options, const FString& Address, 
 	ErrorMessage = TEXT("이미 던전이 진행 중입니다.");
 }
 
+void ADungeonGameMode::InitGame(const FString& MapName, const FString& Options, FString& ErrorMessage)
+{
+	Super::InitGame(MapName, Options, ErrorMessage);
+
+	// 멀티 세이브 이어하기 (메인 메뉴 -> 세션 -> 여기로 바로). 싱글은 주점을 거쳐 평소처럼 옴
+	UTerminusSaveSubsystem* Save = UTerminusSaveSubsystem::Get(this);
+	UTerminusRunSave* Loaded = Save ? Save->GetPendingLoad() : nullptr;
+	if (!Loaded || !Loaded->Summary.bMultiplayer) return;
+
+	// 지도 / 층 / 슬롯 / 이름 -> MapManager 가 BeginPlay 에서 이 지도를 씀
+	if (UTerminusRunSubsystem* Run = GetGameInstance() ? GetGameInstance()->GetSubsystem<UTerminusRunSubsystem>() : nullptr)
+	{
+		Run->BeginLoadedRun(*Loaded);
+	}
+
+	// 세이브 플레이어 전원이 '아직 안 온 사람'. 들어오는 대로 세이브 당시 상태로 (직업도 그대로)
+	for (const FRunSavePlayer& Player : Loaded->Players)
+	{
+		FDepartedPlayer& Waiting = DepartedPlayers.AddDefaulted_GetRef();
+		Waiting.PlayerId = Player.PlayerId;
+		Waiting.PlayerName = Player.PlayerName;
+		Waiting.RunState = Player.RunState;
+		Waiting.RunState.SelectedRoomId = -1;
+	}
+	bGatheringFromSave = DepartedPlayers.Num() > 0;
+
+	Save->ClearPendingLoad();
+	UE_LOG(LogTemp, Log, TEXT("[Dungeon] 멀티 세이브 %s 이어하기. 플레이어 %d명 기다림"), *Loaded->Summary.SlotName, DepartedPlayers.Num());
+}
+
 void ADungeonGameMode::PostLogin(APlayerController* NewPlayer)
 {
 	// 배틀러는 Super::PostLogin 안에서 생김 -> 그 전에 RunState 를 되살려야 스텟 / 체력이 맞음
@@ -67,8 +99,9 @@ void ADungeonGameMode::PostLogin(APlayerController* NewPlayer)
 	bool bReturned = false;
 	if (TPS && DepartedPlayers.Num() > 0)
 	{
+		// 방장 자신은 세이브를 만든 사람 -> 아이디가 달라도 자리를 줌 (계정을 바꿨거나 PIE)
 		const FUniqueNetIdRepl& NetId = TPS->GetUniqueId();
-		const int32 Index = FindDeparted(NetId.IsValid() ? NetId->ToString() : FString(), TPS->GetPlayerName());
+		const int32 Index = FindDeparted(NetId.IsValid() ? NetId->ToString() : FString(), TPS->GetPlayerName(), NewPlayer->IsLocalController());
 		if (Index != INDEX_NONE)
 		{
 			FRunState Restored = DepartedPlayers[Index].RunState;
@@ -85,10 +118,16 @@ void ADungeonGameMode::PostLogin(APlayerController* NewPlayer)
 
 	FChatMessage Notice;
 	Notice.Kind = EChatMessageKind::System;
+	const TCHAR* Verb = bGatheringFromSave ? TEXT("합류했습니다") : TEXT("돌아왔습니다");
 	Notice.Text = DepartedPlayers.Num() == 0
-		? FString::Printf(TEXT("%s 님이 돌아왔습니다. 이공간을 빠져나와 지도로 돌아갑니다."), *TPS->GetPlayerName())
-		: FString::Printf(TEXT("%s 님이 돌아왔습니다. 아직 기다리는 중: %s"), *TPS->GetPlayerName(), *FString::Join(GetDepartedNames(), TEXT(", ")));
+		? FString::Printf(TEXT("%s 님이 %s. 이공간을 빠져나와 지도로 갑니다."), *TPS->GetPlayerName(), Verb)
+		: FString::Printf(TEXT("%s 님이 %s. 아직 기다리는 중: %s"), *TPS->GetPlayerName(), Verb, *FString::Join(GetDepartedNames(), TEXT(", ")));
 	ATerminusPlayerController::BroadcastChat(GetWorld(), Notice);
+
+	if (DepartedPlayers.Num() == 0)
+	{
+		bGatheringFromSave = false;
+	}
 
 	// 다 돌아왔으면 전원 지도로. 아직 남았으면 돌아온 사람도 이공간에
 	RefreshRift();
@@ -110,7 +149,7 @@ bool ADungeonGameMode::UseLooseRejoinMatching() const
 	return World && World->WorldType == EWorldType::PIE;
 }
 
-int32 ADungeonGameMode::FindDeparted(const FString& PlayerId, const FString& PlayerName) const
+int32 ADungeonGameMode::FindDeparted(const FString& PlayerId, const FString& PlayerName, bool bLoose) const
 {
 	if (!PlayerId.IsEmpty())
 	{
@@ -120,7 +159,7 @@ int32 ADungeonGameMode::FindDeparted(const FString& PlayerId, const FString& Pla
 		}
 	}
 
-	if (!UseLooseRejoinMatching()) return INDEX_NONE;
+	if (!bLoose && !UseLooseRejoinMatching()) return INDEX_NONE;
 
 	if (!PlayerName.IsEmpty())
 	{
@@ -149,7 +188,7 @@ void ADungeonGameMode::RefreshRift(const AController* Skip)
 
 		if (bOpen)
 		{
-			PC->Client_EnterRift(Waiting);
+			PC->Client_EnterRift(Waiting, bGatheringFromSave);
 		}
 		else
 		{

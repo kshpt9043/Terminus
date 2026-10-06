@@ -6,6 +6,7 @@
 #include "Framework/Application/SlateApplication.h"
 #include "Widgets/Chat/ChatWidget.h"
 #include "Widgets/Common/EscapeStackSubsystem.h"
+#include "Game/LoadingScreenSubsystem.h"
 #include "Widgets/SWindow.h"
 
 // Slate 가 키를 위젯에 나눠주기 전에 먼저 보는 곳. Enter 만 골라서 서브시스템에 넘김
@@ -99,6 +100,12 @@ bool UChatSubsystem::HandleEnter()
 		{
 			return false;
 		}
+	}
+
+	// 로딩 화면이 덮고 있으면 채팅 안 엶
+	if (const ULoadingScreenSubsystem* Loading = ULoadingScreenSubsystem::Get(Widget); Loading && Loading->IsShowing())
+	{
+		return false;
 	}
 
 	// 팝업 / 창이 떠 있으면 그쪽 Enter (확인 버튼 등)

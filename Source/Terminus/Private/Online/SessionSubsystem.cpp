@@ -16,6 +16,7 @@
 #include "Engine/GameInstance.h"
 #include "TimerManager.h"
 #include "Game/TerminusRunSubsystem.h"
+#include "Game/LoadingScreenSubsystem.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogTerminusSession, Log, All);
 
@@ -141,6 +142,12 @@ IOnlineSessionPtr USessionSubsystem::GetSessionInterface() const
 
 void USessionSubsystem::HostSession(int32 MaxPlayers, const FString& MapPath, const FTerminusRoomOptions& InOptions)
 {
+	// 로딩 화면 (이어하기처럼 이미 더 구체적인 문구로 덮고 있으면 그대로). 실패하면 로딩 서브시스템이 걷음
+	if (ULoadingScreenSubsystem* Loading = GetGameInstance()->GetSubsystem<ULoadingScreenSubsystem>())
+	{
+		Loading->ShowIfHidden(FText::FromString(TEXT("주점을 여는 중...")), ELoadingScreenStyle::Light);
+	}
+
 	// 방 이름: 비었으면 랜덤. 런 서브시스템에 기억 -> 던전 / 세이브 / 이어하기까지 같은 이름
 	FTerminusRoomOptions Options = InOptions;
 	Options.RoomName = Options.RoomName.TrimStartAndEnd().Left(UTerminusRunSubsystem::MaxRoomNameLength);
@@ -345,6 +352,11 @@ void USessionSubsystem::LeaveSession()
 
 void USessionSubsystem::LeaveToMenu()
 {
+	if (ULoadingScreenSubsystem* Loading = GetGameInstance()->GetSubsystem<ULoadingScreenSubsystem>())
+	{
+		Loading->ShowIfHidden(FText::FromString(TEXT("메인 화면으로 나가는 중...")), ELoadingScreenStyle::Light);
+	}
+
 	IOnlineSessionPtr Session = GetSessionInterface();
 
 	// 정리할 세션이 없으면 바로 이동
@@ -667,6 +679,12 @@ void USessionSubsystem::JoinSearchResult(const FOnlineSessionSearchResult& Resul
 		return;
 	}
 
+	// 성공하면 그대로 주점(던전)까지 덮음. 실패하면 로딩 서브시스템이 걷음
+	if (ULoadingScreenSubsystem* Loading = GetGameInstance()->GetSubsystem<ULoadingScreenSubsystem>())
+	{
+		Loading->ShowIfHidden(FText::FromString(TEXT("주점에 들어가는 중...")), ELoadingScreenStyle::Light);
+	}
+
 	JoinHandle = Session->AddOnJoinSessionCompleteDelegate_Handle(
 		FOnJoinSessionCompleteDelegate::CreateUObject(
 			this, &USessionSubsystem::HandleJoinComplete));
@@ -713,6 +731,12 @@ void USessionSubsystem::CleanupAfterFailure(const FText& Reason)
 	// 엔진이 실패를 알려 왔으니 참가 타이머는 더 볼 필요 없음
 	ClearJoinTimeout();
 	PendingDisconnectReason = Reason;
+
+	// 엔진이 메인 맵으로 보냄 -> 메인 메뉴가 뜨면 걷힘
+	if (ULoadingScreenSubsystem* Loading = GetGameInstance()->GetSubsystem<ULoadingScreenSubsystem>())
+	{
+		Loading->Show(FText::FromString(TEXT("연결이 끊겨 메인 화면으로 돌아가는 중...")));
+	}
 
 	// 이동은 엔진이 기본 맵으로 해줌. 우리는 남은 세션만 치운다
 	IOnlineSessionPtr Session = GetSessionInterface();

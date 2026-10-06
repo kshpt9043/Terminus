@@ -2,6 +2,7 @@
 
 #include "Components/Widget.h"
 #include "Engine/GameInstance.h"
+#include "Game/LoadingScreenSubsystem.h"
 #include "Engine/GameViewportClient.h"
 #include "Framework/Application/IInputProcessor.h"
 #include "Framework/Application/SlateApplication.h"
@@ -74,6 +75,12 @@ void UEscapeStackSubsystem::Remove(UWidget* Owner)
 
 bool UEscapeStackSubsystem::HandleEscape()
 {
+	// 로딩 화면이 덮고 있으면 아래 창을 닫지 않음 (키는 먹음)
+	if (const ULoadingScreenSubsystem* Loading = GetGameInstance()->GetSubsystem<ULoadingScreenSubsystem>(); Loading && Loading->IsShowing())
+	{
+		return IsOwnWindowActive();
+	}
+
 	// 사라졌거나 숨겨진 창은 건너뜀 (닫을 때 Remove 를 빼먹었어도 안전하게)
 	Stack.RemoveAll([](const FEntry& Entry) { return !Entry.Owner.IsValid(); });
 

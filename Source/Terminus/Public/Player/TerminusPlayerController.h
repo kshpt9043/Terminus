@@ -34,6 +34,9 @@ class TERMINUS_API ATerminusPlayerController : public APlayerController
 protected:
 	virtual void BeginPlay() override;
 
+	// 레벨 이동 직전 (seamless 포함) -> 로딩 화면
+	virtual void PreClientTravel(const FString& PendingURL, ETravelType TravelType, bool bIsSeamlessTravel) override;
+
 	// 마우스로 하는 게임이라 늘 커서를 보이고, 화면을 눌러도 마우스를 잡거나(캡처) 숨기지 않게
 	// FocusWidget 이 있으면 키 입력이 그 위젯으로 감 (아무 키나 누르기 화면 등)
 	void ApplyUIInputMode(UWidget* FocusWidget = nullptr);
@@ -151,9 +154,9 @@ public:
 	UFUNCTION(Client, Reliable)
 	void Client_CloseMonsterReward();
 
-	// 이공간 (멀티에서 누가 나갔을 때). WaitingFor = 돌아오길 기다리는 사람. 이미 떠 있으면 명단만 갱신
+	// 이공간 (멀티에서 누가 나갔을 때 / 멀티 세이브를 불러와 모이는 중). WaitingFor = 기다리는 사람. 이미 떠 있으면 명단만 갱신
 	UFUNCTION(Client, Reliable)
-	void Client_EnterRift(const TArray<FString>& WaitingFor);
+	void Client_EnterRift(const TArray<FString>& WaitingFor, bool bFromSave);
 
 	// 이공간에서 나옴 (전원 돌아옴) -> 지도
 	UFUNCTION(Client, Reliable)

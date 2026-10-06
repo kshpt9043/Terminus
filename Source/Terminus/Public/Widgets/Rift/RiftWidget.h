@@ -26,6 +26,9 @@ public:
 	// 돌아오길 기다리는 사람 명단
 	void SetWaiting(const TArray<FString>& WaitingFor);
 
+	// 멀티 세이브를 불러와 모이는 중이면 설명 문구가 다름 (누가 나간 게 아님)
+	void SetFromSave(bool bFromSave);
+
 protected:
 	virtual void NativeOnInitialized() override;
 

@@ -21,7 +21,8 @@ public class Terminus : ModuleRules
 			"OnlineSubsystemUtils",
 			"Paper2D",
 			"PaperZD",
-			"DeveloperSettings"
+			"DeveloperSettings",
+			"MoviePlayer"
 		});
 	}
 }

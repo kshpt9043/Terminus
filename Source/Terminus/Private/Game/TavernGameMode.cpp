@@ -12,6 +12,7 @@
 #include "Player/TerminusPlayerController.h"
 #include "Game/TerminusSaveSubsystem.h"
 #include "TimerManager.h"
+#include "Game/LoadingScreenSubsystem.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogTerminusFlow, Log, All);
 
@@ -101,6 +102,12 @@ void ATavernGameMode::TryStartGame()
 		}
 	}
 	
+	// 방장 화면 (손님은 PC 의 PreClientTravel 에서)
+	if (ULoadingScreenSubsystem* Loading = ULoadingScreenSubsystem::Get(this))
+	{
+		Loading->Show(FText::FromString(TEXT("던전으로 이동하는 중...")));
+	}
+
 	UE_LOG(LogTerminusFlow, Log, TEXT("Tavern: 던전으로 이동 %s"), *DungeonMapPath);
 	GetWorld()->ServerTravel(DungeonMapPath);
 }

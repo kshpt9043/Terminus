@@ -23,6 +23,8 @@
 #include "Online/SessionSubsystem.h"
 #include "Engine/GameInstance.h"
 #include "Widgets/TerminusUIColors.h"
+#include "Game/LoadingScreenSubsystem.h"
+#include "Game/TavernGameMode.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogTerminusUI, Log, All);
 
@@ -76,6 +78,7 @@ void UTavernWidget::NativeConstruct()
 	if (IsSolo())
 	{
 		ApplySoloLayout();
+		HideLoadingScreen();
 		return;
 	}
 	
@@ -419,11 +422,32 @@ void UTavernWidget::RefreshSlots()
 			: TEXT("준비를 누르면 방장이 출발할 수 있습니다")));
 	}
 	
+	// 슬롯이 처음 채워지면 로딩 화면 걷기
+	if (MyPS)
+	{
+		HideLoadingScreen();
+	}
+
 	// 인원이 바뀔 때 알려주는 로그
 	if (Players.Num() != LastPlayerCount)
 	{
 		LastPlayerCount = Players.Num();
 		UE_LOG(LogTerminusUI, Log, TEXT("TavernWidget: 인원 %d"), LastPlayerCount);
+	}
+}
+
+void UTavernWidget::HideLoadingScreen()
+{
+	if (bLoadingHidden) return;
+
+	// 싱글 이어하기는 주점을 거쳐 바로 던전으로 감 -> 계속 덮어 둠
+	const ATavernGameMode* GM = GetWorld() ? GetWorld()->GetAuthGameMode<ATavernGameMode>() : nullptr;
+	if (GM && GM->IsContinuingRun()) return;
+
+	bLoadingHidden = true;
+	if (ULoadingScreenSubsystem* Loading = ULoadingScreenSubsystem::Get(this))
+	{
+		Loading->Hide();
 	}
 }
 

@@ -4,6 +4,10 @@
 #include "Components/Button.h"
 #include "Components/TextBlock.h"
 #include "Components/PanelWidget.h"
+#include "Blueprint/WidgetTree.h"
+#include "Components/CircularThrobber.h"
+#include "Components/ScrollBoxSlot.h"
+#include "Components/VerticalBoxSlot.h"
 #include "Components/EditableTextBox.h"
 #include "Components/CheckBox.h"
 #include "Engine/GameInstance.h"
@@ -123,6 +127,7 @@ void URoomListWidget::HandleRefreshClicked()
 
 	ListBox->ClearChildren();
 	SetStatus(TEXT("주점을 찾는 중…"));
+	SetSearching(true);
 
 	// 검색은 비동기. 끝날 때까지 다시 못 누르게
 	Btn_Refresh->SetIsEnabled(false);
@@ -132,6 +137,7 @@ void URoomListWidget::HandleRefreshClicked()
 void URoomListWidget::HandleFindComplete(bool bWasSuccessful, const TArray<FTerminusSessionInfo>& Sessions)
 {
 	Btn_Refresh->SetIsEnabled(true);
+	SetSearching(false);
 	ListBox->ClearChildren();
 
 	if (!bWasSuccessful)
@@ -159,6 +165,33 @@ void URoomListWidget::HandleFindComplete(bool bWasSuccessful, const TArray<FTerm
 		Entry->Setup(Info);
 		Entry->OnClicked.BindUObject(this, &URoomListWidget::HandleEntryClicked);
 		ListBox->AddChild(Entry);
+	}
+}
+
+void URoomListWidget::SetSearching(bool bSearching)
+{
+	// WBP 에 둔 로딩 아이콘이 있으면 그걸 켜고 끔
+	if (SearchThrobber)
+	{
+		SearchThrobber->SetVisibility(bSearching ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Collapsed);
+		return;
+	}
+
+	// 없으면 목록 자리에 하나 넣음 (결과가 오면 ListBox->ClearChildren 으로 같이 지워짐)
+	if (!bSearching || !ListBox) return;
+
+	UCircularThrobber* Throbber = WidgetTree->ConstructWidget<UCircularThrobber>(UCircularThrobber::StaticClass());
+	Throbber->SetRadius(22.f);
+	UPanelSlot* PanelSlot = ListBox->AddChild(Throbber);
+	if (UScrollBoxSlot* ScrollSlot = Cast<UScrollBoxSlot>(PanelSlot))
+	{
+		ScrollSlot->SetHorizontalAlignment(HAlign_Center);
+		ScrollSlot->SetPadding(FMargin(0.f, 40.f));
+	}
+	else if (UVerticalBoxSlot* VSlot = Cast<UVerticalBoxSlot>(PanelSlot))
+	{
+		VSlot->SetHorizontalAlignment(HAlign_Center);
+		VSlot->SetPadding(FMargin(0.f, 40.f));
 	}
 }
 

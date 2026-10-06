@@ -38,6 +38,9 @@ protected:
 	UPROPERTY(meta = (BindWidget)) TObjectPtr<UButton>      Btn_Close;
 	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UTextBlock> StatusText;
 
+	// 검색 중 로딩 아이콘 (목록 패널 안). 없으면 C++ 이 목록 자리에 하나 넣었다가 결과가 오면 지움
+	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UWidget> SearchThrobber;
+
 	UPROPERTY(EditDefaultsOnly, Category = "Terminus|UI")
 	TSubclassOf<URoomEntryWidget> EntryClass;
 
@@ -81,6 +84,9 @@ private:
 	void HandleEscape();
 	void Join(int32 Index, const FString& Password);
 	void SetStatus(const FString& InText);
+
+	// 검색 중 표시 켜기 / 끄기
+	void SetSearching(bool bSearching);
 	void SetBusy(bool bBusy);
 	void ShowPanel(UWidget* Panel, bool bShow);
 	void PaintInputText(UEditableTextBox* Box) const;

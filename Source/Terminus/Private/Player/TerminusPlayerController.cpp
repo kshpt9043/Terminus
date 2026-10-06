@@ -20,6 +20,7 @@
 #include "Widgets/Relic/StartRelicPickWidget.h"
 #include "Widgets/Reward/MonsterRewardWidget.h"
 #include "Widgets/Rift/RiftWidget.h"
+#include "Game/LoadingScreenSubsystem.h"
 #include "Game/TerminusProfileSubsystem.h"
 #include "Data/TerminusDataSettings.h"
 #include "TimerManager.h"
@@ -68,6 +69,19 @@ void ATerminusPlayerController::BeginPlay()
 	FInputModeUIOnly Mode;
 	SetInputMode(Mode);
 	bShowMouseCursor = true;
+}
+
+void ATerminusPlayerController::PreClientTravel(const FString& PendingURL, ETravelType TravelType, bool bIsSeamlessTravel)
+{
+	Super::PreClientTravel(PendingURL, TravelType, bIsSeamlessTravel);
+
+	if (IsLocalController())
+	{
+		if (ULoadingScreenSubsystem* Loading = ULoadingScreenSubsystem::Get(this))
+		{
+			Loading->ShowIfHidden(ULoadingScreenSubsystem::MessageForMap(PendingURL), ELoadingScreenStyle::Full);
+		}
+	}
 }
 
 void ATerminusPlayerController::ApplyUIInputMode(UWidget* FocusWidget)
@@ -361,8 +375,14 @@ void ATerminusPlayerController::Server_EndTurn_Implementation()
 	}
 }
 
-void ATerminusPlayerController::Client_EnterRift_Implementation(const TArray<FString>& WaitingFor)
+void ATerminusPlayerController::Client_EnterRift_Implementation(const TArray<FString>& WaitingFor, bool bFromSave)
 {
+	// 이공간 화면이 곧 안내 -> 로딩 화면은 걷음
+	if (ULoadingScreenSubsystem* Loading = ULoadingScreenSubsystem::Get(this))
+	{
+		Loading->Hide();
+	}
+
 	if (!Rift)
 	{
 		const TSubclassOf<URiftWidget> Class = RiftClass ? RiftClass : TSubclassOf<URiftWidget>(URiftWidget::StaticClass());
@@ -375,6 +395,7 @@ void ATerminusPlayerController::Client_EnterRift_Implementation(const TArray<FSt
 
 	if (Rift)
 	{
+		Rift->SetFromSave(bFromSave);
 		Rift->SetWaiting(WaitingFor);
 	}
 }
@@ -472,6 +493,12 @@ void ATerminusPlayerController::HandleLocalRunStateChanged(const FRunState& NewR
 
 void ATerminusPlayerController::ContinueStartFlow(const FRunState& Run)
 {
+	// 던전 도착 후 필요한 정보(지도 / 내 상태)가 다 왔음 -> 로딩 화면 걷기
+	if (ULoadingScreenSubsystem* Loading = ULoadingScreenSubsystem::Get(this))
+	{
+		Loading->Hide();
+	}
+
 	// 런 중간(방을 하나라도 지남)이거나 둘 다 골랐으면 지도
 	if (Run.CurrentMapLevel > 0 || (Run.bStartSkillChosen && Run.bStartRelicsChosen))
 	{

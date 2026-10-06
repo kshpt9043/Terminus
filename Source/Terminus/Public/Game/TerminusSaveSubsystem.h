@@ -129,8 +129,10 @@ public:
 
 	bool DeleteRunSave(const FString& SlotName);
 
-	// 이어하기. 세이브를 읽어 두고 주점을 엶. 못 열면 false + 사유
-	bool ContinueRun(const UObject* WorldContext, const FString& SlotName, const FString& TavernMapPath, FText& OutError);
+	// 이어하기. 세이브를 읽어 두고 엶. 못 열면 false + 사유
+	//  - 싱글: 세션 없이 주점 -> 바로 출발
+	//  - 멀티: 세이브 인원으로 세션을 열고 던전으로 바로. 세이브 플레이어가 다 들어올 때까지 이공간 (던전 게임모드)
+	bool ContinueRun(const UObject* WorldContext, const FString& SlotName, const FString& TavernMapPath, const FString& DungeonMapPath, FText& OutError);
 
 	// 이어하기로 연 주점이면 그 세이브. 주점 게임모드가 꺼내 씀
 	UTerminusRunSave* GetPendingLoad() const { return PendingLoad; }

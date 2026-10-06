@@ -193,7 +193,7 @@ void URunSaveListWidget::HandleLoad(const FString& SlotName)
 	if (!Save) return;
 
 	FText Error;
-	if (!Save->ContinueRun(this, SlotName, TavernMapPath, Error))
+	if (!Save->ContinueRun(this, SlotName, TavernMapPath, DungeonMapPath, Error))
 	{
 		SetStatus(Error);
 		Refresh();

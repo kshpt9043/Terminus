@@ -30,7 +30,10 @@ public:
 	 * 를 로비 UI에 있던 순서대로 하기 위해서 함 */
 	virtual AActor* ChoosePlayerStart_Implementation(AController* Player) override;
 	
-	// 던전엔 주점에서 같이 넘어온 사람만. 진행 중에 나갔던 사람은 다시 들어올 수 있음
+	// 멀티 세이브 이어하기면 세이브의 지도 / 층을 쓰고, 세이브 플레이어 전원을 '아직 안 온 사람'으로 둠 (= 이공간)
+	virtual void InitGame(const FString& MapName, const FString& Options, FString& ErrorMessage) override;
+
+	// 던전엔 주점에서 같이 넘어온 사람만. 진행 중에 나갔던 사람 / 세이브 플레이어는 들어올 수 있음
 	virtual void PreLogin(const FString& Options, const FString& Address, const FUniqueNetIdRepl& UniqueId, FString& ErrorMessage) override;
 
 	// 나갔던 사람이 돌아오면 나갈 때 상태로 되살림 (배틀러가 생기기 전에)
@@ -55,8 +58,12 @@ protected:
 
 	TArray<FDepartedPlayer> DepartedPlayers;
 
+	// 멀티 세이브를 불러와 모이는 중 (전원 모이면 false). 이공간 / 채팅 문구만 다름
+	bool bGatheringFromSave = false;
+
 	// 돌아온 사람의 기록. 아이디가 같은 것 (PIE 는 아이디가 매번 바뀌어서 이름 -> 아무거나). 없으면 INDEX_NONE
-	int32 FindDeparted(const FString& PlayerId, const FString& PlayerName) const;
+	// bLoose = 아이디가 안 맞아도 이름 -> 아무 자리 (방장 자신 등)
+	int32 FindDeparted(const FString& PlayerId, const FString& PlayerName, bool bLoose = false) const;
 	bool UseLooseRejoinMatching() const;
 
 	// 이공간 상태를 맞춤: 기다리는 사람이 있으면 세션을 목록에 띄우고 전원 이공간 화면, 없으면 닫고 전원 지도로

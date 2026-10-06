@@ -128,4 +128,8 @@ private:
 	
 	// 마지막으로 끼운 상태. -1 은 아직 안 끼움 -> 첫 폴링에서 반드시 한 번 넣게
 	int8 LastReadyShown = -1;
+
+	// 주점 화면이 준비되면 로딩 화면을 걷음 (싱글 이어하기는 바로 던전으로 가니까 안 걷음)
+	bool bLoadingHidden = false;
+	void HideLoadingScreen();
 };
