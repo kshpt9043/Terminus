@@ -47,6 +47,9 @@ public:
 	//  - 모든 구역이 이미 이겼으면(보상 중): 결과는 인정하고 평소처럼 진행. 아직 안 고른 보상은 건너뜀
 	void HandlePlayerLeft(ATerminusPlayerState* Leaver);
 
+	// [서버 / 테스트] 진행 중인 방을 전부 닫음. 지도 위치 그대로, 고른 방만 비움 (보상 / 진행 없음)
+	void AbortAllRooms();
+
 private:
 	// 방에 들어가기 직전 상태 (롤백용). 방이 정상으로 끝나면 비움
 	struct FRoomStartSnapshot

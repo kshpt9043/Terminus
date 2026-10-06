@@ -6,6 +6,7 @@
 #include "GameFramework/PlayerController.h"
 #include "Data/CharacterTypes.h"
 #include "Game/ChatSubsystem.h"
+#include "Map/MapManager.h"
 #include "TerminusPlayerController.generated.h"
 
 class UTavernWidget;
@@ -20,6 +21,7 @@ class UStartRelicPickWidget;
 class UMonsterRewardWidget;
 class URiftWidget;
 class UFloorTitleWidget;
+class UFloorVoteWidget;
 struct FRunState;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnViewAreaChanged, ADungeonArea*, NewArea);
@@ -159,6 +161,20 @@ public:
 	UFUNCTION(Client, Reliable)
 	void Client_ShowFloorTitle(const FText& Title, const FText& Subtitle);
 
+	// 테마 끝 층 행선지 투표 (다음 층 / 탈출 / 배신). 서버가 거절하면 Client_FloorVoteRejected
+	UFUNCTION(Server, Reliable)
+	void Server_CastFloorVote(EFloorChoice Choice);
+
+	UFUNCTION(Client, Reliable)
+	void Client_FloorVoteRejected(const FText& Reason);
+
+	// 투표 상태가 바뀜 (MapManager 의 OnRep). 화면을 띄우거나 갱신하거나 닫음
+	void UpdateFloorVote(const FFloorVoteState& State);
+
+	// 런이 끝남 (탈출). 안내 후 메인 화면으로
+	UFUNCTION(Client, Reliable)
+	void Client_RunEnded(const FText& Message);
+
 	// 이공간 (멀티에서 누가 나갔을 때 / 멀티 세이브를 불러와 모이는 중). WaitingFor = 기다리는 사람. 이미 떠 있으면 명단만 갱신
 	UFUNCTION(Client, Reliable)
 	void Client_EnterRift(const TArray<FString>& WaitingFor, bool bFromSave);
@@ -173,6 +189,14 @@ public:
 
 	UFUNCTION(Server, Reliable)
 	void Server_DebugWinCombat();
+
+	// [테스트] 콘솔에서 DebugClearFloor -> 지금 층 보스를 깬 것처럼 처리
+	// 테마 끝 층(2 / 4 / 6층)이면 행선지 투표, 아니면 바로 다음 층. 방을 진행 중이면 그 방을 닫고 함
+	UFUNCTION(Exec)
+	void DebugClearFloor();
+
+	UFUNCTION(Server, Reliable)
+	void Server_DebugClearFloor();
 
 	// -------------------------------------------------------------
 	// [런 시작 강화 스킬]
@@ -264,6 +288,13 @@ protected:
 
 	UPROPERTY()
 	TObjectPtr<UChatWidget> ChatWidget;
+
+	// 행선지 투표 화면. 비워 두면 C++ 기본 모양(UFloorVoteWidget)
+	UPROPERTY(EditDefaultsOnly, Category = "Terminus|UI")
+	TSubclassOf<UFloorVoteWidget> FloorVoteClass;
+
+	UPROPERTY()
+	TObjectPtr<UFloorVoteWidget> FloorVote;
 
 	// 층 도착 화면. 비워 두면 C++ 기본 모양(UFloorTitleWidget)
 	UPROPERTY(EditDefaultsOnly, Category = "Terminus|UI")

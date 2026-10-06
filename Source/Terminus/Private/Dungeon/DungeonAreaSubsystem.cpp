@@ -169,6 +169,21 @@ void UDungeonAreaSubsystem::HandlePlayerLeft(ATerminusPlayerState* Leaver)
 	RollbackToRoomStart();
 }
 
+void UDungeonAreaSubsystem::AbortAllRooms()
+{
+	for (ADungeonArea* Area : GetSortedAreas())
+	{
+		if (!Area->IsInUse()) continue;
+
+		for (ATerminusPlayerState* PS : Area->GetOccupants())
+		{
+			if (PS) PS->SetSelectedRoomId(-1);
+		}
+		Area->Release();
+	}
+	RoomStartSnapshots.Reset();
+}
+
 void UDungeonAreaSubsystem::TakeRoomStartSnapshots(const TArray<ATerminusPlayerState*>& Players)
 {
 	RoomStartSnapshots.Reset();
@@ -251,12 +266,13 @@ void UDungeonAreaSubsystem::FinishAllRooms()
 	// 방이 정상으로 끝났으니 롤백할 일 없음
 	RoomStartSnapshots.Reset();
 
-	// 보스방이면 층 진행 (저장은 그 뒤에 -> 새 층에서 이어하게)
+	// 보스방이면 층 진행 / 행선지 투표. 저장은 새 층에 도착했을 때 (투표 중엔 저장 안 함 -> 끄면 보스 직전부터)
 	if (bBossCleared)
 	{
 		if (AMapManager* MapMgr = Cast<AMapManager>(UGameplayStatics::GetActorOfClass(GetWorld(), AMapManager::StaticClass())))
 		{
 			MapMgr->HandleBossCleared();
+			return;
 		}
 	}
 

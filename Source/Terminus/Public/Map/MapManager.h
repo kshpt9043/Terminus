@@ -46,6 +46,58 @@ struct FRoomNode
 class ATerminusPlayerController;
 class UDungeonThemeData;
 
+// 테마 끝 층 보스 뒤 선택지
+UENUM(BlueprintType)
+enum class EFloorChoice : uint8
+{
+	None,
+	NextFloor,   // 다음 층 (마지막 층엔 없음)
+	Escape,      // 탈출 -> 정산
+	Betray       // 배신 (멀티만, 선착순 1명)
+};
+
+UENUM(BlueprintType)
+enum class EFloorVotePhase : uint8
+{
+	None,        // 투표 없음
+	Voting,      // 투표 중 (VoteSeconds)
+	Revealing,   // 다 골랐음 -> 공개 타이머 (RevealSeconds)
+	Done         // 공개 + 결과 (잠깐 보여주고 적용)
+};
+
+USTRUCT(BlueprintType)
+struct FFloorVoteEntry
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadOnly)
+	TObjectPtr<APlayerState> Player;
+
+	UPROPERTY(BlueprintReadOnly)
+	EFloorChoice Choice = EFloorChoice::None;
+};
+
+// 모두에게 복제되는 투표 상태. 누가 골랐는지(RevealedVotes)는 공개 단계가 끝나야 채워짐
+USTRUCT(BlueprintType)
+struct FFloorVoteState
+{
+	GENERATED_BODY()
+
+	// 투표마다 다른 번호 (화면이 새 투표인지 알게)
+	UPROPERTY(BlueprintReadOnly) int32 VoteId = 0;
+	UPROPERTY(BlueprintReadOnly) EFloorVotePhase Phase = EFloorVotePhase::None;
+	UPROPERTY(BlueprintReadOnly) int32 Floor = 0;
+	UPROPERTY(BlueprintReadOnly) TArray<EFloorChoice> Options;
+	// 선택지별 표 수 (Options 와 같은 순서)
+	UPROPERTY(BlueprintReadOnly) TArray<int32> Counts;
+	UPROPERTY(BlueprintReadOnly) int32 VotedCount = 0;
+	UPROPERTY(BlueprintReadOnly) int32 TotalVoters = 0;
+	// 이 단계가 끝나는 서버 시각 (GameState::GetServerWorldTimeSeconds 기준)
+	UPROPERTY(BlueprintReadOnly) float PhaseEndTime = 0.f;
+	UPROPERTY(BlueprintReadOnly) TArray<FFloorVoteEntry> RevealedVotes;
+	UPROPERTY(BlueprintReadOnly) EFloorChoice Result = EFloorChoice::None;
+};
+
 // 계층 하나(표층 / 중층 / 심층)에 나올 수 있는 테마들. 계층이 바뀔 때 이 중 하나를 고름
 USTRUCT(BlueprintType)
 struct FTierThemes
@@ -115,8 +167,31 @@ public:
 	// 지금 지도의 줄 수 (퀘스트 줄이 없으면 TotalLevels - 1). 지도가 아직 없으면 TotalLevels
 	int32 GetLevelCount() const;
 
-	// [서버] 보스방이 끝났을 때 (구역 서브시스템이 부름). 테마가 안 바뀌는 층이면 바로 다음 층
-	void HandleBossCleared();
+	// [서버] 보스방이 끝났을 때 (구역 서브시스템이 부름)
+	// 테마가 안 바뀌는 층이면 바로 다음 층(true, 저장까지 함). 테마 끝 층이면 행선지 투표 시작(false, 결과가 나올 때까지 저장 안 함)
+	bool HandleBossCleared();
+
+	// -------------------------------------------------------------
+	// 테마 끝 층 선택 (다음 층 / 탈출 / 배신). 멀티는 투표
+	// -------------------------------------------------------------
+
+	UPROPERTY(ReplicatedUsing = OnRep_VoteState, BlueprintReadOnly, Category = "Map|Vote")
+	FFloorVoteState VoteState;
+
+	bool IsFloorVoteActive() const { return VoteState.Phase != EFloorVotePhase::None; }
+
+	// [서버] 표 넣기 (PC 의 Server_CastFloorVote). 한 사람 한 번, 배신은 선착순 1명. 거절하면 false
+	bool CastFloorVote(APlayerState* Voter, EFloorChoice Choice);
+
+	// 투표 시간 / 공개 타이머 / 결과를 보여주는 시간 (초)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Map Settings|Vote")
+	float VoteSeconds = 15.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Map Settings|Vote")
+	float RevealSeconds = 5.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Map Settings|Vote")
+	float ResultSeconds = 3.f;
 
 	// [서버] 다음 층으로: 층 +1, (계층이 바뀌면) 새 테마, 새 지도, 전원 지도 처음 / 체력 회복
 	void AdvanceFloor();
@@ -137,6 +212,9 @@ protected:
 
 	UFUNCTION()
 	void OnRep_Rooms();
+
+	UFUNCTION()
+	void OnRep_VoteState();
 
 public: 
 	UFUNCTION(BlueprintCallable, Category = "Map")
@@ -172,6 +250,19 @@ private:
 
 	// 이 층의 테마. 같은 계층이면 지금 테마 그대로, 계층이 바뀌면 그 계층 후보 중 랜덤
 	UDungeonThemeData* PickThemeForFloor(int32 Floor) const;
+
+	// 투표 진행 (서버)
+	TMap<TWeakObjectPtr<APlayerState>, EFloorChoice> FloorVotes;
+	FTimerHandle VoteTimer;
+
+	void StartFloorVote();
+	void EndFloorVoting();
+	void ResolveFloorVote();
+	void ApplyFloorChoice();
+	void NotifyVoteChanged();
+
+	// 탈출로 런 끝 (정산이 아직 없어서: 세이브 삭제 + 전원 메인으로)
+	void EndRunByEscape(const FString& Reason);
 
 	// 이번 런이 1인인가. 기획의 방 선택 규칙이 싱글/멀티로 갈린다
 	bool IsSinglePlayerRun() const;

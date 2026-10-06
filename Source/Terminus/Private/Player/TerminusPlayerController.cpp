@@ -21,6 +21,10 @@
 #include "Widgets/Reward/MonsterRewardWidget.h"
 #include "Widgets/Rift/RiftWidget.h"
 #include "Widgets/Map/FloorTitleWidget.h"
+#include "Widgets/Map/FloorVoteWidget.h"
+#include "Dungeon/DungeonAreaSubsystem.h"
+#include "Widgets/Common/ConfirmPopupWidget.h"
+#include "Online/SessionSubsystem.h"
 #include "Game/LoadingScreenSubsystem.h"
 #include "Game/TerminusProfileSubsystem.h"
 #include "Data/TerminusDataSettings.h"
@@ -420,6 +424,81 @@ void ATerminusPlayerController::Client_ShowFloorTitle_Implementation(const FText
 	}
 }
 
+void ATerminusPlayerController::Server_CastFloorVote_Implementation(EFloorChoice Choice)
+{
+	AMapManager* MapMgr = Cast<AMapManager>(UGameplayStatics::GetActorOfClass(this, AMapManager::StaticClass()));
+	if (!MapMgr || !MapMgr->CastFloorVote(PlayerState, Choice))
+	{
+		Client_FloorVoteRejected(FText::FromString(Choice == EFloorChoice::Betray
+			? TEXT("이미 다른 사람이 배신을 골랐습니다.")
+			: TEXT("투표할 수 없습니다.")));
+	}
+}
+
+void ATerminusPlayerController::Client_FloorVoteRejected_Implementation(const FText& Reason)
+{
+	if (FloorVote)
+	{
+		FloorVote->ClearMyChoice();
+	}
+	ShowPopup(FText::FromString(TEXT("투표")), Reason, FText::FromString(TEXT("확인")), FText::GetEmpty());
+}
+
+void ATerminusPlayerController::UpdateFloorVote(const FFloorVoteState& State)
+{
+	if (State.Phase == EFloorVotePhase::None)
+	{
+		if (FloorVote)
+		{
+			FloorVote->RemoveFromParent();
+			FloorVote = nullptr;
+		}
+		return;
+	}
+
+	if (!FloorVote)
+	{
+		const TSubclassOf<UFloorVoteWidget> Class = FloorVoteClass ? FloorVoteClass : TSubclassOf<UFloorVoteWidget>(UFloorVoteWidget::StaticClass());
+		FloorVote = CreateWidget<UFloorVoteWidget>(this, Class);
+		if (FloorVote)
+		{
+			FloorVote->AddToViewport(24);   // 지도 / 보상 위, 채팅(25) 아래 -> 투표하면서 채팅 가능
+		}
+	}
+
+	if (FloorVote)
+	{
+		FloorVote->Refresh(State);
+	}
+}
+
+void ATerminusPlayerController::Client_RunEnded_Implementation(const FText& Message)
+{
+	if (FloorVote)
+	{
+		FloorVote->RemoveFromParent();
+		FloorVote = nullptr;
+	}
+
+	UConfirmPopupWidget* Popup = ShowPopup(FText::FromString(TEXT("던전 종료")), Message, FText::FromString(TEXT("메인 화면으로")), FText::GetEmpty());
+	auto Leave = [this]()
+	{
+		if (USessionSubsystem* Sessions = GetGameInstance() ? GetGameInstance()->GetSubsystem<USessionSubsystem>() : nullptr)
+		{
+			Sessions->LeaveToMenu();
+		}
+	};
+
+	if (Popup)
+	{
+		Popup->OnConfirmedNative.BindWeakLambda(this, Leave);
+	}
+	else
+	{
+		Leave();
+	}
+}
+
 void ATerminusPlayerController::Client_CloseMonsterReward_Implementation()
 {
 	if (MonsterReward)
@@ -473,6 +552,35 @@ void ATerminusPlayerController::Server_DebugWinCombat_Implementation()
 	}
 
 	Combat->DebugKillAllMonsters();
+}
+
+void ATerminusPlayerController::DebugClearFloor()
+{
+	Server_DebugClearFloor();
+}
+
+void ATerminusPlayerController::Server_DebugClearFloor_Implementation()
+{
+	AMapManager* MapMgr = Cast<AMapManager>(UGameplayStatics::GetActorOfClass(this, AMapManager::StaticClass()));
+	if (!MapMgr)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Debug] 던전이 아님"));
+		return;
+	}
+	if (MapMgr->IsFloorVoteActive())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Debug] 이미 행선지 투표 중"));
+		return;
+	}
+
+	// 방을 진행 중이면 그 방은 무효로 닫음 (보상 / 진행 없이)
+	if (UDungeonAreaSubsystem* Areas = GetWorld()->GetSubsystem<UDungeonAreaSubsystem>())
+	{
+		Areas->AbortAllRooms();
+	}
+
+	UE_LOG(LogTemp, Log, TEXT("[Debug] %d층 클리어 처리"), MapMgr->CurrentFloor);
+	MapMgr->HandleBossCleared();
 }
 
 void ATerminusPlayerController::CheckStartSkillPick()

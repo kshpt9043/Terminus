@@ -11,6 +11,8 @@
 #include "GameFramework/GameStateBase.h"
 #include "Engine/GameInstance.h"
 #include "Net/UnrealNetwork.h"
+#include "Game/TerminusSaveSubsystem.h"
+#include "TimerManager.h"
 
 AMapManager::AMapManager()
 { 
@@ -46,6 +48,13 @@ void AMapManager::HandleSelectRoomRequest(ATerminusPlayerController* Requester, 
     if (!RequestingPS->HasChosenStartSkill() || !RequestingPS->HasChosenStartRelics())
     {
         Requester->Client_OnRoomSelectFailed(TEXT("시작 강화 스킬과 유물을 먼저 골라야 합니다."));
+        return;
+    }
+
+    // 행선지 투표 중엔 방을 못 고름
+    if (IsFloorVoteActive())
+    {
+        Requester->Client_OnRoomSelectFailed(TEXT("다음 행선지를 고르는 중입니다."));
         return;
     }
 
@@ -1039,6 +1048,7 @@ void AMapManager::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifet
     DOREPLIFETIME(AMapManager, Rooms);
     DOREPLIFETIME(AMapManager, CurrentFloor);
     DOREPLIFETIME(AMapManager, FloorTheme);
+    DOREPLIFETIME(AMapManager, VoteState);
 }
 
 // =====================================================================
@@ -1073,27 +1083,235 @@ UDungeonThemeData* AMapManager::PickThemeForFloor(int32 Floor) const
     return FloorTheme;
 }
 
-void AMapManager::HandleBossCleared()
+bool AMapManager::HandleBossCleared()
 {
-    if (!HasAuthority()) return;
+    if (!HasAuthority()) return false;
 
     UE_LOG(LogTemp, Log, TEXT("[Map] %d층 보스 클리어"), CurrentFloor);
 
+    // 테마가 바뀌는 층(2 / 4 / 6층)에서만 행선지를 고름. 나머지는 바로 다음 층
     if (IsThemeEndFloor(CurrentFloor))
     {
-        // TODO: 테마 끝 층 -> 다음 층 / 탈출 / 배신 고르기 (멀티 투표). 아직 없어서 임시 처리
-        if (CurrentFloor >= LastFloor)
-        {
-            FChatMessage Notice;
-            Notice.Kind = EChatMessageKind::System;
-            Notice.Text = FString::Printf(TEXT("%d층 보스를 쓰러뜨렸습니다. 마지막 층입니다. (탈출 / 배신은 준비 중)"), CurrentFloor);
-            ATerminusPlayerController::BroadcastChat(GetWorld(), Notice);
-            return;
-        }
-        UE_LOG(LogTemp, Warning, TEXT("[Map] 테마 끝 층 선택(다음 층 / 탈출 / 배신)이 아직 없어서 바로 다음 층으로"));
+        StartFloorVote();
+        return false;
     }
 
     AdvanceFloor();
+    return true;
+}
+
+// =====================================================================
+// 테마 끝 층 선택 (투표)
+// =====================================================================
+
+void AMapManager::StartFloorVote()
+{
+    const AGameStateBase* GS = GetWorld()->GetGameState();
+    const bool bSingle = IsSinglePlayerRun();
+
+    FloorVotes.Reset();
+    const int32 NextId = VoteState.VoteId + 1;
+    VoteState = FFloorVoteState();
+    VoteState.VoteId = NextId;
+    VoteState.Phase = EFloorVotePhase::Voting;
+    VoteState.Floor = CurrentFloor;
+
+    // 마지막 층(콘텐츠 끝)이면 다음 층 없음. 배신은 멀티만
+    if (CurrentFloor < LastFloor) VoteState.Options.Add(EFloorChoice::NextFloor);
+    VoteState.Options.Add(EFloorChoice::Escape);
+    if (!bSingle) VoteState.Options.Add(EFloorChoice::Betray);
+
+    VoteState.Counts.SetNumZeroed(VoteState.Options.Num());
+    VoteState.TotalVoters = GS ? FMath::Max(1, GS->PlayerArray.Num()) : 1;
+    VoteState.PhaseEndTime = (GS ? GS->GetServerWorldTimeSeconds() : 0.f) + VoteSeconds;
+
+    GetWorldTimerManager().SetTimer(VoteTimer, this, &AMapManager::EndFloorVoting, VoteSeconds, false);
+
+    FChatMessage Notice;
+    Notice.Kind = EChatMessageKind::System;
+    Notice.Text = bSingle
+        ? FString::Printf(TEXT("%d층 보스를 쓰러뜨렸습니다. 다음 행선지를 고르세요."), CurrentFloor)
+        : FString::Printf(TEXT("%d층 보스를 쓰러뜨렸습니다. %d초 동안 다음 행선지를 투표합니다."), CurrentFloor, FMath::RoundToInt(VoteSeconds));
+    ATerminusPlayerController::BroadcastChat(GetWorld(), Notice);
+
+    UE_LOG(LogTemp, Log, TEXT("[Map] %d층 행선지 투표 시작 (선택지 %d개, %d명)"), CurrentFloor, VoteState.Options.Num(), VoteState.TotalVoters);
+    NotifyVoteChanged();
+}
+
+bool AMapManager::CastFloorVote(APlayerState* Voter, EFloorChoice Choice)
+{
+    if (!HasAuthority() || !Voter || VoteState.Phase != EFloorVotePhase::Voting) return false;
+    if (FloorVotes.Contains(Voter)) return false;   // 한 번만
+
+    const int32 Index = VoteState.Options.IndexOfByKey(Choice);
+    if (Index == INDEX_NONE) return false;
+
+    // 배신은 선착순 1명
+    if (Choice == EFloorChoice::Betray && VoteState.Counts[Index] > 0) return false;
+
+    FloorVotes.Add(Voter, Choice);
+    ++VoteState.Counts[Index];
+    ++VoteState.VotedCount;
+
+    UE_LOG(LogTemp, Log, TEXT("[Map] 투표 %d / %d"), VoteState.VotedCount, VoteState.TotalVoters);
+
+    // 배신이 나오면 바로 끝 (그 1명 vs 나머지), 전원 골랐으면 공개로
+    if (Choice == EFloorChoice::Betray || VoteState.VotedCount >= VoteState.TotalVoters)
+    {
+        EndFloorVoting();
+    }
+    else
+    {
+        NotifyVoteChanged();
+    }
+    return true;
+}
+
+void AMapManager::EndFloorVoting()
+{
+    if (VoteState.Phase != EFloorVotePhase::Voting) return;
+    GetWorldTimerManager().ClearTimer(VoteTimer);
+
+    // 혼자면 공개할 게 없음
+    if (VoteState.TotalVoters <= 1)
+    {
+        ResolveFloorVote();
+        return;
+    }
+
+    const AGameStateBase* GS = GetWorld()->GetGameState();
+    VoteState.Phase = EFloorVotePhase::Revealing;
+    VoteState.PhaseEndTime = (GS ? GS->GetServerWorldTimeSeconds() : 0.f) + RevealSeconds;
+    GetWorldTimerManager().SetTimer(VoteTimer, this, &AMapManager::ResolveFloorVote, RevealSeconds, false);
+    NotifyVoteChanged();
+}
+
+void AMapManager::ResolveFloorVote()
+{
+    GetWorldTimerManager().ClearTimer(VoteTimer);
+
+    // 누가 무엇을 골랐는지 공개
+    VoteState.RevealedVotes.Reset();
+    bool bBetrayed = false;
+    for (const TPair<TWeakObjectPtr<APlayerState>, EFloorChoice>& Pair : FloorVotes)
+    {
+        if (APlayerState* PS = Pair.Key.Get())
+        {
+            FFloorVoteEntry& Entry = VoteState.RevealedVotes.AddDefaulted_GetRef();
+            Entry.Player = PS;
+            Entry.Choice = Pair.Value;
+        }
+        bBetrayed |= Pair.Value == EFloorChoice::Betray;
+    }
+
+    // 결과: 배신이 있으면 배신. 아니면 다수결, 동점이면 그중 랜덤 (아무도 안 골랐으면 배신 빼고 랜덤)
+    EFloorChoice Result = EFloorChoice::None;
+    if (bBetrayed)
+    {
+        Result = EFloorChoice::Betray;
+    }
+    else
+    {
+        int32 Best = -1;
+        TArray<EFloorChoice> Tied;
+        for (int32 i = 0; i < VoteState.Options.Num(); ++i)
+        {
+            if (VoteState.Options[i] == EFloorChoice::Betray) continue;
+
+            const int32 Count = VoteState.Counts.IsValidIndex(i) ? VoteState.Counts[i] : 0;
+            if (Count > Best)
+            {
+                Best = Count;
+                Tied.Reset();
+            }
+            if (Count == Best)
+            {
+                Tied.Add(VoteState.Options[i]);
+            }
+        }
+        if (Tied.Num() > 0)
+        {
+            Result = Tied[FMath::RandRange(0, Tied.Num() - 1)];
+        }
+    }
+
+    const AGameStateBase* GS = GetWorld()->GetGameState();
+    VoteState.Result = Result;
+    VoteState.Phase = EFloorVotePhase::Done;
+    VoteState.PhaseEndTime = (GS ? GS->GetServerWorldTimeSeconds() : 0.f) + ResultSeconds;
+    NotifyVoteChanged();
+
+    UE_LOG(LogTemp, Log, TEXT("[Map] 투표 결과: %s"), *UEnum::GetValueAsString(Result));
+
+    // 결과를 잠깐 보여주고 적용 (혼자면 바로)
+    const float Delay = VoteState.TotalVoters <= 1 ? 0.5f : ResultSeconds;
+    GetWorldTimerManager().SetTimer(VoteTimer, this, &AMapManager::ApplyFloorChoice, Delay, false);
+}
+
+void AMapManager::ApplyFloorChoice()
+{
+    const EFloorChoice Result = VoteState.Result;
+
+    // 투표 화면 닫기
+    VoteState.Phase = EFloorVotePhase::None;
+    NotifyVoteChanged();
+
+    switch (Result)
+    {
+    case EFloorChoice::NextFloor:
+        AdvanceFloor();
+        break;
+
+    case EFloorChoice::Betray:
+        // TODO: 배신 전투 (배신자 1명 vs 나머지). 아직 없어서 탈출로 처리
+        EndRunByEscape(TEXT("배신이 선택되었습니다. (배신 전투는 준비 중이라 탈출로 처리합니다)"));
+        break;
+
+    case EFloorChoice::Escape:
+    default:
+        EndRunByEscape(TEXT("던전을 탈출했습니다. (정산은 준비 중)"));
+        break;
+    }
+}
+
+void AMapManager::NotifyVoteChanged()
+{
+    // 리슨 서버 자신은 OnRep 이 안 불려서 직접
+    OnRep_VoteState();
+}
+
+void AMapManager::OnRep_VoteState()
+{
+    for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
+    {
+        ATerminusPlayerController* PC = Cast<ATerminusPlayerController>(It->Get());
+        if (PC && PC->IsLocalController())
+        {
+            PC->UpdateFloorVote(VoteState);
+        }
+    }
+}
+
+void AMapManager::EndRunByEscape(const FString& Reason)
+{
+    // 런이 끝남 -> 세이브 삭제 (정산을 만들면 정산이 끝난 뒤로 옮길 것)
+    if (UTerminusSaveSubsystem* Save = UTerminusSaveSubsystem::Get(this))
+    {
+        if (const UTerminusRunSubsystem* Run = GetGameInstance() ? GetGameInstance()->GetSubsystem<UTerminusRunSubsystem>() : nullptr)
+        {
+            Save->DeleteRunSave(Run->GetSaveSlot());
+        }
+    }
+
+    UE_LOG(LogTemp, Log, TEXT("[Map] 런 종료: %s"), *Reason);
+
+    for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
+    {
+        if (ATerminusPlayerController* PC = Cast<ATerminusPlayerController>(It->Get()))
+        {
+            PC->Client_RunEnded(FText::FromString(Reason));
+        }
+    }
 }
 
 void AMapManager::AdvanceFloor()
@@ -1152,6 +1370,12 @@ void AMapManager::AdvanceFloor()
     ATerminusPlayerController::BroadcastChat(GetWorld(), Notice);
 
     UE_LOG(LogTemp, Log, TEXT("[Map] %d층으로 (%s), 방 %d개"), CurrentFloor, *Sub, Rooms.Num());
+
+    // 새 층에서 이어하게 저장
+    if (UTerminusSaveSubsystem* Save = UTerminusSaveSubsystem::Get(this))
+    {
+        Save->SaveCurrentRun(GetWorld());
+    }
 }
 
 FText AMapManager::GetTierName(int32 Floor)
