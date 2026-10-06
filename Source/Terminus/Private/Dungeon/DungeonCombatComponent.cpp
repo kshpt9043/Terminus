@@ -811,7 +811,11 @@ void UDungeonCombatComponent::StartRoomRewards()
 		}
 
 		if (SkillCount > 0) Offer.SkillOffers = PickRewardSkills(PS, SkillCount);
-		if (RelicCount > 0) Offer.RelicOffers = PickRewardRelics(PS, RelicCount);
+		if (RelicCount > 0)
+		{
+			Offer.RelicOffers = PickRewardRelics(PS, RelicCount);
+			PS->MarkRelicsSeen(Offer.RelicOffers);   // 안 골라도 이번 런엔 다시 안 나옴
+		}
 
 		FPendingReward& Reward = PendingRewards.Add(PS);
 		Reward.Offers = Offer.SkillOffers;
@@ -841,9 +845,9 @@ TArray<FName> UDungeonCombatComponent::PickRewardRelics(const ATerminusPlayerSta
 		const FRelicRow* Relic = UTerminusDataSettings::FindRelicRow(Row);
 		if (!Relic || Relic->RelicTier != Tier) continue;
 
-		// 공용이거나 내 직업 것 (몬스터 유물 / 다른 직업 X), 이미 가진 건 빼고
+		// 공용이거나 내 직업 것 (몬스터 유물 / 다른 직업 X), 이번 런에 이미 나왔던 건 빼고 (가진 것 포함)
 		if (!ATerminusPlayerState::CanClassHoldRelic(PS->GetCharacterClass(), *Relic)) continue;
-		if (PS->GetRelics().Contains(Row)) continue;
+		if (PS->GetRelics().Contains(Row) || PS->HasSeenRelic(Row)) continue;
 
 		Pool.Add(Row);
 	}

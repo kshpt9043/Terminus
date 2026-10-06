@@ -323,7 +323,7 @@ namespace
 		return Tier != ERelicTier::Basic && Tier != ERelicTier::Upgrade;
 	}
 
-	// OldRelic 을 바꿀 수 있는 유물: 같은 계층, 공용이거나 내 직업, 아직 없는 것
+	// OldRelic 을 바꿀 수 있는 유물: 같은 계층, 공용이거나 내 직업, 이번 런에 안 나왔던 것
 	TArray<FName> EventSwapPool(const ATerminusPlayerState* PS, FName OldRelic)
 	{
 		TArray<FName> Pool;
@@ -336,7 +336,7 @@ namespace
 			const FRelicRow* Relic = UTerminusDataSettings::FindRelicRow(Row);
 			if (!Relic || Relic->RelicTier != Old->RelicTier) continue;
 			if (!ATerminusPlayerState::CanClassHoldRelic(PS->GetCharacterClass(), *Relic)) continue;
-			if (PS->GetRelics().Contains(Row)) continue;
+			if (PS->GetRelics().Contains(Row) || PS->HasSeenRelic(Row)) continue;
 			Pool.Add(Row);
 		}
 		return Pool;

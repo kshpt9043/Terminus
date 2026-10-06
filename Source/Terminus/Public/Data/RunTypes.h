@@ -81,6 +81,11 @@ struct FRunState
 	UPROPERTY(BlueprintReadOnly)
 	TArray<int32> BasicSkillLevels;
 
+	// 이번 런에서 나한테 한 번이라도 나온 유물 (얻은 것 + 보상 / 이벤트 / 상점 후보로 보였던 것 + 판 것)
+	// 사용자 결정 2026-10-06: 한 번 나온 유물은 그 런 동안 다시 안 나옴. 멀티는 사람마다 따로
+	UPROPERTY(BlueprintReadOnly)
+	TArray<FName> SeenRelics;
+
 	// 일시 스탯 버프 (이벤트 방). 남은 전투 수가 0 이 되면 사라짐
 	UPROPERTY(BlueprintReadOnly)
 	TArray<FTempStatBuff> TempBuffs;

@@ -120,6 +120,12 @@ public:
 
 	const TArray<FName>& GetRelics() const { return RunState.Relics; }
 
+	// 이번 런에서 나온 적 있는 유물인가 (있으면 후보로 다시 안 나옴). 얻은 유물은 GainRelic 이 알아서 넣음
+	bool HasSeenRelic(FName RelicRow) const { return RunState.SeenRelics.Contains(RelicRow); }
+
+	// 후보로 보여준 유물 / 판 유물을 '나온 유물' 로 (서버만)
+	void MarkRelicsSeen(const TArray<FName>& RelicRows);
+
 	// 직업 기본 유물 행 이름 (RLC_Fighter_001 등). 데이터에 없으면 NAME_None
 	static FName GetBasicRelicRow(ECharacterClass InClass);
 

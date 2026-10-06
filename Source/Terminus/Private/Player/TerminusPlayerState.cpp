@@ -122,6 +122,8 @@ void ATerminusPlayerState::BeginRun()
 	RunState.bStartRelicsChosen = false;
 	RunState.Currency = 0;
 	RunState.SavedHealth = -1;
+	RunState.TempBuffs.Reset();
+	RunState.SeenRelics.Reset();
 
 	// 직업 기본 유물 = 패시브. 데이터에 아직 없는 직업은 빈 채로
 	RunState.Relics.Reset();
@@ -349,6 +351,7 @@ bool ATerminusPlayerState::GainRelic(FName RelicRow)
 	}
 
 	RunState.Relics.Add(RelicRow);
+	RunState.SeenRelics.AddUnique(RelicRow);
 	UE_LOG(LogTemp, Log, TEXT("[Relic] %s 획득: %s"), *GetPlayerName(), *Relic->RelicName.ToString());
 
 	// 얻는 순간 효과 (팔아도 유지되는 것들)
@@ -359,6 +362,22 @@ bool ATerminusPlayerState::GainRelic(FName RelicRow)
 
 	OnRep_RunState();
 	return true;
+}
+
+void ATerminusPlayerState::MarkRelicsSeen(const TArray<FName>& RelicRows)
+{
+	if (!HasAuthority()) return;
+
+	bool bChanged = false;
+	for (const FName& Row : RelicRows)
+	{
+		if (!Row.IsNone() && !RunState.SeenRelics.Contains(Row))
+		{
+			RunState.SeenRelics.Add(Row);
+			bChanged = true;
+		}
+	}
+	if (bChanged) OnRep_RunState();
 }
 
 int32 ATerminusPlayerState::GetRelicCapacity() const
