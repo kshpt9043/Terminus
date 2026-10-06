@@ -16,12 +16,12 @@
 #include "Game/TerminusRunSubsystem.h"
 #include "Widgets/Base/BaseWidget.h"
 #include "Game/LoadingScreenSubsystem.h"
+#include "Widgets/Common/ConfirmPopupWidget.h"
 
 namespace
 {
 	const FLinearColor TextGold     = TerminusUI::Hex(TEXT("E6C47A"));
 	const FLinearColor TextDim      = TerminusUI::Hex(TEXT("8D8778"));   // 게임 종료 기본색
-	const FLinearColor TextDisabled = TerminusUI::Hex(TEXT("5D5A52"));
 }
 
 void UMainMenuWidget::NativeOnInitialized()
@@ -38,21 +38,7 @@ void UMainMenuWidget::NativeOnInitialized()
 	if (Btn_Storage) { Btn_Storage->OnClicked.AddDynamic(this, &UMainMenuWidget::HandleStorageClicked); }
 	if (Btn_Continue) { Btn_Continue->OnClicked.AddDynamic(this, &UMainMenuWidget::HandleContinueClicked); }
 
-	// 거점: Btn_Base, 없으면 예전 Btn_Tower 를 거점 버튼으로
-	if (UButton* BaseButton = Btn_Base ? Btn_Base.Get() : Btn_Tower.Get())
-	{
-		BaseButton->OnClicked.AddDynamic(this, &UMainMenuWidget::HandleBaseClicked);
-	}
-	if (Btn_Base && Btn_Tower)
-	{
-		Btn_Tower->SetVisibility(ESlateVisibility::Collapsed);
-	}
-
-	// 훈련소는 거점 안으로 들어감 (시안: 메인 메뉴엔 거점 하나)
-	if (Btn_Training)
-	{
-		Btn_Training->SetVisibility(ESlateVisibility::Collapsed);
-	}
+	if (Btn_Base) { Btn_Base->OnClicked.AddDynamic(this, &UMainMenuWidget::HandleBaseClicked); }
 }
 
 void UMainMenuWidget::NativeConstruct()
@@ -139,19 +125,33 @@ void UMainMenuWidget::HandleDungeonClicked()
 	// 주점을 거쳐야 ServerTravel(CopyProperties)로 RunState 가 던전까지 간다
 	ClearPendingContinue();
 
-	// 진행 중인 싱글 런이 있으면 그것만 (새 게임 불가). 세이브는 하나
+	// 던전 입장은 늘 새 게임. 싱글 세이브는 하나뿐이라, 진행 중인 게 있으면 지워도 되는지 먼저 물음 (이어하기는 '이어하기' 목록에서)
 	UTerminusSaveSubsystem* Save = UTerminusSaveSubsystem::Get(this);
 	FRunSaveSummary Single;
 	if (Save && Save->FindSingleRunSave(Single))
 	{
-		FText Error;
-		if (!Save->ContinueRun(this, Single.SlotName, TavernMapPath, FString(), Error))
+		UConfirmPopupWidget* Popup = CreateWidget<UConfirmPopupWidget>(GetOwningPlayer(), UConfirmPopupWidget::StaticClass());
+		if (Popup)
 		{
-			ShowPopup(FText::FromString(TEXT("진행 중인 던전을 불러오지 못했습니다.")), Error);
+			Popup->Setup(FText::FromString(TEXT("새 던전")),
+				FText::FromString(FString::Printf(TEXT("진행 중인 싱글 던전이 있습니다. (%s)\n새로 시작하면 기존 진행 상황이 삭제됩니다.\n이어서 하려면 '이어하기'에서 고르세요."),
+					*UTerminusSaveSubsystem::DescribeTitle(Single).ToString())),
+				FText::FromString(TEXT("삭제하고 시작")), FText::FromString(TEXT("취소")));
+			Popup->OnConfirmedNative.BindUObject(this, &UMainMenuWidget::HandleOverwriteSingleConfirmed);
+			Popup->AddToViewport(50);
+			return;
 		}
-		return;
 	}
 
+	StartNewSolo();
+}
+
+void UMainMenuWidget::HandleOverwriteSingleConfirmed()
+{
+	if (UTerminusSaveSubsystem* Save = UTerminusSaveSubsystem::Get(this))
+	{
+		Save->DeleteSingleRunSaves();
+	}
 	StartNewSolo();
 }
 

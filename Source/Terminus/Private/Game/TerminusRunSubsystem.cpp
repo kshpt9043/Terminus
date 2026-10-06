@@ -6,6 +6,7 @@ void UTerminusRunSubsystem::BeginNewRun(int32 InPartySize)
 {
 	PartySize = FMath::Max(1, InPartySize);
 	Floor = 0;
+	ThemePath.Reset();
 	Rooms.Reset();
 	SaveSlot = UTerminusSaveSubsystem::MakeNewSlotName();
 
@@ -43,6 +44,7 @@ void UTerminusRunSubsystem::BeginLoadedRun(const UTerminusRunSave& Save)
 {
 	PartySize = FMath::Max(1, Save.Players.Num());
 	Floor = FMath::Max(1, Save.Floor);
+	ThemePath = Save.Theme;
 	Rooms = Save.Rooms;
 	SaveSlot = Save.Summary.SlotName;
 	RoomName = Save.Summary.RoomName.IsEmpty() ? MakeRandomRoomName() : Save.Summary.RoomName;

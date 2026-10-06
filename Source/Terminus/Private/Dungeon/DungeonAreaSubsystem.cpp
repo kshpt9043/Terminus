@@ -4,6 +4,7 @@
 #include "Game/TerminusSaveSubsystem.h"
 #include "Player/TerminusPlayerController.h"
 #include "Map/MapManager.h"
+#include "Kismet/GameplayStatics.h"
 #include "Player/TerminusPlayerState.h"
 #include "Character/TerminusBattler.h"
 #include "Combat/CombatStatsComponent.h"
@@ -228,12 +229,14 @@ void UDungeonAreaSubsystem::FinishAllRooms()
 {
 	UE_LOG(LogTemp, Log, TEXT("[AreaSubsystem] 모든 구역 종료. 지도로 복귀"));
 
+	bool bBossCleared = false;
 	for (ADungeonArea* Area : GetSortedAreas())
 	{
 		if (!Area->IsInUse()) continue;
 
 		// 지도상 위치를 들어갔던 방으로 진행 (선택도 여기서 비워짐)
 		const FRoomNode& Room = Area->GetRoom();
+		bBossCleared |= Room.Type == ERoomType::BOSS;
 		for (ATerminusPlayerState* PS : Area->GetOccupants())
 		{
 			if (PS)
@@ -247,6 +250,15 @@ void UDungeonAreaSubsystem::FinishAllRooms()
 
 	// 방이 정상으로 끝났으니 롤백할 일 없음
 	RoomStartSnapshots.Reset();
+
+	// 보스방이면 층 진행 (저장은 그 뒤에 -> 새 층에서 이어하게)
+	if (bBossCleared)
+	{
+		if (AMapManager* MapMgr = Cast<AMapManager>(UGameplayStatics::GetActorOfClass(GetWorld(), AMapManager::StaticClass())))
+		{
+			MapMgr->HandleBossCleared();
+		}
+	}
 
 	// 자동 저장: 방이 끝나고 전원이 지도로 돌아온 지금 (보상까지 받은 뒤)
 	if (UTerminusSaveSubsystem* Save = UTerminusSaveSubsystem::Get(this))

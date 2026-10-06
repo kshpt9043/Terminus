@@ -121,6 +121,9 @@ public:
 
 	// 방을 클리어하고 그 방으로 진행. 지도상 현재 위치와 진행 레벨을 갱신하고 선택을 비운다
 	void AdvanceToRoom(int32 TargetRoomId, int32 TargetRow);
+
+	// 다음 층으로 (서버만): 지도 위치 처음으로, 지나온 길 비움, 체력 전부 회복
+	void BeginFloor();
 	
 	// Seamless Travel할 때 들고 가는게 아니라 복사시켜서 새로 만들어야 함
 	virtual void CopyProperties(APlayerState* NewPS) override;

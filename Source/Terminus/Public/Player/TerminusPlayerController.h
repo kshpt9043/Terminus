@@ -19,6 +19,7 @@ class UChatWidget;
 class UStartRelicPickWidget;
 class UMonsterRewardWidget;
 class URiftWidget;
+class UFloorTitleWidget;
 struct FRunState;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnViewAreaChanged, ADungeonArea*, NewArea);
@@ -154,6 +155,10 @@ public:
 	UFUNCTION(Client, Reliable)
 	void Client_CloseMonsterReward();
 
+	// 다음 층 도착 화면 ("2층" / "표층 · 슬라임 왕국")
+	UFUNCTION(Client, Reliable)
+	void Client_ShowFloorTitle(const FText& Title, const FText& Subtitle);
+
 	// 이공간 (멀티에서 누가 나갔을 때 / 멀티 세이브를 불러와 모이는 중). WaitingFor = 기다리는 사람. 이미 떠 있으면 명단만 갱신
 	UFUNCTION(Client, Reliable)
 	void Client_EnterRift(const TArray<FString>& WaitingFor, bool bFromSave);
@@ -259,6 +264,10 @@ protected:
 
 	UPROPERTY()
 	TObjectPtr<UChatWidget> ChatWidget;
+
+	// 층 도착 화면. 비워 두면 C++ 기본 모양(UFloorTitleWidget)
+	UPROPERTY(EditDefaultsOnly, Category = "Terminus|UI")
+	TSubclassOf<UFloorTitleWidget> FloorTitleClass;
 
 	// 이공간 화면. 비워 두면 C++ 기본 모양(URiftWidget)
 	UPROPERTY(EditDefaultsOnly, Category = "Terminus|UI")

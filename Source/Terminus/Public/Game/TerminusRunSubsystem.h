@@ -33,8 +33,13 @@ public:
 	const FString& GetSaveSlot() const { return SaveSlot; }
 	void SetSaveSlot(const FString& InSlot) { SaveSlot = InSlot; }
 
-	// 이 런의 층 (세이브에서 불러온 값). 0 이면 MapManager 디테일 값
+	// 이 런의 층 (세이브에서 불러온 값 / 층을 넘어갈 때). 0 이면 MapManager 디테일 값
 	int32 GetFloor() const { return Floor; }
+	void SetFloor(int32 InFloor) { Floor = InFloor; }
+
+	// 이 런의 지금 테마 (UDungeonThemeData). 비어 있으면 MapManager 디테일 값
+	const FSoftObjectPath& GetThemePath() const { return ThemePath; }
+	void SetThemePath(const FSoftObjectPath& InPath) { ThemePath = InPath; }
 
 	// 방(던전) 이름. 처음 주점을 열 때(싱글은 시작할 때) 정한 이름이 런 끝까지 유지됨
 	// 주점 목록 / 재합류 대기 / 세이브 목록 / 이어하기로 연 주점에 모두 이 이름
@@ -57,6 +62,7 @@ public:
 private:
 	int32 PartySize = 0;
 	int32 Floor = 0;
+	FSoftObjectPath ThemePath;
 	FString SaveSlot;
 	FString RoomName;
 

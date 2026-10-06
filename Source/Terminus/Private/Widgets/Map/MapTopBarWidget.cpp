@@ -191,7 +191,7 @@ void UMapTopBarWidget::RefreshTexts()
 	if (RoomText)
 	{
 		// CurrentMapLevel = 지금까지 지난 방 수 -> 다음에 들어갈 방은 그 다음
-		const int32 Total = MapMgr ? MapMgr->TotalLevels : 12;
+		const int32 Total = MapMgr ? MapMgr->GetLevelCount() : 12;   // 퀘스트 방이 없는 층은 한 줄 적음
 		const int32 Next = FMath::Min((LocalPS ? LocalPS->GetCurrentMapLevel() : 0) + 1, Total);
 		RoomText->SetText(FText::FromString(FString::Printf(TEXT("다음 방 %d / %d"), Next, Total)));
 	}

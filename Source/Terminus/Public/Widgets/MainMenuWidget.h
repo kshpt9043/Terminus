@@ -34,10 +34,6 @@ protected:
 	// 거점 (직업의 탑: 세력 -> 직업 -> 연무장 / 훈련소). 기획 UI 레퍼런스 > 메인 화면
 	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UButton> Btn_Base;
 
-	// 예전 이름. Btn_Base 가 없으면 Btn_Tower 가 거점 버튼. Btn_Training 은 거점 안으로 들어가서 숨김
-	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UButton> Btn_Tower;
-	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UButton> Btn_Training;
-
 	// 거점 창. WBP 안에 같은 이름으로 넣어 두면 그걸 쓰고, 없으면 BaseWidgetClass 로 만들어 화면에 띄움
 	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UBaseWidget> BaseWindow;
 
@@ -103,8 +99,11 @@ private:
 	UFUNCTION() void HandleContinueClicked();
 	UFUNCTION() void HandleBaseClicked();
 
-	// 싱글 새 게임: 주점(캐릭터 선택)으로. 진행 중인 싱글 세이브가 있으면 이 대신 그걸 이어서 함
+	// 싱글 새 게임: 주점(캐릭터 선택)으로
 	void StartNewSolo();
+
+	// '진행 상황이 삭제됩니다' 확인 -> 싱글 세이브 삭제 후 새 게임
+	void HandleOverwriteSingleConfirmed();
 
 	// 이어하기로 읽어 둔 세이브를 버림 (새 판을 시작하거나 메뉴로 돌아왔을 때)
 	void ClearPendingContinue();

@@ -438,6 +438,24 @@ void ATerminusPlayerState::AdvanceToRoom(int32 TargetRoomId, int32 TargetRow)
 	}
 }
 
+void ATerminusPlayerState::BeginFloor()
+{
+	if (!HasAuthority()) return;
+
+	RunState.CurrentRoomId = -1;
+	RunState.CurrentMapLevel = 0;
+	RunState.SelectedRoomId = -1;
+	RunState.VisitedRoomIds.Reset();
+	OnRep_RunState();
+
+	// 기획: 층이 바뀌면 체력 전부 회복
+	const ATerminusBattler* Battler = Cast<ATerminusBattler>(GetPawn());
+	if (UCombatStatsComponent* Stats = Battler ? Battler->GetCombatStats() : nullptr)
+	{
+		Stats->Revive(1.f);
+	}
+}
+
 void ATerminusPlayerState::CopyProperties(APlayerState* NewPS)
 {
 	Super::CopyProperties(NewPS);

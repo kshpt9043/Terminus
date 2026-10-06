@@ -20,6 +20,7 @@
 #include "Widgets/Relic/StartRelicPickWidget.h"
 #include "Widgets/Reward/MonsterRewardWidget.h"
 #include "Widgets/Rift/RiftWidget.h"
+#include "Widgets/Map/FloorTitleWidget.h"
 #include "Game/LoadingScreenSubsystem.h"
 #include "Game/TerminusProfileSubsystem.h"
 #include "Data/TerminusDataSettings.h"
@@ -406,6 +407,16 @@ void ATerminusPlayerController::Client_LeaveRift_Implementation()
 	{
 		Rift->RemoveFromParent();
 		Rift = nullptr;
+	}
+}
+
+void ATerminusPlayerController::Client_ShowFloorTitle_Implementation(const FText& Title, const FText& Subtitle)
+{
+	const TSubclassOf<UFloorTitleWidget> Class = FloorTitleClass ? FloorTitleClass : TSubclassOf<UFloorTitleWidget>(UFloorTitleWidget::StaticClass());
+	if (UFloorTitleWidget* Widget = CreateWidget<UFloorTitleWidget>(this, Class))
+	{
+		Widget->Setup(Title, Subtitle, FText::FromString(TEXT("체력이 모두 회복되었습니다")));
+		Widget->AddToViewport(30);   // 지도 / 보상 / 이공간 위, 팝업(50) 아래
 	}
 }
 

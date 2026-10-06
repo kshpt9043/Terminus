@@ -99,7 +99,7 @@ void URunSaveListWidget::BuildDefaultLayout()
 	StatusText = MakeSaveListText(WidgetTree, TEXT("StatusText"), FString(), 14, FLinearColor(1.f, 0.45f, 0.4f));
 	if (UVerticalBoxSlot* S = Column->AddChildToVerticalBox(StatusText)) S->SetPadding(FMargin(0.f, 0.f, 0.f, 8.f));
 
-	EmptyText = MakeSaveListText(WidgetTree, TEXT("EmptyText"), TEXT("저장된 멀티 진행이 없습니다. 던전에서 방을 끝내면 자동으로 저장됩니다."), 15, FLinearColor(0.7f, 0.7f, 0.7f));
+	EmptyText = MakeSaveListText(WidgetTree, TEXT("EmptyText"), TEXT("저장된 진행이 없습니다. 던전에서 방을 끝내면 자동으로 저장됩니다."), 15, FLinearColor(0.7f, 0.7f, 0.7f));
 	EmptyText->SetAutoWrapText(true);
 	Column->AddChildToVerticalBox(EmptyText);
 
@@ -144,8 +144,8 @@ void URunSaveListWidget::HandleClose()
 void URunSaveListWidget::Refresh()
 {
 	UTerminusSaveSubsystem* Save = UTerminusSaveSubsystem::Get(this);
-	// 싱글은 '던전 입장' 이 이어서 함 -> 여기엔 멀티만
-	const TArray<FRunSaveSummary> Saves = Save ? Save->GetRunSaves(true) : TArray<FRunSaveSummary>();
+	// 싱글(하나) + 멀티
+	const TArray<FRunSaveSummary> Saves = Save ? Save->GetRunSaves() : TArray<FRunSaveSummary>();
 
 	if (EmptyText) EmptyText->SetVisibility(Saves.Num() == 0 ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Collapsed);
 	if (!EntryBox) return;

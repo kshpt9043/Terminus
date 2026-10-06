@@ -402,13 +402,10 @@ void UMapCanvasWidget::BuildMapUI(const TArray<FRoomNode>& MapData)
     // 경로 제한 + 선택 표시 + 연결선 상태 초기 적용
     RefreshRoomStates();
 
-    // 처음 그릴 때 고를 줄(시작이면 맨 아래 퀘스트방)이 가운데 오게.
+    // 새 지도(처음 / 다음 층)를 그리면 고를 줄(맨 아래 퀘스트방)이 가운데 오게.
     // 그 뒤로는 방을 옮겼을 때만 다시 맞춤 (OnPlayerRunStateChanged / 지도 화면이 다시 보일 때)
-    if (!bInitialScrollDone)
-    {
-        bInitialScrollDone = true;
-        CenterOnSelectableRooms();
-    }
+    bInitialScrollDone = true;
+    CenterOnSelectableRooms();
 }
 
 void UMapCanvasWidget::CenterOnSelectableRooms()

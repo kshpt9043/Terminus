@@ -295,6 +295,10 @@ void UDungeonCombatComponent::SpawnMonsters(const FRoomNode& Room, const UDungeo
 
 	const TArray<FName> Rows = PickMonsterRows(Room.Type, Theme, FMath::Max(1, Area->GetNumMonsterSlots()));
 
+	// 기획: 테마의 두 번째 층 몬스터(보스 제외)는 기본 체력 +10%
+	const AMapManager* FloorMap = Cast<AMapManager>(UGameplayStatics::GetActorOfClass(this, AMapManager::StaticClass()));
+	const bool bSecondFloorOfTheme = FloorMap && AMapManager::IsThemeEndFloor(FloorMap->CurrentFloor);
+
 	// 기획: 멀티 체력 보정은 그 방에 들어온 인원 기준
 	const int32 PartySize = FMath::Max(1, Players.Num());
 	const float PartyBonus = PartyHealthBonus.IsValidIndex(PartySize - 1) ? PartyHealthBonus[PartySize - 1]
@@ -317,6 +321,10 @@ void UDungeonCombatComponent::SpawnMonsters(const FRoomNode& Room, const UDungeo
 		// 스텟: 인원 보정 먼저, 그다음 개체 랜덤 (기획 순서). 보스는 개체 랜덤 없음
 		FCharacterStats Stats = Row->ToStats();
 		const bool bBoss = Row->MonsterCategory == EMonsterCategory::Boss;
+		if (bSecondFloorOfTheme && !bBoss)
+		{
+			Stats.MaxHealth = FMath::Max(1, FMath::RoundToInt(Stats.MaxHealth * (1.f + SecondFloorHealthBonus)));
+		}
 
 		float HealthScale = 1.f + PartyBonus;
 		if (!bBoss)
@@ -567,7 +575,16 @@ void UDungeonCombatComponent::DebugKillAllMonsters()
 
 	for (UCombatStatsComponent* Stats : GetAliveMonsterStats())
 	{
+		// 테스트용이라 몬스터 유물 / 상태를 무시하고 확실히 죽임
+		// (왕의 위엄 = 피해 1 고정, 고대의 슬라임 코어 = 부활 -> 보스방에서 안 죽던 원인)
+		Stats->PreventDeath.Unbind();
+		Stats->ClearCombatEffects();
 		Stats->ApplyDamage(Stats->GetCombatState().Health + Stats->GetCombatState().Shield);
+
+		if (!Stats->IsDead())
+		{
+			UE_LOG(LogDungeonCombat, Warning, TEXT("[Debug] %s 가 안 죽음 (체력 %d)"), *GetNameSafe(Stats->GetOwner()), Stats->GetCombatState().Health);
+		}
 	}
 
 	HideDeadMonsters();

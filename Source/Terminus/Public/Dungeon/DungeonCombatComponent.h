@@ -144,6 +144,10 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Combat|Monster")
 	FVector2D MonsterHealthRandom = FVector2D(-0.05f, 0.10f);
 
+	// 테마의 두 번째 층(2 / 4 / 6층) 몬스터 기본 체력 보정 (보스 제외). 기획: +10%
+	UPROPERTY(EditAnywhere, Category = "Combat|Balance")
+	float SecondFloorHealthBonus = 0.1f;
+
 	// 몬스터(보스 제외) 공격 / 방어 랜덤 가산 최대치. 기획서 "최대 +2" (KSH 코드 주석은 +0~1 -> 기획 확인 필요)
 	UPROPERTY(EditAnywhere, Category = "Combat|Monster")
 	int32 MonsterStatRandomMax = 2;

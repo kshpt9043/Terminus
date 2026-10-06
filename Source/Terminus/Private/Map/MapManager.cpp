@@ -145,7 +145,11 @@ void AMapManager::BeginPlay()
             Rooms = Run->GetRooms();
             if (Run->GetFloor() > 0)
             {
-                CurrentFloor = Run->GetFloor();   // 세이브에서 이어하는 런
+                CurrentFloor = Run->GetFloor();   // 세이브에서 이어하는 런 / 층을 넘어간 런
+            }
+            if (UDungeonThemeData* Saved = Cast<UDungeonThemeData>(Run->GetThemePath().TryLoad()))
+            {
+                FloorTheme = Saved;
             }
             UE_LOG(LogTemp, Log, TEXT("[MapGenerator] 이번 런의 기존 지도 재사용 (방 %d개)"), Rooms.Num());
         }
@@ -158,11 +162,19 @@ void AMapManager::BeginPlay()
             }
             CurrentPlayerCount = FMath::Max(1, CurrentPlayerCount);
 
+            // 첫 층 테마 (계층 후보가 있으면 거기서)
+            if (UDungeonThemeData* Theme = PickThemeForFloor(CurrentFloor))
+            {
+                FloorTheme = Theme;
+            }
+
             Rooms = GenerateMap();
 
             if (Run)
             {
                 Run->SetRooms(Rooms);
+                Run->SetFloor(CurrentFloor);
+                Run->SetThemePath(FSoftObjectPath(FloorTheme.Get()));
             }
         }
 
@@ -181,7 +193,10 @@ TArray<FRoomNode> AMapManager::GenerateMap()
     // 1000회면 실패가 사실상 사라지고(4000판 중 0회, 최대 458회 시도) 비용도 무시할 수준
     const int32 MaxRetries = 1000;
 
-    const int32 ValidTotalLevels = FMath::Max(2, TotalLevels);
+    // 퀘스트 방은 테마가 시작되는 층에만 (기획: 테마에 들어갈 때 퀘스트를 받음). 없는 층은 그 줄을 빼고 일반 방부터
+    const bool bQuestRow = HasQuestRoom(CurrentFloor);
+    const int32 FirstNormalRow = bQuestRow ? 1 : 0;   // 일반 방이 시작되는 줄 (몬스터 고정)
+    const int32 ValidTotalLevels = FMath::Max(2, bQuestRow ? TotalLevels : TotalLevels - 1);
     const int32 LastRowIndex = ValidTotalLevels - 1; // 보스방 Row
     const int32 ValidMaxRooms = FMath::Max(1, MaxRoomsPerRow);
     const int32 CenterCol = ValidMaxRooms / 2;
@@ -199,8 +214,8 @@ TArray<FRoomNode> AMapManager::GenerateMap()
         // ==========================================
         // [Pass 0] 1개 방을 가질 레벨 추첨 (최대 2개, 연속X)
         // ==========================================
-        // 중간 레벨 범위: Row 2 ~ (LastRowIndex - 1)
-        int32 MinMiddleRow = 2;
+        // 중간 레벨 범위: 몬스터 고정 줄 다음 ~ (LastRowIndex - 1)
+        int32 MinMiddleRow = FirstNormalRow + 1;
         int32 MaxMiddleRow = LastRowIndex - 1;
 
         if (MinMiddleRow <= MaxMiddleRow)
@@ -235,8 +250,8 @@ TArray<FRoomNode> AMapManager::GenerateMap()
         // ==========================================
         for (int32 Row = 0; Row < ValidTotalLevels; ++Row)
         {
-            // 1. [1레벨 / Row 0] 퀘스트방 1개 고정
-            if (Row == 0)
+            // 1. [1레벨 / Row 0] 퀘스트방 1개 고정 (퀘스트 방이 있는 층만)
+            if (bQuestRow && Row == 0)
             {
                 Map.Add(CreateRoom(GlobalRoomId++, Row, CenterCol, ERoomType::QUEST, CurrentPlayerCount));
                 continue;
@@ -261,8 +276,8 @@ TArray<FRoomNode> AMapManager::GenerateMap()
                 continue;
             }
 
-            // 4. [나머지 일반 레벨 (2레벨 포함): 최소 2개 이상 방 생성 보장]
-            // 2레벨(Row 1)은 몬스터방 고정. 나머지 타입 / 정원은 Pass 1.5 에서
+            // 4. [나머지 일반 레벨: 최소 2개 이상 방 생성 보장]
+            // 첫 일반 줄(FirstNormalRow: 퀘스트 층은 Row 1, 아니면 Row 0)은 몬스터방 고정. 나머지 타입 / 정원은 Pass 1.5 에서
             TArray<FRoomNode> RowRooms;
             for (int32 Col = 0; Col < ValidMaxRooms; ++Col)
             {
@@ -316,7 +331,7 @@ TArray<FRoomNode> AMapManager::GenerateMap()
         // 보스 직전 레벨은 전부 휴식터 (기획: UI 레퍼런스 "보스방 직전 방들은 휴식터"). 비율 배분에는 안 셈
         // 배분보다 먼저 정해야 함 -> 배분이 경로 규칙을 검사할 때 이 줄도 보게
         const int32 RestRow = LastRowIndex - 1;
-        const bool bHasRestRow = RestRow >= 2;   // 2레벨(Row 1)은 몬스터 고정이라 그보다 짧은 지도면 생략
+        const bool bHasRestRow = RestRow >= FirstNormalRow + 1;   // 몬스터 고정 줄보다 짧은 지도면 생략
 
         if (bHasRestRow)
         {
@@ -326,14 +341,14 @@ TArray<FRoomNode> AMapManager::GenerateMap()
             }
         }
 
-        // 3레벨(Row 2) ~ 휴식터 줄 앞까지 비율대로 고르게 배분. 퀘스트 / 2레벨 몬스터 / 휴식터 줄 / 보스는 고정
+        // 첫 일반 줄 다음 ~ 휴식터 줄 앞까지 비율대로 고르게 배분. 퀘스트 / 첫 일반 줄(몬스터) / 휴식터 줄 / 보스는 고정
         // 휴식터 줄 바로 앞 줄에는 휴식터 금지 (Slay the Spire 14층 규칙과 같음)
-        DistributeRoomTypes(Map, 2, bHasRestRow ? RestRow - 1 : LastRowIndex - 1, bHasRestRow ? RestRow - 1 : INDEX_NONE);
+        DistributeRoomTypes(Map, FirstNormalRow + 1, bHasRestRow ? RestRow - 1 : LastRowIndex - 1, bHasRestRow ? RestRow - 1 : INDEX_NONE);
 
         for (FRoomNode& Node : Map)
         {
             // 퀘스트 / 보스는 생성할 때 전원 수용으로 이미 정함
-            if (Node.Row == 0 || Node.Row == LastRowIndex) continue;
+            if ((bQuestRow && Node.Row == 0) || Node.Row == LastRowIndex) continue;
 
             // 방이 하나뿐인 층은 파티 전원이 여길 지나가야 함 -> 정원 = 전체 인원
             Node.MaxPlayers = ChosenSingleRoomRows.Contains(Node.Row)
@@ -363,6 +378,16 @@ TArray<FRoomNode> AMapManager::GenerateMap()
 
     UE_LOG(LogTemp, Log, TEXT("[MapGenerator] Map Generated with SingleRoomRows at [ %s] (Attempts: %d)"), *SingleRowsStr, RetryCount);
     return Map;
+}
+
+int32 AMapManager::GetLevelCount() const
+{
+    int32 MaxRow = INDEX_NONE;
+    for (const FRoomNode& Node : Rooms)
+    {
+        MaxRow = FMath::Max(MaxRow, Node.Row);
+    }
+    return MaxRow >= 0 ? MaxRow + 1 : TotalLevels;
 }
 
 FRoomNode AMapManager::CreateRoom(int32 RoomId, int32 Row, int32 Col, ERoomType Type, int32 MaxPlayers)
@@ -1013,6 +1038,120 @@ void AMapManager::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifet
 
     DOREPLIFETIME(AMapManager, Rooms);
     DOREPLIFETIME(AMapManager, CurrentFloor);
+    DOREPLIFETIME(AMapManager, FloorTheme);
+}
+
+// =====================================================================
+// 층 진행
+// =====================================================================
+
+UDungeonThemeData* AMapManager::PickThemeForFloor(int32 Floor) const
+{
+    const int32 Tier = (FMath::Max(1, Floor) - 1) / 2;
+    const int32 PrevTier = (FMath::Max(1, Floor - 1) - 1) / 2;
+
+    // 같은 계층의 두 번째 층이면 지금 테마 그대로
+    if (Floor > 1 && Tier == PrevTier && FloorTheme)
+    {
+        return FloorTheme;
+    }
+
+    if (TierThemes.IsValidIndex(Tier))
+    {
+        TArray<UDungeonThemeData*> Candidates;
+        for (UDungeonThemeData* Theme : TierThemes[Tier].Themes)
+        {
+            if (Theme) Candidates.Add(Theme);
+        }
+        if (Candidates.Num() > 0)
+        {
+            return Candidates[FMath::RandRange(0, Candidates.Num() - 1)];
+        }
+    }
+
+    // 후보가 없으면 지금 테마 (레벨에 지정한 것)
+    return FloorTheme;
+}
+
+void AMapManager::HandleBossCleared()
+{
+    if (!HasAuthority()) return;
+
+    UE_LOG(LogTemp, Log, TEXT("[Map] %d층 보스 클리어"), CurrentFloor);
+
+    if (IsThemeEndFloor(CurrentFloor))
+    {
+        // TODO: 테마 끝 층 -> 다음 층 / 탈출 / 배신 고르기 (멀티 투표). 아직 없어서 임시 처리
+        if (CurrentFloor >= LastFloor)
+        {
+            FChatMessage Notice;
+            Notice.Kind = EChatMessageKind::System;
+            Notice.Text = FString::Printf(TEXT("%d층 보스를 쓰러뜨렸습니다. 마지막 층입니다. (탈출 / 배신은 준비 중)"), CurrentFloor);
+            ATerminusPlayerController::BroadcastChat(GetWorld(), Notice);
+            return;
+        }
+        UE_LOG(LogTemp, Warning, TEXT("[Map] 테마 끝 층 선택(다음 층 / 탈출 / 배신)이 아직 없어서 바로 다음 층으로"));
+    }
+
+    AdvanceFloor();
+}
+
+void AMapManager::AdvanceFloor()
+{
+    if (!HasAuthority()) return;
+
+    ++CurrentFloor;
+    if (UDungeonThemeData* Theme = PickThemeForFloor(CurrentFloor))
+    {
+        FloorTheme = Theme;
+    }
+
+    // 새 지도 (인원은 이 런 그대로)
+    Rooms = GenerateMap();
+
+    if (UTerminusRunSubsystem* Run = GetGameInstance() ? GetGameInstance()->GetSubsystem<UTerminusRunSubsystem>() : nullptr)
+    {
+        Run->SetRooms(Rooms);
+        Run->SetFloor(CurrentFloor);
+        Run->SetThemePath(FSoftObjectPath(FloorTheme.Get()));
+    }
+
+    // 전원: 지도 처음으로 + 체력 전부 회복
+    if (const AGameStateBase* GS = GetWorld()->GetGameState())
+    {
+        for (APlayerState* PS : GS->PlayerArray)
+        {
+            if (ATerminusPlayerState* TPS = Cast<ATerminusPlayerState>(PS))
+            {
+                TPS->BeginFloor();
+            }
+        }
+    }
+
+    // 리슨 서버 자신의 지도 화면 (손님은 Rooms 복제 -> OnRep_Rooms)
+    OnMapGenerated.Broadcast(Rooms);
+
+    // 층 도착 화면
+    const FText Title = FText::FromString(FString::Printf(TEXT("%d층"), CurrentFloor));
+    FString Sub = GetTierName(CurrentFloor).ToString();
+    if (FloorTheme && !FloorTheme->DisplayName.IsEmpty())
+    {
+        Sub += FString::Printf(TEXT(" · %s"), *FloorTheme->DisplayName.ToString());
+    }
+    for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
+    {
+        if (ATerminusPlayerController* PC = Cast<ATerminusPlayerController>(It->Get()))
+        {
+            PC->Client_ShowFloorTitle(Title, FText::FromString(Sub));
+        }
+    }
+
+    FChatMessage Notice;
+    Notice.Kind = EChatMessageKind::System;
+    Notice.Text = FString::Printf(TEXT("%d층(%s)에 도착했습니다. 체력이 모두 회복되었습니다."), CurrentFloor, *Sub);
+    ATerminusPlayerController::BroadcastChat(GetWorld(), Notice);
+
+    UE_LOG(LogTemp, Log, TEXT("[Map] %d층으로 (%s), 방 %d개"), CurrentFloor, *Sub, Rooms.Num());
 }
 
 FText AMapManager::GetTierName(int32 Floor)

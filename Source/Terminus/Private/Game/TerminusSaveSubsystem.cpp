@@ -6,6 +6,7 @@
 #include "Engine/GameInstance.h"
 #include "Engine/World.h"
 #include "Game/DungeonGameMode.h"
+#include "Dungeon/DungeonThemeData.h"
 #include "Game/LoadingScreenSubsystem.h"
 #include "Game/TerminusSaveCrypto.h"
 #include "Game/TerminusRunSubsystem.h"
@@ -29,11 +30,9 @@ static FAutoConsoleCommandWithWorld GDeleteSingleSaveCommand(
 	TEXT("Terminus.DeleteSingleSave"), TEXT("진행 중인 싱글 세이브 삭제 (새 싱글 게임을 시작할 수 있게)"),
 	FConsoleCommandWithWorldDelegate::CreateLambda([](UWorld* World)
 	{
-		UTerminusSaveSubsystem* Save = UTerminusSaveSubsystem::Get(World);
-		FRunSaveSummary Summary;
-		while (Save && Save->FindSingleRunSave(Summary))
+		if (UTerminusSaveSubsystem* Save = UTerminusSaveSubsystem::Get(World))
 		{
-			Save->DeleteRunSave(Summary.SlotName);
+			Save->DeleteSingleRunSaves();
 		}
 	}));
 
@@ -103,6 +102,15 @@ TArray<FRunSaveSummary> UTerminusSaveSubsystem::GetRunSaves(bool bMultiplayerOnl
 	return Result;
 }
 
+void UTerminusSaveSubsystem::DeleteSingleRunSaves()
+{
+	FRunSaveSummary Summary;
+	while (FindSingleRunSave(Summary))
+	{
+		DeleteRunSave(Summary.SlotName);
+	}
+}
+
 bool UTerminusSaveSubsystem::FindSingleRunSave(FRunSaveSummary& OutSummary)
 {
 	// 가장 최근 싱글 세이브 (예전 방식으로 여러 개 남아 있어도 최신 하나)
@@ -136,6 +144,7 @@ bool UTerminusSaveSubsystem::SaveCurrentRun(UWorld* World)
 	const AMapManager* MapMgr = Cast<AMapManager>(UGameplayStatics::GetActorOfClass(World, AMapManager::StaticClass()));
 	Save->Rooms = MapMgr ? MapMgr->Rooms : Run->GetRooms();
 	Save->Floor = MapMgr ? MapMgr->CurrentFloor : Run->GetFloor();
+	Save->Theme = MapMgr && MapMgr->FloorTheme ? FSoftObjectPath(MapMgr->FloorTheme.Get()) : Run->GetThemePath();
 
 	// 플레이어. 순서가 매번 같게 PlayerId 순
 	TArray<ATerminusPlayerState*> Players;

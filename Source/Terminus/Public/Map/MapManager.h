@@ -46,6 +46,16 @@ struct FRoomNode
 class ATerminusPlayerController;
 class UDungeonThemeData;
 
+// 계층 하나(표층 / 중층 / 심층)에 나올 수 있는 테마들. 계층이 바뀔 때 이 중 하나를 고름
+USTRUCT(BlueprintType)
+struct FTierThemes
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	TArray<TObjectPtr<UDungeonThemeData>> Themes;
+};
+
 // 맵 데이터가 업데이트되었음을 UI 등에 알리기 위한 델리게이트
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMapGenerated, const TArray<FRoomNode>&, MapData);
 
@@ -79,15 +89,37 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map Settings")
 	TMap<ERoomType, float> RoomTypeWeights;
 
-	// 이 층(지도)의 테마. 방에 들어가면 구역에 이 테마의 무대가 뜬다
-	// TODO: 층 진행이 생기면 층마다 바꿀 것 (기획: 테마 하나가 2개 층)
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map Settings|Theme")
+	// 이 층(지도)의 테마. 방에 들어가면 구역에 이 테마의 무대가 뜬다. 계층이 바뀌면 TierThemes 에서 새로 고름
+	// 모두에게 복제 (상단바 테마 이름). TierThemes 가 비어 있으면 이 값을 계속 씀
+	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite, Category = "Map Settings|Theme")
 	TObjectPtr<UDungeonThemeData> FloorTheme;
 
-	// 지금 층 (1~6). 기획: 1~2층 표층 / 3~4층 중층 / 5~6층 심층
-	// TODO: 층 진행이 생기면 보스방 클리어 때 올릴 것. 지금은 늘 1층
+	// 계층별 테마 후보 (0 = 표층, 1 = 중층, 2 = 심층). 기획: 테마 하나가 2개 층, 중층은 리자드의 늪 / 꽃의 정원
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Map Settings|Theme")
+	TArray<FTierThemes> TierThemes;
+
+	// 지금 층 (1~). 기획: 1~2층 표층 / 3~4층 중층 / 5~6층 심층. 보스방을 깨면 올라감
 	UPROPERTY(Replicated, EditAnywhere, BlueprintReadOnly, Category = "Map Settings", meta = (ClampMin = "1"))
 	int32 CurrentFloor = 1;
+
+	// 지금 있는 마지막 층 (콘텐츠가 늘면 올릴 것). 이 층 보스 뒤엔 '다음 층' 이 없음
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Map Settings", meta = (ClampMin = "1"))
+	int32 LastFloor = 6;
+
+	// 테마가 바뀌는 층인가 (2 / 4 / 6층). 이 층 보스 뒤에서만 다음 층 / 탈출 / 배신을 고름
+	static bool IsThemeEndFloor(int32 Floor) { return Floor % 2 == 0; }
+
+	// 퀘스트 방이 있는 층인가 = 테마가 시작되는 층 (1 / 3 / 5층). 아니면 퀘스트 줄 없이 일반 방부터 (줄 수 TotalLevels - 1)
+	static bool HasQuestRoom(int32 Floor) { return !IsThemeEndFloor(Floor); }
+
+	// 지금 지도의 줄 수 (퀘스트 줄이 없으면 TotalLevels - 1). 지도가 아직 없으면 TotalLevels
+	int32 GetLevelCount() const;
+
+	// [서버] 보스방이 끝났을 때 (구역 서브시스템이 부름). 테마가 안 바뀌는 층이면 바로 다음 층
+	void HandleBossCleared();
+
+	// [서버] 다음 층으로: 층 +1, (계층이 바뀌면) 새 테마, 새 지도, 전원 지도 처음 / 체력 회복
+	void AdvanceFloor();
 
 	// 층 이름 "표층" / "중층" / "심층"
 	static FText GetTierName(int32 Floor);
@@ -137,6 +169,9 @@ private:
 	bool ValidatePlayerCapacity(const TArray<FRoomNode>& InMap);
 
 	bool IsValidNextRoom(const FRunState& PlayerRunState, const FRoomNode& TargetRoom);
+
+	// 이 층의 테마. 같은 계층이면 지금 테마 그대로, 계층이 바뀌면 그 계층 후보 중 랜덤
+	UDungeonThemeData* PickThemeForFloor(int32 Floor) const;
 
 	// 이번 런이 1인인가. 기획의 방 선택 규칙이 싱글/멀티로 갈린다
 	bool IsSinglePlayerRun() const;
