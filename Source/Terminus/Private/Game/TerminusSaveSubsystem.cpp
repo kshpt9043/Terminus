@@ -21,6 +21,21 @@ namespace
 	constexpr int32 RunSaveUserIndex = 0;
 }
 
+const FString UTerminusSaveSubsystem::SingleRunSlot = TEXT("SingleRun");
+
+// [테스트] 싱글 세이브 지우기. 정산 / 사망이 아직 없어서 싱글 런을 끝낼 방법이 없을 때
+static FAutoConsoleCommandWithWorld GDeleteSingleSaveCommand(
+	TEXT("Terminus.DeleteSingleSave"), TEXT("진행 중인 싱글 세이브 삭제 (새 싱글 게임을 시작할 수 있게)"),
+	FConsoleCommandWithWorldDelegate::CreateLambda([](UWorld* World)
+	{
+		UTerminusSaveSubsystem* Save = UTerminusSaveSubsystem::Get(World);
+		FRunSaveSummary Summary;
+		while (Save && Save->FindSingleRunSave(Summary))
+		{
+			Save->DeleteRunSave(Summary.SlotName);
+		}
+	}));
+
 UTerminusSaveSubsystem* UTerminusSaveSubsystem::Get(const UObject* WorldContext)
 {
 	const UWorld* World = WorldContext ? WorldContext->GetWorld() : nullptr;
@@ -57,7 +72,7 @@ void UTerminusSaveSubsystem::SaveIndex(UTerminusRunSaveIndex* Index) const
 	}
 }
 
-TArray<FRunSaveSummary> UTerminusSaveSubsystem::GetRunSaves()
+TArray<FRunSaveSummary> UTerminusSaveSubsystem::GetRunSaves(bool bMultiplayerOnly)
 {
 	UTerminusRunSaveIndex* Index = LoadIndex();
 	if (!Index) return {};
@@ -73,8 +88,26 @@ TArray<FRunSaveSummary> UTerminusSaveSubsystem::GetRunSaves()
 	}
 
 	TArray<FRunSaveSummary> Result = Index->Entries;
+	if (bMultiplayerOnly)
+	{
+		Result.RemoveAll([](const FRunSaveSummary& Entry) { return !Entry.bMultiplayer; });
+	}
 	Result.Sort([](const FRunSaveSummary& A, const FRunSaveSummary& B) { return A.SavedAt > B.SavedAt; });
 	return Result;
+}
+
+bool UTerminusSaveSubsystem::FindSingleRunSave(FRunSaveSummary& OutSummary)
+{
+	// 가장 최근 싱글 세이브 (예전 방식으로 여러 개 남아 있어도 최신 하나)
+	for (const FRunSaveSummary& Entry : GetRunSaves())
+	{
+		if (!Entry.bMultiplayer)
+		{
+			OutSummary = Entry;
+			return true;
+		}
+	}
+	return false;
 }
 
 // =====================================================================
@@ -146,18 +179,19 @@ bool UTerminusSaveSubsystem::SaveCurrentRun(UWorld* World)
 
 	if (Save->Players.Num() == 0) return false;
 
-	// 슬롯: 이 런의 슬롯을 계속 덮어씀. 주점을 안 거친 PIE 처럼 없으면 새로
-	FString Slot = Run->GetSaveSlot();
+	// 슬롯: 싱글은 언제나 하나 (SingleRunSlot). 멀티는 이 런의 슬롯을 계속 덮어씀 (주점을 안 거친 PIE 처럼 없으면 새로)
+	const bool bMultiplayer = World->GetNetMode() != NM_Standalone;
+	FString Slot = bMultiplayer ? Run->GetSaveSlot() : SingleRunSlot;
 	if (Slot.IsEmpty())
 	{
 		Slot = MakeNewSlotName();
-		Run->SetSaveSlot(Slot);
 	}
+	Run->SetSaveSlot(Slot);
 
 	Save->Summary.SlotName = Slot;
 	Save->Summary.RoomName = Run->GetRoomName();
 	Save->Summary.SavedAt = FDateTime::Now();
-	Save->Summary.bMultiplayer = World->GetNetMode() != NM_Standalone;
+	Save->Summary.bMultiplayer = bMultiplayer;
 	Save->Summary.Floor = Save->Floor;
 
 	if (!UGameplayStatics::SaveGameToSlot(Save, Slot, RunSaveUserIndex))
@@ -166,10 +200,19 @@ bool UTerminusSaveSubsystem::SaveCurrentRun(UWorld* World)
 		return false;
 	}
 
-	// 목록 갱신 (같은 슬롯이면 교체)
+	// 목록 갱신 (같은 슬롯이면 교체). 싱글이면 다른 싱글 세이브(예전 방식으로 남은 것)는 지움 -> 싱글은 하나만
 	if (UTerminusRunSaveIndex* Index = LoadIndex())
 	{
-		Index->Entries.RemoveAll([&Slot](const FRunSaveSummary& Entry) { return Entry.SlotName == Slot; });
+		Index->Entries.RemoveAll([&Slot, bMultiplayer](const FRunSaveSummary& Entry)
+		{
+			if (Entry.SlotName == Slot) return true;
+			if (!bMultiplayer && !Entry.bMultiplayer)
+			{
+				UGameplayStatics::DeleteGameInSlot(Entry.SlotName, RunSaveUserIndex);
+				return true;
+			}
+			return false;
+		});
 		Index->Entries.Add(Save->Summary);
 		SaveIndex(Index);
 	}

@@ -14,7 +14,6 @@
 #include "Widgets/Save/RunSaveListWidget.h"
 #include "Game/TerminusSaveSubsystem.h"
 #include "Game/TerminusRunSubsystem.h"
-#include "Widgets/Common/TextInputPopupWidget.h"
 #include "Widgets/Base/BaseWidget.h"
 #include "Game/LoadingScreenSubsystem.h"
 
@@ -130,28 +129,28 @@ void UMainMenuWidget::HandleDungeonClicked()
 	// 주점을 거쳐야 ServerTravel(CopyProperties)로 RunState 가 던전까지 간다
 	ClearPendingContinue();
 
-	// 싱글도 던전 이름을 정함 (세이브 목록에 이 이름으로). 기본은 랜덤
-	const TSubclassOf<UTextInputPopupWidget> Class = NameInputPopupClass ? NameInputPopupClass : TSubclassOf<UTextInputPopupWidget>(UTextInputPopupWidget::StaticClass());
-	UTextInputPopupWidget* Popup = CreateWidget<UTextInputPopupWidget>(GetOwningPlayer(), Class);
-	if (!Popup)
+	// 진행 중인 싱글 런이 있으면 그것만 (새 게임 불가). 세이브는 하나
+	UTerminusSaveSubsystem* Save = UTerminusSaveSubsystem::Get(this);
+	FRunSaveSummary Single;
+	if (Save && Save->FindSingleRunSave(Single))
 	{
-		StartSoloWithName(UTerminusRunSubsystem::MakeRandomRoomName());
+		FText Error;
+		if (!Save->ContinueRun(this, Single.SlotName, TavernMapPath, FString(), Error))
+		{
+			ShowPopup(FText::FromString(TEXT("진행 중인 던전을 불러오지 못했습니다.")), Error);
+		}
 		return;
 	}
 
-	Popup->Setup(FText::FromString(TEXT("던전 이름")),
-		FText::FromString(TEXT("이번 탐험의 이름을 정하세요. 세이브 목록에 이 이름으로 남습니다.")),
-		UTerminusRunSubsystem::MakeRandomRoomName(), UTerminusRunSubsystem::MaxRoomNameLength);
-	Popup->SetRandomProvider([]() { return UTerminusRunSubsystem::MakeRandomRoomName(); });
-	Popup->OnConfirmedText.BindUObject(this, &UMainMenuWidget::StartSoloWithName);
-	Popup->AddToViewport(50);
+	StartNewSolo();
 }
 
-void UMainMenuWidget::StartSoloWithName(const FString& RoomName)
+void UMainMenuWidget::StartNewSolo()
 {
+	// 싱글은 이름을 묻지 않음 (내부용 랜덤 이름)
 	if (UTerminusRunSubsystem* Run = GetGameInstance() ? GetGameInstance()->GetSubsystem<UTerminusRunSubsystem>() : nullptr)
 	{
-		Run->SetRoomName(RoomName);
+		Run->SetRoomName(UTerminusRunSubsystem::MakeRandomRoomName());
 	}
 	if (ULoadingScreenSubsystem* Loading = ULoadingScreenSubsystem::Get(this))
 	{

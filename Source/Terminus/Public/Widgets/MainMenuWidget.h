@@ -10,7 +10,6 @@ class USessionSubsystem;
 class URoomListWidget;
 class UStorageWidget;
 class URunSaveListWidget;
-class UTextInputPopupWidget;
 class UBaseWidget;
 
 /**
@@ -66,10 +65,6 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Terminus|UI")
 	TSubclassOf<URunSaveListWidget> SaveListWidgetClass;
 
-	// 싱글 시작 때 던전 이름 입력 팝업. 비워 두면 C++ 기본 모양
-	UPROPERTY(EditDefaultsOnly, Category = "Terminus|UI")
-	TSubclassOf<UTextInputPopupWidget> NameInputPopupClass;
-
 	// 보유 골드 (UTerminusProfileSubsystem). 바뀌면 바로 갱신
 	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UTextBlock> GoldText;
 
@@ -108,8 +103,8 @@ private:
 	UFUNCTION() void HandleContinueClicked();
 	UFUNCTION() void HandleBaseClicked();
 
-	// 싱글: 이름을 정하면 주점(캐릭터 선택)으로
-	void StartSoloWithName(const FString& RoomName);
+	// 싱글 새 게임: 주점(캐릭터 선택)으로. 진행 중인 싱글 세이브가 있으면 이 대신 그걸 이어서 함
+	void StartNewSolo();
 
 	// 이어하기로 읽어 둔 세이브를 버림 (새 판을 시작하거나 메뉴로 돌아왔을 때)
 	void ClearPendingContinue();

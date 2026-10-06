@@ -101,7 +101,9 @@ public:
  * 런 세이브 (이어하기)
  *  - 자동 저장: 방(전투)이 끝나고 전원이 지도로 돌아왔을 때 서버가 저장 (UDungeonAreaSubsystem::FinishAllRooms)
  *    싱글 / 멀티 모두 서버(방장) 컴퓨터에만 저장됨
- *  - 이어하기: 목록에서 고르면 세이브를 읽어 두고 주점을 엶. 주점 게임모드가 GetPendingLoad 로 꺼내 씀
+ *  - 싱글: 세이브 하나 (SingleRunSlot). 진행 중인 게 있으면 메인 메뉴 '던전 입장' 이 그걸 이어서 함 (새 게임 불가)
+ *  - 멀티: 런마다 슬롯 하나. 메인 메뉴 '이어하기' 목록에서 고름
+ *  - 이어하기: 세이브를 읽어 두고 엶. 게임모드가 GetPendingLoad 로 꺼내 씀
  *    싱글 = 세션 없이 주점 -> 바로 출발. 멀티 = 세이브 인원으로 주점을 열고, 세이브 당시 플레이어가 다 모여야 출발
  *
  * 영구 데이터(골드 / 창고 / 보유 스킬)는 여기가 아니라 UTerminusProfileSubsystem
@@ -114,10 +116,17 @@ class TERMINUS_API UTerminusSaveSubsystem : public UGameInstanceSubsystem
 public:
 	static UTerminusSaveSubsystem* Get(const UObject* WorldContext);
 
-	// 세이브 목록 (최근 저장 먼저). 파일이 없어진 항목은 뺌
-	TArray<FRunSaveSummary> GetRunSaves();
+	// 세이브 목록 (최근 저장 먼저). 파일이 없어진 항목은 뺌. bMultiplayerOnly = 멀티 세이브만 (이어하기 목록)
+	TArray<FRunSaveSummary> GetRunSaves(bool bMultiplayerOnly = false);
 
-	bool HasRunSaves() { return GetRunSaves().Num() > 0; }
+	// 이어하기 목록에 띄울 멀티 세이브가 있는가
+	bool HasRunSaves() { return GetRunSaves(true).Num() > 0; }
+
+	// 싱글은 세이브가 하나뿐 (슬롯 SingleRunSlot). 진행 중인 싱글 런이 있으면 true + 요약
+	// 있으면 던전 입장은 이걸 이어서만 할 수 있음 (새 싱글 게임 불가)
+	bool FindSingleRunSave(FRunSaveSummary& OutSummary);
+
+	static const FString SingleRunSlot;
 
 	// 세이브가 생기거나 지워졌을 때 (메인 메뉴 이어하기 버튼 표시용)
 	FSimpleMulticastDelegate OnRunSavesChanged;
