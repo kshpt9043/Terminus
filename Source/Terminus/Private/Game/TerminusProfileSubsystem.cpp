@@ -2,6 +2,7 @@
 
 #include "Data/TerminusDataSettings.h"
 #include "Kismet/GameplayStatics.h"
+#include "Game/TerminusSaveCrypto.h"
 #include "HAL/IConsoleManager.h"
 #include "Engine/GameInstance.h"
 #include "Engine/World.h"
@@ -9,6 +10,8 @@
 namespace
 {
 	const TCHAR* ProfileSlotName = TEXT("Profile");
+	const TCHAR* ProfileBackupSlotName = TEXT("Profile_Backup");     // 저장할 때마다 같이 씀 (원본이 깨졌을 때 복구용)
+	const TCHAR* ProfileTamperedSlotName = TEXT("Profile_Tampered"); // 조작 / 손상된 원본 보관
 	constexpr int32 ProfileUserIndex = 0;
 }
 
@@ -112,14 +115,33 @@ void UTerminusProfileSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
 	Super::Initialize(Collection);
 
-	if (UGameplayStatics::DoesSaveGameExist(ProfileSlotName, ProfileUserIndex))
+	// 암호화 세이브 (TerminusSaveCrypto). 조작 / 손상이면 백업에서, 백업도 안 되면 새로
+	using TerminusSaveCrypto::ELoadResult;
+	ELoadResult Result = ELoadResult::NotFound;
+	Profile = Cast<UTerminusProfileSave>(TerminusSaveCrypto::LoadFromSlot(ProfileSlotName, ProfileUserIndex, &Result));
+	bool bNeedsSave = Result == ELoadResult::Legacy;   // 예전 평문 -> 바로 암호화해서 다시 씀
+
+	if (!Profile && Result == ELoadResult::Tampered)
 	{
-		Profile = Cast<UTerminusProfileSave>(UGameplayStatics::LoadGameFromSlot(ProfileSlotName, ProfileUserIndex));
+		TerminusSaveCrypto::CopySlot(ProfileSlotName, ProfileTamperedSlotName, ProfileUserIndex);
+
+		ELoadResult BackupResult = ELoadResult::NotFound;
+		Profile = Cast<UTerminusProfileSave>(TerminusSaveCrypto::LoadFromSlot(ProfileBackupSlotName, ProfileUserIndex, &BackupResult));
+		LoadNotice = FText::FromString(Profile
+			? TEXT("세이브 파일이 손상되어 백업에서 복구했습니다.")
+			: TEXT("세이브 파일이 손상되었거나 변조되어 새로 시작합니다."));
+		UE_LOG(LogTemp, Warning, TEXT("[Profile] 세이브 조작 / 손상 -> %s"), Profile ? TEXT("백업에서 복구") : TEXT("새로 시작"));
+		bNeedsSave = true;
 	}
 
 	if (!Profile)
 	{
 		Profile = Cast<UTerminusProfileSave>(UGameplayStatics::CreateSaveGameObject(UTerminusProfileSave::StaticClass()));
+	}
+
+	if (bNeedsSave)
+	{
+		Save();
 	}
 
 	// 예전 세이브엔 같은 유물이 여러 개 있을 수 있음 -> 도감처럼 하나씩만
@@ -369,8 +391,15 @@ bool UTerminusProfileSubsystem::IsEquippableSkill(FName SkillRow, ECharacterClas
 
 void UTerminusProfileSubsystem::Save()
 {
-	if (Profile)
+	if (Profile && TerminusSaveCrypto::SaveToSlot(Profile, ProfileSlotName, ProfileUserIndex))
 	{
-		UGameplayStatics::SaveGameToSlot(Profile, ProfileSlotName, ProfileUserIndex);
+		TerminusSaveCrypto::SaveToSlot(Profile, ProfileBackupSlotName, ProfileUserIndex);
 	}
+}
+
+FText UTerminusProfileSubsystem::ConsumeLoadNotice()
+{
+	FText Out = LoadNotice;
+	LoadNotice = FText::GetEmpty();
+	return Out;
 }

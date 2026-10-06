@@ -7,6 +7,7 @@
 #include "Engine/World.h"
 #include "Game/DungeonGameMode.h"
 #include "Game/LoadingScreenSubsystem.h"
+#include "Game/TerminusSaveCrypto.h"
 #include "Game/TerminusRunSubsystem.h"
 #include "GameFramework/GameStateBase.h"
 #include "Kismet/GameplayStatics.h"
@@ -56,8 +57,14 @@ UTerminusRunSaveIndex* UTerminusSaveSubsystem::LoadIndex() const
 {
 	if (UGameplayStatics::DoesSaveGameExist(RunSaveIndexSlot, RunSaveUserIndex))
 	{
-		if (UTerminusRunSaveIndex* Index = Cast<UTerminusRunSaveIndex>(UGameplayStatics::LoadGameFromSlot(RunSaveIndexSlot, RunSaveUserIndex)))
+		TerminusSaveCrypto::ELoadResult Result = TerminusSaveCrypto::ELoadResult::NotFound;
+		if (UTerminusRunSaveIndex* Index = Cast<UTerminusRunSaveIndex>(TerminusSaveCrypto::LoadFromSlot(RunSaveIndexSlot, RunSaveUserIndex, &Result)))
 		{
+			// 예전 평문이면 바로 암호화해서 다시 씀
+			if (Result == TerminusSaveCrypto::ELoadResult::Legacy)
+			{
+				TerminusSaveCrypto::SaveToSlot(Index, RunSaveIndexSlot, RunSaveUserIndex);
+			}
 			return Index;
 		}
 	}
@@ -68,7 +75,7 @@ void UTerminusSaveSubsystem::SaveIndex(UTerminusRunSaveIndex* Index) const
 {
 	if (Index)
 	{
-		UGameplayStatics::SaveGameToSlot(Index, RunSaveIndexSlot, RunSaveUserIndex);
+		TerminusSaveCrypto::SaveToSlot(Index, RunSaveIndexSlot, RunSaveUserIndex);
 	}
 }
 
@@ -194,7 +201,7 @@ bool UTerminusSaveSubsystem::SaveCurrentRun(UWorld* World)
 	Save->Summary.bMultiplayer = bMultiplayer;
 	Save->Summary.Floor = Save->Floor;
 
-	if (!UGameplayStatics::SaveGameToSlot(Save, Slot, RunSaveUserIndex))
+	if (!TerminusSaveCrypto::SaveToSlot(Save, Slot, RunSaveUserIndex))
 	{
 		UE_LOG(LogTerminusSave, Warning, TEXT("[Save] %s 저장 실패"), *Slot);
 		return false;
@@ -225,7 +232,14 @@ bool UTerminusSaveSubsystem::SaveCurrentRun(UWorld* World)
 UTerminusRunSave* UTerminusSaveSubsystem::LoadRunSave(const FString& SlotName) const
 {
 	if (SlotName.IsEmpty() || !UGameplayStatics::DoesSaveGameExist(SlotName, RunSaveUserIndex)) return nullptr;
-	return Cast<UTerminusRunSave>(UGameplayStatics::LoadGameFromSlot(SlotName, RunSaveUserIndex));
+	// 조작 / 손상이면 nullptr (이어하기 실패로 안내). 예전 평문이면 바로 암호화해서 다시 씀
+	TerminusSaveCrypto::ELoadResult Result = TerminusSaveCrypto::ELoadResult::NotFound;
+	UTerminusRunSave* Save = Cast<UTerminusRunSave>(TerminusSaveCrypto::LoadFromSlot(SlotName, RunSaveUserIndex, &Result));
+	if (Save && Result == TerminusSaveCrypto::ELoadResult::Legacy)
+	{
+		TerminusSaveCrypto::SaveToSlot(Save, SlotName, RunSaveUserIndex);
+	}
+	return Save;
 }
 
 bool UTerminusSaveSubsystem::DeleteRunSave(const FString& SlotName)
@@ -261,7 +275,7 @@ bool UTerminusSaveSubsystem::ContinueRun(const UObject* WorldContext, const FStr
 	UTerminusRunSave* Save = LoadRunSave(SlotName);
 	if (!Save || Save->Players.Num() == 0 || Save->Rooms.Num() == 0)
 	{
-		OutError = FText::FromString(TEXT("세이브 파일을 읽을 수 없습니다."));
+		OutError = FText::FromString(TEXT("세이브 파일을 읽을 수 없습니다. 손상되었거나 변조된 파일입니다."));
 		return false;
 	}
 

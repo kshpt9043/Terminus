@@ -94,6 +94,16 @@ void UMainMenuWidget::NativeConstruct()
 	Sessions->OnHostComplete.AddUniqueDynamic(this, &UMainMenuWidget::HandleHostComplete);
 	Sessions->OnJoinComplete.AddUniqueDynamic(this, &UMainMenuWidget::HandleJoinComplete);
 
+	// 세이브가 조작 / 손상돼서 복구했거나 새로 시작했으면 알림 (한 번만)
+	if (UTerminusProfileSubsystem* Profile = GetGameInstance() ? GetGameInstance()->GetSubsystem<UTerminusProfileSubsystem>() : nullptr)
+	{
+		const FText Notice = Profile->ConsumeLoadNotice();
+		if (!Notice.IsEmpty())
+		{
+			ShowPopup(FText::FromString(TEXT("세이브 파일 문제")), Notice);
+		}
+	}
+
 	// 끊겨서 돌아온 거면 이유를 보여준다. 꺼내면 비워지므로 한 번만 뜬다
 	const FText Reason = Sessions->ConsumeDisconnectReason();
 	if (!Reason.IsEmpty())

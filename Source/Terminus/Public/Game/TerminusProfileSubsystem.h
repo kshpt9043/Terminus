@@ -117,6 +117,9 @@ public:
 	DECLARE_MULTICAST_DELEGATE(FOnUpgradesChanged);
 	FOnUpgradesChanged OnUpgradesChanged;
 
+	// 게임을 켤 때 세이브가 조작 / 손상돼서 백업으로 복구했거나 새로 시작했으면 그 안내. 꺼내면 비워짐 (메인 메뉴 팝업)
+	FText ConsumeLoadNotice();
+
 	// 창고 내용(보유 스킬 / 보관 유물)이 바뀜. 창고 화면 갱신용
 	DECLARE_MULTICAST_DELEGATE(FOnStorageChanged);
 	FOnStorageChanged OnStorageChanged;
@@ -139,4 +142,6 @@ private:
 
 	UPROPERTY()
 	TObjectPtr<UTerminusProfileSave> Profile;
+
+	FText LoadNotice;
 };
