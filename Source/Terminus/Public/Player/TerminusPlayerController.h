@@ -7,6 +7,7 @@
 #include "Data/CharacterTypes.h"
 #include "Game/ChatSubsystem.h"
 #include "Map/MapManager.h"
+#include "Data/RewardTypes.h"
 #include "TerminusPlayerController.generated.h"
 
 class UTavernWidget;
@@ -147,11 +148,11 @@ public:
 
 	// 몬스터방 보상 화면 띄우기 (서버 -> 이 플레이어). Currency = 이미 받은 던전 재화, SkillOffers = 고를 수 있는 스킬
 	UFUNCTION(Client, Reliable)
-	void Client_ShowMonsterReward(int32 Currency, const TArray<FName>& SkillOffers);
+	void Client_ShowRoomReward(const FRoomRewardOffer& Offer);
 
 	// 보상 마침 ('다음으로'). ChosenSkill = None 이면 안 고름, ReplaceSlot = 칸이 꽉 찼을 때 바꿀 강화 칸
 	UFUNCTION(Server, Reliable)
-	void Server_FinishMonsterReward(FName ChosenSkill, int32 ReplaceSlot);
+	void Server_FinishRoomReward(FName ChosenSkill, int32 ReplaceSlot, FName ChosenRelic, FName ReplaceRelic);
 
 	// 보상 화면 닫기 (누가 나가서 방이 닫혔을 때)
 	UFUNCTION(Client, Reliable)

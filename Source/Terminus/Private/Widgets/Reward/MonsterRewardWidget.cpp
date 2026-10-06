@@ -5,9 +5,11 @@
 #include "Components/Button.h"
 #include "Components/HorizontalBox.h"
 #include "Components/HorizontalBoxSlot.h"
+#include "Components/SizeBox.h"
 #include "Components/TextBlock.h"
 #include "Components/VerticalBox.h"
 #include "Components/VerticalBoxSlot.h"
+#include "Data/RelicTypes.h"
 #include "Data/TerminusDataSettings.h"
 #include "Player/TerminusPlayerController.h"
 #include "Player/TerminusPlayerState.h"
@@ -44,6 +46,37 @@ namespace
 			S->SetPadding(FMargin(0.f, Top, 0.f, 0.f));
 		}
 	}
+
+	// 바꾸기 패널 하나 (안내 + 칸 줄 + 취소)
+	UVerticalBox* MakeRewardReplacePanel(UWidgetTree* Tree, const FName& PanelName, const FString& Guide,
+		const FName& BoxName, TObjectPtr<UPanelWidget>& OutBox, const FName& CancelName, TObjectPtr<UButton>& OutCancel)
+	{
+		UVerticalBox* Panel = Tree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), PanelName);
+
+		UTextBlock* GuideText = MakeRewardText(Tree, NAME_None, 16, FLinearColor(0.85f, 0.85f, 0.85f));
+		GuideText->SetText(FText::FromString(Guide));
+		AddCentered(Panel, GuideText, 0.f);
+
+		UHorizontalBox* Box = Tree->ConstructWidget<UHorizontalBox>(UHorizontalBox::StaticClass(), BoxName);
+		OutBox = Box;
+		AddCentered(Panel, Box, 12.f);
+
+		OutCancel = MakeRewardButton(Tree, CancelName, TEXT("  취소  "));
+		AddCentered(Panel, OutCancel, 12.f);
+		return Panel;
+	}
+
+	FString RewardRelicName(FName Row)
+	{
+		const FRelicRow* Relic = UTerminusDataSettings::FindRelicRow(Row);
+		return Relic ? Relic->RelicName.ToString() : Row.ToString();
+	}
+
+	FString RewardSkillName(FName Row)
+	{
+		const FSkillRow* Skill = UTerminusDataSettings::FindSkillRow(Row);
+		return Skill ? Skill->DisplayName_KR.ToString() : Row.ToString();
+	}
 }
 
 // =====================================================================
@@ -59,8 +92,9 @@ void UMonsterRewardWidget::NativeOnInitialized()
 		BuildDefaultLayout();
 	}
 
-	if (NextButton)          NextButton->OnClicked.AddDynamic(this, &UMonsterRewardWidget::HandleNextClicked);
-	if (ReplaceCancelButton) ReplaceCancelButton->OnClicked.AddDynamic(this, &UMonsterRewardWidget::HandleReplaceCancel);
+	if (NextButton)               NextButton->OnClicked.AddDynamic(this, &UMonsterRewardWidget::HandleNextClicked);
+	if (ReplaceCancelButton)      ReplaceCancelButton->OnClicked.AddDynamic(this, &UMonsterRewardWidget::HandleReplaceCancel);
+	if (RelicReplaceCancelButton) RelicReplaceCancelButton->OnClicked.AddDynamic(this, &UMonsterRewardWidget::HandleRelicReplaceCancel);
 
 	// 아래 화면(전투 HUD)을 못 누르게
 	SetVisibility(ESlateVisibility::Visible);
@@ -83,23 +117,36 @@ void UMonsterRewardWidget::BuildDefaultLayout()
 	CurrencyText = MakeRewardText(WidgetTree, TEXT("CurrencyText"), 18, FLinearColor::White);
 	AddCentered(Column, CurrencyText, 10.f);
 
+	// 스킬 / 유물 섹션을 나란히
+	UHorizontalBox* Sections = WidgetTree->ConstructWidget<UHorizontalBox>();
+	AddCentered(Column, Sections, 24.f);
+
+	UVerticalBox* Skill = WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), TEXT("SkillSection"));
+	SkillSection = Skill;
+	if (UHorizontalBoxSlot* S = Sections->AddChildToHorizontalBox(Skill)) S->SetPadding(FMargin(20.f, 0.f));
+	UTextBlock* SkillTitle = MakeRewardText(WidgetTree, NAME_None, 17, FLinearColor(0.8f, 0.8f, 0.8f));
+	SkillTitle->SetText(FText::FromString(TEXT("픽업 스킬")));
+	AddCentered(Skill, SkillTitle, 0.f);
 	CardBox = WidgetTree->ConstructWidget<UHorizontalBox>(UHorizontalBox::StaticClass(), TEXT("CardBox"));
-	AddCentered(Column, CardBox, 28.f);
+	AddCentered(Skill, CardBox, 10.f);
 
-	// 바꿀 칸 고르기
-	UVerticalBox* Replace = WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), TEXT("ReplacePanel"));
-	ReplacePanel = Replace;
-	AddCentered(Column, Replace, 28.f);
+	UVerticalBox* Relic = WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), TEXT("RelicSection"));
+	RelicSection = Relic;
+	if (UHorizontalBoxSlot* S = Sections->AddChildToHorizontalBox(Relic)) S->SetPadding(FMargin(20.f, 0.f));
+	UTextBlock* RelicTitle = MakeRewardText(WidgetTree, NAME_None, 17, FLinearColor(0.8f, 0.8f, 0.8f));
+	RelicTitle->SetText(FText::FromString(TEXT("유물")));
+	AddCentered(Relic, RelicTitle, 0.f);
+	RelicBox = WidgetTree->ConstructWidget<UHorizontalBox>(UHorizontalBox::StaticClass(), TEXT("RelicBox"));
+	AddCentered(Relic, RelicBox, 10.f);
 
-	UTextBlock* ReplaceGuide = MakeRewardText(WidgetTree, NAME_None, 16, FLinearColor(0.85f, 0.85f, 0.85f));
-	ReplaceGuide->SetText(FText::FromString(TEXT("강화 스킬 칸이 가득 찼습니다. 바꿀 스킬을 고르세요")));
-	AddCentered(Replace, ReplaceGuide, 0.f);
+	// 바꾸기 패널
+	ReplacePanel = MakeRewardReplacePanel(WidgetTree, TEXT("ReplacePanel"), TEXT("강화 스킬 칸이 가득 찼습니다. 바꿀 스킬을 고르세요"),
+		TEXT("ReplaceBox"), ReplaceBox, TEXT("ReplaceCancelButton"), ReplaceCancelButton);
+	AddCentered(Column, ReplacePanel, 24.f);
 
-	ReplaceBox = WidgetTree->ConstructWidget<UHorizontalBox>(UHorizontalBox::StaticClass(), TEXT("ReplaceBox"));
-	AddCentered(Replace, ReplaceBox, 12.f);
-
-	ReplaceCancelButton = MakeRewardButton(WidgetTree, TEXT("ReplaceCancelButton"), TEXT("  취소  "));
-	AddCentered(Replace, ReplaceCancelButton, 12.f);
+	RelicReplacePanel = MakeRewardReplacePanel(WidgetTree, TEXT("RelicReplacePanel"), TEXT("유물 칸이 가득 찼습니다. 버릴 유물을 고르세요"),
+		TEXT("RelicReplaceBox"), RelicReplaceBox, TEXT("RelicReplaceCancelButton"), RelicReplaceCancelButton);
+	AddCentered(Column, RelicReplacePanel, 24.f);
 
 	ResultText = MakeRewardText(WidgetTree, TEXT("ResultText"), 18, FLinearColor::White);
 	AddCentered(Column, ResultText, 24.f);
@@ -109,61 +156,179 @@ void UMonsterRewardWidget::BuildDefaultLayout()
 }
 
 // =====================================================================
-// 단계
+// 내용
 // =====================================================================
 
-void UMonsterRewardWidget::Setup(int32 InCurrency, const TArray<FName>& InSkillOffers)
+void UMonsterRewardWidget::Setup(const FRoomRewardOffer& InOffer)
 {
-	Offers = InSkillOffers;
-	ChosenSkill = NAME_None;
-	PendingSkill = NAME_None;
+	Offer = InOffer;
+	ChosenSkill = PendingSkill = NAME_None;
+	ChosenRelic = PendingRelic = ReplaceRelic = NAME_None;
 	ReplaceSlot = INDEX_NONE;
 
-	if (TitleText)    TitleText->SetText(FText::FromString(TEXT("전투 승리!")));
-	if (CurrencyText) CurrencyText->SetText(FText::FromString(FString::Printf(TEXT("던전 재화 +%d"), InCurrency)));
-
-	// 카드 만들기 (한 번)
-	if (CardBox)
+	if (TitleText)
 	{
-		CardBox->ClearChildren();
-		const TSubclassOf<USkillCardWidget> Class = CardClass ? CardClass : TSubclassOf<USkillCardWidget>(USkillCardWidget::StaticClass());
-		for (int32 i = 0; i < Offers.Num(); ++i)
-		{
-			USkillCardWidget* Card = CreateWidget<USkillCardWidget>(this, Class);
-			if (!Card) continue;
+		const TCHAR* Title = Offer.RoomType == ERoomType::BOSS ? TEXT("보스 처치!")
+			: Offer.RoomType == ERoomType::GUARDIAN ? TEXT("가디언 처치!")
+			: TEXT("전투 승리!");
+		TitleText->SetText(FText::FromString(Title));
+	}
+	if (CurrencyText)
+	{
+		CurrencyText->SetText(FText::FromString(FString::Printf(TEXT("던전 재화 +%d"), Offer.Currency)));
+		CurrencyText->SetVisibility(Offer.Currency > 0 ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Collapsed);
+	}
 
-			Card->SetSkill(Offers[i]);
-			Card->OnCardClicked.BindUObject(this, &UMonsterRewardWidget::HandleCardClicked);
-			if (UHorizontalBoxSlot* HSlot = Cast<UHorizontalBoxSlot>(CardBox->AddChild(Card)))
-			{
-				HSlot->SetPadding(FMargin(i == 0 ? 0.f : CardSpacing * 0.5f, 0.f, i == Offers.Num() - 1 ? 0.f : CardSpacing * 0.5f, 0.f));
-				HSlot->SetVerticalAlignment(VAlign_Center);
-			}
+	BuildSkillCards();
+	BuildRelicCards();
+	Refresh();
+}
+
+UItemSlotWidget* UMonsterRewardWidget::MakeSlot()
+{
+	const TSubclassOf<UItemSlotWidget> Class = SlotClass ? SlotClass : TSubclassOf<UItemSlotWidget>(UItemSlotWidget::StaticClass());
+	return CreateWidget<UItemSlotWidget>(this, Class);
+}
+
+void UMonsterRewardWidget::BuildSkillCards()
+{
+	if (!CardBox) return;
+	CardBox->ClearChildren();
+
+	const TSubclassOf<USkillCardWidget> Class = CardClass ? CardClass : TSubclassOf<USkillCardWidget>(USkillCardWidget::StaticClass());
+	for (int32 i = 0; i < Offer.SkillOffers.Num(); ++i)
+	{
+		USkillCardWidget* Card = CreateWidget<USkillCardWidget>(this, Class);
+		if (!Card) continue;
+
+		Card->SetSkill(Offer.SkillOffers[i]);
+		Card->OnCardClicked.BindUObject(this, &UMonsterRewardWidget::HandleCardClicked);
+		if (UHorizontalBoxSlot* HSlot = Cast<UHorizontalBoxSlot>(CardBox->AddChild(Card)))
+		{
+			HSlot->SetPadding(FMargin(CardSpacing * 0.5f, 0.f));
+			HSlot->SetVerticalAlignment(VAlign_Center);
 		}
 	}
-
-	ShowCards();
 }
 
-void UMonsterRewardWidget::ShowCards()
+void UMonsterRewardWidget::BuildRelicCards()
 {
-	if (CardBox)      CardBox->SetVisibility(Offers.Num() > 0 ? ESlateVisibility::SelfHitTestInvisible : ESlateVisibility::Collapsed);
-	if (ReplacePanel) ReplacePanel->SetVisibility(ESlateVisibility::Collapsed);
+	if (!RelicBox) return;
+	RelicBox->ClearChildren();
 
-	if (ResultText)
+	for (const FName& Row : Offer.RelicOffers)
 	{
-		ResultText->SetText(FText::FromString(Offers.Num() > 0
-			? TEXT("강화 스킬을 하나 고를 수 있습니다 (안 골라도 됩니다)")
-			: TEXT("받을 수 있는 강화 스킬이 없습니다")));
+		const FRelicRow* Relic = UTerminusDataSettings::FindRelicRow(Row);
+		UItemSlotWidget* RelicSlot = MakeSlot();
+		if (!Relic || !RelicSlot) continue;
+
+		RelicSlot->SetShowName(true);
+		RelicSlot->SetSlotSize(FVector2D(120.f, 120.f));
+		RelicSlot->SetRelic(Row);
+		RelicSlot->OnSlotClicked.BindUObject(this, &UMonsterRewardWidget::HandleRelicClicked);
+
+		// 칸 + 설명
+		UVerticalBox* Card = WidgetTree->ConstructWidget<UVerticalBox>();
+		AddCentered(Card, RelicSlot, 0.f);
+
+		USizeBox* DescSize = WidgetTree->ConstructWidget<USizeBox>();
+		DescSize->SetWidthOverride(220.f);
+		UTextBlock* Desc = MakeRewardText(WidgetTree, NAME_None, 14, FLinearColor(0.9f, 0.9f, 0.9f));
+		Desc->SetText(Relic->RelicDesc);
+		Desc->SetAutoWrapText(true);
+		DescSize->SetContent(Desc);
+		AddCentered(Card, DescSize, 8.f);
+
+		if (UHorizontalBoxSlot* HSlot = Cast<UHorizontalBoxSlot>(RelicBox->AddChild(Card)))
+		{
+			HSlot->SetPadding(FMargin(CardSpacing * 0.5f, 0.f));
+			HSlot->SetVerticalAlignment(VAlign_Top);
+		}
 	}
 }
 
-void UMonsterRewardWidget::ShowReplace()
+void UMonsterRewardWidget::Refresh()
 {
-	if (CardBox)      CardBox->SetVisibility(ESlateVisibility::Collapsed);
-	if (ReplacePanel) ReplacePanel->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
-	if (ResultText)   ResultText->SetText(FText::GetEmpty());
+	const bool bSkillReplacing = !PendingSkill.IsNone();
+	const bool bRelicReplacing = !PendingRelic.IsNone();
+	const bool bReplacing = bSkillReplacing || bRelicReplacing;
 
+	// 후보는 아직 안 골랐고 바꾸기 중이 아닐 때만
+	if (SkillSection)
+	{
+		const bool bShow = !bReplacing && ChosenSkill.IsNone() && Offer.SkillOffers.Num() > 0;
+		SkillSection->SetVisibility(bShow ? ESlateVisibility::SelfHitTestInvisible : ESlateVisibility::Collapsed);
+	}
+	else if (CardBox)
+	{
+		CardBox->SetVisibility(!bReplacing && ChosenSkill.IsNone() ? ESlateVisibility::SelfHitTestInvisible : ESlateVisibility::Collapsed);
+	}
+
+	if (RelicSection)
+	{
+		const bool bShow = !bReplacing && ChosenRelic.IsNone() && Offer.RelicOffers.Num() > 0;
+		RelicSection->SetVisibility(bShow ? ESlateVisibility::SelfHitTestInvisible : ESlateVisibility::Collapsed);
+	}
+	else if (RelicBox)
+	{
+		RelicBox->SetVisibility(!bReplacing && ChosenRelic.IsNone() ? ESlateVisibility::SelfHitTestInvisible : ESlateVisibility::Collapsed);
+	}
+
+	if (ReplacePanel)      ReplacePanel->SetVisibility(bSkillReplacing ? ESlateVisibility::SelfHitTestInvisible : ESlateVisibility::Collapsed);
+	if (RelicReplacePanel) RelicReplacePanel->SetVisibility(bRelicReplacing ? ESlateVisibility::SelfHitTestInvisible : ESlateVisibility::Collapsed);
+
+	if (!ResultText) return;
+
+	TArray<FString> Lines;
+	if (!ChosenSkill.IsNone())
+	{
+		Lines.Add(FString::Printf(TEXT("획득: %s%s"), *RewardSkillName(ChosenSkill),
+			ReplaceSlot != INDEX_NONE ? *FString::Printf(TEXT("  (강화 칸 %d 교체)"), ReplaceSlot + 1) : TEXT("")));
+	}
+	if (!ChosenRelic.IsNone())
+	{
+		Lines.Add(FString::Printf(TEXT("획득: %s%s"), *RewardRelicName(ChosenRelic),
+			!ReplaceRelic.IsNone() ? *FString::Printf(TEXT("  (%s 버림)"), *RewardRelicName(ReplaceRelic)) : TEXT("")));
+	}
+
+	const bool bAnyLeft = (ChosenSkill.IsNone() && Offer.SkillOffers.Num() > 0) || (ChosenRelic.IsNone() && Offer.RelicOffers.Num() > 0);
+	if (bReplacing)
+	{
+		Lines.Reset();
+	}
+	else if (Lines.Num() == 0)
+	{
+		Lines.Add(bAnyLeft ? TEXT("받을 보상을 고르세요 (안 받아도 됩니다)") : TEXT("받을 수 있는 보상이 없습니다"));
+	}
+	ResultText->SetText(FText::FromString(FString::Join(Lines, TEXT("\n"))));
+}
+
+// =====================================================================
+// 스킬
+// =====================================================================
+
+void UMonsterRewardWidget::HandleCardClicked(FName SkillRow)
+{
+	if (bFinished || !ChosenSkill.IsNone() || !PendingRelic.IsNone()) return;
+
+	const APlayerController* PC = GetOwningPlayer();
+	const ATerminusPlayerState* PS = PC ? PC->GetPlayerState<ATerminusPlayerState>() : nullptr;
+
+	// 칸이 꽉 찼으면 바꿀 칸부터
+	if (PS && PS->GetRunState().EnhanceSkills.Num() >= PS->GetEnhanceSlotCount())
+	{
+		PendingSkill = SkillRow;
+		ShowSkillReplace();
+	}
+	else
+	{
+		ChosenSkill = SkillRow;
+	}
+	Refresh();
+}
+
+void UMonsterRewardWidget::ShowSkillReplace()
+{
 	if (!ReplaceBox) return;
 	ReplaceBox->ClearChildren();
 
@@ -171,10 +336,9 @@ void UMonsterRewardWidget::ShowReplace()
 	const ATerminusPlayerState* PS = PC ? PC->GetPlayerState<ATerminusPlayerState>() : nullptr;
 	const TArray<FName> Equipped = PS ? PS->GetRunState().EnhanceSkills : TArray<FName>();
 
-	const TSubclassOf<UItemSlotWidget> Class = SlotClass ? SlotClass : TSubclassOf<UItemSlotWidget>(UItemSlotWidget::StaticClass());
 	for (int32 i = 0; i < Equipped.Num(); ++i)
 	{
-		UItemSlotWidget* EquippedSlot = CreateWidget<UItemSlotWidget>(this, Class);
+		UItemSlotWidget* EquippedSlot = MakeSlot();
 		if (!EquippedSlot) continue;
 
 		EquippedSlot->SetSlotIndex(i);
@@ -187,46 +351,6 @@ void UMonsterRewardWidget::ShowReplace()
 	}
 }
 
-void UMonsterRewardWidget::ShowResult()
-{
-	if (CardBox)      CardBox->SetVisibility(ESlateVisibility::Collapsed);
-	if (ReplacePanel) ReplacePanel->SetVisibility(ESlateVisibility::Collapsed);
-
-	if (ResultText)
-	{
-		const FSkillRow* Skill = UTerminusDataSettings::FindSkillRow(ChosenSkill);
-		FString Label = FString::Printf(TEXT("획득: %s"), Skill ? *Skill->DisplayName_KR.ToString() : *ChosenSkill.ToString());
-		if (ReplaceSlot != INDEX_NONE)
-		{
-			Label += FString::Printf(TEXT("  (강화 칸 %d 교체)"), ReplaceSlot + 1);
-		}
-		ResultText->SetText(FText::FromString(Label));
-	}
-}
-
-// =====================================================================
-// 입력
-// =====================================================================
-
-void UMonsterRewardWidget::HandleCardClicked(FName SkillRow)
-{
-	if (bFinished || !ChosenSkill.IsNone()) return;
-
-	const APlayerController* PC = GetOwningPlayer();
-	const ATerminusPlayerState* PS = PC ? PC->GetPlayerState<ATerminusPlayerState>() : nullptr;
-
-	// 칸이 꽉 찼으면 바꿀 칸부터
-	if (PS && PS->GetRunState().EnhanceSkills.Num() >= PS->GetEnhanceSlotCount())
-	{
-		PendingSkill = SkillRow;
-		ShowReplace();
-		return;
-	}
-
-	ChosenSkill = SkillRow;
-	ShowResult();
-}
-
 void UMonsterRewardWidget::HandleReplaceSlotClicked(UItemSlotWidget* ClickedSlot)
 {
 	if (bFinished || PendingSkill.IsNone() || !ClickedSlot) return;
@@ -234,14 +358,87 @@ void UMonsterRewardWidget::HandleReplaceSlotClicked(UItemSlotWidget* ClickedSlot
 	ChosenSkill = PendingSkill;
 	PendingSkill = NAME_None;
 	ReplaceSlot = ClickedSlot->GetSlotIndex();
-	ShowResult();
+	Refresh();
 }
 
 void UMonsterRewardWidget::HandleReplaceCancel()
 {
 	PendingSkill = NAME_None;
-	ShowCards();
+	Refresh();
 }
+
+// =====================================================================
+// 유물
+// =====================================================================
+
+void UMonsterRewardWidget::HandleRelicClicked(UItemSlotWidget* ClickedSlot)
+{
+	if (bFinished || !ClickedSlot || !ChosenRelic.IsNone() || !PendingSkill.IsNone()) return;
+
+	const FName Row = ClickedSlot->GetItemRow();
+	const APlayerController* PC = GetOwningPlayer();
+	const ATerminusPlayerState* PS = PC ? PC->GetPlayerState<ATerminusPlayerState>() : nullptr;
+
+	// 칸이 꽉 찼으면 버릴 유물부터
+	if (PS && PS->GetRelics().Num() >= PS->GetRelicCapacity())
+	{
+		PendingRelic = Row;
+		ShowRelicReplace();
+	}
+	else
+	{
+		ChosenRelic = Row;
+	}
+	Refresh();
+}
+
+void UMonsterRewardWidget::ShowRelicReplace()
+{
+	if (!RelicReplaceBox) return;
+	RelicReplaceBox->ClearChildren();
+
+	const APlayerController* PC = GetOwningPlayer();
+	const ATerminusPlayerState* PS = PC ? PC->GetPlayerState<ATerminusPlayerState>() : nullptr;
+	if (!PS) return;
+
+	for (const FName& Owned : PS->GetRelics())
+	{
+		// 직업 기본 유물(패시브)은 못 버림
+		const FRelicRow* Relic = UTerminusDataSettings::FindRelicRow(Owned);
+		if (!Relic || Relic->RelicTier == ERelicTier::Basic) continue;
+
+		UItemSlotWidget* OwnedSlot = MakeSlot();
+		if (!OwnedSlot) continue;
+
+		OwnedSlot->SetShowName(true);
+		OwnedSlot->SetRelic(Owned);
+		OwnedSlot->OnSlotClicked.BindUObject(this, &UMonsterRewardWidget::HandleRelicReplaceClicked);
+		if (UHorizontalBoxSlot* HSlot = Cast<UHorizontalBoxSlot>(RelicReplaceBox->AddChild(OwnedSlot)))
+		{
+			HSlot->SetPadding(FMargin(6.f, 0.f));
+		}
+	}
+}
+
+void UMonsterRewardWidget::HandleRelicReplaceClicked(UItemSlotWidget* ClickedSlot)
+{
+	if (bFinished || PendingRelic.IsNone() || !ClickedSlot) return;
+
+	ChosenRelic = PendingRelic;
+	PendingRelic = NAME_None;
+	ReplaceRelic = ClickedSlot->GetItemRow();
+	Refresh();
+}
+
+void UMonsterRewardWidget::HandleRelicReplaceCancel()
+{
+	PendingRelic = NAME_None;
+	Refresh();
+}
+
+// =====================================================================
+// 마침
+// =====================================================================
 
 void UMonsterRewardWidget::HandleNextClicked()
 {
@@ -250,7 +447,7 @@ void UMonsterRewardWidget::HandleNextClicked()
 
 	if (ATerminusPlayerController* PC = GetOwningPlayer<ATerminusPlayerController>())
 	{
-		PC->Server_FinishMonsterReward(ChosenSkill, ReplaceSlot);
+		PC->Server_FinishRoomReward(ChosenSkill, ReplaceSlot, ChosenRelic, ReplaceRelic);
 	}
 
 	RemoveFromParent();

@@ -101,7 +101,8 @@ public:
 
 	// 몬스터방 보상을 마침 (플레이어가 '다음으로'). ChosenSkill = 고른 보상 스킬 (None = 안 고름), ReplaceSlot = 칸이 꽉 찼을 때 바꿀 칸
 	// 구역의 모든 플레이어가 마치면 구역 클리어 -> 지도
-	void HandleRewardFinished(ATerminusPlayerState* PS, FName ChosenSkill, int32 ReplaceSlot);
+	// 보상 마침 (PC 의 Server_FinishRoomReward). 보여 준 후보 중에서만 인정
+	void HandleRewardFinished(ATerminusPlayerState* PS, FName ChosenSkill, int32 ReplaceSlot, FName ChosenRelic, FName ReplaceRelic);
 
 	// -------------------------------------------------------------
 	// [조회] 클라 HUD 가 씀
@@ -167,9 +168,20 @@ public:
 
 	// ---- 몬스터방 보상 (기획: 던전 재화 + 랜덤 강화 스킬 2개 중 1개, 안 골라도 됨)
 
-	// 던전 재화 (최소, 최대). 기획에 수치가 없어 임시
+	// 몬스터방 던전 재화 (최소, 최대)
 	UPROPERTY(EditAnywhere, Category = "Combat|Reward")
-	FIntPoint MonsterRewardCurrency = FIntPoint(15, 25);
+	FIntPoint MonsterRewardCurrency = FIntPoint(10, 10);
+
+	// 가디언 / 보스방 던전 재화 (사용자 결정 2026-10-06: 몬스터 10 / 가디언 20 / 보스 40. X~Y 사이 랜덤)
+	UPROPERTY(EditAnywhere, Category = "Combat|Reward")
+	FIntPoint GuardianRewardCurrency = FIntPoint(20, 20);
+
+	UPROPERTY(EditAnywhere, Category = "Combat|Reward")
+	FIntPoint BossRewardCurrency = FIntPoint(40, 40);
+
+	// 보스방 픽업 스킬 후보 수 (기본 1 = 그 하나를 받거나 말거나)
+	UPROPERTY(EditAnywhere, Category = "Combat|Reward", meta = (ClampMin = "1"))
+	int32 BossRewardSkillChoices = 1;
 
 	// 보상 스킬 후보 수
 	UPROPERTY(EditAnywhere, Category = "Combat|Reward", meta = (ClampMin = "1"))
@@ -250,7 +262,8 @@ private:
 	// ---- 몬스터방 보상 (서버만)
 	struct FPendingReward
 	{
-		TArray<FName> Offers;   // 보여 준 스킬 후보
+		TArray<FName> Offers;        // 보여 준 스킬 후보
+		TArray<FName> RelicOffers;   // 보여 준 유물 후보
 		bool bDone = false;
 	};
 	TMap<TWeakObjectPtr<ATerminusPlayerState>, FPendingReward> PendingRewards;
@@ -258,8 +271,12 @@ private:
 	// 지금 방 번호 (로그용)
 	int32 CurrentRoomId = INDEX_NONE;
 
-	void StartMonsterRewards();
-	TArray<FName> PickRewardSkills(const ATerminusPlayerState* PS) const;
+	// 몬스터 / 가디언 / 보스방 클리어 보상
+	void StartRoomRewards();
+	TArray<FName> PickRewardSkills(const ATerminusPlayerState* PS, int32 Count) const;
+
+	// 유물 후보: 공용이거나 내 직업, 지금 계층 등급(표층 / 중층 / 심층), 아직 안 가진 것 중 Count 개
+	TArray<FName> PickRewardRelics(const ATerminusPlayerState* PS, int32 Count) const;
 	void FinishRewardsIfAllDone();
 	void ClearArea();
 

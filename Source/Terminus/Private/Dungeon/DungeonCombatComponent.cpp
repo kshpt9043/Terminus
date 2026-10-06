@@ -738,10 +738,11 @@ void UDungeonCombatComponent::FinishCombat(bool bVictory)
 		}
 	}
 
-	// 몬스터방 승리: 잠시 뒤 각자 보상 화면 -> 전원 '다음으로' 를 누르면 구역 클리어
-	if (bVictory && CurrentRoomType == ERoomType::MONSTER && Players.Num() > 0)
+	// 몬스터 / 가디언 / 보스방 승리: 잠시 뒤 각자 보상 화면 -> 전원 '다음으로' 를 누르면 구역 클리어
+	const bool bRewardRoom = CurrentRoomType == ERoomType::MONSTER || CurrentRoomType == ERoomType::GUARDIAN || CurrentRoomType == ERoomType::BOSS;
+	if (bVictory && bRewardRoom && Players.Num() > 0)
 	{
-		GetWorld()->GetTimerManager().SetTimer(StepTimer, this, &UDungeonCombatComponent::StartMonsterRewards, RewardDelay, false);
+		GetWorld()->GetTimerManager().SetTimer(StepTimer, this, &UDungeonCombatComponent::StartRoomRewards, RewardDelay, false);
 		return;
 	}
 
@@ -761,9 +762,18 @@ void UDungeonCombatComponent::ClearArea()
 // 몬스터방 보상
 // =====================================================================
 
-void UDungeonCombatComponent::StartMonsterRewards()
+void UDungeonCombatComponent::StartRoomRewards()
 {
 	PendingRewards.Reset();
+
+	// 방 종류별 보상 (사용자 결정 2026-10-06)
+	//  몬스터: 재화 + 픽업 스킬 후보 중 하나 / 가디언: 유물 하나 / 보스: 유물 하나 + 픽업 스킬 하나
+	const bool bMonster  = CurrentRoomType == ERoomType::MONSTER;
+	const bool bGuardian = CurrentRoomType == ERoomType::GUARDIAN;
+	const bool bBoss     = CurrentRoomType == ERoomType::BOSS;
+	const FIntPoint CurrencyRange = bBoss ? BossRewardCurrency : (bGuardian ? GuardianRewardCurrency : MonsterRewardCurrency);
+	const int32 SkillCount = bMonster ? RewardSkillChoices : (bBoss ? BossRewardSkillChoices : 0);
+	const int32 RelicCount = (bGuardian || bBoss) ? 1 : 0;
 
 	for (const TWeakObjectPtr<ATerminusPlayerState>& Weak : Players)
 	{
@@ -771,21 +781,63 @@ void UDungeonCombatComponent::StartMonsterRewards()
 		ATerminusPlayerController* PC = PS ? Cast<ATerminusPlayerController>(PS->GetOwner()) : nullptr;
 		if (!PS || !PC) continue;
 
+		FRoomRewardOffer Offer;
+		Offer.RoomType = CurrentRoomType;
+
 		// 던전 재화는 바로 지급
-		const int32 Currency = FMath::RandRange(FMath::Min(MonsterRewardCurrency.X, MonsterRewardCurrency.Y), FMath::Max(MonsterRewardCurrency.X, MonsterRewardCurrency.Y));
-		PS->AddCurrency(Currency);
+		Offer.Currency = FMath::RandRange(FMath::Min(CurrencyRange.X, CurrencyRange.Y), FMath::Max(CurrencyRange.X, CurrencyRange.Y));
+		if (Offer.Currency > 0)
+		{
+			PS->AddCurrency(Offer.Currency);
+		}
+
+		if (SkillCount > 0) Offer.SkillOffers = PickRewardSkills(PS, SkillCount);
+		if (RelicCount > 0) Offer.RelicOffers = PickRewardRelics(PS, RelicCount);
 
 		FPendingReward& Reward = PendingRewards.Add(PS);
-		Reward.Offers = PickRewardSkills(PS);
+		Reward.Offers = Offer.SkillOffers;
+		Reward.RelicOffers = Offer.RelicOffers;
 
-		UE_LOG(LogDungeonCombat, Log, TEXT("[Reward] %d번 방 %s: 재화 %d, 스킬 후보 %d개"), CurrentRoomId, *PS->GetPlayerName(), Currency, Reward.Offers.Num());
-		PC->Client_ShowMonsterReward(Currency, Reward.Offers);
+		UE_LOG(LogDungeonCombat, Log, TEXT("[Reward] %d번 방(%s) %s: 재화 %d, 스킬 후보 %d개, 유물 후보 %d개"),
+			CurrentRoomId, *UEnum::GetValueAsString(CurrentRoomType), *PS->GetPlayerName(), Offer.Currency, Offer.SkillOffers.Num(), Offer.RelicOffers.Num());
+		PC->Client_ShowRoomReward(Offer);
 	}
 
 	FinishRewardsIfAllDone();   // 받을 사람이 없으면 바로 끝
 }
 
-TArray<FName> UDungeonCombatComponent::PickRewardSkills(const ATerminusPlayerState* PS) const
+TArray<FName> UDungeonCombatComponent::PickRewardRelics(const ATerminusPlayerState* PS, int32 Count) const
+{
+	TArray<FName> Pool;
+	const UDataTable* Table = UTerminusDataSettings::Get()->RelicTable.LoadSynchronous();
+	if (!PS || !Table || Count <= 0) return Pool;
+
+	// 지금 계층 등급 (1~2층 표층, 3~4층 중층, 5~6층 심층)
+	const AMapManager* MapMgr = Cast<AMapManager>(UGameplayStatics::GetActorOfClass(this, AMapManager::StaticClass()));
+	const int32 Floor = MapMgr ? MapMgr->CurrentFloor : 1;
+	const ERelicTier Tier = Floor >= 5 ? ERelicTier::Deep : (Floor >= 3 ? ERelicTier::Mid : ERelicTier::Surface);
+
+	for (const FName& Row : Table->GetRowNames())
+	{
+		const FRelicRow* Relic = UTerminusDataSettings::FindRelicRow(Row);
+		if (!Relic || Relic->RelicTier != Tier) continue;
+
+		// 공용이거나 내 직업 것 (몬스터 유물 / 다른 직업 X), 이미 가진 건 빼고
+		if (!ATerminusPlayerState::CanClassHoldRelic(PS->GetCharacterClass(), *Relic)) continue;
+		if (PS->GetRelics().Contains(Row)) continue;
+
+		Pool.Add(Row);
+	}
+
+	for (int32 i = Pool.Num() - 1; i > 0; --i)
+	{
+		Pool.Swap(i, FMath::RandRange(0, i));
+	}
+	Pool.SetNum(FMath::Min(Pool.Num(), Count));
+	return Pool;
+}
+
+TArray<FName> UDungeonCombatComponent::PickRewardSkills(const ATerminusPlayerState* PS, int32 Count) const
 {
 	TArray<FName> Pool;
 	const UDataTable* Table = UTerminusDataSettings::Get()->SkillTable.LoadSynchronous();
@@ -805,6 +857,9 @@ TArray<FName> UDungeonCombatComponent::PickRewardSkills(const ATerminusPlayerSta
 
 		// 기획: 공용 스킬 + 내 직업 전용 스킬 (기본 / 몬스터 스킬은 안 나옴)
 		if (!UTerminusProfileSubsystem::IsEquippableSkill(Row, PS->GetCharacterClass())) continue;
+
+		// 픽업 스킬 = 스킬 에너지를 쓰는 스킬 (사용자 결정)
+		if (Skill->SkillEnergyCost <= 0) continue;
 		if (bRewardExcludeEventSkills && Skill->SkillCategory == ESkillCategory::Event) continue;
 		if (bRewardExcludeHigherTier && Skill->SkillTier > MaxTier) continue;
 		if (!bRewardIncludeEquippedSkills && Equipped.Contains(Row)) continue;
@@ -817,11 +872,11 @@ TArray<FName> UDungeonCombatComponent::PickRewardSkills(const ATerminusPlayerSta
 	{
 		Pool.Swap(i, FMath::RandRange(0, i));
 	}
-	Pool.SetNum(FMath::Min(Pool.Num(), FMath::Max(1, RewardSkillChoices)));
+	Pool.SetNum(FMath::Min(Pool.Num(), FMath::Max(1, Count)));
 	return Pool;
 }
 
-void UDungeonCombatComponent::HandleRewardFinished(ATerminusPlayerState* PS, FName ChosenSkill, int32 ReplaceSlot)
+void UDungeonCombatComponent::HandleRewardFinished(ATerminusPlayerState* PS, FName ChosenSkill, int32 ReplaceSlot, FName ChosenRelic, FName ReplaceRelic)
 {
 	FPendingReward* Reward = PS ? PendingRewards.Find(PS) : nullptr;
 	if (!Reward || Reward->bDone) return;
@@ -839,6 +894,29 @@ void UDungeonCombatComponent::HandleRewardFinished(ATerminusPlayerState* PS, FNa
 		else
 		{
 			UE_LOG(LogDungeonCombat, Warning, TEXT("[Reward] %s: 후보에 없던 스킬 '%s' 요청 무시"), *PS->GetPlayerName(), *ChosenSkill.ToString());
+		}
+	}
+
+	// 유물: 보여 준 후보만. 칸이 꽉 찼으면 고른 유물(직업 기본 유물 제외)을 버리고 받음
+	if (!ChosenRelic.IsNone())
+	{
+		if (Reward->RelicOffers.Contains(ChosenRelic))
+		{
+			const FRelicRow* Discard = ReplaceRelic.IsNone() ? nullptr : UTerminusDataSettings::FindRelicRow(ReplaceRelic);
+			if (Discard && Discard->RelicTier != ERelicTier::Basic && PS->GetRelics().Contains(ReplaceRelic)
+				&& PS->GetRelics().Num() >= PS->GetRelicCapacity())
+			{
+				PS->RemoveRelic(ReplaceRelic);
+			}
+
+			if (!PS->GainRelic(ChosenRelic))
+			{
+				UE_LOG(LogDungeonCombat, Warning, TEXT("[Reward] %s: 유물 '%s' 를 못 받음 (칸이 꽉 참 등)"), *PS->GetPlayerName(), *ChosenRelic.ToString());
+			}
+		}
+		else
+		{
+			UE_LOG(LogDungeonCombat, Warning, TEXT("[Reward] %s: 후보에 없던 유물 '%s' 요청 무시"), *PS->GetPlayerName(), *ChosenRelic.ToString());
 		}
 	}
 
