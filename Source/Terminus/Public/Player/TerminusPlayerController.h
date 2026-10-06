@@ -23,6 +23,7 @@ class UMonsterRewardWidget;
 class URiftWidget;
 class UFloorTitleWidget;
 class UFloorVoteWidget;
+class URestWidget;
 struct FRunState;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnViewAreaChanged, ADungeonArea*, NewArea);
@@ -176,6 +177,16 @@ public:
 	UFUNCTION(Client, Reliable)
 	void Client_RunEnded(const FText& Message);
 
+	// 휴식터: 회복 대상 고르기 화면 (Occupants = 같은 휴식터 사람) / 닫기 / 고른 대상 알리기
+	UFUNCTION(Client, Reliable)
+	void Client_ShowRest(const TArray<APlayerState*>& Occupants, float HealRatio);
+
+	UFUNCTION(Client, Reliable)
+	void Client_CloseRest();
+
+	UFUNCTION(Server, Reliable)
+	void Server_ChooseRestTarget(APlayerState* Target);
+
 	// 이공간 (멀티에서 누가 나갔을 때 / 멀티 세이브를 불러와 모이는 중). WaitingFor = 기다리는 사람. 이미 떠 있으면 명단만 갱신
 	UFUNCTION(Client, Reliable)
 	void Client_EnterRift(const TArray<FString>& WaitingFor, bool bFromSave);
@@ -289,6 +300,13 @@ protected:
 
 	UPROPERTY()
 	TObjectPtr<UChatWidget> ChatWidget;
+
+	// 휴식터 화면. 비워 두면 C++ 기본 모양(URestWidget)
+	UPROPERTY(EditDefaultsOnly, Category = "Terminus|UI")
+	TSubclassOf<URestWidget> RestClass;
+
+	UPROPERTY()
+	TObjectPtr<URestWidget> RestWidget;
 
 	// 행선지 투표 화면. 비워 두면 C++ 기본 모양(UFloorVoteWidget)
 	UPROPERTY(EditDefaultsOnly, Category = "Terminus|UI")

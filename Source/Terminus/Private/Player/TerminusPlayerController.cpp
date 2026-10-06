@@ -22,6 +22,7 @@
 #include "Widgets/Rift/RiftWidget.h"
 #include "Widgets/Map/FloorTitleWidget.h"
 #include "Widgets/Map/FloorVoteWidget.h"
+#include "Widgets/Rest/RestWidget.h"
 #include "Dungeon/DungeonAreaSubsystem.h"
 #include "Widgets/Common/ConfirmPopupWidget.h"
 #include "Online/SessionSubsystem.h"
@@ -496,6 +497,41 @@ void ATerminusPlayerController::Client_RunEnded_Implementation(const FText& Mess
 	else
 	{
 		Leave();
+	}
+}
+
+void ATerminusPlayerController::Client_ShowRest_Implementation(const TArray<APlayerState*>& Occupants, float HealRatio)
+{
+	if (RestWidget)
+	{
+		RestWidget->RemoveFromParent();
+		RestWidget = nullptr;
+	}
+
+	const TSubclassOf<URestWidget> Class = RestClass ? RestClass : TSubclassOf<URestWidget>(URestWidget::StaticClass());
+	RestWidget = CreateWidget<URestWidget>(this, Class);
+	if (RestWidget)
+	{
+		RestWidget->Setup(Occupants, HealRatio);
+		RestWidget->AddToViewport(22);   // 보상 화면과 같은 높이, 채팅(25) 아래
+	}
+}
+
+void ATerminusPlayerController::Client_CloseRest_Implementation()
+{
+	if (RestWidget)
+	{
+		RestWidget->RemoveFromParent();
+		RestWidget = nullptr;
+	}
+}
+
+void ATerminusPlayerController::Server_ChooseRestTarget_Implementation(APlayerState* Target)
+{
+	ATerminusPlayerState* PS = GetPlayerState<ATerminusPlayerState>();
+	if (ADungeonArea* Area = PS ? PS->GetCurrentArea() : nullptr)
+	{
+		Area->HandleRestChoice(PS, Cast<ATerminusPlayerState>(Target));
 	}
 }
 

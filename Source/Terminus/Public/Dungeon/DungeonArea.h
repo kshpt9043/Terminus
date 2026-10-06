@@ -51,6 +51,14 @@ public:
 	// 구역 비우기. 배틀러를 원래 자리로 돌려놓고 시점을 지도로 돌린다
 	void Release();
 
+	// [휴식터] 회복 대상 고르기 (PC 의 Server_ChooseRestTarget). 같은 휴식터 사람만, 한 사람 한 번
+	// 대상은 최대 체력의 RestHealRatio 만큼 회복. 전원이 고르면 방이 끝남
+	void HandleRestChoice(ATerminusPlayerState* Chooser, ATerminusPlayerState* Target);
+
+	// 휴식터 회복량 (최대 체력 비율). 기획: 20%
+	UPROPERTY(EditAnywhere, Category = "Dungeon Area|Rest", meta = (ClampMin = "0.0", ClampMax = "1.0"))
+	float RestHealRatio = 0.2f;
+
 	// -------------------------------------------------------------
 	// [조회]
 	// -------------------------------------------------------------
@@ -147,4 +155,12 @@ protected:
 private:
 	// 들어오기 전 배틀러 위치. 구역을 비울 때 지도 화면의 원래 자리로 돌려놓기 위함 (서버만)
 	TMap<TWeakObjectPtr<APawn>, FVector> ReturnLocations;
+
+	// 휴식터: 이미 고른 사람 (서버만)
+	TSet<TWeakObjectPtr<ATerminusPlayerState>> RestChosen;
+	bool bResting = false;
+	FTimerHandle RestTimer;
+
+	void BeginRest();
+	void FinishRest();
 };

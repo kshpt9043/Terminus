@@ -7,6 +7,10 @@
 #include "Dungeon/DungeonCombatComponent.h"
 #include "Dungeon/DungeonThemeData.h"
 #include "Player/TerminusPlayerState.h"
+#include "Player/TerminusPlayerController.h"
+#include "Character/TerminusBattler.h"
+#include "Combat/CombatStatsComponent.h"
+#include "TimerManager.h"
 #include "Net/UnrealNetwork.h"
 
 ADungeonArea::ADungeonArea()
@@ -189,11 +193,92 @@ void ADungeonArea::BeginRoom(const FRoomNode& InRoom, const TArray<ATerminusPlay
 
 	// 방 타입별 콘텐츠
 	//  - 몬스터 / 가디언 / 보스: 전투 (끝나면 전투 쪽이 MarkCleared)
-	//  - TODO 상점 / 휴식터 / 이벤트 / 퀘스트: 해당 UI. 지금은 DebugClearArea 로 넘김
+	//  - 휴식터: 회복 대상 고르기 (전원이 고르면 MarkCleared)
+	//  - TODO 상점 / 이벤트 / 퀘스트: 해당 UI. 지금은 DebugClearArea 로 넘김
+	if (Room.Type == ERoomType::BREAK)
+	{
+		BeginRest();
+		return;
+	}
+
 	if (Combat)
 	{
 		Combat->StartCombat(Room, InPlayers, Theme);
 	}
+}
+
+// =====================================================================
+// 휴식터
+// =====================================================================
+
+void ADungeonArea::BeginRest()
+{
+	bResting = true;
+	RestChosen.Reset();
+
+	TArray<APlayerState*> Present;
+	for (ATerminusPlayerState* PS : Occupants)
+	{
+		if (PS) Present.Add(PS);
+	}
+
+	for (ATerminusPlayerState* PS : Occupants)
+	{
+		if (ATerminusPlayerController* PC = PS ? Cast<ATerminusPlayerController>(PS->GetOwner()) : nullptr)
+		{
+			PC->Client_ShowRest(Present, RestHealRatio);
+		}
+	}
+
+	if (Present.Num() == 0)
+	{
+		MarkCleared();
+	}
+}
+
+void ADungeonArea::HandleRestChoice(ATerminusPlayerState* Chooser, ATerminusPlayerState* Target)
+{
+	if (!HasAuthority() || !bResting || !Chooser || !Target) return;
+	if (!Occupants.Contains(Chooser) || !Occupants.Contains(Target)) return;   // 같은 휴식터 사람만
+	if (RestChosen.Contains(Chooser)) return;                                  // 한 번만
+
+	RestChosen.Add(Chooser);
+
+	const ATerminusBattler* Battler = Cast<ATerminusBattler>(Target->GetPawn());
+	if (UCombatStatsComponent* Stats = Battler ? Battler->GetCombatStats() : nullptr)
+	{
+		const int32 Amount = FMath::Max(1, FMath::RoundToInt(Stats->GetStats().MaxHealth * RestHealRatio));
+		Stats->Heal(Amount);
+
+		if (Occupants.Num() > 1)
+		{
+			FChatMessage Notice;
+			Notice.Kind = EChatMessageKind::System;
+			Notice.Text = Chooser == Target
+				? FString::Printf(TEXT("%s 님이 휴식으로 체력을 %d 회복했습니다."), *Chooser->GetPlayerName(), Amount)
+				: FString::Printf(TEXT("%s 님이 %s 님의 체력을 %d 회복시켰습니다."), *Chooser->GetPlayerName(), *Target->GetPlayerName(), Amount);
+			ATerminusPlayerController::BroadcastChat(GetWorld(), Notice);
+		}
+
+		UE_LOG(LogTemp, Log, TEXT("[Area %d] 휴식: %s -> %s +%d"), AreaIndex, *Chooser->GetPlayerName(), *Target->GetPlayerName(), Amount);
+	}
+
+	// 전원이 골랐으면 잠깐 보여주고 끝
+	bool bAllChosen = true;
+	for (ATerminusPlayerState* PS : Occupants)
+	{
+		if (PS && !RestChosen.Contains(PS)) bAllChosen = false;
+	}
+	if (bAllChosen)
+	{
+		GetWorldTimerManager().SetTimer(RestTimer, this, &ADungeonArea::FinishRest, 1.0f, false);
+	}
+}
+
+void ADungeonArea::FinishRest()
+{
+	if (!bResting) return;
+	MarkCleared();
 }
 
 void ADungeonArea::MarkCleared()
@@ -221,6 +306,21 @@ bool ADungeonArea::IsFightOver() const
 void ADungeonArea::Release()
 {
 	if (!HasAuthority()) return;
+
+	// 휴식터 화면 닫기 (전원 고르기 전에 닫히는 경우 포함: 누가 나가서 방 무효 등)
+	if (bResting)
+	{
+		GetWorldTimerManager().ClearTimer(RestTimer);
+		for (ATerminusPlayerState* PS : Occupants)
+		{
+			if (ATerminusPlayerController* PC = PS ? Cast<ATerminusPlayerController>(PS->GetOwner()) : nullptr)
+			{
+				PC->Client_CloseRest();
+			}
+		}
+		bResting = false;
+		RestChosen.Reset();
+	}
 
 	// 몬스터 치우고 전투 상태 초기화
 	if (Combat)
