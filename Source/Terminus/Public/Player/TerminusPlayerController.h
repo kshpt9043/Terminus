@@ -24,6 +24,7 @@ class URiftWidget;
 class UFloorTitleWidget;
 class UFloorVoteWidget;
 class URestWidget;
+class UEventWidget;
 struct FRunState;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnViewAreaChanged, ADungeonArea*, NewArea);
@@ -187,6 +188,19 @@ public:
 	UFUNCTION(Server, Reliable)
 	void Server_ChooseRestTarget(APlayerState* Target);
 
+	// 이벤트 방: 후보 고르기 화면 (이미 떠 있으면 처음으로) / 고른 결과 / 닫기 / 고른 후보 알리기
+	UFUNCTION(Client, Reliable)
+	void Client_ShowEvent(const TArray<FEventOption>& Options);
+
+	UFUNCTION(Client, Reliable)
+	void Client_EventResult(const FText& Result);
+
+	UFUNCTION(Client, Reliable)
+	void Client_CloseEvent();
+
+	UFUNCTION(Server, Reliable)
+	void Server_ChooseEvent(int32 Index, int32 ReplaceSlot, FName RelicRow);
+
 	// 이공간 (멀티에서 누가 나갔을 때 / 멀티 세이브를 불러와 모이는 중). WaitingFor = 기다리는 사람. 이미 떠 있으면 명단만 갱신
 	UFUNCTION(Client, Reliable)
 	void Client_EnterRift(const TArray<FString>& WaitingFor, bool bFromSave);
@@ -307,6 +321,13 @@ protected:
 
 	UPROPERTY()
 	TObjectPtr<URestWidget> RestWidget;
+
+	// 이벤트 방 화면. 비워 두면 C++ 기본 모양(UEventWidget)
+	UPROPERTY(EditDefaultsOnly, Category = "Terminus|UI")
+	TSubclassOf<UEventWidget> EventClass;
+
+	UPROPERTY()
+	TObjectPtr<UEventWidget> EventWidget;
 
 	// 행선지 투표 화면. 비워 두면 C++ 기본 모양(UFloorVoteWidget)
 	UPROPERTY(EditDefaultsOnly, Category = "Terminus|UI")

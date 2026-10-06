@@ -23,6 +23,7 @@
 #include "Widgets/Map/FloorTitleWidget.h"
 #include "Widgets/Map/FloorVoteWidget.h"
 #include "Widgets/Rest/RestWidget.h"
+#include "Widgets/Event/EventWidget.h"
 #include "Dungeon/DungeonAreaSubsystem.h"
 #include "Widgets/Common/ConfirmPopupWidget.h"
 #include "Online/SessionSubsystem.h"
@@ -532,6 +533,50 @@ void ATerminusPlayerController::Server_ChooseRestTarget_Implementation(APlayerSt
 	if (ADungeonArea* Area = PS ? PS->GetCurrentArea() : nullptr)
 	{
 		Area->HandleRestChoice(PS, Cast<ATerminusPlayerState>(Target));
+	}
+}
+
+void ATerminusPlayerController::Client_ShowEvent_Implementation(const TArray<FEventOption>& Options)
+{
+	if (!EventWidget)
+	{
+		const TSubclassOf<UEventWidget> Class = EventClass ? EventClass : TSubclassOf<UEventWidget>(UEventWidget::StaticClass());
+		EventWidget = CreateWidget<UEventWidget>(this, Class);
+		if (EventWidget)
+		{
+			EventWidget->AddToViewport(22);   // 보상 / 휴식터 화면과 같은 높이, 채팅(25) 아래
+		}
+	}
+
+	if (EventWidget)
+	{
+		EventWidget->Setup(Options);
+	}
+}
+
+void ATerminusPlayerController::Client_EventResult_Implementation(const FText& Result)
+{
+	if (EventWidget)
+	{
+		EventWidget->ShowResult(Result);
+	}
+}
+
+void ATerminusPlayerController::Client_CloseEvent_Implementation()
+{
+	if (EventWidget)
+	{
+		EventWidget->RemoveFromParent();
+		EventWidget = nullptr;
+	}
+}
+
+void ATerminusPlayerController::Server_ChooseEvent_Implementation(int32 Index, int32 ReplaceSlot, FName RelicRow)
+{
+	ATerminusPlayerState* PS = GetPlayerState<ATerminusPlayerState>();
+	if (ADungeonArea* Area = PS ? PS->GetCurrentArea() : nullptr)
+	{
+		Area->HandleEventChoice(PS, Index, ReplaceSlot, RelicRow);
 	}
 }
 

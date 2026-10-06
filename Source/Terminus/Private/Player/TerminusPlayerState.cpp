@@ -375,6 +375,83 @@ bool ATerminusPlayerState::RemoveRelic(FName RelicRow)
 	return true;
 }
 
+bool ATerminusPlayerState::SwapRelic(FName OldRelic, FName NewRelic)
+{
+	const int32 Index = RunState.Relics.IndexOfByKey(OldRelic);
+	if (!HasAuthority() || Index == INDEX_NONE || OldRelic == NewRelic) return false;
+
+	RunState.Relics.RemoveAt(Index);
+	if (!GainRelic(NewRelic))
+	{
+		RunState.Relics.Insert(OldRelic, Index);
+		OnRep_RunState();
+		return false;
+	}
+
+	// GainRelic 은 맨 뒤에 붙이니 원래 자리로
+	RunState.Relics.Remove(NewRelic);
+	RunState.Relics.Insert(NewRelic, FMath::Min(Index, RunState.Relics.Num()));
+	OnRep_RunState();
+	return true;
+}
+
+void ATerminusPlayerState::ApplyPermanentStat(int32 StatKind, int32 Amount)
+{
+	if (!HasAuthority() || Amount == 0) return;
+
+	ATerminusBattler* Battler = Cast<ATerminusBattler>(GetPawn());
+	UCombatStatsComponent* Stats = Battler ? Battler->GetCombatStats() : nullptr;
+
+	// 런 스텟(다음 레벨에도 유지)과 지금 배틀러 둘 다
+	if (StatKind == 0)
+	{
+		RunState.Stats.MaxHealth = FMath::Max(1, RunState.Stats.MaxHealth + Amount);
+		if (Stats) Stats->ModifyMaxHealth(Amount);
+	}
+	else
+	{
+		int32& RunValue = StatKind == 1 ? RunState.Stats.Attack : RunState.Stats.Defense;
+		RunValue += Amount;
+
+		if (Stats)
+		{
+			// 배틀러 스텟은 InitFrom 으로만 바뀌어서 다시 넣고 체력을 되돌림 (전투 밖이라 다른 상태는 없음)
+			FCharacterStats NewStats = Stats->GetStats();
+			int32& BattlerValue = StatKind == 1 ? NewStats.Attack : NewStats.Defense;
+			BattlerValue += Amount;
+
+			const int32 Health = Stats->GetCombatState().Health;
+			Stats->InitFrom(NewStats);
+			if (NewStats.MaxHealth > 0 && Health > 0 && Health < NewStats.MaxHealth)
+			{
+				Stats->Revive(static_cast<float>(Health) / NewStats.MaxHealth);
+			}
+		}
+	}
+
+	OnRep_RunState();
+}
+
+void ATerminusPlayerState::AddTempBuff(const FTempStatBuff& Buff)
+{
+	if (!HasAuthority() || Buff.BattlesLeft <= 0) return;
+
+	RunState.TempBuffs.Add(Buff);
+	OnRep_RunState();
+}
+
+void ATerminusPlayerState::ConsumeTempBuffBattle()
+{
+	if (!HasAuthority() || RunState.TempBuffs.Num() == 0) return;
+
+	for (FTempStatBuff& Buff : RunState.TempBuffs)
+	{
+		--Buff.BattlesLeft;
+	}
+	RunState.TempBuffs.RemoveAll([](const FTempStatBuff& Buff) { return Buff.BattlesLeft <= 0; });
+	OnRep_RunState();
+}
+
 void ATerminusPlayerState::ApplyRelicMetaEffect(const FRelicRow& Relic)
 {
 	if (!HasAuthority()) return;

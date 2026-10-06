@@ -155,6 +155,19 @@ void UDungeonCombatComponent::StartCombat(const FRoomNode& Room, const TArray<AT
 	SpawnMonsters(Room, Theme);
 	BuildRelicHolders();
 
+	// 이벤트 방에서 받은 일시 버프: 이번 전투 동안 용기(공격) / 용암(방어 감소)
+	for (const TWeakObjectPtr<ATerminusPlayerState>& PS : Players)
+	{
+		UCombatStatsComponent* Stats = GetStats(PS.Get());
+		if (!Stats) continue;
+
+		for (const FTempStatBuff& Buff : PS->GetRunState().TempBuffs)
+		{
+			if (Buff.Attack > 0)  Stats->ApplyStatus(EStatusEffect::Brave, Buff.Attack, -1);
+			if (Buff.Defense < 0) Stats->ApplyStatus(EStatusEffect::Lava, -Buff.Defense, -1);
+		}
+	}
+
 
 	if (Monsters.Num() == 0)
 	{
@@ -713,6 +726,12 @@ void UDungeonCombatComponent::FinishCombat(bool bVictory)
 		if (UCombatStatsComponent* Stats = GetStats(PS.Get()))
 		{
 			Stats->ClearCombatEffects();
+		}
+
+		// 이벤트 일시 버프는 전투 한 번이 끝날 때마다 1 씩
+		if (ATerminusPlayerState* Player = PS.Get())
+		{
+			Player->ConsumeTempBuffBattle();
 		}
 	}
 

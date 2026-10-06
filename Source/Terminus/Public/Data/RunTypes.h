@@ -5,6 +5,18 @@
 #include "Data/StatTypes.h"
 #include "RunTypes.generated.h"
 
+// 일시 스탯 버프 (이벤트 방). 전투가 시작될 때 상태로 걸리고(공격 = 용기, 방어 감소 = 용암), 전투가 끝날 때마다 1 줄어듦
+USTRUCT(BlueprintType)
+struct FTempStatBuff
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadOnly) int32 Attack = 0;
+	UPROPERTY(BlueprintReadOnly) int32 Defense = 0;        // 음수면 방어 감소
+	UPROPERTY(BlueprintReadOnly) int32 BattlesLeft = 0;
+	UPROPERTY(BlueprintReadOnly) FString Source;           // 어디서 받았는지 (표시용)
+};
+
 // 던전을 돌 동안 유지되는 데이터 구조체
 // 맵을 넘어가도 살아야함
 
@@ -68,6 +80,10 @@ struct FRunState
 	// 훈련소 기본 스킬 강화 단계 (0~2 칸). 런 시작 때 프로필에서 복사. 쓸 때 BaseValue(없으면 StatusValue)에 더함
 	UPROPERTY(BlueprintReadOnly)
 	TArray<int32> BasicSkillLevels;
+
+	// 일시 스탯 버프 (이벤트 방). 남은 전투 수가 0 이 되면 사라짐
+	UPROPERTY(BlueprintReadOnly)
+	TArray<FTempStatBuff> TempBuffs;
 
 	// 세이브에서 이어할 때의 체력. 던전에서 배틀러가 처음 빙의될 때 적용하고 -1 로 비움 (-1 = 최대 체력으로 시작)
 	UPROPERTY(BlueprintReadOnly)

@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "Map/MapManager.h"
+#include "Data/RewardTypes.h"
 #include "DungeonArea.generated.h"
 
 class UCameraComponent;
@@ -58,6 +59,41 @@ public:
 	// 휴식터 회복량 (최대 체력 비율). 기획: 20%
 	UPROPERTY(EditAnywhere, Category = "Dungeon Area|Rest", meta = (ClampMin = "0.0", ClampMax = "1.0"))
 	float RestHealRatio = 0.2f;
+
+	// [이벤트] 후보 고르기 (PC 의 Server_ChooseEvent). 한 사람 한 번, 전원이 고르면 방이 끝남
+	// ReplaceSlot = 강화 칸이 꽉 찼을 때 바꿀 칸, RelicRow = '유물 변화(선택)' 에서 바꿀 내 유물
+	void HandleEventChoice(ATerminusPlayerState* Chooser, int32 Index, int32 ReplaceSlot, FName RelicRow);
+
+	// 이벤트 후보 수 (사용자 결정: 3개, 각자 받음)
+	UPROPERTY(EditAnywhere, Category = "Dungeon Area|Event", meta = (ClampMin = "1"))
+	int32 EventOptionCount = 3;
+
+	// 아래 수치는 기획 미정이라 임시 (사용자 결정 2026-10-06: 제안값 그대로)
+	UPROPERTY(EditAnywhere, Category = "Dungeon Area|Event")
+	FIntPoint EventCurrency = FIntPoint(15, 30);
+
+	UPROPERTY(EditAnywhere, Category = "Dungeon Area|Event")
+	int32 EventPermanentHealth = 5;
+
+	UPROPERTY(EditAnywhere, Category = "Dungeon Area|Event")
+	int32 EventPermanentAttack = 1;
+
+	UPROPERTY(EditAnywhere, Category = "Dungeon Area|Event")
+	int32 EventPermanentDefense = 1;
+
+	// 공용 일시 버프: 공격 +2, 방어 -1, 전투 3번
+	UPROPERTY(EditAnywhere, Category = "Dungeon Area|Event")
+	int32 EventTempAttack = 2;
+
+	UPROPERTY(EditAnywhere, Category = "Dungeon Area|Event")
+	int32 EventTempDefensePenalty = 1;
+
+	UPROPERTY(EditAnywhere, Category = "Dungeon Area|Event", meta = (ClampMin = "1"))
+	int32 EventTempBattles = 3;
+
+	// 테마 일시 버프: 공격 +3, 디버프 없음, 전투 EventTempBattles 번
+	UPROPERTY(EditAnywhere, Category = "Dungeon Area|Event")
+	int32 EventThemeAttack = 3;
 
 	// -------------------------------------------------------------
 	// [조회]
@@ -163,4 +199,16 @@ private:
 
 	void BeginRest();
 	void FinishRest();
+
+	// 이벤트: 각자 받은 후보 / 이미 고른 사람 (서버만)
+	TMap<TWeakObjectPtr<ATerminusPlayerState>, TArray<FEventOption>> EventOffers;
+	TSet<TWeakObjectPtr<ATerminusPlayerState>> EventChosen;
+	bool bInEvent = false;
+	FTimerHandle EventTimer;
+
+	void BeginEvent();
+	void CheckEventDone();
+	void FinishEvent();
+	TArray<FEventOption> MakeEventOptions(const ATerminusPlayerState* PS) const;
+	bool ApplyEventOption(ATerminusPlayerState* PS, const FEventOption& Option, int32 ReplaceSlot, FName RelicRow, FString& OutResult);
 };

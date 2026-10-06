@@ -108,6 +108,16 @@ public:
 
 	bool RemoveRelic(FName RelicRow);
 
+	// [이벤트] 유물 하나를 다른 유물로 (같은 자리). 새 유물을 못 얻으면 원래대로 두고 false
+	bool SwapRelic(FName OldRelic, FName NewRelic);
+
+	// [이벤트] 이번 런 동안 스텟 올리기 (서버만). StatKind 0 = 최대 체력, 1 = 공격, 2 = 방어
+	void ApplyPermanentStat(int32 StatKind, int32 Amount);
+
+	// [이벤트] 일시 버프 (다음 전투 몇 번). 전투가 시작될 때 상태로 걸리고, 끝날 때마다 ConsumeTempBuffBattle 로 1 씩 줄어듦
+	void AddTempBuff(const FTempStatBuff& Buff);
+	void ConsumeTempBuffBattle();
+
 	const TArray<FName>& GetRelics() const { return RunState.Relics; }
 
 	// 직업 기본 유물 행 이름 (RLC_Fighter_001 등). 데이터에 없으면 NAME_None
