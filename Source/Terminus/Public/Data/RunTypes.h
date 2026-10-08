@@ -49,6 +49,10 @@ struct FRunState
 	UPROPERTY(BlueprintReadOnly)
 	bool bStartRelicsChosen = false;
 
+	// 던전에 들어갈 때 창고에서 들고 간 유물. 정산에서 고르는 후보에서 뺌 (사용자 결정 10-08)
+	UPROPERTY(BlueprintReadOnly)
+	TArray<FName> StartRelics;
+
 	// 하드 모드 (판 전체 규칙, 주점에서 방장이 정함). 켜면 런 시작 때 들고 간 창고 유물이 창고에서 사라짐
 	// 파티 전원의 RunState 에 같은 값이 들어감. 런을 새로 시작해도 유지 (BeginRun 이 안 지움)
 	UPROPERTY(BlueprintReadOnly)

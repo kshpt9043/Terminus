@@ -7,20 +7,8 @@
 #include "Data/UpgradeTypes.h"
 #include "TerminusProfileSubsystem.generated.h"
 
-// 정산할 유물 하나. 세력별 판매가는 정산을 시작할 때 정해 둠 (다시 열어도 그대로)
-USTRUCT()
-struct FSettlementRelic
-{
-	GENERATED_BODY()
-
-	UPROPERTY() FName Row;
-
-	// 마탑 / 테르미누스(종교)가 사는 값 (골드). -1 = 팔 수 없음
-	UPROPERTY() int32 MagePrice = -1;
-	UPROPERTY() int32 ReligionPrice = -1;
-};
-
-// 아직 안 끝낸 정산 (던전 탈출 직후 저장 -> 메인 화면에서 정산). 기획 '정산': 유물 판매 / 보관 -> 완료 퀘스트 -> 최종 골드
+// 아직 안 끝낸 정산 (던전 탈출 직후 저장 -> 메인 화면에서 정산). 순서: 유물 하나 보관 -> 완료 퀘스트 -> 최종 골드
+// 사용자 결정 10-08: 던전에서 얻은 유물 중 하나만 골라 창고로, 나머지는 사라짐 (유물 판매 없음. 노션 정산 페이지의 판매와 다름)
 // 방장이 먼저 나가서 끊기거나 게임이 꺼져도 다음 메인 화면에서 이어서 정산하게 프로필에 저장
 USTRUCT()
 struct FPendingSettlement
@@ -34,9 +22,10 @@ struct FPendingSettlement
 	UPROPERTY() FString RoomName;
 	UPROPERTY() int32 Floor = 0;
 
-	UPROPERTY() TArray<FSettlementRelic> Relics;
+	// 고를 수 있는 유물: 던전에서 얻은 것 (직업 기본 유물 / 몬스터 유물 / 시작 유물 제외)
+	UPROPERTY() TArray<FName> Relics;
 
-	// 강화 칸 스킬 중 아직 없는 것 하나 (기획 플레이 로직: 탈출하면 랜덤 1개 보관). None = 얻을 게 없음
+	// 장착 중인 픽업 스킬 중 아직 없는 것 하나 랜덤 (전부 있으면 None = 건너뜀)
 	UPROPERTY() FName KeptSkill;
 };
 
@@ -158,8 +147,9 @@ public:
 	// [정산] 던전 탈출 -> 정산 대기 저장 -> 메인 화면에서 유물 판매 / 보관 -> 골드
 	// -------------------------------------------------------------
 
-	// 이번 런 결과로 정산 내용을 만듦: 보관할 수 있는 유물 + 세력별 판매가(기본가 ±5%), 얻을 스킬 하나
-	FPendingSettlement MakeSettlement(const TArray<FName>& RunRelics, const TArray<FName>& EnhanceSkills, const FString& Reason, const FString& RoomName, int32 Floor) const;
+	// 이번 런 결과로 정산 내용을 만듦: 고를 수 있는 유물(시작 유물 StartRelics 제외), 얻을 스킬 하나
+	FPendingSettlement MakeSettlement(const TArray<FName>& RunRelics, const TArray<FName>& StartRelics, const TArray<FName>& EnhanceSkills,
+		const FString& Reason, const FString& RoomName, int32 Floor) const;
 
 	// 정산 대기로 저장 (이미 있으면 덮어씀)
 	void BeginSettlement(const FPendingSettlement& Settlement);
@@ -167,11 +157,8 @@ public:
 	bool HasPendingSettlement() const;
 	const FPendingSettlement& GetPendingSettlement() const;
 
-	// 정산 끝: 보관 유물을 창고에, 스킬을 보유 스킬에, 판 값을 골드에. 정산 대기는 비움
-	void FinishSettlement(const TArray<FName>& KeptRelics, int32 GoldEarned);
-
-	// 세력 판매가 흔들림 (기획 유물: 기본가의 -5% ~ +5%)
-	static constexpr float SettlementPriceSpread = 0.05f;
+	// 정산 끝: 고른 유물 하나를 창고에(None = 없음), 스킬을 보유 스킬에, 퀘스트 골드를 골드에. 정산 대기는 비움
+	void FinishSettlement(FName KeptRelic, int32 GoldEarned);
 
 	// 게임을 켤 때 세이브가 조작 / 손상돼서 백업으로 복구했거나 새로 시작했으면 그 안내. 꺼내면 비워짐 (메인 메뉴 팝업)
 	FText ConsumeLoadNotice();

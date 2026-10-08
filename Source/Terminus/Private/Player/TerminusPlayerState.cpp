@@ -124,6 +124,7 @@ void ATerminusPlayerState::BeginRun()
 	RunState.SavedHealth = -1;
 	RunState.TempBuffs.Reset();
 	RunState.SeenRelics.Reset();
+	RunState.StartRelics.Reset();
 
 	// 직업 기본 유물 = 패시브. 데이터에 아직 없는 직업은 빈 채로
 	RunState.Relics.Reset();
@@ -182,6 +183,7 @@ void ATerminusPlayerState::ChooseStartRelics(const TArray<FName>& RelicRows)
 		if (Taken >= MaxStartRelics) break;
 		if (UTerminusProfileSubsystem::IsStorableRelic(Row) && GainRelic(Row))
 		{
+			RunState.StartRelics.AddUnique(Row);
 			++Taken;
 		}
 	}

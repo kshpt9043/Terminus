@@ -518,7 +518,7 @@ void ATerminusPlayerController::Client_BeginSettlement_Implementation(const FTex
 		const UTerminusRunSubsystem* Run = GetGameInstance()->GetSubsystem<UTerminusRunSubsystem>();
 		const AMapManager* MapMgr = Cast<AMapManager>(UGameplayStatics::GetActorOfClass(this, AMapManager::StaticClass()));
 		const FRunState RunState = PS->GetRunState();
-		Profile->BeginSettlement(Profile->MakeSettlement(RunState.Relics, RunState.EnhanceSkills, Message.ToString(),
+		Profile->BeginSettlement(Profile->MakeSettlement(RunState.Relics, RunState.StartRelics, RunState.EnhanceSkills, Message.ToString(),
 			Run ? Run->GetRoomName() : FString(), MapMgr ? MapMgr->CurrentFloor : 0));
 	}
 

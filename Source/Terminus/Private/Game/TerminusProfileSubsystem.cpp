@@ -248,7 +248,8 @@ int32 UTerminusProfileSubsystem::GetGold() const
 // 정산
 // =====================================================================
 
-FPendingSettlement UTerminusProfileSubsystem::MakeSettlement(const TArray<FName>& RunRelics, const TArray<FName>& EnhanceSkills, const FString& Reason, const FString& RoomName, int32 Floor) const
+FPendingSettlement UTerminusProfileSubsystem::MakeSettlement(const TArray<FName>& RunRelics, const TArray<FName>& StartRelics, const TArray<FName>& EnhanceSkills,
+	const FString& Reason, const FString& RoomName, int32 Floor) const
 {
 	FPendingSettlement Out;
 	Out.bValid = true;
@@ -256,28 +257,14 @@ FPendingSettlement UTerminusProfileSubsystem::MakeSettlement(const TArray<FName>
 	Out.RoomName = RoomName;
 	Out.Floor = Floor;
 
-	auto Spread = [](int32 Base)
-	{
-		return Base < 0 ? -1 : FMath::Max(0, FMath::RoundToInt(Base * (1.f + FMath::FRandRange(-SettlementPriceSpread, SettlementPriceSpread))));
-	};
-
 	for (const FName& Row : RunRelics)
 	{
-		// 직업 기본 유물 / 몬스터 유물은 정산 대상이 아님
-		if (!IsStorableRelic(Row)) continue;
-
-		const FRelicRow* Relic = UTerminusDataSettings::FindRelicRow(Row);
-		FSettlementRelic Entry;
-		Entry.Row = Row;
-		if (Relic && Relic->CanSellAtSettlement())
-		{
-			Entry.MagePrice = Spread(Relic->SellPrice_Gold);
-			Entry.ReligionPrice = Spread(Relic->SellPrice_Gold);
-		}
-		Out.Relics.Add(Entry);
+		// 직업 기본 유물 / 몬스터 유물 / 창고에서 들고 간 시작 유물은 후보가 아님
+		if (!IsStorableRelic(Row) || StartRelics.Contains(Row)) continue;
+		Out.Relics.AddUnique(Row);
 	}
 
-	// 강화 칸 스킬 중 아직 없는 것 하나 랜덤
+	// 장착 중인 픽업 스킬 중 아직 없는 것 하나 랜덤 (중복 X, 전부 있으면 건너뜀)
 	TArray<FName> NewSkills;
 	for (const FName& Skill : EnhanceSkills)
 	{
@@ -311,7 +298,7 @@ const FPendingSettlement& UTerminusProfileSubsystem::GetPendingSettlement() cons
 	return Profile ? Profile->PendingSettlement : Empty;
 }
 
-void UTerminusProfileSubsystem::FinishSettlement(const TArray<FName>& KeptRelics, int32 GoldEarned)
+void UTerminusProfileSubsystem::FinishSettlement(FName KeptRelic, int32 GoldEarned)
 {
 	if (!HasPendingSettlement()) return;
 
@@ -319,13 +306,10 @@ void UTerminusProfileSubsystem::FinishSettlement(const TArray<FName>& KeptRelics
 	Profile->PendingSettlement = FPendingSettlement();   // 먼저 비워서 아래가 중간에 실패해도 두 번 받지 않게
 	Save();
 
-	// 보관 (이미 있는 유물은 아무 일도 없음: 사용자 결정 10-06)
-	for (const FName& Row : KeptRelics)
+	// 고른 유물 하나만 보관 (이미 있는 유물은 아무 일도 없음: 사용자 결정 10-06). 나머지는 사라짐
+	if (!KeptRelic.IsNone() && Done.Relics.Contains(KeptRelic))
 	{
-		if (Done.Relics.ContainsByPredicate([&Row](const FSettlementRelic& R) { return R.Row == Row; }))
-		{
-			AddStoredRelic(Row);
-		}
+		AddStoredRelic(KeptRelic);
 	}
 	if (!Done.KeptSkill.IsNone())
 	{
@@ -333,7 +317,7 @@ void UTerminusProfileSubsystem::FinishSettlement(const TArray<FName>& KeptRelics
 	}
 	AddGold(GoldEarned);
 
-	UE_LOG(LogTemp, Log, TEXT("[Profile] 정산 끝: 골드 +%d, 보관 %d개, 스킬 %s"), GoldEarned, KeptRelics.Num(), *Done.KeptSkill.ToString());
+	UE_LOG(LogTemp, Log, TEXT("[Profile] 정산 끝: 골드 +%d, 보관 %s, 스킬 %s"), GoldEarned, *KeptRelic.ToString(), *Done.KeptSkill.ToString());
 }
 
 void UTerminusProfileSubsystem::AddGold(int32 Amount)
