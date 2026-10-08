@@ -52,13 +52,24 @@ public:
 	// 구역 비우기. 배틀러를 원래 자리로 돌려놓고 시점을 지도로 돌린다
 	void Release();
 
-	// [휴식터] 회복 대상 고르기 (PC 의 Server_ChooseRestTarget). 같은 휴식터 사람만, 한 사람 한 번
-	// 대상은 최대 체력의 RestHealRatio 만큼 회복. 전원이 고르면 방이 끝남
+	// [휴식터] 휴식 / 탐색 중 하나만 (기획 10-07, 사용자 결정 10-08: 선택지 화면). 한 사람 한 번, 전원이 고르면 방이 끝남
+	// 휴식: 회복 대상 고르기 (PC 의 Server_ChooseRestTarget). 같은 휴식터 사람만. 대상은 최대 체력의 RestHealRatio 만큼 회복
 	void HandleRestChoice(ATerminusPlayerState* Chooser, ATerminusPlayerState* Target);
+
+	// 탐색 (PC 의 Server_ChooseRestExplore): 던전 재화 RestExploreCurrency + RestExploreRelicChance 확률로 유물
+	void HandleRestExplore(ATerminusPlayerState* Chooser);
 
 	// 휴식터 회복량 (최대 체력 비율). 기획: 20%
 	UPROPERTY(EditAnywhere, Category = "Dungeon Area|Rest", meta = (ClampMin = "0.0", ClampMax = "1.0"))
 	float RestHealRatio = 0.2f;
+
+	// 탐색 던전 재화 (최소, 최대). 기획: '소량' -> 수치 미정이라 임시 (몬스터방 10 의 절반쯤)
+	UPROPERTY(EditAnywhere, Category = "Dungeon Area|Rest")
+	FIntPoint RestExploreCurrency = FIntPoint(5, 10);
+
+	// 탐색 유물 확률. 기획: 5%. 유물은 가디언 보상과 같은 조건 (공용 / 내 직업, 지금 계층, 이번 런에 안 나온 것)
+	UPROPERTY(EditAnywhere, Category = "Dungeon Area|Rest", meta = (ClampMin = "0.0", ClampMax = "1.0"))
+	float RestExploreRelicChance = 0.05f;
 
 	// [이벤트] 후보 고르기 (PC 의 Server_ChooseEvent). 한 사람 한 번, 전원이 고르면 방이 끝남
 	// ReplaceSlot = 강화 칸이 꽉 찼을 때 바꿀 칸, RelicRow = '유물 변화(선택)' 에서 바꿀 내 유물
@@ -198,6 +209,7 @@ private:
 	FTimerHandle RestTimer;
 
 	void BeginRest();
+	void CheckRestDone();
 	void FinishRest();
 
 	// 이벤트: 각자 받은 후보 / 이미 고른 사람 (서버만)

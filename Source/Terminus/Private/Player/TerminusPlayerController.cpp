@@ -501,7 +501,7 @@ void ATerminusPlayerController::Client_RunEnded_Implementation(const FText& Mess
 	}
 }
 
-void ATerminusPlayerController::Client_ShowRest_Implementation(const TArray<APlayerState*>& Occupants, float HealRatio)
+void ATerminusPlayerController::Client_ShowRest_Implementation(const TArray<APlayerState*>& Occupants, float HealRatio, FIntPoint ExploreCurrency, float ExploreRelicChance)
 {
 	if (RestWidget)
 	{
@@ -513,7 +513,7 @@ void ATerminusPlayerController::Client_ShowRest_Implementation(const TArray<APla
 	RestWidget = CreateWidget<URestWidget>(this, Class);
 	if (RestWidget)
 	{
-		RestWidget->Setup(Occupants, HealRatio);
+		RestWidget->Setup(Occupants, HealRatio, ExploreCurrency, ExploreRelicChance);
 		RestWidget->AddToViewport(22);   // 보상 화면과 같은 높이, 채팅(25) 아래
 	}
 }
@@ -524,6 +524,23 @@ void ATerminusPlayerController::Client_CloseRest_Implementation()
 	{
 		RestWidget->RemoveFromParent();
 		RestWidget = nullptr;
+	}
+}
+
+void ATerminusPlayerController::Client_RestResult_Implementation(const FText& Result)
+{
+	if (RestWidget)
+	{
+		RestWidget->ShowResult(Result);
+	}
+}
+
+void ATerminusPlayerController::Server_ChooseRestExplore_Implementation()
+{
+	ATerminusPlayerState* PS = GetPlayerState<ATerminusPlayerState>();
+	if (ADungeonArea* Area = PS ? PS->GetCurrentArea() : nullptr)
+	{
+		Area->HandleRestExplore(PS);
 	}
 }
 

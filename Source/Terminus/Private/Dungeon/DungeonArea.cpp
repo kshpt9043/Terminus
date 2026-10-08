@@ -237,7 +237,7 @@ void ADungeonArea::BeginRest()
 	{
 		if (ATerminusPlayerController* PC = PS ? Cast<ATerminusPlayerController>(PS->GetOwner()) : nullptr)
 		{
-			PC->Client_ShowRest(Present, RestHealRatio);
+			PC->Client_ShowRest(Present, RestHealRatio, RestExploreCurrency, RestExploreRelicChance);
 		}
 	}
 
@@ -261,6 +261,13 @@ void ADungeonArea::HandleRestChoice(ATerminusPlayerState* Chooser, ATerminusPlay
 		const int32 Amount = FMath::Max(1, FMath::RoundToInt(Stats->GetStats().MaxHealth * RestHealRatio));
 		Stats->Heal(Amount);
 
+		if (ATerminusPlayerController* PC = Cast<ATerminusPlayerController>(Chooser->GetOwner()))
+		{
+			PC->Client_RestResult(FText::FromString(Chooser == Target
+				? FString::Printf(TEXT("푹 쉬었습니다. 체력을 %d 회복했습니다."), Amount)
+				: FString::Printf(TEXT("%s 님의 체력을 %d 회복시켰습니다."), *Target->GetPlayerName(), Amount)));
+		}
+
 		if (Occupants.Num() > 1)
 		{
 			FChatMessage Notice;
@@ -274,16 +281,62 @@ void ADungeonArea::HandleRestChoice(ATerminusPlayerState* Chooser, ATerminusPlay
 		UE_LOG(LogTemp, Log, TEXT("[Area %d] 휴식: %s -> %s +%d"), AreaIndex, *Chooser->GetPlayerName(), *Target->GetPlayerName(), Amount);
 	}
 
-	// 전원이 골랐으면 잠깐 보여주고 끝
-	bool bAllChosen = true;
+	CheckRestDone();
+}
+
+void ADungeonArea::HandleRestExplore(ATerminusPlayerState* Chooser)
+{
+	if (!HasAuthority() || !bResting || !Chooser) return;
+	if (!Occupants.Contains(Chooser) || RestChosen.Contains(Chooser)) return;   // 휴식 / 탐색 중 하나만, 한 번
+
+	RestChosen.Add(Chooser);
+
+	const int32 Currency = FMath::RandRange(FMath::Min(RestExploreCurrency.X, RestExploreCurrency.Y), FMath::Max(RestExploreCurrency.X, RestExploreCurrency.Y));
+	Chooser->AddCurrency(Currency);
+	FString Result = FString::Printf(TEXT("주변을 뒤져 던전 재화 %d 을(를) 찾았습니다."), Currency);
+
+	if (FMath::FRand() < RestExploreRelicChance)
+	{
+		const TArray<FName> Found = Combat ? Combat->PickRewardRelics(Chooser, 1) : TArray<FName>();
+		if (Found.Num() > 0)
+		{
+			const FRelicRow* Relic = UTerminusDataSettings::FindRelicRow(Found[0]);
+			const FString RelicName = Relic ? Relic->RelicName.ToString() : Found[0].ToString();
+
+			Chooser->MarkRelicsSeen(Found);   // 못 가져가도 이번 런엔 다시 안 나옴
+			Result += Chooser->GainRelic(Found[0])
+				? FString::Printf(TEXT("\n그리고 유물 [%s] 을(를) 발견했습니다!"), *RelicName)
+				: FString::Printf(TEXT("\n유물 [%s] 을(를) 발견했지만 유물 칸이 가득 차 가져가지 못했습니다."), *RelicName);
+		}
+	}
+
+	if (ATerminusPlayerController* PC = Cast<ATerminusPlayerController>(Chooser->GetOwner()))
+	{
+		PC->Client_RestResult(FText::FromString(Result));
+	}
+
+	if (Occupants.Num() > 1)
+	{
+		FChatMessage Notice;
+		Notice.Kind = EChatMessageKind::System;
+		Notice.Text = FString::Printf(TEXT("%s 님이 휴식터를 탐색했습니다. %s"), *Chooser->GetPlayerName(), *Result.Replace(TEXT("\n"), TEXT(" ")));
+		ATerminusPlayerController::BroadcastChat(GetWorld(), Notice);
+	}
+
+	UE_LOG(LogTemp, Log, TEXT("[Area %d] 탐색: %s -> %s"), AreaIndex, *Chooser->GetPlayerName(), *Result.Replace(TEXT("\n"), TEXT(" / ")));
+
+	CheckRestDone();
+}
+
+void ADungeonArea::CheckRestDone()
+{
 	for (ATerminusPlayerState* PS : Occupants)
 	{
-		if (PS && !RestChosen.Contains(PS)) bAllChosen = false;
+		if (PS && !RestChosen.Contains(PS)) return;
 	}
-	if (bAllChosen)
-	{
-		GetWorldTimerManager().SetTimer(RestTimer, this, &ADungeonArea::FinishRest, 1.0f, false);
-	}
+
+	// 전원이 골랐으면 결과를 잠깐 보여주고 끝
+	GetWorldTimerManager().SetTimer(RestTimer, this, &ADungeonArea::FinishRest, 1.5f, false);
 }
 
 void ADungeonArea::FinishRest()

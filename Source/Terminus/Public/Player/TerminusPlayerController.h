@@ -178,9 +178,15 @@ public:
 	UFUNCTION(Client, Reliable)
 	void Client_RunEnded(const FText& Message);
 
-	// 휴식터: 회복 대상 고르기 화면 (Occupants = 같은 휴식터 사람) / 닫기 / 고른 대상 알리기
+	// 휴식터: 휴식 / 탐색 선택지 화면 (Occupants = 같은 휴식터 사람) / 결과 / 닫기 / 고른 것 알리기
 	UFUNCTION(Client, Reliable)
-	void Client_ShowRest(const TArray<APlayerState*>& Occupants, float HealRatio);
+	void Client_ShowRest(const TArray<APlayerState*>& Occupants, float HealRatio, FIntPoint ExploreCurrency, float ExploreRelicChance);
+
+	UFUNCTION(Client, Reliable)
+	void Client_RestResult(const FText& Result);
+
+	UFUNCTION(Server, Reliable)
+	void Server_ChooseRestExplore();
 
 	UFUNCTION(Client, Reliable)
 	void Client_CloseRest();

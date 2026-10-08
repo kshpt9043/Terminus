@@ -104,6 +104,9 @@ public:
 	// 보상 마침 (PC 의 Server_FinishRoomReward). 보여 준 후보 중에서만 인정
 	void HandleRewardFinished(ATerminusPlayerState* PS, FName ChosenSkill, int32 ReplaceSlot, FName ChosenRelic, FName ReplaceRelic);
 
+	// 유물 후보: 공용이거나 내 직업, 지금 계층 등급(표층 / 중층 / 심층), 이번 런에 안 나온 것 중 Count 개 (휴식터 탐색도 씀)
+	TArray<FName> PickRewardRelics(const ATerminusPlayerState* PS, int32 Count) const;
+
 	// -------------------------------------------------------------
 	// [조회] 클라 HUD 가 씀
 	// -------------------------------------------------------------
@@ -282,9 +285,6 @@ private:
 	// 몬스터 / 가디언 / 보스방 클리어 보상
 	void StartRoomRewards();
 	TArray<FName> PickRewardSkills(const ATerminusPlayerState* PS, int32 Count) const;
-
-	// 유물 후보: 공용이거나 내 직업, 지금 계층 등급(표층 / 중층 / 심층), 아직 안 가진 것 중 Count 개
-	TArray<FName> PickRewardRelics(const ATerminusPlayerState* PS, int32 Count) const;
 	void FinishRewardsIfAllDone();
 	void ClearArea();
 
