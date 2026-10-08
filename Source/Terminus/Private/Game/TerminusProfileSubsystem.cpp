@@ -249,10 +249,11 @@ int32 UTerminusProfileSubsystem::GetGold() const
 // =====================================================================
 
 FPendingSettlement UTerminusProfileSubsystem::MakeSettlement(const TArray<FName>& RunRelics, const TArray<FName>& StartRelics, const TArray<FName>& EnhanceSkills,
-	const FString& Reason, const FString& RoomName, int32 Floor) const
+	const FString& Reason, const FString& RoomName, int32 Floor, bool bDeath) const
 {
 	FPendingSettlement Out;
 	Out.bValid = true;
+	Out.bDeath = bDeath;
 	Out.Reason = Reason;
 	Out.RoomName = RoomName;
 	Out.Floor = Floor;
@@ -260,8 +261,21 @@ FPendingSettlement UTerminusProfileSubsystem::MakeSettlement(const TArray<FName>
 	for (const FName& Row : RunRelics)
 	{
 		// 직업 기본 유물 / 몬스터 유물 / 창고에서 들고 간 시작 유물은 후보가 아님
-		if (!IsStorableRelic(Row) || StartRelics.Contains(Row)) continue;
-		Out.Relics.AddUnique(Row);
+		if (!IsStorableRelic(Row) || StartRelics.Contains(Row) || Out.Relics.Contains(Row)) continue;
+		Out.Relics.Add(Row);
+
+		// 사망: 유물만 골드로 판매 (DT 정산 판매가 그대로)
+		if (bDeath)
+		{
+			const FRelicRow* Relic = UTerminusDataSettings::FindRelicRow(Row);
+			Out.RelicGold.Add(Relic && Relic->CanSellAtSettlement() ? Relic->SellPrice_Gold : 0);
+		}
+	}
+
+	// 사망: 강화 스킬은 사라짐 (가져가는 스킬 없음)
+	if (bDeath)
+	{
+		return Out;
 	}
 
 	// 장착 중인 픽업 스킬 중 아직 없는 것 하나 랜덤 (중복 X, 전부 있으면 건너뜀)

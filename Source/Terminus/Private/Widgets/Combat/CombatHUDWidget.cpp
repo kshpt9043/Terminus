@@ -22,6 +22,7 @@
 #include "Widgets/Relic/RelicBarWidget.h"
 #include "Player/TerminusPlayerController.h"
 #include "Player/TerminusPlayerState.h"
+#include "Kismet/GameplayStatics.h"
 
 namespace
 {
@@ -509,15 +510,23 @@ void UCombatHUDWidget::UpdatePanels()
 	const UCombatStatsComponent* MyStats = MyBattler ? MyBattler->GetCombatStats() : nullptr;
 	const bool bMeAlive = MyStats && !MyStats->IsDead();
 
-	const ECombatPhase Phase = Combat->GetPhase();
-	const bool bMyTurn = Phase == ECombatPhase::PlayerTurn && bMeAlive && !Combat->HasEndedTurn(LocalPS);
+	// 관전 중 (내가 들어 있지 않은 구역을 보는 중): 내 턴 아님, 스킬 못 씀
+	const bool bSpectating = !CurrentArea->GetOccupants().ContainsByPredicate(
+		[LocalPS](const TObjectPtr<ATerminusPlayerState>& P) { return P.Get() == LocalPS; });
 
-	// ---- 위
+	const ECombatPhase Phase = Combat->GetPhase();
+	const bool bMyTurn = !bSpectating && Phase == ECombatPhase::PlayerTurn && bMeAlive && !Combat->HasEndedTurn(LocalPS);
+
+	// ---- 위: "n층 n번째 방" (기획 시안)
 	if (RoomText)
 	{
-		// TODO: 층 진행이 생기면 "n층 n번째 방" (기획 시안)
-		RoomText->SetText(FText::FromString(FString::Printf(TEXT("%d번째 방  ·  사이클 %d"),
-			CurrentArea->GetRoom().Row + 1, Combat->GetCycle())));
+		if (!CachedMap.IsValid())
+		{
+			CachedMap = Cast<AMapManager>(UGameplayStatics::GetActorOfClass(this, AMapManager::StaticClass()));
+		}
+		const int32 Floor = CachedMap.IsValid() ? CachedMap->CurrentFloor : 1;
+		RoomText->SetText(FText::FromString(FString::Printf(TEXT("%d층 %d번째 방  ·  사이클 %d"),
+			Floor, CurrentArea->GetRoom().Row + 1, Combat->GetCycle())));
 	}
 
 	if (PhaseText)
@@ -526,13 +535,14 @@ void UCombatHUDWidget::UpdatePanels()
 		switch (Phase)
 		{
 		case ECombatPhase::PlayerTurn:
-			Label = !bMeAlive ? TEXT("쓰러짐") : (bMyTurn ? TEXT("내 턴") : TEXT("다른 플레이어를 기다리는 중"));
+			Label = bSpectating ? TEXT("플레이어 턴") : (!bMeAlive ? TEXT("쓰러짐") : (bMyTurn ? TEXT("내 턴") : TEXT("다른 플레이어를 기다리는 중")));
 			break;
 		case ECombatPhase::MonsterTurn: Label = TEXT("적의 턴"); break;
 		case ECombatPhase::Victory:     Label = TEXT("승리!"); break;
 		case ECombatPhase::Defeat:      Label = TEXT("패배"); break;
 		default: break;
 		}
+		if (bSpectating) Label = TEXT("관전 중  ·  ") + Label;
 		PhaseText->SetText(FText::FromString(Label));
 	}
 
@@ -595,6 +605,13 @@ void UCombatHUDWidget::OnSkillClicked(int32 SkillIndex)
 	ATerminusPlayerController* PC = GetOwningPlayer<ATerminusPlayerController>();
 	const ATerminusPlayerState* LocalPS = PC ? PC->GetPlayerState<ATerminusPlayerState>() : nullptr;
 	if (!PC || !LocalPS) return;
+
+	// 관전 중인 구역에선 못 씀
+	if (const ADungeonArea* Viewed = Area.Get(); Viewed && !Viewed->GetOccupants().ContainsByPredicate(
+		[LocalPS](const TObjectPtr<ATerminusPlayerState>& P) { return P.Get() == LocalPS; }))
+	{
+		return;
+	}
 
 	// 같은 스킬을 다시 누르면 취소
 	if (PendingSkillIndex == SkillIndex)

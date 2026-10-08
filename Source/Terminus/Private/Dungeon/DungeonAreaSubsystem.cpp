@@ -8,6 +8,7 @@
 #include "Player/TerminusPlayerState.h"
 #include "Character/TerminusBattler.h"
 #include "Combat/CombatStatsComponent.h"
+#include "TimerManager.h"
 
 void UDungeonAreaSubsystem::RegisterArea(ADungeonArea* Area)
 {
@@ -47,6 +48,13 @@ bool UDungeonAreaSubsystem::IsAnyRoomInProgress() const
 		if (Area.IsValid() && Area->IsInUse()) return true;
 	}
 	return false;
+}
+
+TArray<ADungeonArea*> UDungeonAreaSubsystem::GetActiveAreas() const
+{
+	TArray<ADungeonArea*> Result = GetSortedAreas();
+	Result.RemoveAll([](const ADungeonArea* Area) { return !Area->IsInUse(); });
+	return Result;
 }
 
 TArray<ADungeonArea*> UDungeonAreaSubsystem::GetSortedAreas() const
@@ -121,17 +129,241 @@ bool UDungeonAreaSubsystem::StartSelectedRooms(const TArray<ATerminusPlayerState
 
 void UDungeonAreaSubsystem::NotifyAreaCleared(ADungeonArea* Area)
 {
-	// 아직 진행 중인 구역이 있으면 대기
-	// TODO: 먼저 끝난 구역 사람은 여기서 관전 / 구출 / 난입 선택
-	for (const TWeakObjectPtr<ADungeonArea>& Other : Areas)
+	EvaluateAreas();
+}
+
+void UDungeonAreaSubsystem::NotifyAreaWiped(ADungeonArea* Area)
+{
+	EvaluateAreas();
+}
+
+void UDungeonAreaSubsystem::SplitAreas(TArray<ADungeonArea*>& OutSurvivors, TArray<ADungeonArea*>& OutWiped, bool& bOutStillFighting) const
+{
+	bOutStillFighting = false;
+	for (ADungeonArea* Area : GetSortedAreas())
 	{
-		if (Other.IsValid() && Other->IsInUse() && !Other->IsCleared())
+		if (!Area->IsInUse()) continue;
+
+		if (Area->IsWiped())        OutWiped.Add(Area);
+		else if (Area->IsCleared()) OutSurvivors.Add(Area);
+		else                        bOutStillFighting = true;   // 싸우는 중 / 보상 / 휴식 / 이벤트 고르는 중
+	}
+}
+
+void UDungeonAreaSubsystem::EvaluateAreas()
+{
+	if (bRescueVoting) return;
+
+	TArray<ADungeonArea*> Survivors, Wiped;
+	bool bStillFighting = false;
+	SplitAreas(Survivors, Wiped, bStillFighting);
+
+	// 아직 진행 중인 구역이 있으면 대기 (그 구역도 끝나야 구출 / 난입을 고를 수 있음)
+	// TODO: 먼저 끝난 구역 사람은 관전
+	if (bStillFighting) return;
+
+	if (Wiped.Num() == 0)
+	{
+		FinishAllRooms();
+		return;
+	}
+
+	if (Survivors.Num() > 0)
+	{
+		StartRescueVote(Survivors, Wiped);
+		return;
+	}
+
+	// 다른 방에 아무도 없음 -> 전멸. 런 끝 (세이브 삭제 + 사망 정산)
+	int32 PlayerCount = 0;
+	for (ADungeonArea* Area : Wiped) PlayerCount += Area->GetOccupants().Num();
+
+	UE_LOG(LogTemp, Log, TEXT("[AreaSubsystem] 전멸. 런 끝"));
+	if (AMapManager* MapMgr = Cast<AMapManager>(UGameplayStatics::GetActorOfClass(GetWorld(), AMapManager::StaticClass())))
+	{
+		MapMgr->EndRunByDeath(PlayerCount > 1 ? TEXT("파티가 전멸했습니다.") : TEXT("쓰러졌습니다."));
+	}
+}
+
+void UDungeonAreaSubsystem::StartRescueVote(const TArray<ADungeonArea*>& SurvivorAreas, const TArray<ADungeonArea*>& WipedAreas)
+{
+	bRescueVoting = true;
+	bRescueCanIntervene = WipedAreas.Num() == 1;   // 전멸한 방이 둘 이상이면 구출만 (한 번에 한 방에만 들어갈 수 있어서)
+	RescueVoters.Reset();
+	RescueVotes.Reset();
+
+	TArray<FString> WipedNames;
+	for (ADungeonArea* Area : WipedAreas)
+	{
+		for (ATerminusPlayerState* PS : Area->GetOccupants())
 		{
-			return;
+			if (PS) WipedNames.Add(PS->GetPlayerName());
 		}
 	}
 
+	for (ADungeonArea* Area : SurvivorAreas)
+	{
+		for (ATerminusPlayerState* PS : Area->GetOccupants())
+		{
+			if (!PS) continue;
+			RescueVoters.Add(PS);
+			if (ATerminusPlayerController* PC = Cast<ATerminusPlayerController>(PS->GetOwner()))
+			{
+				PC->Client_ShowRescue(true, WipedNames, bRescueCanIntervene, RescueHealthCost, RescueVoteSeconds);
+			}
+		}
+	}
+
+	for (ADungeonArea* Area : WipedAreas)
+	{
+		for (ATerminusPlayerState* PS : Area->GetOccupants())
+		{
+			if (ATerminusPlayerController* PC = PS ? Cast<ATerminusPlayerController>(PS->GetOwner()) : nullptr)
+			{
+				PC->Client_ShowRescue(false, WipedNames, bRescueCanIntervene, RescueHealthCost, RescueVoteSeconds);
+			}
+		}
+	}
+
+	FChatMessage Notice;
+	Notice.Kind = EChatMessageKind::System;
+	Notice.Text = FString::Printf(TEXT("%s 님이 쓰러졌습니다. 다른 방의 동료가 구출 / 난입을 고릅니다."), *FString::Join(WipedNames, TEXT(", ")));
+	ATerminusPlayerController::BroadcastChat(GetWorld(), Notice);
+
+	GetWorld()->GetTimerManager().SetTimer(RescueTimer, this, &UDungeonAreaSubsystem::ResolveRescueVote, RescueVoteSeconds, false);
+}
+
+void UDungeonAreaSubsystem::HandleRescueChoice(ATerminusPlayerState* Voter, bool bIntervene)
+{
+	if (!bRescueVoting || !Voter || !RescueVoters.Contains(Voter) || RescueVotes.Contains(Voter)) return;
+	if (bIntervene && !bRescueCanIntervene) return;
+
+	RescueVotes.Add(Voter, bIntervene);
+
+	for (const TWeakObjectPtr<ATerminusPlayerState>& Weak : RescueVoters)
+	{
+		if (Weak.IsValid() && !RescueVotes.Contains(Weak)) return;
+	}
+	ResolveRescueVote();
+}
+
+void UDungeonAreaSubsystem::CancelRescueVote()
+{
+	if (!bRescueVoting) return;
+
+	bRescueVoting = false;
+	GetWorld()->GetTimerManager().ClearTimer(RescueTimer);
+	RescueVoters.Reset();
+	RescueVotes.Reset();
+
+	for (ADungeonArea* Area : GetSortedAreas())
+	{
+		for (ATerminusPlayerState* PS : Area->GetOccupants())
+		{
+			if (ATerminusPlayerController* PC = PS ? Cast<ATerminusPlayerController>(PS->GetOwner()) : nullptr)
+			{
+				PC->Client_CloseRescue();
+			}
+		}
+	}
+}
+
+void UDungeonAreaSubsystem::ResolveRescueVote()
+{
+	if (!bRescueVoting) return;
+
+	// 다수결, 동점이면 랜덤, 아무도 안 골랐으면 구출
+	int32 Rescue = 0, Intervene = 0;
+	for (const TPair<TWeakObjectPtr<ATerminusPlayerState>, bool>& Pair : RescueVotes)
+	{
+		(Pair.Value ? Intervene : Rescue) += 1;
+	}
+	const bool bIntervene = bRescueCanIntervene && (Intervene > Rescue || (Intervene == Rescue && Intervene > 0 && FMath::RandBool()));
+
+	CancelRescueVote();   // 투표 화면 닫기
+
+	TArray<ADungeonArea*> Survivors, Wiped;
+	bool bStillFighting = false;
+	SplitAreas(Survivors, Wiped, bStillFighting);
+	if (Survivors.Num() == 0 || Wiped.Num() == 0)
+	{
+		EvaluateAreas();
+		return;
+	}
+
+	FChatMessage Notice;
+	Notice.Kind = EChatMessageKind::System;
+	Notice.Text = bIntervene
+		? FString::Printf(TEXT("난입! 전멸한 방에 들어가 남은 몬스터와 싸웁니다. (구출 %d / 난입 %d)"), Rescue, Intervene)
+		: FString::Printf(TEXT("구출! 쓰러진 동료를 데리고 다음 방으로 갑니다. (구출 %d / 난입 %d)"), Rescue, Intervene);
+	ATerminusPlayerController::BroadcastChat(GetWorld(), Notice);
+
+	if (bIntervene) ApplyIntervention(Survivors, Wiped[0]);
+	else            ApplyRescue(Survivors, Wiped);
+}
+
+void UDungeonAreaSubsystem::ApplyRescue(const TArray<ADungeonArea*>& SurvivorAreas, const TArray<ADungeonArea*>& WipedAreas)
+{
+	// 살리러 간 방 (전멸한 방). 구출한 사람도 그 방에 같이 있는 걸로 침 -> 다음 선택은 그 방에서
+	const FRoomNode TargetRoom = WipedAreas[0]->GetRoom();
+
+	// 구출하는 사람: 현재 체력의 RescueHealthCost 만큼 잃음 (1 아래로는 안 내려감)
+	for (ADungeonArea* Area : SurvivorAreas)
+	{
+		for (ATerminusPlayerState* PS : Area->GetOccupants())
+		{
+			if (!PS) continue;
+
+			const ATerminusBattler* Battler = Cast<ATerminusBattler>(PS->GetPawn());
+			UCombatStatsComponent* Stats = Battler ? Battler->GetCombatStats() : nullptr;
+			if (Stats && !Stats->IsDead())
+			{
+				const int32 MaxHealth = FMath::Max(1, Stats->GetStats().MaxHealth);
+				const int32 Health = Stats->GetCombatState().Health;
+				const int32 NewHealth = FMath::Max(1, Health - FMath::RoundToInt(Health * RescueHealthCost));
+				Stats->Revive(static_cast<float>(NewHealth) / MaxHealth);
+			}
+			PS->AdvanceToRoom(TargetRoom.RoomId, TargetRoom.Row);
+		}
+		Area->Release();
+	}
+
+	// 전멸한 사람: 체력 1. 보상 없음
+	for (ADungeonArea* Area : WipedAreas)
+	{
+		for (ATerminusPlayerState* PS : Area->GetOccupants())
+		{
+			if (!PS) continue;
+
+			const ATerminusBattler* Battler = Cast<ATerminusBattler>(PS->GetPawn());
+			if (UCombatStatsComponent* Stats = Battler ? Battler->GetCombatStats() : nullptr)
+			{
+				Stats->Revive(0.f);   // 최소 1
+			}
+			PS->AdvanceToRoom(TargetRoom.RoomId, TargetRoom.Row);
+		}
+		Area->Release();
+	}
+
+	// 열린 구역이 없으니 지도 복귀 + 자동 저장만
 	FinishAllRooms();
+}
+
+void UDungeonAreaSubsystem::ApplyIntervention(const TArray<ADungeonArea*>& SurvivorAreas, ADungeonArea* WipedArea)
+{
+	// 살아남은 사람들을 자기 구역에서 빼서 (지도 자리로 돌아온 뒤) 전멸한 구역으로
+	TArray<ATerminusPlayerState*> Joiners;
+	for (ADungeonArea* Area : SurvivorAreas)
+	{
+		for (ATerminusPlayerState* PS : Area->GetOccupants())
+		{
+			if (PS) Joiners.Add(PS);
+		}
+		Area->Release();
+	}
+
+	// 이기면 그 구역이 클리어 -> 전원 그 방(살리러 간 방)으로 진행. 지면 다시 전멸 -> 아무도 없으니 런 끝
+	WipedArea->BeginIntervention(Joiners);
 }
 
 void UDungeonAreaSubsystem::HandlePlayerLeft(ATerminusPlayerState* Leaver)
@@ -146,6 +378,9 @@ void UDungeonAreaSubsystem::HandlePlayerLeft(ATerminusPlayerState* Leaver)
 	}
 
 	if (!bAnyInUse) return;
+
+	// 구출 / 난입 투표 중이었으면 닫음 (아래에서 방을 무효로 돌림)
+	CancelRescueVote();
 
 	if (bAllFightsOver)
 	{
@@ -171,6 +406,8 @@ void UDungeonAreaSubsystem::HandlePlayerLeft(ATerminusPlayerState* Leaver)
 
 void UDungeonAreaSubsystem::AbortAllRooms()
 {
+	CancelRescueVote();
+
 	for (ADungeonArea* Area : GetSortedAreas())
 	{
 		if (!Area->IsInUse()) continue;

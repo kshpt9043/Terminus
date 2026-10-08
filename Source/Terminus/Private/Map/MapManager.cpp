@@ -1294,6 +1294,16 @@ void AMapManager::OnRep_VoteState()
 
 void AMapManager::EndRunByEscape(const FString& Reason)
 {
+    EndRun(Reason, false);
+}
+
+void AMapManager::EndRunByDeath(const FString& Reason)
+{
+    EndRun(Reason, true);
+}
+
+void AMapManager::EndRun(const FString& Reason, bool bDeath)
+{
     // 런이 끝남 -> 세이브 삭제 (정산 내용은 각자 프로필에 따로 저장되니 여기서 바로 지워도 됨)
     if (UTerminusSaveSubsystem* Save = UTerminusSaveSubsystem::Get(this))
     {
@@ -1309,7 +1319,7 @@ void AMapManager::EndRunByEscape(const FString& Reason)
     {
         if (ATerminusPlayerController* PC = Cast<ATerminusPlayerController>(It->Get()))
         {
-            PC->Client_BeginSettlement(FText::FromString(Reason));
+            PC->Client_BeginSettlement(FText::FromString(Reason), bDeath);
         }
     }
 }

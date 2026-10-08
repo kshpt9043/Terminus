@@ -24,6 +24,9 @@
 #include "Widgets/Map/FloorVoteWidget.h"
 #include "Widgets/Rest/RestWidget.h"
 #include "Widgets/Event/EventWidget.h"
+#include "Widgets/Rescue/RescueWidget.h"
+#include "Widgets/Spectate/SpectateWidget.h"
+#include "Dungeon/DungeonAreaSubsystem.h"
 #include "Dungeon/DungeonAreaSubsystem.h"
 #include "Widgets/Common/ConfirmPopupWidget.h"
 #include "Online/SessionSubsystem.h"
@@ -360,6 +363,17 @@ void ATerminusPlayerController::ViewDungeonArea(ADungeonArea* Area)
 		CombatHUD->SetArea(Area);
 	}
 
+	// 관전 바: 구역에 처음 들어갈 때 만들어 둠. 보일지는 스스로 판단 (내 싸움이 끝났고 다른 구역이 진행 중일 때)
+	if (Area && !SpectateWidget)
+	{
+		const TSubclassOf<USpectateWidget> Class = SpectateClass ? SpectateClass : TSubclassOf<USpectateWidget>(USpectateWidget::StaticClass());
+		SpectateWidget = CreateWidget<USpectateWidget>(this, Class);
+		if (SpectateWidget)
+		{
+			SpectateWidget->AddToViewport(21);
+		}
+	}
+
 	OnViewAreaChanged.Broadcast(Area);
 }
 
@@ -502,8 +516,14 @@ void ATerminusPlayerController::Client_RunEnded_Implementation(const FText& Mess
 	}
 }
 
-void ATerminusPlayerController::Client_BeginSettlement_Implementation(const FText& Message)
+void ATerminusPlayerController::Client_BeginSettlement_Implementation(const FText& Message, bool bDeath)
 {
+	if (RescueWidget)
+	{
+		RescueWidget->RemoveFromParent();
+		RescueWidget = nullptr;
+	}
+
 	if (FloorVote)
 	{
 		FloorVote->RemoveFromParent();
@@ -519,11 +539,14 @@ void ATerminusPlayerController::Client_BeginSettlement_Implementation(const FTex
 		const AMapManager* MapMgr = Cast<AMapManager>(UGameplayStatics::GetActorOfClass(this, AMapManager::StaticClass()));
 		const FRunState RunState = PS->GetRunState();
 		Profile->BeginSettlement(Profile->MakeSettlement(RunState.Relics, RunState.StartRelics, RunState.EnhanceSkills, Message.ToString(),
-			Run ? Run->GetRoomName() : FString(), MapMgr ? MapMgr->CurrentFloor : 0));
+			Run ? Run->GetRoomName() : FString(), MapMgr ? MapMgr->CurrentFloor : 0, bDeath));
 	}
 
-	UConfirmPopupWidget* Popup = ShowPopup(FText::FromString(TEXT("던전 탈출")),
-		FText::FromString(Message.ToString() + TEXT("\n메인 화면에서 정산합니다.")), FText::FromString(TEXT("정산하러 가기")), FText::GetEmpty());
+	UConfirmPopupWidget* Popup = ShowPopup(FText::FromString(bDeath ? TEXT("전멸") : TEXT("던전 탈출")),
+		FText::FromString(Message.ToString() + (bDeath
+			? TEXT("\n강화 스킬과 던전 재화는 사라지고, 유물은 골드로 판매됩니다.\n메인 화면에서 정산합니다.")
+			: TEXT("\n메인 화면에서 정산합니다."))),
+		FText::FromString(TEXT("정산하러 가기")), FText::GetEmpty());
 	auto Leave = [this]()
 	{
 		if (USessionSubsystem* Sessions = GetGameInstance() ? GetGameInstance()->GetSubsystem<USessionSubsystem>() : nullptr)
@@ -539,6 +562,41 @@ void ATerminusPlayerController::Client_BeginSettlement_Implementation(const FTex
 	else
 	{
 		Leave();
+	}
+}
+
+void ATerminusPlayerController::Client_ShowRescue_Implementation(bool bChooser, const TArray<FString>& WipedNames, bool bCanIntervene, float HealthCost, float Seconds)
+{
+	if (!RescueWidget)
+	{
+		const TSubclassOf<URescueWidget> Class = RescueClass ? RescueClass : TSubclassOf<URescueWidget>(URescueWidget::StaticClass());
+		RescueWidget = CreateWidget<URescueWidget>(this, Class);
+		if (RescueWidget)
+		{
+			RescueWidget->AddToViewport(23);   // 보상 / 휴식 화면 위, 채팅(25) 아래
+		}
+	}
+
+	if (RescueWidget)
+	{
+		RescueWidget->Setup(bChooser, WipedNames, bCanIntervene, HealthCost, Seconds);
+	}
+}
+
+void ATerminusPlayerController::Client_CloseRescue_Implementation()
+{
+	if (RescueWidget)
+	{
+		RescueWidget->RemoveFromParent();
+		RescueWidget = nullptr;
+	}
+}
+
+void ATerminusPlayerController::Server_ChooseRescue_Implementation(bool bIntervene)
+{
+	if (UDungeonAreaSubsystem* Areas = GetWorld() ? GetWorld()->GetSubsystem<UDungeonAreaSubsystem>() : nullptr)
+	{
+		Areas->HandleRescueChoice(GetPlayerState<ATerminusPlayerState>(), bIntervene);
 	}
 }
 
@@ -691,6 +749,25 @@ void ATerminusPlayerController::Server_DebugWinCombat_Implementation()
 	}
 
 	Combat->DebugKillAllMonsters();
+}
+
+void ATerminusPlayerController::DebugLoseCombat()
+{
+	Server_DebugLoseCombat();
+}
+
+void ATerminusPlayerController::Server_DebugLoseCombat_Implementation()
+{
+	const ATerminusPlayerState* PS = GetPlayerState<ATerminusPlayerState>();
+	ADungeonArea* Area = PS ? PS->GetCurrentArea() : nullptr;
+	UDungeonCombatComponent* Combat = Area ? Area->GetCombat() : nullptr;
+	if (!Combat || !Combat->IsInCombat())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Debug] 전투 중이 아님"));
+		return;
+	}
+
+	Combat->DebugKillAllPlayers();
 }
 
 void ATerminusPlayerController::DebugClearFloor()

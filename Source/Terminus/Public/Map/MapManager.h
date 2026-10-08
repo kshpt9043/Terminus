@@ -220,6 +220,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Map")
 	TArray<FRoomNode> GenerateMap();
 
+	// [서버] 전멸 (싱글 사망 / 멀티 전원 사망)로 런 끝. 세이브 삭제 + 사망 정산 (유물만 골드로, 강화 스킬 / 던전 재화 소멸)
+	void EndRunByDeath(const FString& Reason);
+
 private:
 	FRoomNode CreateRoom(int32 RoomId, int32 Row, int32 Col, ERoomType Type = ERoomType::MONSTER, int32 MaxPlayers = 1);
 
@@ -261,8 +264,11 @@ private:
 	void ApplyFloorChoice();
 	void NotifyVoteChanged();
 
-	// 탈출로 런 끝 (정산이 아직 없어서: 세이브 삭제 + 전원 메인으로)
+	// 탈출로 런 끝: 세이브 삭제 + 각자 탈출 정산
 	void EndRunByEscape(const FString& Reason);
+
+	// 런 끝 공통: 세이브 삭제 + 각자 정산 대기로
+	void EndRun(const FString& Reason, bool bDeath);
 
 	// 이번 런이 1인인가. 기획의 방 선택 규칙이 싱글/멀티로 갈린다
 	bool IsSinglePlayerRun() const;

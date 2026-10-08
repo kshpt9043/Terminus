@@ -49,6 +49,13 @@ public:
 	// 이 구역의 방을 끝냈다고 표시. 전 구역이 끝났는지는 서브시스템이 판단
 	void MarkCleared();
 
+	// 이 구역 전멸 (전투 패배). 구출 / 난입 / 런 끝은 서브시스템이 판단
+	void MarkWiped();
+	bool IsWiped() const { return bWiped; }
+
+	// [난입] 다른 구역 사람들이 이 구역에 들어와 남은 몬스터와 이어서 싸움
+	void BeginIntervention(const TArray<ATerminusPlayerState*>& Joiners);
+
 	// 구역 비우기. 배틀러를 원래 자리로 돌려놓고 시점을 지도로 돌린다
 	void Release();
 
@@ -116,7 +123,7 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Dungeon Area")
 	bool IsCleared() const { return bCleared; }
 
-	// 싸움이 끝났는가 (클리어했거나, 승리 / 패배 후 결과·보상 화면). 싸우는 중이면 false
+	// 싸움이 끝났는가 (클리어했거나, 승리 후 결과·보상 화면). 싸우는 중이거나 전멸해서 구출 / 난입을 기다리면 false
 	bool IsFightOver() const;
 
 	// 지금 이 구역에서 진행 중인 방. IsInUse 가 false 면 의미 없음
@@ -183,6 +190,9 @@ protected:
 
 	UPROPERTY(Replicated)
 	bool bCleared = false;
+
+	// 전멸해서 구출 / 난입을 기다리는 중 (서버만)
+	bool bWiped = false;
 
 	UPROPERTY(Replicated)
 	FRoomNode Room;

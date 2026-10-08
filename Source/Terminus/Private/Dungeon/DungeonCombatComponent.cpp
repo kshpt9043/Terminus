@@ -159,14 +159,7 @@ void UDungeonCombatComponent::StartCombat(const FRoomNode& Room, const TArray<AT
 	// 이벤트 방에서 받은 일시 버프: 이번 전투 동안 용기(공격) / 용암(방어 감소)
 	for (const TWeakObjectPtr<ATerminusPlayerState>& PS : Players)
 	{
-		UCombatStatsComponent* Stats = GetStats(PS.Get());
-		if (!Stats) continue;
-
-		for (const FTempStatBuff& Buff : PS->GetRunState().TempBuffs)
-		{
-			if (Buff.Attack > 0)  Stats->ApplyStatus(EStatusEffect::Brave, Buff.Attack, -1);
-			if (Buff.Defense < 0) Stats->ApplyStatus(EStatusEffect::Lava, -Buff.Defense, -1);
-		}
+		ApplyTempBuffs(PS.Get());
 	}
 
 
@@ -182,6 +175,53 @@ void UDungeonCombatComponent::StartCombat(const FRoomNode& Room, const TArray<AT
 
 	Cycle = 0;
 	StartCycle();
+}
+
+void UDungeonCombatComponent::ApplyTempBuffs(ATerminusPlayerState* PS)
+{
+	UCombatStatsComponent* Stats = GetStats(PS);
+	if (!PS || !Stats) return;
+
+	for (const FTempStatBuff& Buff : PS->GetRunState().TempBuffs)
+	{
+		if (Buff.Attack > 0)  Stats->ApplyStatus(EStatusEffect::Brave, Buff.Attack, -1);
+		if (Buff.Defense < 0) Stats->ApplyStatus(EStatusEffect::Lava, -Buff.Defense, -1);
+	}
+}
+
+void UDungeonCombatComponent::ResumeWithPlayers(const TArray<ATerminusPlayerState*>& Joiners)
+{
+	if (!GetOwner() || !GetOwner()->HasAuthority() || Phase != ECombatPhase::Defeat) return;
+
+	if (UWorld* World = GetWorld())
+	{
+		World->GetTimerManager().ClearTimer(StepTimer);
+	}
+
+	// 기획 사망 순서도 '난입': 남아 있는 몬스터들과 새롭게 전투. 몬스터 체력은 그대로, 쓰러진 사람은 이기면 체력 1 로
+	// 들어온 사람만 유물 홀더 추가 (몬스터 유물의 남은 횟수 같은 건 그대로 둠)
+	TArray<int32> JoinerHolders;
+	for (ATerminusPlayerState* PS : Joiners)
+	{
+		if (!PS || Players.Contains(PS)) continue;
+		Players.Add(PS);
+		ApplyTempBuffs(PS);
+
+		const int32 HolderIndex = AddRelicHolder(GetStats(PS), PS, false, PS->GetRelics());
+		if (HolderIndex != INDEX_NONE) JoinerHolders.Add(HolderIndex);
+	}
+	PendingRewards.Reset();
+
+	UE_LOG(LogDungeonCombat, Log, TEXT("[Combat] %d번 방 난입: %d명 합류, 남은 몬스터 %d"), CurrentRoomId, Joiners.Num(), GetAliveMonsterStats().Num());
+	StartCycle();
+
+	// 들어온 사람에겐 새 전투 -> 전투 시작 유물 발동 (첫 턴 에너지 회복 뒤, 보통 전투와 같은 순서)
+	for (const int32 HolderIndex : JoinerHolders)
+	{
+		FireRelics(HolderIndex, ERelicTrigger::OnBattleStart);
+		if (CurrentRoomType == ERoomType::GUARDIAN) FireRelics(HolderIndex, ERelicTrigger::OnGuardianBattleStart);
+		if (CurrentRoomType == ERoomType::BOSS)     FireRelics(HolderIndex, ERelicTrigger::OnBossBattleStart);
+	}
 }
 
 void UDungeonCombatComponent::EndCombat()
@@ -633,6 +673,21 @@ void UDungeonCombatComponent::DebugKillAllMonsters()
 	CheckCombatEnd();
 }
 
+void UDungeonCombatComponent::DebugKillAllPlayers()
+{
+	if (!IsInCombat() || Phase == ECombatPhase::Victory || Phase == ECombatPhase::Defeat) return;
+
+	for (UCombatStatsComponent* Stats : GetAlivePlayerStats())
+	{
+		// 부활 / 피해 감소 유물을 무시하고 확실히 쓰러뜨림
+		Stats->PreventDeath.Unbind();
+		Stats->ClearCombatEffects();
+		Stats->ApplyDamage(Stats->GetCombatState().Health + Stats->GetCombatState().Shield);
+	}
+
+	CheckCombatEnd();
+}
+
 void UDungeonCombatComponent::BeginMonsterTurn()
 {
 	Phase = ECombatPhase::MonsterTurn;
@@ -765,25 +820,27 @@ void UDungeonCombatComponent::FinishCombat(bool bVictory)
 	}
 
 
-	if (!bVictory)
+	// 기획 사망 순서도
+	//  - 이김: 쓰러졌던 사람은 체력 1 로 부활
+	//    반드시 위의 전투 종료 유물(OnBattleEnd) 발동 '뒤'에 살릴 것: 쓰러져 있던 사람(난입으로 살아나는 사람 포함)은
+	//    전투 종료 유물이 발동하면 안 됨 (사용자 결정 10-08). FireRelics 는 죽은 사람을 건너뜀
+	//  - 이 구역 전멸: 잠시 뒤 구역에 알림 -> 다른 방 동료가 구출 / 난입, 아무도 없으면 런 끝 (구역 서브시스템이 판단)
+	if (bVictory)
 	{
-		// TODO: 사망 로직 (기획 사망 순서도: 멀티면 구출 / 난입, 싱글이면 유물만 판매하고 로비로)
-		// 아직 없어서 임시로 체력 1 로 일으켜 세우고 방을 넘김 -> 흐름이 멈추지 않게
-		UE_LOG(LogDungeonCombat, Warning, TEXT("[Combat] 사망 로직 미구현: 임시로 체력 1 로 부활시키고 방을 끝냄"));
-
 		for (const TWeakObjectPtr<ATerminusPlayerState>& PS : Players)
 		{
-			if (UCombatStatsComponent* Stats = GetStats(PS.Get()))
+			UCombatStatsComponent* Stats = GetStats(PS.Get());
+			if (Stats && Stats->IsDead())
 			{
-				if (Stats->IsDead())
-				{
-					// 죽은 상태에선 Heal 이 막혀 있어서 같은 스텟으로 다시 초기화한 뒤 1 만 남김
-					const FCharacterStats Saved = Stats->GetStats();
-					Stats->InitFrom(Saved);
-					Stats->ApplyDamage(Saved.MaxHealth - 1);
-				}
+				Stats->Revive(0.f);   // 최소 1
+				UE_LOG(LogDungeonCombat, Log, TEXT("[Combat] %s 체력 1 로 부활"), *PS->GetPlayerName());
 			}
 		}
+	}
+	else
+	{
+		GetWorld()->GetTimerManager().SetTimer(StepTimer, this, &UDungeonCombatComponent::ReportWipe, CombatEndDelay, false);
+		return;
 	}
 
 	// 몬스터 / 가디언 / 보스방 승리: 잠시 뒤 각자 보상 화면 -> 전원 '다음으로' 를 누르면 구역 클리어
@@ -796,6 +853,14 @@ void UDungeonCombatComponent::FinishCombat(bool bVictory)
 
 	// 그 외: 잠시 결과를 보여 준 뒤 구역 클리어 -> 모든 구역이 끝나면 지도로
 	GetWorld()->GetTimerManager().SetTimer(StepTimer, this, &UDungeonCombatComponent::ClearArea, CombatEndDelay, false);
+}
+
+void UDungeonCombatComponent::ReportWipe()
+{
+	if (ADungeonArea* Area = GetArea())
+	{
+		Area->MarkWiped();
+	}
 }
 
 void UDungeonCombatComponent::ClearArea()
@@ -992,30 +1057,37 @@ void UDungeonCombatComponent::FinishRewardsIfAllDone()
 // 유물
 // =====================================================================
 
+int32 UDungeonCombatComponent::AddRelicHolder(UCombatStatsComponent* Stats, ATerminusPlayerState* PS, bool bMonster, const TArray<FName>& Relics)
+{
+	if (!Stats) return INDEX_NONE;
+
+	const int32 Index = Holders.AddDefaulted();
+	FRelicHolder& Holder = Holders[Index];
+	Holder.Stats = Stats;
+	Holder.Player = PS;
+	Holder.bMonster = bMonster;
+	for (const FName& Row : Relics)
+	{
+		if (UTerminusDataSettings::FindRelicRow(Row)) Holder.Relics.Add(Row);
+	}
+
+	Stats->OnDamaged.AddUObject(this, &UDungeonCombatComponent::HandleStatsDamaged);
+	Stats->OnShieldGained.AddUObject(this, &UDungeonCombatComponent::HandleShieldGained);
+	Stats->OnHealed.AddUObject(this, &UDungeonCombatComponent::HandleHealed);
+	Stats->OnEnergySpent.AddUObject(this, &UDungeonCombatComponent::HandleEnergySpent);
+	Stats->OnSkillEnergySpent.AddUObject(this, &UDungeonCombatComponent::HandleSkillEnergySpent);
+	Stats->OnDiedNative.AddUObject(this, &UDungeonCombatComponent::HandleStatsDied);
+	Stats->PreventDeath.BindUObject(this, &UDungeonCombatComponent::HandlePreventDeath);
+	return Index;
+}
+
 void UDungeonCombatComponent::BuildRelicHolders()
 {
 	ClearRelicHolders();
 
 	auto AddHolder = [this](UCombatStatsComponent* Stats, ATerminusPlayerState* PS, bool bMonster, const TArray<FName>& Relics)
 	{
-		if (!Stats) return;
-
-		FRelicHolder& Holder = Holders.AddDefaulted_GetRef();
-		Holder.Stats = Stats;
-		Holder.Player = PS;
-		Holder.bMonster = bMonster;
-		for (const FName& Row : Relics)
-		{
-			if (UTerminusDataSettings::FindRelicRow(Row)) Holder.Relics.Add(Row);
-		}
-
-		Stats->OnDamaged.AddUObject(this, &UDungeonCombatComponent::HandleStatsDamaged);
-		Stats->OnShieldGained.AddUObject(this, &UDungeonCombatComponent::HandleShieldGained);
-		Stats->OnHealed.AddUObject(this, &UDungeonCombatComponent::HandleHealed);
-		Stats->OnEnergySpent.AddUObject(this, &UDungeonCombatComponent::HandleEnergySpent);
-		Stats->OnSkillEnergySpent.AddUObject(this, &UDungeonCombatComponent::HandleSkillEnergySpent);
-		Stats->OnDiedNative.AddUObject(this, &UDungeonCombatComponent::HandleStatsDied);
-		Stats->PreventDeath.BindUObject(this, &UDungeonCombatComponent::HandlePreventDeath);
+		AddRelicHolder(Stats, PS, bMonster, Relics);
 	};
 
 	// 플레이어: 런 보유 유물 (직업 기본 유물 포함)

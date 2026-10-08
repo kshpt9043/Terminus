@@ -106,6 +106,9 @@ private:
 	};
 
 	TWeakObjectPtr<ADungeonArea> Area;
+
+	// 층 표시용 ("n층 n번째 방")
+	TWeakObjectPtr<class AMapManager> CachedMap;
 	TArray<FBattlerTag> Tags;
 
 	// 표시를 다시 만들어야 하는지 판단용 (몬스터 / 플레이어 구성이 바뀌면)

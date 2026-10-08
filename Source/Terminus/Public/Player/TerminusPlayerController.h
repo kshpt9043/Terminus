@@ -25,6 +25,8 @@ class UFloorTitleWidget;
 class UFloorVoteWidget;
 class URestWidget;
 class UEventWidget;
+class URescueWidget;
+class USpectateWidget;
 struct FRunState;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnViewAreaChanged, ADungeonArea*, NewArea);
@@ -178,9 +180,20 @@ public:
 	UFUNCTION(Client, Reliable)
 	void Client_RunEnded(const FText& Message);
 
-	// 던전 탈출: 이번 런 결과를 내 프로필에 '정산 대기'로 저장하고 메인 화면으로 (정산은 메인 화면에서)
+	// 런 끝: 이번 런 결과를 내 프로필에 '정산 대기'로 저장하고 메인 화면으로 (정산은 메인 화면에서)
+	// bDeath = 전멸 (사망 정산: 유물만 골드로 자동 판매, 강화 스킬 / 던전 재화 소멸). 아니면 탈출 정산
 	UFUNCTION(Client, Reliable)
-	void Client_BeginSettlement(const FText& Message);
+	void Client_BeginSettlement(const FText& Message, bool bDeath);
+
+	// 다른 방 동료가 전멸: 구출 / 난입 고르기 (bChooser = 살아남은 사람). 전멸한 사람은 기다리는 화면
+	UFUNCTION(Client, Reliable)
+	void Client_ShowRescue(bool bChooser, const TArray<FString>& WipedNames, bool bCanIntervene, float HealthCost, float Seconds);
+
+	UFUNCTION(Client, Reliable)
+	void Client_CloseRescue();
+
+	UFUNCTION(Server, Reliable)
+	void Server_ChooseRescue(bool bIntervene);
 
 	// 휴식터: 휴식 / 탐색 선택지 화면 (Occupants = 같은 휴식터 사람) / 결과 / 닫기 / 고른 것 알리기
 	UFUNCTION(Client, Reliable)
@@ -225,6 +238,13 @@ public:
 
 	UFUNCTION(Server, Reliable)
 	void Server_DebugWinCombat();
+
+	// [테스트] 콘솔에서 DebugLoseCombat -> 내 구역 플레이어 전부 쓰러뜨림 (전멸 / 구출 / 난입 확인용)
+	UFUNCTION(Exec)
+	void DebugLoseCombat();
+
+	UFUNCTION(Server, Reliable)
+	void Server_DebugLoseCombat();
 
 	// [테스트] 콘솔에서 DebugClearFloor -> 지금 층 보스를 깬 것처럼 처리
 	// 테마 끝 층(2 / 4 / 6층)이면 행선지 투표, 아니면 바로 다음 층. 방을 진행 중이면 그 방을 닫고 함
@@ -331,6 +351,20 @@ protected:
 
 	UPROPERTY()
 	TObjectPtr<URestWidget> RestWidget;
+
+	// 관전 바 (다른 구역 보기). 비워 두면 C++ 기본 모양(USpectateWidget)
+	UPROPERTY(EditDefaultsOnly, Category = "Terminus|UI")
+	TSubclassOf<USpectateWidget> SpectateClass;
+
+	UPROPERTY()
+	TObjectPtr<USpectateWidget> SpectateWidget;
+
+	// 구출 / 난입 화면. 비워 두면 C++ 기본 모양(URescueWidget)
+	UPROPERTY(EditDefaultsOnly, Category = "Terminus|UI")
+	TSubclassOf<URescueWidget> RescueClass;
+
+	UPROPERTY()
+	TObjectPtr<URescueWidget> RescueWidget;
 
 	// 이벤트 방 화면. 비워 두면 C++ 기본 모양(UEventWidget)
 	UPROPERTY(EditDefaultsOnly, Category = "Terminus|UI")

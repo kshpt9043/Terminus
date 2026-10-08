@@ -12,6 +12,7 @@ class UItemSlotWidget;
 
 /**
  * 정산 화면 (메인 화면에서 뜸). 순서: 유물 하나 보관 -> 완료된 퀘스트 -> 가져가는 스킬 -> 최종 골드
+ * 전멸로 끝났으면 사망 정산 (기획 사망 순서도): 유물은 고르지 않고 전부 골드로 판매, 스킬은 못 가져감
  *  - 던전에서 얻은 유물(시작 유물 제외) 중 하나를 골라 창고에 보관, 나머지는 사라짐 (사용자 결정 10-08, 유물 판매 없음)
  *  - 창고(도감)에 이미 있는 유물을 고르면 아무 일도 없음 (사용자 결정 10-06)
  *  - 장착 중인 픽업 스킬 중 아직 없는 것 하나를 보유 스킬로 (전부 있으면 건너뜀)
@@ -34,6 +35,10 @@ protected:
 
 	// "던전을 탈출했습니다. (배고픈 슬라임 원정대 · 3층)"
 	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UTextBlock> SubtitleText;
+
+	// "1. 보관할 유물" / 사망이면 "1. 판매된 유물" 과 그 설명
+	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UTextBlock> RelicHeaderText;
+	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UTextBlock> RelicHelpText;
 
 	// 유물 칸이 들어갈 곳 (랩 박스 / 가로 상자)
 	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UPanelWidget> RelicList;
@@ -68,6 +73,7 @@ private:
 	void RebuildRelics();
 	void RefreshGuide();
 	bool IsAlreadyStored(FName Row) const;
+	int32 DeathGold() const;
 
 	void HandleRelicClicked(UItemSlotWidget* ClickedSlot);
 

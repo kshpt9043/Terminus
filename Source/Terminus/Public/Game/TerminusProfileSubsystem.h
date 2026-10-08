@@ -17,6 +17,9 @@ struct FPendingSettlement
 
 	UPROPERTY() bool bValid = false;
 
+	// 전멸로 끝남 (기획 사망 순서도): 유물은 고르지 않고 전부 골드로 판매 (RelicGold), 스킬은 못 가져감
+	UPROPERTY() bool bDeath = false;
+
 	// "던전을 탈출했습니다." 같은 안내 / 던전 이름 / 몇 층까지 갔는지
 	UPROPERTY() FString Reason;
 	UPROPERTY() FString RoomName;
@@ -24,6 +27,9 @@ struct FPendingSettlement
 
 	// 고를 수 있는 유물: 던전에서 얻은 것 (직업 기본 유물 / 몬스터 유물 / 시작 유물 제외)
 	UPROPERTY() TArray<FName> Relics;
+
+	// 사망 정산일 때 Relics 와 같은 순서의 판매 골드 (DT 정산 판매가, 못 파는 건 0)
+	UPROPERTY() TArray<int32> RelicGold;
 
 	// 장착 중인 픽업 스킬 중 아직 없는 것 하나 랜덤 (전부 있으면 None = 건너뜀)
 	UPROPERTY() FName KeptSkill;
@@ -148,8 +154,9 @@ public:
 	// -------------------------------------------------------------
 
 	// 이번 런 결과로 정산 내용을 만듦: 고를 수 있는 유물(시작 유물 StartRelics 제외), 얻을 스킬 하나
+	// bDeath = 전멸 (유물은 전부 골드로, 스킬 없음)
 	FPendingSettlement MakeSettlement(const TArray<FName>& RunRelics, const TArray<FName>& StartRelics, const TArray<FName>& EnhanceSkills,
-		const FString& Reason, const FString& RoomName, int32 Floor) const;
+		const FString& Reason, const FString& RoomName, int32 Floor, bool bDeath = false) const;
 
 	// 정산 대기로 저장 (이미 있으면 덮어씀)
 	void BeginSettlement(const FPendingSettlement& Settlement);

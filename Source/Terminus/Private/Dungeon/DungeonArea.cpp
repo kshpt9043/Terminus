@@ -152,6 +152,7 @@ void ADungeonArea::BeginRoom(const FRoomNode& InRoom, const TArray<ATerminusPlay
 	Room = InRoom;
 	bInUse = true;
 	bCleared = false;
+	bWiped = false;
 	Occupants.Reset();
 	ReturnLocations.Reset();
 
@@ -704,9 +705,52 @@ void ADungeonArea::MarkCleared()
 bool ADungeonArea::IsFightOver() const
 {
 	if (bCleared) return true;
+	if (bWiped) return false;
 
 	const ECombatPhase Phase = Combat ? Combat->GetPhase() : ECombatPhase::None;
-	return Phase == ECombatPhase::Victory || Phase == ECombatPhase::Defeat;
+	return Phase == ECombatPhase::Victory;
+}
+
+void ADungeonArea::MarkWiped()
+{
+	if (!HasAuthority() || !bInUse || bCleared || bWiped) return;
+
+	bWiped = true;
+	UE_LOG(LogTemp, Log, TEXT("[Area %d] %d번 방 전멸"), AreaIndex, Room.RoomId);
+
+	if (UDungeonAreaSubsystem* Subsystem = GetWorld()->GetSubsystem<UDungeonAreaSubsystem>())
+	{
+		Subsystem->NotifyAreaWiped(this);
+	}
+}
+
+void ADungeonArea::BeginIntervention(const TArray<ATerminusPlayerState*>& Joiners)
+{
+	if (!HasAuthority() || !bInUse || !bWiped) return;
+
+	bWiped = false;
+
+	for (ATerminusPlayerState* PS : Joiners)
+	{
+		if (!PS || Occupants.Contains(PS)) continue;
+
+		const int32 SlotIndex = Occupants.Num();
+		Occupants.Add(PS);
+
+		if (APawn* Pawn = PS->GetPawn())
+		{
+			ReturnLocations.Add(Pawn, Pawn->GetActorLocation());
+			Pawn->SetActorLocation(GetPlayerSlotLocation(SlotIndex), false, nullptr, ETeleportType::TeleportPhysics);
+		}
+		PS->SetCurrentArea(this);
+	}
+
+	UE_LOG(LogTemp, Log, TEXT("[Area %d] 난입: %d명 합류"), AreaIndex, Joiners.Num());
+
+	if (Combat)
+	{
+		Combat->ResumeWithPlayers(Joiners);
+	}
 }
 
 void ADungeonArea::Release()
@@ -772,4 +816,5 @@ void ADungeonArea::Release()
 	Room = FRoomNode();
 	bInUse = false;
 	bCleared = false;
+	bWiped = false;
 }

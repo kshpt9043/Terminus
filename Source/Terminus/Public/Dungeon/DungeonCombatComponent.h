@@ -99,10 +99,16 @@ public:
 	// [테스트] 몬스터 전부 처치 -> 승리 (PC 의 DebugWinCombat)
 	void DebugKillAllMonsters();
 
+	// [테스트] 이 구역 플레이어 전부 쓰러뜨림 -> 패배 (PC 의 DebugLoseCombat)
+	void DebugKillAllPlayers();
+
 	// 몬스터방 보상을 마침 (플레이어가 '다음으로'). ChosenSkill = 고른 보상 스킬 (None = 안 고름), ReplaceSlot = 칸이 꽉 찼을 때 바꿀 칸
 	// 구역의 모든 플레이어가 마치면 구역 클리어 -> 지도
 	// 보상 마침 (PC 의 Server_FinishRoomReward). 보여 준 후보 중에서만 인정
 	void HandleRewardFinished(ATerminusPlayerState* PS, FName ChosenSkill, int32 ReplaceSlot, FName ChosenRelic, FName ReplaceRelic);
+
+	// [난입] 전멸한 이 구역의 전투를 새로 들어온 사람들과 이어서 함 (몬스터 체력은 그대로). 패배 상태에서만
+	void ResumeWithPlayers(const TArray<ATerminusPlayerState*>& Joiners);
 
 	// 유물 후보: 공용이거나 내 직업, 지금 계층 등급(표층 / 중층 / 심층), 이번 런에 안 나온 것 중 Count 개 (휴식터 탐색도 씀)
 	TArray<FName> PickRewardRelics(const ATerminusPlayerState* PS, int32 Count) const;
@@ -287,6 +293,8 @@ private:
 	TArray<FName> PickRewardSkills(const ATerminusPlayerState* PS, int32 Count) const;
 	void FinishRewardsIfAllDone();
 	void ClearArea();
+	void ReportWipe();
+	void ApplyTempBuffs(ATerminusPlayerState* PS);
 
 	// -------------------------------------------------------------
 	// 유물 (서버만). 전투에 참가한 쪽(플레이어 / 몬스터)마다 보유 유물을 들고, 전투 사건이 오면 발동 시점이 맞는 것을 실행
@@ -308,6 +316,7 @@ private:
 	int32 RelicDepth = 0;
 
 	void BuildRelicHolders();
+	int32 AddRelicHolder(UCombatStatsComponent* Stats, ATerminusPlayerState* PS, bool bMonster, const TArray<FName>& Relics);
 	void ClearRelicHolders();
 	int32 FindHolder(const UCombatStatsComponent* Stats) const;
 
