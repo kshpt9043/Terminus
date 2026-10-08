@@ -9,6 +9,7 @@
 #include "Widgets/TerminusUIColors.h"
 #include "Widgets/RoomListWidget.h"
 #include "Game/TerminusProfileSubsystem.h"
+#include "Widgets/Settlement/SettlementWidget.h"
 #include "Widgets/Storage/StorageWidget.h"
 #include "Widgets/Common/EscapeStackSubsystem.h"
 #include "Widgets/Save/RunSaveListWidget.h"
@@ -88,6 +89,23 @@ void UMainMenuWidget::NativeConstruct()
 		{
 			ShowPopup(FText::FromString(TEXT("세이브 파일 문제")), Notice);
 		}
+	}
+
+	// 던전을 탈출하고 돌아왔으면 정산부터 (방장이 먼저 나가 끊긴 것도 여기로 -> 끊김 안내는 안 띄움)
+	if (UTerminusProfileSubsystem* Profile = GetGameInstance() ? GetGameInstance()->GetSubsystem<UTerminusProfileSubsystem>() : nullptr;
+		Profile && Profile->HasPendingSettlement())
+	{
+		Sessions->ConsumeDisconnectReason();
+		if (!SettlementWindow)
+		{
+			const TSubclassOf<USettlementWidget> Class = SettlementWidgetClass ? SettlementWidgetClass : TSubclassOf<USettlementWidget>(USettlementWidget::StaticClass());
+			SettlementWindow = CreateWidget<USettlementWidget>(GetOwningPlayer(), Class);
+			if (SettlementWindow)
+			{
+				SettlementWindow->AddToViewport(45);
+			}
+		}
+		return;
 	}
 
 	// 끊겨서 돌아온 거면 이유를 보여준다. 꺼내면 비워지므로 한 번만 뜬다

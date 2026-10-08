@@ -1269,7 +1269,7 @@ void AMapManager::ApplyFloorChoice()
 
     case EFloorChoice::Escape:
     default:
-        EndRunByEscape(TEXT("던전을 탈출했습니다. (정산은 준비 중)"));
+        EndRunByEscape(TEXT("던전을 탈출했습니다."));
         break;
     }
 }
@@ -1294,7 +1294,7 @@ void AMapManager::OnRep_VoteState()
 
 void AMapManager::EndRunByEscape(const FString& Reason)
 {
-    // 런이 끝남 -> 세이브 삭제 (정산을 만들면 정산이 끝난 뒤로 옮길 것)
+    // 런이 끝남 -> 세이브 삭제 (정산 내용은 각자 프로필에 따로 저장되니 여기서 바로 지워도 됨)
     if (UTerminusSaveSubsystem* Save = UTerminusSaveSubsystem::Get(this))
     {
         if (const UTerminusRunSubsystem* Run = GetGameInstance() ? GetGameInstance()->GetSubsystem<UTerminusRunSubsystem>() : nullptr)
@@ -1309,7 +1309,7 @@ void AMapManager::EndRunByEscape(const FString& Reason)
     {
         if (ATerminusPlayerController* PC = Cast<ATerminusPlayerController>(It->Get()))
         {
-            PC->Client_RunEnded(FText::FromString(Reason));
+            PC->Client_BeginSettlement(FText::FromString(Reason));
         }
     }
 }

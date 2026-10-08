@@ -11,6 +11,7 @@ class URoomListWidget;
 class UStorageWidget;
 class URunSaveListWidget;
 class UBaseWidget;
+class USettlementWidget;
 
 /**
  * 첫 화면. 버튼 다섯 개와 안내 팝업.
@@ -60,6 +61,13 @@ protected:
 	// 이어하기 창 클래스 (WBP_SaveList). 비워 두면 C++ 기본 모양
 	UPROPERTY(EditDefaultsOnly, Category = "Terminus|UI")
 	TSubclassOf<URunSaveListWidget> SaveListWidgetClass;
+
+	// 정산 창 클래스 (WBP_Settlement). 던전을 탈출하고 돌아오면 이것부터 뜸. 비워 두면 C++ 기본 모양
+	UPROPERTY(EditDefaultsOnly, Category = "Terminus|UI")
+	TSubclassOf<USettlementWidget> SettlementWidgetClass;
+
+	UPROPERTY()
+	TObjectPtr<USettlementWidget> SettlementWindow;
 
 	// 보유 골드 (UTerminusProfileSubsystem). 바뀌면 바로 갱신
 	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UTextBlock> GoldText;

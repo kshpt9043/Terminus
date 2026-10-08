@@ -29,6 +29,7 @@
 #include "Online/SessionSubsystem.h"
 #include "Game/LoadingScreenSubsystem.h"
 #include "Game/TerminusProfileSubsystem.h"
+#include "Game/TerminusRunSubsystem.h"
 #include "Data/TerminusDataSettings.h"
 #include "TimerManager.h"
 #include "EngineUtils.h"
@@ -483,6 +484,46 @@ void ATerminusPlayerController::Client_RunEnded_Implementation(const FText& Mess
 	}
 
 	UConfirmPopupWidget* Popup = ShowPopup(FText::FromString(TEXT("던전 종료")), Message, FText::FromString(TEXT("메인 화면으로")), FText::GetEmpty());
+	auto Leave = [this]()
+	{
+		if (USessionSubsystem* Sessions = GetGameInstance() ? GetGameInstance()->GetSubsystem<USessionSubsystem>() : nullptr)
+		{
+			Sessions->LeaveToMenu();
+		}
+	};
+
+	if (Popup)
+	{
+		Popup->OnConfirmedNative.BindWeakLambda(this, Leave);
+	}
+	else
+	{
+		Leave();
+	}
+}
+
+void ATerminusPlayerController::Client_BeginSettlement_Implementation(const FText& Message)
+{
+	if (FloorVote)
+	{
+		FloorVote->RemoveFromParent();
+		FloorVote = nullptr;
+	}
+
+	// 정산 내용은 바로 내 프로필에 저장 (방장이 먼저 나가 끊겨도 메인 화면에서 이어서 정산)
+	const ATerminusPlayerState* PS = GetPlayerState<ATerminusPlayerState>();
+	UTerminusProfileSubsystem* Profile = GetGameInstance() ? GetGameInstance()->GetSubsystem<UTerminusProfileSubsystem>() : nullptr;
+	if (PS && Profile)
+	{
+		const UTerminusRunSubsystem* Run = GetGameInstance()->GetSubsystem<UTerminusRunSubsystem>();
+		const AMapManager* MapMgr = Cast<AMapManager>(UGameplayStatics::GetActorOfClass(this, AMapManager::StaticClass()));
+		const FRunState RunState = PS->GetRunState();
+		Profile->BeginSettlement(Profile->MakeSettlement(RunState.Relics, RunState.EnhanceSkills, Message.ToString(),
+			Run ? Run->GetRoomName() : FString(), MapMgr ? MapMgr->CurrentFloor : 0));
+	}
+
+	UConfirmPopupWidget* Popup = ShowPopup(FText::FromString(TEXT("던전 탈출")),
+		FText::FromString(Message.ToString() + TEXT("\n메인 화면에서 정산합니다.")), FText::FromString(TEXT("정산하러 가기")), FText::GetEmpty());
 	auto Leave = [this]()
 	{
 		if (USessionSubsystem* Sessions = GetGameInstance() ? GetGameInstance()->GetSubsystem<USessionSubsystem>() : nullptr)

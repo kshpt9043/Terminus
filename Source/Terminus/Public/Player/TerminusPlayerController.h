@@ -178,6 +178,10 @@ public:
 	UFUNCTION(Client, Reliable)
 	void Client_RunEnded(const FText& Message);
 
+	// 던전 탈출: 이번 런 결과를 내 프로필에 '정산 대기'로 저장하고 메인 화면으로 (정산은 메인 화면에서)
+	UFUNCTION(Client, Reliable)
+	void Client_BeginSettlement(const FText& Message);
+
 	// 휴식터: 휴식 / 탐색 선택지 화면 (Occupants = 같은 휴식터 사람) / 결과 / 닫기 / 고른 것 알리기
 	UFUNCTION(Client, Reliable)
 	void Client_ShowRest(const TArray<APlayerState*>& Occupants, float HealRatio, FIntPoint ExploreCurrency, float ExploreRelicChance);

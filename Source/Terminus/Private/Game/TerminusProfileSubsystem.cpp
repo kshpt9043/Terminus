@@ -244,6 +244,98 @@ int32 UTerminusProfileSubsystem::GetGold() const
 	return Profile ? Profile->Gold : 0;
 }
 
+// =====================================================================
+// 정산
+// =====================================================================
+
+FPendingSettlement UTerminusProfileSubsystem::MakeSettlement(const TArray<FName>& RunRelics, const TArray<FName>& EnhanceSkills, const FString& Reason, const FString& RoomName, int32 Floor) const
+{
+	FPendingSettlement Out;
+	Out.bValid = true;
+	Out.Reason = Reason;
+	Out.RoomName = RoomName;
+	Out.Floor = Floor;
+
+	auto Spread = [](int32 Base)
+	{
+		return Base < 0 ? -1 : FMath::Max(0, FMath::RoundToInt(Base * (1.f + FMath::FRandRange(-SettlementPriceSpread, SettlementPriceSpread))));
+	};
+
+	for (const FName& Row : RunRelics)
+	{
+		// 직업 기본 유물 / 몬스터 유물은 정산 대상이 아님
+		if (!IsStorableRelic(Row)) continue;
+
+		const FRelicRow* Relic = UTerminusDataSettings::FindRelicRow(Row);
+		FSettlementRelic Entry;
+		Entry.Row = Row;
+		if (Relic && Relic->CanSellAtSettlement())
+		{
+			Entry.MagePrice = Spread(Relic->SellPrice_Gold);
+			Entry.ReligionPrice = Spread(Relic->SellPrice_Gold);
+		}
+		Out.Relics.Add(Entry);
+	}
+
+	// 강화 칸 스킬 중 아직 없는 것 하나 랜덤
+	TArray<FName> NewSkills;
+	for (const FName& Skill : EnhanceSkills)
+	{
+		if (IsOwnableSkill(Skill) && !GetOwnedSkills().Contains(Skill)) NewSkills.AddUnique(Skill);
+	}
+	if (NewSkills.Num() > 0)
+	{
+		Out.KeptSkill = NewSkills[FMath::RandRange(0, NewSkills.Num() - 1)];
+	}
+	return Out;
+}
+
+void UTerminusProfileSubsystem::BeginSettlement(const FPendingSettlement& Settlement)
+{
+	if (!Profile) return;
+
+	Profile->PendingSettlement = Settlement;
+	Profile->PendingSettlement.bValid = true;
+	Save();
+	UE_LOG(LogTemp, Log, TEXT("[Profile] 정산 대기: 유물 %d개, 스킬 %s"), Settlement.Relics.Num(), *Settlement.KeptSkill.ToString());
+}
+
+bool UTerminusProfileSubsystem::HasPendingSettlement() const
+{
+	return Profile && Profile->PendingSettlement.bValid;
+}
+
+const FPendingSettlement& UTerminusProfileSubsystem::GetPendingSettlement() const
+{
+	static const FPendingSettlement Empty;
+	return Profile ? Profile->PendingSettlement : Empty;
+}
+
+void UTerminusProfileSubsystem::FinishSettlement(const TArray<FName>& KeptRelics, int32 GoldEarned)
+{
+	if (!HasPendingSettlement()) return;
+
+	const FPendingSettlement Done = Profile->PendingSettlement;
+	Profile->PendingSettlement = FPendingSettlement();   // 먼저 비워서 아래가 중간에 실패해도 두 번 받지 않게
+	Save();
+
+	// 보관 (이미 있는 유물은 아무 일도 없음: 사용자 결정 10-06)
+	for (const FName& Row : KeptRelics)
+	{
+		if (Done.Relics.ContainsByPredicate([&Row](const FSettlementRelic& R) { return R.Row == Row; }))
+		{
+			AddStoredRelic(Row);
+		}
+	}
+	if (!Done.KeptSkill.IsNone())
+	{
+		AddOwnedSkill(Done.KeptSkill);
+	}
+	AddGold(GoldEarned);
+
+	UE_LOG(LogTemp, Log, TEXT("[Profile] 정산 끝: 골드 +%d, 보관 %d개, 스킬 %s"), GoldEarned, KeptRelics.Num(), *Done.KeptSkill.ToString());
+}
+
 void UTerminusProfileSubsystem::AddGold(int32 Amount)
 {
 	if (!Profile || Amount <= 0) return;
