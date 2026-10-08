@@ -8,6 +8,7 @@ void UTerminusRunSubsystem::BeginNewRun(int32 InPartySize)
 	Floor = 0;
 	ThemePath.Reset();
 	Rooms.Reset();
+	SeenGuardians.Reset();
 	SaveSlot = UTerminusSaveSubsystem::MakeNewSlotName();
 
 	// 이름은 주점을 열 때(싱글은 시작할 때) 이미 정해짐. 혹시 비었으면 랜덤
@@ -46,6 +47,7 @@ void UTerminusRunSubsystem::BeginLoadedRun(const UTerminusRunSave& Save)
 	Floor = FMath::Max(1, Save.Floor);
 	ThemePath = Save.Theme;
 	Rooms = Save.Rooms;
+	SeenGuardians = Save.SeenGuardians;
 	SaveSlot = Save.Summary.SlotName;
 	RoomName = Save.Summary.RoomName.IsEmpty() ? MakeRandomRoomName() : Save.Summary.RoomName;
 

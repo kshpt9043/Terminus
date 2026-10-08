@@ -86,6 +86,10 @@ public:
 	UPROPERTY()
 	FSoftObjectPath Theme;
 
+	// 이번 런에 나온 가디언 (중복 출현 금지용)
+	UPROPERTY()
+	TArray<FName> SeenGuardians;
+
 	UPROPERTY()
 	TArray<FRunSavePlayer> Players;
 };

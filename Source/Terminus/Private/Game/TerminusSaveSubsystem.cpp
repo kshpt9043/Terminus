@@ -145,6 +145,7 @@ bool UTerminusSaveSubsystem::SaveCurrentRun(UWorld* World)
 	Save->Rooms = MapMgr ? MapMgr->Rooms : Run->GetRooms();
 	Save->Floor = MapMgr ? MapMgr->CurrentFloor : Run->GetFloor();
 	Save->Theme = MapMgr && MapMgr->FloorTheme ? FSoftObjectPath(MapMgr->FloorTheme.Get()) : Run->GetThemePath();
+	Save->SeenGuardians = Run->GetSeenGuardians();
 
 	// 플레이어. 순서가 매번 같게 PlayerId 순
 	TArray<ATerminusPlayerState*> Players;

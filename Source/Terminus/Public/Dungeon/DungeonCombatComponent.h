@@ -145,9 +145,17 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Combat|Monster")
 	FVector2D MonsterHealthRandom = FVector2D(-0.05f, 0.10f);
 
-	// 테마의 두 번째 층(2 / 4 / 6층) 몬스터 기본 체력 보정 (보스 제외). 기획: +10%
+	// 테마의 두 번째 층(2 / 4 / 6층) 몬스터 / 가디언 기본 체력 보정 (보스 제외). 기획(10-07): +30%
 	UPROPERTY(EditAnywhere, Category = "Combat|Balance")
-	float SecondFloorHealthBonus = 0.1f;
+	float SecondFloorHealthBonus = 0.3f;
+
+	// 테마의 두 번째 층 몬스터 / 가디언 공격 / 방어 가산 (보스 제외). 기획(10-07): +1
+	UPROPERTY(EditAnywhere, Category = "Combat|Balance")
+	int32 SecondFloorStatBonus = 1;
+
+	// 방에 들어온 플레이어 1명당 몬스터 공격 / 방어 가산 (보스 포함). 기획(10-06) + 사용자 결정(10-08): 혼자 +1 ~ 4명 +4
+	UPROPERTY(EditAnywhere, Category = "Combat|Balance")
+	int32 PartyStatBonusPerPlayer = 1;
 
 	// 몬스터(보스 제외) 공격 / 방어 랜덤 가산 최대치. 기획서 "최대 +2" (KSH 코드 주석은 +0~1 -> 기획 확인 필요)
 	UPROPERTY(EditAnywhere, Category = "Combat|Monster")

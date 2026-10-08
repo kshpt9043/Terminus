@@ -41,6 +41,11 @@ public:
 	const FSoftObjectPath& GetThemePath() const { return ThemePath; }
 	void SetThemePath(const FSoftObjectPath& InPath) { ThemePath = InPath; }
 
+	// 이번 런에 나온 가디언 (DT_Monster 행). 테마의 가디언이 전부 한 번씩 나오기 전엔 다시 안 나옴 (기획 10-07)
+	const TArray<FName>& GetSeenGuardians() const { return SeenGuardians; }
+	void AddSeenGuardian(FName Row) { SeenGuardians.AddUnique(Row); }
+	void ForgetSeenGuardians(const TArray<FName>& Rows) { SeenGuardians.RemoveAll([&Rows](const FName& Row) { return Rows.Contains(Row); }); }
+
 	// 방(던전) 이름. 처음 주점을 열 때(싱글은 시작할 때) 정한 이름이 런 끝까지 유지됨
 	// 주점 목록 / 재합류 대기 / 세이브 목록 / 이어하기로 연 주점에 모두 이 이름
 	const FString& GetRoomName() const { return RoomName; }
@@ -68,4 +73,7 @@ private:
 
 	UPROPERTY()
 	TArray<FRoomNode> Rooms;
+
+	UPROPERTY()
+	TArray<FName> SeenGuardians;
 };

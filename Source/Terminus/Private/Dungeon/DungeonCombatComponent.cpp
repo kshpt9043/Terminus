@@ -15,6 +15,7 @@
 #include "Player/TerminusPlayerState.h"
 #include "Player/TerminusPlayerController.h"
 #include "Game/TerminusProfileSubsystem.h"
+#include "Game/TerminusRunSubsystem.h"
 #include "Kismet/GameplayStatics.h"
 #include "TimerManager.h"
 
@@ -279,6 +280,27 @@ TArray<FName> UDungeonCombatComponent::PickMonsterRows(ERoomType RoomType, const
 			*ThemeName, *UEnum::GetValueAsString(Category));
 	}
 
+	// 가디언: 그 테마 가디언이 전부 한 번씩 나오기 전엔 중복으로 안 나옴 (기획 10-07). 다 나왔으면 다시 처음부터
+	// 이번 런에 나온 가디언은 런 서브시스템이 들고 있고 세이브에도 들어감
+	if (Category == EMonsterCategory::Guardian)
+	{
+		const UGameInstance* GI = GetWorld() ? GetWorld()->GetGameInstance() : nullptr;
+		if (UTerminusRunSubsystem* Run = GI ? GI->GetSubsystem<UTerminusRunSubsystem>() : nullptr)
+		{
+			TArray<FName> Fresh = Pool.FilterByPredicate([Run](const FName& Row) { return !Run->GetSeenGuardians().Contains(Row); });
+			if (Fresh.Num() == 0)
+			{
+				Run->ForgetSeenGuardians(Pool);
+				Fresh = Pool;
+			}
+
+			const FName Picked = Fresh[FMath::RandRange(0, Fresh.Num() - 1)];
+			Run->AddSeenGuardian(Picked);
+			Out.Add(Picked);
+			return Out;
+		}
+	}
+
 	// 몬스터방 1~3 마리, 가디언 / 보스는 1 마리
 	const int32 Count = (Category == EMonsterCategory::Normal)
 		? FMath::Clamp(FMath::RandRange(NormalMonsterCount.X, NormalMonsterCount.Y), 1, MaxCount)
@@ -308,7 +330,7 @@ void UDungeonCombatComponent::SpawnMonsters(const FRoomNode& Room, const UDungeo
 
 	const TArray<FName> Rows = PickMonsterRows(Room.Type, Theme, FMath::Max(1, Area->GetNumMonsterSlots()));
 
-	// 기획: 테마의 두 번째 층 몬스터(보스 제외)는 기본 체력 +10%
+	// 기획(10-07): 테마의 두 번째 층 몬스터 / 가디언(보스 제외)은 기본 체력 +30%, 공방 +1
 	const AMapManager* FloorMap = Cast<AMapManager>(UGameplayStatics::GetActorOfClass(this, AMapManager::StaticClass()));
 	const bool bSecondFloorOfTheme = FloorMap && AMapManager::IsThemeEndFloor(FloorMap->CurrentFloor);
 
@@ -331,18 +353,25 @@ void UDungeonCombatComponent::SpawnMonsters(const FRoomNode& Room, const UDungeo
 		Monster->bAlwaysRelevant = true;
 		Monster->FinishSpawning(SpawnTransform);
 
-		// 스텟: 인원 보정 먼저, 그다음 개체 랜덤 (기획 순서). 보스는 개체 랜덤 없음
+		// 스텟: 층 보정 -> 인원 체력 보정 -> 개체 랜덤 (기획 순서)
 		FCharacterStats Stats = Row->ToStats();
 		const bool bBoss = Row->MonsterCategory == EMonsterCategory::Boss;
 		if (bSecondFloorOfTheme && !bBoss)
 		{
 			Stats.MaxHealth = FMath::Max(1, FMath::RoundToInt(Stats.MaxHealth * (1.f + SecondFloorHealthBonus)));
+			Stats.Attack += SecondFloorStatBonus;
+			Stats.Defense += SecondFloorStatBonus;
 		}
 
+		// 멀티: 방에 들어온 플레이어 1명당 공방 +1 (보스 포함, 혼자여도 +1)
+		Stats.Attack += PartyStatBonusPerPlayer * PartySize;
+		Stats.Defense += PartyStatBonusPerPlayer * PartySize;
+
+		// 체력 랜덤은 보스 포함 (사용자 결정 10-08), 공방 랜덤은 보스 제외
 		float HealthScale = 1.f + PartyBonus;
+		HealthScale *= 1.f + FMath::FRandRange(MonsterHealthRandom.X, MonsterHealthRandom.Y);
 		if (!bBoss)
 		{
-			HealthScale *= 1.f + FMath::FRandRange(MonsterHealthRandom.X, MonsterHealthRandom.Y);
 			Stats.Attack += FMath::RandRange(0, MonsterStatRandomMax);
 			Stats.Defense += FMath::RandRange(0, MonsterStatRandomMax);
 		}
