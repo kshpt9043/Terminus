@@ -40,21 +40,6 @@ void ATavernGameMode::TryStartGame()
 		return;
 	}
 
-	// 이어하기: 세이브 당시 플레이어가 다 와야 출발
-	if (LoadedSave)
-	{
-		const TArray<FString> Missing = GetMissingSavePlayers();
-		if (Missing.Num() > 0)
-		{
-			FChatMessage Notice;
-			Notice.Kind = EChatMessageKind::System;
-			Notice.Text = FString::Printf(TEXT("세이브 당시 플레이어가 모두 모여야 출발할 수 있습니다. 기다리는 중: %s"), *FString::Join(Missing, TEXT(", ")));
-			ATerminusPlayerController::BroadcastChat(GetWorld(), Notice);
-			UE_LOG(LogTerminusFlow, Warning, TEXT("Tavern: 시작 거절. 세이브 플레이어 %d명 안 옴"), Missing.Num());
-			return;
-		}
-	}
-
 	if (USessionSubsystem* Sessions = GetGameInstance()->GetSubsystem<USessionSubsystem>())
 	{
 		Sessions->StartRun();
@@ -64,18 +49,16 @@ void ATavernGameMode::TryStartGame()
 
 	if (LoadedSave)
 	{
-		// 세이브의 지도 / 층 / 슬롯 그대로. 각자 세이브 당시 RunState 로 (시작 고르기는 이미 끝난 상태)
+		// 세이브의 지도 / 층 / 슬롯 그대로. 세이브 당시 RunState 로 (시작 고르기는 이미 끝난 상태)
 		if (Run)
 		{
 			Run->BeginLoadedRun(*LoadedSave);
 		}
 
-		for (const TPair<int32, TWeakObjectPtr<ATerminusPlayerState>>& Seat : SaveSeats)
+		ATerminusPlayerState* TPS = GameState->PlayerArray.Num() > 0 ? Cast<ATerminusPlayerState>(GameState->PlayerArray[0]) : nullptr;
+		if (TPS && LoadedSave->Players.Num() > 0)
 		{
-			ATerminusPlayerState* TPS = Seat.Value.Get();
-			if (!TPS || !LoadedSave->Players.IsValidIndex(Seat.Key)) continue;
-
-			FRunState Saved = LoadedSave->Players[Seat.Key].RunState;
+			FRunState Saved = LoadedSave->Players[0].RunState;
 			Saved.SelectedRoomId = -1;
 			TPS->SetRunState(Saved);
 		}
@@ -125,17 +108,6 @@ void ATavernGameMode::PreLogin(const FString& Options, const FString& Address, c
 		Sessions->CheckJoinRequest(Options, GetNumPlayers(), ErrorMessage);
 	}
 
-	// 이어하기: 세이브에 있는 사람만
-	if (ErrorMessage.IsEmpty() && LoadedSave)
-	{
-		const FString PlayerId = UniqueId.IsValid() ? UniqueId->ToString() : FString();
-		if (FindSaveSeat(PlayerId, FString()) == INDEX_NONE)
-		{
-			ErrorMessage = UseLooseSaveMatching()
-				? TEXT("세이브 인원이 모두 찼습니다.")
-				: TEXT("이 주점은 세이브를 이어하는 중입니다. 세이브에 없는 플레이어는 들어갈 수 없습니다.");
-		}
-	}
 }
 
 void ATavernGameMode::PostLogin(APlayerController* NewPlayer)
@@ -155,120 +127,16 @@ void ATavernGameMode::PostLogin(APlayerController* NewPlayer)
 		ATerminusPlayerController::BroadcastChat(GetWorld(), Notice);
 	}
 
-	if (LoadedSave)
+	// 싱글 이어하기: 세이브 당시 직업 / 하드 모드로 고정하고 바로 출발 (로그인 도중에 레벨을 옮기지 않게 살짝 뒤에)
+	if (LoadedSave && LoadedSave->Players.Num() > 0)
 	{
-		TakeSaveSeat(NewPlayer);
-
-		// 싱글 이어하기는 고를 게 없으니 바로 출발 (로그인 도중에 레벨을 옮기지 않게 살짝 뒤에)
-		if (GetNetMode() == NM_Standalone)
+		if (ATerminusPlayerState* TPS = NewPlayer ? NewPlayer->GetPlayerState<ATerminusPlayerState>() : nullptr)
 		{
-			GetWorldTimerManager().SetTimer(AutoStartTimer, this, &ATavernGameMode::TryStartGame, 0.2f, false);
+			TPS->LockClassFromSave(LoadedSave->Players[0].RunState.CharacterClass);
+			TPS->SetHardMode(LoadedSave->Summary.bHardMode);
 		}
+		GetWorldTimerManager().SetTimer(AutoStartTimer, this, &ATavernGameMode::TryStartGame, 0.2f, false);
 	}
-}
-
-// =====================================================================
-// 이어하기 자리
-// =====================================================================
-
-bool ATavernGameMode::UseLooseSaveMatching() const
-{
-	const UWorld* World = GetWorld();
-	return bLooseSaveMatching || GetNetMode() == NM_Standalone || (World && World->WorldType == EWorldType::PIE);
-}
-
-int32 ATavernGameMode::FindSaveSeat(const FString& PlayerId, const FString& PlayerName) const
-{
-	if (!LoadedSave) return INDEX_NONE;
-
-	auto IsFree = [this](int32 Seat)
-	{
-		const TWeakObjectPtr<ATerminusPlayerState>* Taken = SaveSeats.Find(Seat);
-		return !Taken || !Taken->IsValid();
-	};
-
-	const TArray<FRunSavePlayer>& Players = LoadedSave->Players;
-
-	// 1. 같은 온라인 아이디
-	if (!PlayerId.IsEmpty())
-	{
-		for (int32 i = 0; i < Players.Num(); ++i)
-		{
-			if (IsFree(i) && Players[i].PlayerId == PlayerId) return i;
-		}
-	}
-
-	if (!UseLooseSaveMatching()) return INDEX_NONE;
-
-	// 2. 같은 이름 -> 3. 아무 빈 자리
-	if (!PlayerName.IsEmpty())
-	{
-		for (int32 i = 0; i < Players.Num(); ++i)
-		{
-			if (IsFree(i) && Players[i].PlayerName == PlayerName) return i;
-		}
-	}
-	for (int32 i = 0; i < Players.Num(); ++i)
-	{
-		if (IsFree(i)) return i;
-	}
-	return INDEX_NONE;
-}
-
-void ATavernGameMode::TakeSaveSeat(APlayerController* NewPlayer)
-{
-	ATerminusPlayerState* TPS = NewPlayer ? NewPlayer->GetPlayerState<ATerminusPlayerState>() : nullptr;
-	if (!TPS || !LoadedSave) return;
-
-	const FUniqueNetIdRepl& NetId = TPS->GetUniqueId();
-	const int32 Seat = FindSaveSeat(NetId.IsValid() ? NetId->ToString() : FString(), TPS->GetPlayerName());
-	if (Seat == INDEX_NONE)
-	{
-		UE_LOG(LogTerminusFlow, Warning, TEXT("Tavern: %s 님이 앉을 세이브 자리가 없음"), *TPS->GetPlayerName());
-		return;
-	}
-
-	SaveSeats.Add(Seat, TPS);
-
-	const FRunSavePlayer& Saved = LoadedSave->Players[Seat];
-	TPS->LockClassFromSave(Saved.RunState.CharacterClass);
-	TPS->SetHardMode(LoadedSave->Summary.bHardMode);
-
-	UE_LOG(LogTerminusFlow, Log, TEXT("Tavern: %s -> 세이브 자리 %d (%s, 저장 당시 이름 %s)"),
-		*TPS->GetPlayerName(), Seat, *UEnum::GetValueAsString(Saved.RunState.CharacterClass), *Saved.PlayerName);
-
-	AnnounceSaveSeats();
-}
-
-TArray<FString> ATavernGameMode::GetMissingSavePlayers() const
-{
-	TArray<FString> Missing;
-	if (!LoadedSave) return Missing;
-
-	for (int32 i = 0; i < LoadedSave->Players.Num(); ++i)
-	{
-		const TWeakObjectPtr<ATerminusPlayerState>* Taken = SaveSeats.Find(i);
-		if (!Taken || !Taken->IsValid())
-		{
-			Missing.Add(LoadedSave->Players[i].PlayerName);
-		}
-	}
-	return Missing;
-}
-
-void ATavernGameMode::AnnounceSaveSeats() const
-{
-	if (!LoadedSave || GetNetMode() == NM_Standalone) return;
-
-	const TArray<FString> Missing = GetMissingSavePlayers();
-
-	FChatMessage Notice;
-	Notice.Kind = EChatMessageKind::System;
-	Notice.Text = Missing.Num() == 0
-		? FString(TEXT("세이브 당시 플레이어가 모두 모였습니다. 직업은 세이브 당시로 고정됩니다."))
-		: FString::Printf(TEXT("이어하기: %d / %d명. 기다리는 중: %s"),
-			LoadedSave->Players.Num() - Missing.Num(), LoadedSave->Players.Num(), *FString::Join(Missing, TEXT(", ")));
-	ATerminusPlayerController::BroadcastChat(GetWorld(), Notice);
 }
 
 void ATavernGameMode::Logout(AController* Exiting)
@@ -281,25 +149,7 @@ void ATavernGameMode::Logout(AController* Exiting)
 		ATerminusPlayerController::BroadcastChat(GetWorld(), Notice);
 	}
 
-	// 이어하기 자리 비우기
-	if (LoadedSave && Exiting)
-	{
-		const APlayerState* Leaving = Exiting->PlayerState;
-		for (auto It = SaveSeats.CreateIterator(); It; ++It)
-		{
-			if (!It.Value().IsValid() || It.Value().Get() == Leaving)
-			{
-				It.RemoveCurrent();
-			}
-		}
-	}
-
 	Super::Logout(Exiting);
-
-	if (LoadedSave)
-	{
-		AnnounceSaveSeats();
-	}
 }
 
 void ATavernGameMode::SetHardMode(bool bInHardMode)
@@ -319,7 +169,7 @@ void ATavernGameMode::SetHardMode(bool bInHardMode)
 
 	FChatMessage Notice;
 	Notice.Kind = EChatMessageKind::System;
-	Notice.Text = bInHardMode ? TEXT("하드 모드가 켜졌습니다. 던전에 들고 간 창고 유물은 창고에서 사라집니다.")
+	Notice.Text = bInHardMode ? TEXT("하드 모드가 켜졌습니다. 죽으면 던전에 들고 간 창고 유물이 창고에서 사라집니다.")
 	                          : TEXT("하드 모드가 꺼졌습니다.");
 	ATerminusPlayerController::BroadcastChat(GetWorld(), Notice);
 }

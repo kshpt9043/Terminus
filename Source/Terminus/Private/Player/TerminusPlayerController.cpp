@@ -538,8 +538,15 @@ void ATerminusPlayerController::Client_BeginSettlement_Implementation(const FTex
 		const UTerminusRunSubsystem* Run = GetGameInstance()->GetSubsystem<UTerminusRunSubsystem>();
 		const AMapManager* MapMgr = Cast<AMapManager>(UGameplayStatics::GetActorOfClass(this, AMapManager::StaticClass()));
 		const FRunState RunState = PS->GetRunState();
-		Profile->BeginSettlement(Profile->MakeSettlement(RunState.Relics, RunState.StartRelics, RunState.EnhanceSkills, Message.ToString(),
-			Run ? Run->GetRoomName() : FString(), MapMgr ? MapMgr->CurrentFloor : 0, bDeath));
+		FPendingSettlement Settlement = Profile->MakeSettlement(RunState.Relics, RunState.StartRelics, RunState.EnhanceSkills, Message.ToString(),
+			Run ? Run->GetRoomName() : FString(), MapMgr ? MapMgr->CurrentFloor : 0, bDeath);
+
+		// 하드 모드에서 죽으면 들고 간 창고 유물이 창고(도감)에서 사라짐 (사용자 결정 10-08)
+		if (bDeath && RunState.bHardMode)
+		{
+			Settlement.LostStoredRelics = RunState.StartRelics;
+		}
+		Profile->BeginSettlement(Settlement);
 	}
 
 	UConfirmPopupWidget* Popup = ShowPopup(FText::FromString(bDeath ? TEXT("전멸") : TEXT("던전 탈출")),

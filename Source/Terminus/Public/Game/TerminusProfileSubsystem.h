@@ -31,6 +31,9 @@ struct FPendingSettlement
 	// 사망 정산일 때 Relics 와 같은 순서의 판매 골드 (DT 정산 판매가, 못 파는 건 0)
 	UPROPERTY() TArray<int32> RelicGold;
 
+	// 하드 모드에서 죽음: 창고에서 들고 간 시작 유물이 창고(도감)에서 지워짐 (사용자 결정 10-08)
+	UPROPERTY() TArray<FName> LostStoredRelics;
+
 	// 장착 중인 픽업 스킬 중 아직 없는 것 하나 랜덤 (전부 있으면 None = 건너뜀)
 	UPROPERTY() FName KeptSkill;
 };
@@ -165,6 +168,7 @@ public:
 	const FPendingSettlement& GetPendingSettlement() const;
 
 	// 정산 끝: 고른 유물 하나를 창고에(None = 없음), 스킬을 보유 스킬에, 퀘스트 골드를 골드에. 정산 대기는 비움
+	// 하드 모드 사망이면 LostStoredRelics 를 창고에서 지움
 	void FinishSettlement(FName KeptRelic, int32 GoldEarned);
 
 	// 게임을 켤 때 세이브가 조작 / 손상돼서 백업으로 복구했거나 새로 시작했으면 그 안내. 꺼내면 비워짐 (메인 메뉴 팝업)

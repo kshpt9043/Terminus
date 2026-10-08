@@ -114,7 +114,14 @@ void USettlementWidget::NativeOnInitialized()
 	{
 		if (TitleText) TitleText->SetText(FText::FromString(TEXT("사망 정산")));
 		if (RelicHeaderText) RelicHeaderText->SetText(FText::FromString(TEXT("1. 판매된 유물")));
-		if (RelicHelpText) RelicHelpText->SetText(FText::FromString(TEXT("전멸해서 던전에서 얻은 유물은 모두 골드로 판매됩니다.")));
+		FString Help = TEXT("전멸해서 던전에서 얻은 유물은 모두 골드로 판매됩니다.");
+		if (Settlement.LostStoredRelics.Num() > 0)
+		{
+			TArray<FString> Names;
+			for (const FName& Row : Settlement.LostStoredRelics) Names.Add(SettleRelicName(Row));
+			Help += FString::Printf(TEXT("\n하드 모드: 들고 간 [%s] 이(가) 창고에서 사라집니다."), *FString::Join(Names, TEXT(", ")));
+		}
+		if (RelicHelpText) RelicHelpText->SetText(FText::FromString(Help));
 	}
 
 	if (SummaryPanel) SummaryPanel->SetVisibility(ESlateVisibility::Collapsed);

@@ -320,6 +320,12 @@ void UTerminusProfileSubsystem::FinishSettlement(FName KeptRelic, int32 GoldEarn
 	Profile->PendingSettlement = FPendingSettlement();   // 먼저 비워서 아래가 중간에 실패해도 두 번 받지 않게
 	Save();
 
+	// 하드 모드 사망: 들고 간 창고 유물을 창고에서 지움
+	for (const FName& Row : Done.LostStoredRelics)
+	{
+		RemoveStoredRelic(Row);
+	}
+
 	// 고른 유물 하나만 보관 (이미 있는 유물은 아무 일도 없음: 사용자 결정 10-06). 나머지는 사라짐
 	if (!KeptRelic.IsNone() && Done.Relics.Contains(KeptRelic))
 	{

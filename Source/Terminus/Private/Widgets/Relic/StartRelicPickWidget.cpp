@@ -115,8 +115,9 @@ void UStartRelicPickWidget::SetCandidates(const TArray<FName>& StoredRelics, ECh
 
 	if (ModeText)
 	{
+		// 사용자 결정 10-08: 들고 가도 창고(도감)에 남음. 하드 모드에서 죽으면 그때 창고에서 지워짐
 		ModeText->SetText(FText::FromString(bHardMode
-			? TEXT("하드 모드: 들고 간 유물은 창고에서 사라집니다")
+			? TEXT("하드 모드: 죽으면 들고 간 유물이 창고에서 사라집니다")
 			: TEXT("들고 간 유물은 창고에 그대로 남습니다")));
 		ModeText->SetColorAndOpacity(FSlateColor(bHardMode ? FLinearColor(1.f, 0.4f, 0.35f) : FLinearColor(0.75f, 0.75f, 0.75f)));
 	}
@@ -238,15 +239,7 @@ void UStartRelicPickWidget::HandleStartClicked()
 		PC->Server_ChooseStartRelics(Chosen);
 	}
 
-	// 창고는 영구 소유라 그대로 둠. 하드 모드일 때만 들고 간 유물이 창고에서 사라짐
-	UTerminusProfileSubsystem* Profile = bHardMode && GetGameInstance() ? GetGameInstance()->GetSubsystem<UTerminusProfileSubsystem>() : nullptr;
-	if (Profile)
-	{
-		for (const FName& Row : Chosen)
-		{
-			Profile->RemoveStoredRelic(Row);
-		}
-	}
+	// 창고는 도감이라 들고 가도 그대로 둠. 하드 모드에서 죽으면 사망 정산 때 지움 (사용자 결정 10-08)
 
 	RemoveFromParent();
 }
