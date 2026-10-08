@@ -114,6 +114,9 @@ public:
 	// [이벤트] 이번 런 동안 스텟 올리기 (서버만). StatKind 0 = 최대 체력, 1 = 공격, 2 = 방어
 	void ApplyPermanentStat(int32 StatKind, int32 Amount);
 
+	// [보스방] 보상으로 받은 유물 / 스킬 기록 (배신 결과용). None 이면 그 칸은 그대로
+	void RecordBossReward(FName Skill, FName Relic);
+
 	// [이벤트] 일시 버프 (다음 전투 몇 번). 전투가 시작될 때 상태로 걸리고, 끝날 때마다 ConsumeTempBuffBattle 로 1 씩 줄어듦
 	void AddTempBuff(const FTempStatBuff& Buff);
 	void ConsumeTempBuffBattle();

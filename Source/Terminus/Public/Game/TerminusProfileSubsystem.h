@@ -34,6 +34,10 @@ struct FPendingSettlement
 	// 하드 모드에서 죽음: 창고에서 들고 간 시작 유물이 창고(도감)에서 지워짐 (사용자 결정 10-08)
 	UPROPERTY() TArray<FName> LostStoredRelics;
 
+	// 추가 골드와 이유 (배신자 패배: 배신자 보스 유물 판매 분배)
+	UPROPERTY() int32 BonusGold = 0;
+	UPROPERTY() FString BonusReason;
+
 	// 장착 중인 픽업 스킬 중 아직 없는 것 하나 랜덤 (전부 있으면 None = 건너뜀)
 	UPROPERTY() FName KeptSkill;
 };

@@ -485,10 +485,17 @@ void UCombatHUDWidget::UpdateTags()
 			}
 		}
 
-		// 대상 선택 버튼
+		// 대상 선택 버튼. 배신 전투면 적 = 상대 편 플레이어, 아군 = 같은 편
 		if (UButton* Target = Tag.TargetButton.Get())
 		{
-			const bool bSelectable = bAlive && ((bPickEnemy && Tag.bMonster) || (bPickAlly && !Tag.bMonster));
+			bool bSelectable = bAlive && ((bPickEnemy && Tag.bMonster) || (bPickAlly && !Tag.bMonster));
+			if (Combat->IsBetrayal() && !Tag.bMonster)
+			{
+				const TArray<TObjectPtr<ATerminusPlayerState>>& Occupants = CurrentArea->GetOccupants();
+				const ATerminusPlayerState* TagPS = Occupants.IsValidIndex(Tag.Index) ? Occupants[Tag.Index].Get() : nullptr;
+				const bool bSameSide = Combat->IsSameSide(TagPS, PC->GetPlayerState<ATerminusPlayerState>());
+				bSelectable = bAlive && ((bPickEnemy && !bSameSide) || (bPickAlly && bSameSide));
+			}
 			Target->SetVisibility(bSelectable ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
 			if (bSelectable)
 			{
@@ -515,7 +522,8 @@ void UCombatHUDWidget::UpdatePanels()
 		[LocalPS](const TObjectPtr<ATerminusPlayerState>& P) { return P.Get() == LocalPS; });
 
 	const ECombatPhase Phase = Combat->GetPhase();
-	const bool bMyTurn = !bSpectating && Phase == ECombatPhase::PlayerTurn && bMeAlive && !Combat->HasEndedTurn(LocalPS);
+	const bool bMyTurn = !bSpectating && Combat->IsTurnOf(LocalPS) && bMeAlive && !Combat->HasEndedTurn(LocalPS);
+	const bool bBetrayal = Combat->IsBetrayal();
 
 	// ---- 위: "n층 n번째 방" (기획 시안)
 	if (RoomText)
@@ -525,8 +533,9 @@ void UCombatHUDWidget::UpdatePanels()
 			CachedMap = Cast<AMapManager>(UGameplayStatics::GetActorOfClass(this, AMapManager::StaticClass()));
 		}
 		const int32 Floor = CachedMap.IsValid() ? CachedMap->CurrentFloor : 1;
-		RoomText->SetText(FText::FromString(FString::Printf(TEXT("%d층 %d번째 방  ·  사이클 %d"),
-			Floor, CurrentArea->GetRoom().Row + 1, Combat->GetCycle())));
+		RoomText->SetText(FText::FromString(bBetrayal
+			? FString::Printf(TEXT("%d층 배신 전투  ·  사이클 %d"), Floor, Combat->GetCycle())
+			: FString::Printf(TEXT("%d층 %d번째 방  ·  사이클 %d"), Floor, CurrentArea->GetRoom().Row + 1, Combat->GetCycle())));
 	}
 
 	if (PhaseText)
@@ -535,10 +544,18 @@ void UCombatHUDWidget::UpdatePanels()
 		switch (Phase)
 		{
 		case ECombatPhase::PlayerTurn:
+			if (bBetrayal && !bMyTurn && bMeAlive && !bSpectating && !Combat->IsTurnOf(LocalPS))
+			{
+				Label = Combat->IsBetrayerTurn() ? TEXT("배신자의 턴") : TEXT("상대 편의 턴");
+				break;
+			}
 			Label = bSpectating ? TEXT("플레이어 턴") : (!bMeAlive ? TEXT("쓰러짐") : (bMyTurn ? TEXT("내 턴") : TEXT("다른 플레이어를 기다리는 중")));
 			break;
 		case ECombatPhase::MonsterTurn: Label = TEXT("적의 턴"); break;
-		case ECombatPhase::Victory:     Label = TEXT("승리!"); break;
+		case ECombatPhase::Victory:
+			// 배신 전투: 내 편이 이겼는지
+			Label = !bBetrayal || bSpectating || ((LocalPS == Combat->GetBetrayer()) == Combat->DidBetrayerWin()) ? TEXT("승리!") : TEXT("패배");
+			break;
 		case ECombatPhase::Defeat:      Label = TEXT("패배"); break;
 		default: break;
 		}

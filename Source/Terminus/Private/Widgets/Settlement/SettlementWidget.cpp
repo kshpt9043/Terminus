@@ -91,6 +91,10 @@ void USettlementWidget::NativeOnInitialized()
 		{
 			Sub += FString::Printf(TEXT("  (%s%s%d층)"), *Settlement.RoomName, Settlement.RoomName.IsEmpty() ? TEXT("") : TEXT(" · "), Settlement.Floor);
 		}
+		if (Settlement.BonusGold > 0)
+		{
+			Sub += FString::Printf(TEXT("\n%s  +%s"), *Settlement.BonusReason, *SettleGoldText(Settlement.BonusGold));
+		}
 		SubtitleText->SetText(FText::FromString(Sub));
 	}
 
@@ -305,13 +309,16 @@ void USettlementWidget::HandleConfirm()
 	const int32 QuestGold = 0;   // TODO: 퀘스트가 생기면 완료한 퀘스트 보상 (사망이면 없음)
 	const int32 RelicGold = Settlement.bDeath ? DeathGold() : 0;
 
-	Profile->FinishSettlement(Chosen, QuestGold + RelicGold);
+	const int32 BonusGold = FMath::Max(0, Settlement.BonusGold);
+
+	Profile->FinishSettlement(Chosen, QuestGold + RelicGold + BonusGold);
 
 	if (SummaryText)
 	{
 		FString Summary = Settlement.bDeath
 			? FString::Printf(TEXT("유물 판매  +%s\n\n보유 골드  %s"), *SettleGoldText(RelicGold), *SettleGoldText(Profile->GetGold()))
 			: FString::Printf(TEXT("퀘스트 골드  +%s\n\n보유 골드  %s"), *SettleGoldText(QuestGold), *SettleGoldText(Profile->GetGold()));
+		if (BonusGold > 0) Summary = FString::Printf(TEXT("%s  +%s\n"), *Settlement.BonusReason, *SettleGoldText(BonusGold)) + Summary;
 		if (bNewRelic) Summary += FString::Printf(TEXT("\n\n창고에 보관: %s"), *SettleRelicName(Chosen));
 		if (bNewSkill)
 		{

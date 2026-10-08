@@ -206,6 +206,16 @@ void ADungeonGameMode::Logout(AController* Exiting)
 	const bool bTearingDown = !GetWorld() || GetWorld()->bIsTearingDown;
 	const bool bGuestLeft = TPS && !bTearingDown && GetNetMode() != NM_Standalone && !(ExitingPC && ExitingPC->IsLocalController());
 
+	// 배신 전투 중이거나 런이 이미 끝났으면(정산으로 넘어감) 이공간으로 가지 않음. 배신 전투는 나간 사람이 진 걸로
+	const AMapManager* MapMgr = Cast<AMapManager>(UGameplayStatics::GetActorOfClass(this, AMapManager::StaticClass()));
+	UDungeonAreaSubsystem* EndingAreas = GetWorld() ? GetWorld()->GetSubsystem<UDungeonAreaSubsystem>() : nullptr;
+	if (bGuestLeft && ((MapMgr && MapMgr->IsRunEnded()) || (EndingAreas && EndingAreas->IsBetrayalInProgress())))
+	{
+		if (EndingAreas) EndingAreas->HandlePlayerLeft(TPS);
+		Super::Logout(Exiting);
+		return;
+	}
+
 	if (bGuestLeft)
 	{
 		// 1. 진행 중인 방 정리. 싸우는 중이면 이번 방은 무효 (전원 들어가기 전으로 롤백)

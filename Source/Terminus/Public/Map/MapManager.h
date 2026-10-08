@@ -193,6 +193,23 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Map Settings|Vote")
 	float ResultSeconds = 3.f;
 
+	// 배신 전투 보정 (사용자 결정 10-08: 배신당한 쪽 현재 체력 일정 % 감소 + 배신자 공격 / 방어 상승. 수치는 임시)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Map Settings|Betrayal", meta = (ClampMin = "0.0", ClampMax = "0.95"))
+	float BetrayalVictimHealthCut = 0.3f;
+
+	// 배신자 공격 / 방어 +(상대 수 x 이 값)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Map Settings|Betrayal", meta = (ClampMin = "0"))
+	int32 BetrayerStatPerOpponent = 1;
+
+	// [서버] 배신 전투가 끝남 (전투가 부름). 결과대로 각자 정산 조정을 붙여 런을 끝냄
+	//  - 이긴 쪽이 보스 유물을 가짐: 배신자 승리면 동료들의 보스 유물이 배신자 정산 후보로
+	//  - 배신자 패배: 배신자의 보스 유물을 팔아 그 골드를 나머지가 나눠 가짐
+	//  - 진 쪽은 이번 보스전에서 얻은 유물 / 스킬을 정산에서 못 가져감. 나머지는 평소 탈출 정산
+	void HandleBetrayalResult(ATerminusPlayerState* Betrayer, bool bBetrayerWon);
+
+	// 런이 끝났는가 (정산으로 넘어감). 끝난 뒤 나가는 사람은 이공간으로 안 감
+	bool IsRunEnded() const { return bRunEnded; }
+
 	// [서버] 다음 층으로: 층 +1, (계층이 바뀌면) 새 테마, 새 지도, 전원 지도 처음 / 체력 회복
 	void AdvanceFloor();
 
@@ -267,8 +284,18 @@ private:
 	// 탈출로 런 끝: 세이브 삭제 + 각자 탈출 정산
 	void EndRunByEscape(const FString& Reason);
 
-	// 런 끝 공통: 세이브 삭제 + 각자 정산 대기로
-	void EndRun(const FString& Reason, bool bDeath);
+	// 런 끝 공통: 세이브 삭제 + 각자 정산 대기로. Results 가 있으면 사람마다 안내 / 정산 조정 (배신 결과)
+	struct FRunEndResult
+	{
+		FString Message;
+		FSettlementAdjust Adjust;
+	};
+	void EndRun(const FString& Reason, bool bDeath, const TMap<APlayerState*, FRunEndResult>* Results = nullptr);
+
+	// 투표에서 배신이 나옴 -> 배신 전투 시작
+	void StartBetrayalBattle();
+
+	bool bRunEnded = false;
 
 	// 이번 런이 1인인가. 기획의 방 선택 규칙이 싱글/멀티로 갈린다
 	bool IsSinglePlayerRun() const;

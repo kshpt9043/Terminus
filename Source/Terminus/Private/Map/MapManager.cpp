@@ -13,6 +13,8 @@
 #include "Net/UnrealNetwork.h"
 #include "Game/TerminusSaveSubsystem.h"
 #include "TimerManager.h"
+#include "Data/RelicTypes.h"
+#include "Data/TerminusDataSettings.h"
 
 AMapManager::AMapManager()
 { 
@@ -1263,8 +1265,7 @@ void AMapManager::ApplyFloorChoice()
         break;
 
     case EFloorChoice::Betray:
-        // TODO: 배신 전투 (배신자 1명 vs 나머지). 아직 없어서 탈출로 처리
-        EndRunByEscape(TEXT("배신이 선택되었습니다. (배신 전투는 준비 중이라 탈출로 처리합니다)"));
+        StartBetrayalBattle();
         break;
 
     case EFloorChoice::Escape:
@@ -1302,8 +1303,113 @@ void AMapManager::EndRunByDeath(const FString& Reason)
     EndRun(Reason, true);
 }
 
-void AMapManager::EndRun(const FString& Reason, bool bDeath)
+void AMapManager::StartBetrayalBattle()
 {
+    // 배신을 고른 사람 (선착순 1명)
+    ATerminusPlayerState* Betrayer = nullptr;
+    for (const TPair<TWeakObjectPtr<APlayerState>, EFloorChoice>& Pair : FloorVotes)
+    {
+        if (Pair.Value == EFloorChoice::Betray) Betrayer = Cast<ATerminusPlayerState>(Pair.Key.Get());
+    }
+
+    // 팀 먼저, 배신자 마지막
+    TArray<ATerminusPlayerState*> Players;
+    if (const AGameStateBase* GS = GetWorld()->GetGameState())
+    {
+        for (APlayerState* PS : GS->PlayerArray)
+        {
+            ATerminusPlayerState* TPS = Cast<ATerminusPlayerState>(PS);
+            if (TPS && TPS != Betrayer) Players.Add(TPS);
+        }
+    }
+    if (Betrayer) Players.Add(Betrayer);
+
+    UDungeonAreaSubsystem* Areas = GetWorld()->GetSubsystem<UDungeonAreaSubsystem>();
+    if (!Betrayer || Players.Num() < 2 || !Areas
+        || !Areas->StartBetrayal(Players, Betrayer, FloorTheme, BetrayalVictimHealthCut, BetrayerStatPerOpponent))
+    {
+        EndRunByEscape(TEXT("배신할 상대가 없어 던전을 탈출합니다."));
+        return;
+    }
+
+    FChatMessage Notice;
+    Notice.Kind = EChatMessageKind::System;
+    Notice.Text = FString::Printf(TEXT("%s 님이 배신했습니다! 배신 전투가 시작됩니다."), *Betrayer->GetPlayerName());
+    ATerminusPlayerController::BroadcastChat(GetWorld(), Notice);
+}
+
+void AMapManager::HandleBetrayalResult(ATerminusPlayerState* Betrayer, bool bBetrayerWon)
+{
+    if (!HasAuthority() || bRunEnded) return;
+
+    TArray<ATerminusPlayerState*> Team;
+    if (const AGameStateBase* GS = GetWorld()->GetGameState())
+    {
+        for (APlayerState* PS : GS->PlayerArray)
+        {
+            ATerminusPlayerState* TPS = Cast<ATerminusPlayerState>(PS);
+            if (TPS && TPS != Betrayer) Team.Add(TPS);
+        }
+    }
+
+    const FRunState BetrayerRun = Betrayer ? Betrayer->GetRunState() : FRunState();
+    const FString BetrayerName = Betrayer ? Betrayer->GetPlayerName() : FString(TEXT("배신자"));
+    TMap<APlayerState*, FRunEndResult> Results;
+
+    auto LoseBossRewards = [](const FRunState& Run, FSettlementAdjust& Adjust)
+    {
+        if (!Run.BossRelic.IsNone()) Adjust.LostRelics.Add(Run.BossRelic);
+        if (!Run.BossSkill.IsNone()) Adjust.LostSkills.Add(Run.BossSkill);
+    };
+
+    if (bBetrayerWon)
+    {
+        // 배신자: 동료들의 보스 유물을 가져감 / 동료: 보스전 유물 / 스킬을 못 가져감
+        FRunEndResult& Winner = Results.Add(Betrayer);
+        Winner.Message = TEXT("배신에 성공했습니다! 동료들의 보스 유물을 빼앗았습니다.");
+        for (ATerminusPlayerState* PS : Team)
+        {
+            const FRunState Run = PS->GetRunState();
+            if (!Run.BossRelic.IsNone()) Winner.Adjust.ExtraRelics.AddUnique(Run.BossRelic);
+
+            FRunEndResult& Loser = Results.Add(PS);
+            Loser.Message = FString::Printf(TEXT("배신자 %s 에게 패배했습니다. 보스전에서 얻은 유물과 스킬을 잃었습니다."), *BetrayerName);
+            LoseBossRewards(Run, Loser.Adjust);
+        }
+    }
+    else
+    {
+        // 배신자: 보스전 유물 / 스킬을 못 가져감 / 동료: 배신자 보스 유물을 판 골드를 나눠 가짐
+        if (Betrayer)
+        {
+            FRunEndResult& Loser = Results.Add(Betrayer);
+            Loser.Message = TEXT("배신에 실패했습니다. 보스전에서 얻은 유물과 스킬을 잃었습니다.");
+            LoseBossRewards(BetrayerRun, Loser.Adjust);
+        }
+
+        const FRelicRow* BossRelic = BetrayerRun.BossRelic.IsNone() ? nullptr : UTerminusDataSettings::FindRelicRow(BetrayerRun.BossRelic);
+        const int32 Pot = BossRelic && BossRelic->CanSellAtSettlement() ? BossRelic->SellPrice_Gold : 0;
+        const int32 Share = Team.Num() > 0 ? Pot / Team.Num() : 0;
+
+        for (ATerminusPlayerState* PS : Team)
+        {
+            FRunEndResult& Winner = Results.Add(PS);
+            Winner.Message = FString::Printf(TEXT("배신자 %s 을(를) 물리쳤습니다!"), *BetrayerName);
+            if (Share > 0)
+            {
+                Winner.Adjust.BonusGold = Share;
+                Winner.Adjust.BonusReason = FString::Printf(TEXT("배신자의 보스 유물 [%s] 판매 분배"), *BossRelic->RelicName.ToString());
+            }
+        }
+    }
+
+    EndRun(TEXT("배신 전투가 끝나 던전을 나갑니다."), false, &Results);
+}
+
+void AMapManager::EndRun(const FString& Reason, bool bDeath, const TMap<APlayerState*, FRunEndResult>* Results)
+{
+    bRunEnded = true;
+
     // 런이 끝남 -> 세이브 삭제 (정산 내용은 각자 프로필에 따로 저장되니 여기서 바로 지워도 됨)
     if (UTerminusSaveSubsystem* Save = UTerminusSaveSubsystem::Get(this))
     {
@@ -1319,7 +1425,9 @@ void AMapManager::EndRun(const FString& Reason, bool bDeath)
     {
         if (ATerminusPlayerController* PC = Cast<ATerminusPlayerController>(It->Get()))
         {
-            PC->Client_BeginSettlement(FText::FromString(Reason), bDeath);
+            const FRunEndResult* Result = Results ? Results->Find(PC->PlayerState) : nullptr;
+            PC->Client_BeginSettlement(FText::FromString(Result && !Result->Message.IsEmpty() ? Result->Message : Reason), bDeath,
+                Result ? Result->Adjust : FSettlementAdjust());
         }
     }
 }

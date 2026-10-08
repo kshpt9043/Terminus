@@ -724,6 +724,58 @@ void ADungeonArea::MarkWiped()
 	}
 }
 
+void ADungeonArea::BeginBetrayal(const TArray<ATerminusPlayerState*>& Team, ATerminusPlayerState* Betrayer, const UDungeonThemeData* Theme, float VictimHealthCut, int32 StatPerOpponent)
+{
+	if (!HasAuthority() || !Betrayer) return;
+
+	Room = FRoomNode();
+	Room.RoomId = INDEX_NONE;
+	Room.Row = INDEX_NONE;
+	Room.Type = ERoomType::BOSS;   // 무대는 보스방 것
+	bInUse = true;
+	bCleared = false;
+	bWiped = false;
+	Occupants.Reset();
+	ReturnLocations.Reset();
+
+	if (Theme)
+	{
+		if (TSubclassOf<ADungeonAreaSet> SetClass = Theme->PickAreaSet(ERoomType::BOSS))
+		{
+			CurrentSetClass = SetClass;
+			OnRep_CurrentSetClass();
+		}
+	}
+
+	// 순서 = 전투 Players 순서 = 대상 인덱스: 팀 먼저, 배신자 마지막
+	auto Place = [this](ATerminusPlayerState* PS, const FVector& Location)
+	{
+		Occupants.Add(PS);
+		if (APawn* Pawn = PS->GetPawn())
+		{
+			ReturnLocations.Add(Pawn, Pawn->GetActorLocation());
+			Pawn->SetActorLocation(Location, false, nullptr, ETeleportType::TeleportPhysics);
+		}
+		PS->SetCurrentArea(this);
+	};
+
+	int32 SlotIndex = 0;
+	for (ATerminusPlayerState* PS : Team)
+	{
+		if (PS && PS != Betrayer) Place(PS, GetPlayerSlotLocation(SlotIndex++));
+	}
+	Place(Betrayer, GetMonsterSlotLocation(0));   // 배신자는 맞은편 (몬스터 자리)
+
+	UE_LOG(LogTemp, Log, TEXT("[Area %d] 배신 전투: %s vs %d명"), AreaIndex, *Betrayer->GetPlayerName(), Occupants.Num() - 1);
+
+	if (Combat)
+	{
+		TArray<ATerminusPlayerState*> Players;
+		for (ATerminusPlayerState* PS : Occupants) Players.Add(PS);
+		Combat->StartBetrayal(Players, Betrayer, VictimHealthCut, StatPerOpponent);
+	}
+}
+
 void ADungeonArea::BeginIntervention(const TArray<ATerminusPlayerState*>& Joiners)
 {
 	if (!HasAuthority() || !bInUse || !bWiped) return;

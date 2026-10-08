@@ -56,6 +56,9 @@ public:
 	// [난입] 다른 구역 사람들이 이 구역에 들어와 남은 몬스터와 이어서 싸움
 	void BeginIntervention(const TArray<ATerminusPlayerState*>& Joiners);
 
+	// [배신 전투] 팀은 플레이어 자리, 배신자는 몬스터 자리에 세우고 배신 전투 시작
+	void BeginBetrayal(const TArray<ATerminusPlayerState*>& Team, ATerminusPlayerState* Betrayer, const UDungeonThemeData* Theme, float VictimHealthCut, int32 StatPerOpponent);
+
 	// 구역 비우기. 배틀러를 원래 자리로 돌려놓고 시점을 지도로 돌린다
 	void Release();
 

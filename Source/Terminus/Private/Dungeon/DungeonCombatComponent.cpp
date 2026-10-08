@@ -84,6 +84,9 @@ void UDungeonCombatComponent::GetLifetimeReplicatedProps(TArray<FLifetimePropert
 	DOREPLIFETIME(UDungeonCombatComponent, Monsters);
 	DOREPLIFETIME(UDungeonCombatComponent, Intents);
 	DOREPLIFETIME(UDungeonCombatComponent, EndedTurn);
+	DOREPLIFETIME(UDungeonCombatComponent, Betrayer);
+	DOREPLIFETIME(UDungeonCombatComponent, bBetrayerTurn);
+	DOREPLIFETIME(UDungeonCombatComponent, bBetrayerWon);
 }
 
 // =====================================================================
@@ -175,6 +178,174 @@ void UDungeonCombatComponent::StartCombat(const FRoomNode& Room, const TArray<AT
 
 	Cycle = 0;
 	StartCycle();
+}
+
+// =====================================================================
+// 배신 전투
+// =====================================================================
+
+bool UDungeonCombatComponent::IsTurnOf(const ATerminusPlayerState* PS) const
+{
+	if (Phase != ECombatPhase::PlayerTurn || !PS) return false;
+	return !IsBetrayal() || ((PS == Betrayer) == bBetrayerTurn);
+}
+
+bool UDungeonCombatComponent::IsSameSide(const ATerminusPlayerState* A, const ATerminusPlayerState* B) const
+{
+	return !IsBetrayal() || ((A == Betrayer) == (B == Betrayer));
+}
+
+TArray<UCombatStatsComponent*> UDungeonCombatComponent::GetBetrayalSideStats(bool bBetrayerSide) const
+{
+	TArray<UCombatStatsComponent*> Out;
+	for (const TWeakObjectPtr<ATerminusPlayerState>& PS : Players)
+	{
+		if ((PS.Get() == Betrayer) != bBetrayerSide) continue;
+		UCombatStatsComponent* Stats = GetStats(PS.Get());
+		if (Stats && !Stats->IsDead()) Out.Add(Stats);
+	}
+	return Out;
+}
+
+void UDungeonCombatComponent::StartBetrayal(const TArray<ATerminusPlayerState*>& InPlayers, ATerminusPlayerState* InBetrayer, float VictimHealthCut, int32 StatPerOpponent)
+{
+	if (!GetOwner() || !GetOwner()->HasAuthority() || !InBetrayer) return;
+
+	EndCombat();
+
+	for (ATerminusPlayerState* PS : InPlayers)
+	{
+		if (PS) Players.Add(PS);
+	}
+	Betrayer = InBetrayer;
+	bBetrayerTurn = false;
+	bBetrayerWon = false;
+	CurrentRoomType = ERoomType::MONSTER;   // 가디언 / 보스 시작 유물은 안 씀
+	CurrentRoomId = INDEX_NONE;
+	PendingRewards.Reset();
+
+	BuildRelicHolders();
+
+	// 보정: 배신당한 사람은 현재 체력의 일부를 잃고, 배신자는 상대 수만큼 공격 / 방어가 오름 (이번 전투 동안)
+	int32 Opponents = 0;
+	for (const TWeakObjectPtr<ATerminusPlayerState>& PS : Players)
+	{
+		ApplyTempBuffs(PS.Get());
+		if (PS.Get() == Betrayer) continue;
+		++Opponents;
+
+		UCombatStatsComponent* Stats = GetStats(PS.Get());
+		if (!Stats || Stats->IsDead()) continue;
+		const int32 Health = Stats->GetCombatState().Health;
+		const int32 NewHealth = FMath::Max(1, Health - FMath::RoundToInt(Health * VictimHealthCut));
+		Stats->Revive(static_cast<float>(NewHealth) / FMath::Max(1, Stats->GetStats().MaxHealth));
+	}
+
+	if (UCombatStatsComponent* Stats = GetStats(Betrayer))
+	{
+		const int32 Bonus = StatPerOpponent * Opponents;
+		if (Bonus > 0)
+		{
+			Stats->ApplyStatus(EStatusEffect::Brave, Bonus, -1);   // 공격
+			Stats->ApplyStatus(EStatusEffect::Solid, Bonus, -1);   // 방어
+		}
+	}
+
+	UE_LOG(LogDungeonCombat, Log, TEXT("[Combat] 배신 전투 시작: %s vs %d명"), *Betrayer->GetPlayerName(), Opponents);
+
+	Cycle = 0;
+	StartCycle();
+}
+
+void UDungeonCombatComponent::BeginBetrayerTurn()
+{
+	bBetrayerTurn = true;
+	EndedTurn.Reset();
+
+	// 배신자 턴 시작: 보호막 버림, 에너지 최대, 활력, 턴 시작 유물 (팀은 StartCycle 에서 같은 처리)
+	if (UCombatStatsComponent* Stats = GetStats(Betrayer); Stats && !Stats->IsDead())
+	{
+		Stats->ClearShield();
+		Stats->RefillEnergy();
+		if (const int32 Vitality = Stats->GetStatusValue(EStatusEffect::Vitality); Vitality > 0)
+		{
+			Stats->AddEnergy(Vitality, true);
+		}
+		FireRelics(FindHolder(Stats), ERelicTrigger::OnTurnStart);
+	}
+
+	UE_LOG(LogDungeonCombat, Log, TEXT("[Combat] 사이클 %d 배신자 턴"), Cycle);
+	CheckCombatEnd();
+}
+
+void UDungeonCombatComponent::TryAdvanceBetrayalTurn()
+{
+	if (!IsBetrayal() || Phase != ECombatPhase::PlayerTurn) return;
+
+	// 지금 차례인 편의 살아 있는 사람이 전원 턴 종료했으면 다음 차례
+	for (const TWeakObjectPtr<ATerminusPlayerState>& PS : Players)
+	{
+		if ((PS.Get() == Betrayer) != bBetrayerTurn) continue;
+		const UCombatStatsComponent* Stats = GetStats(PS.Get());
+		if (Stats && !Stats->IsDead() && !EndedTurn.Contains(PS.Get())) return;
+	}
+
+	if (!bBetrayerTurn) BeginBetrayerTurn();
+	else                FinishCycle();
+}
+
+void UDungeonCombatComponent::HandleBetrayalLeaver(ATerminusPlayerState* Leaver)
+{
+	if (!IsBetrayal() || !Leaver || Phase == ECombatPhase::Victory || Phase == ECombatPhase::Defeat) return;
+
+	// 나간 사람은 쓰러진 걸로 (인덱스가 Occupants 와 어긋나지 않게 목록에서 빼진 않음)
+	if (UCombatStatsComponent* Stats = GetStats(Leaver))
+	{
+		Stats->PreventDeath.Unbind();
+		Stats->ClearCombatEffects();
+		Stats->ApplyDamage(Stats->GetCombatState().Health + Stats->GetCombatState().Shield);
+	}
+	if (Leaver == Betrayer)
+	{
+		FinishBetrayal(false);
+		return;
+	}
+
+	if (CheckCombatEnd()) return;
+	TryAdvanceBetrayalTurn();
+}
+
+void UDungeonCombatComponent::FinishBetrayal(bool bInBetrayerWon)
+{
+	bBetrayerWon = bInBetrayerWon;
+	Phase = ECombatPhase::Victory;   // HUD 는 편을 보고 승리 / 패배를 표시
+	Intents.Reset();
+
+	if (UWorld* World = GetWorld())
+	{
+		World->GetTimerManager().ClearTimer(StepTimer);
+	}
+
+	for (const TWeakObjectPtr<ATerminusPlayerState>& PS : Players)
+	{
+		if (UCombatStatsComponent* Stats = GetStats(PS.Get()))
+		{
+			Stats->ClearCombatEffects();
+		}
+	}
+
+	UE_LOG(LogDungeonCombat, Log, TEXT("[Combat] 배신 전투 끝: %s"), bBetrayerWon ? TEXT("배신자 승리") : TEXT("팀 승리"));
+
+	// 결과를 잠깐 보여 준 뒤 맵 매니저가 런을 끝냄 (정산)
+	GetWorld()->GetTimerManager().SetTimer(StepTimer, this, &UDungeonCombatComponent::ReportBetrayalResult, CombatEndDelay, false);
+}
+
+void UDungeonCombatComponent::ReportBetrayalResult()
+{
+	if (AMapManager* MapMgr = Cast<AMapManager>(UGameplayStatics::GetActorOfClass(this, AMapManager::StaticClass())))
+	{
+		MapMgr->HandleBetrayalResult(Betrayer, bBetrayerWon);
+	}
 }
 
 void UDungeonCombatComponent::ApplyTempBuffs(ATerminusPlayerState* PS)
@@ -276,6 +447,9 @@ void UDungeonCombatComponent::EndCombat()
 	Players.Reset();
 	Cycle = 0;
 	Phase = ECombatPhase::None;
+	Betrayer = nullptr;
+	bBetrayerTurn = false;
+	bBetrayerWon = false;
 }
 
 // =====================================================================
@@ -481,10 +655,13 @@ void UDungeonCombatComponent::StartCycle()
 {
 	++Cycle;
 	EndedTurn.Reset();
+	bBetrayerTurn = false;
 
 	// 플레이어 보호막은 사이클이 끝나면 사라짐 (몬스터 턴까지 버티고 여기서 버림), 에너지는 최대치로
+	// 배신 전투면 팀 차례부터 (배신자는 BeginBetrayerTurn 에서)
 	for (const TWeakObjectPtr<ATerminusPlayerState>& PS : Players)
 	{
+		if (IsBetrayal() && PS.Get() == Betrayer) continue;
 		if (UCombatStatsComponent* Stats = GetStats(PS.Get()))
 		{
 			if (Stats->IsDead()) continue;
@@ -506,6 +683,7 @@ void UDungeonCombatComponent::StartCycle()
 	// 플레이어 턴 시작: 활력(턴 시작 에너지 +수치) 다음 턴 시작 유물
 	for (const TWeakObjectPtr<ATerminusPlayerState>& PS : Players)
 	{
+		if (IsBetrayal() && PS.Get() == Betrayer) continue;
 		UCombatStatsComponent* Stats = GetStats(PS.Get());
 		if (!Stats || Stats->IsDead()) continue;
 
@@ -555,7 +733,7 @@ void UDungeonCombatComponent::ChooseIntents()
 
 void UDungeonCombatComponent::HandleUseSkill(ATerminusPlayerState* PS, int32 SkillIndex, int32 TargetIndex)
 {
-	if (Phase != ECombatPhase::PlayerTurn || !PS || EndedTurn.Contains(PS)) return;
+	if (!IsTurnOf(PS) || EndedTurn.Contains(PS)) return;
 	if (!Players.Contains(PS)) return;
 
 	UCombatStatsComponent* Caster = GetStats(PS);
@@ -571,7 +749,28 @@ void UDungeonCombatComponent::HandleUseSkill(ATerminusPlayerState* PS, int32 Ski
 
 	// 대상 먼저 확인 (에너지만 날리고 실패하지 않게)
 	TArray<UCombatStatsComponent*> Targets;
-	switch (Skill.TargetType)
+
+	// 배신 전투: 적 = 상대 편 플레이어, 아군 = 같은 편 (대상 인덱스는 Players = 구역 Occupants 순서)
+	if (IsBetrayal())
+	{
+		const bool bMine = PS == Betrayer;
+		auto PickPlayer = [&](bool bWantSameSide)
+		{
+			ATerminusPlayerState* TargetPS = Players.IsValidIndex(TargetIndex) ? Players[TargetIndex].Get() : nullptr;
+			UCombatStatsComponent* T = GetStats(TargetPS);
+			if (T && !T->IsDead() && IsSameSide(PS, TargetPS) == bWantSameSide) Targets.Add(T);
+		};
+
+		switch (Skill.TargetType)
+		{
+		case ETargetType::Self:        Targets.Add(Caster); break;
+		case ETargetType::SingleEnemy: PickPlayer(false); break;
+		case ETargetType::AllEnemies:  Targets = GetBetrayalSideStats(!bMine); break;
+		case ETargetType::SingleAlly:  PickPlayer(true); break;
+		case ETargetType::AllAllies:   Targets = GetBetrayalSideStats(bMine); break;
+		}
+	}
+	else switch (Skill.TargetType)
 	{
 	case ETargetType::Self:
 		Targets.Add(Caster);
@@ -627,7 +826,7 @@ void UDungeonCombatComponent::HandleUseSkill(ATerminusPlayerState* PS, int32 Ski
 
 void UDungeonCombatComponent::HandleEndTurn(ATerminusPlayerState* PS)
 {
-	if (Phase != ECombatPhase::PlayerTurn || !PS || !Players.Contains(PS) || EndedTurn.Contains(PS)) return;
+	if (!IsTurnOf(PS) || !Players.Contains(PS) || EndedTurn.Contains(PS)) return;
 
 	EndedTurn.Add(PS);
 
@@ -640,6 +839,12 @@ void UDungeonCombatComponent::HandleEndTurn(ATerminusPlayerState* PS)
 	}
 
 	if (CheckCombatEnd()) return;
+
+	if (IsBetrayal())
+	{
+		TryAdvanceBetrayalTurn();
+		return;
+	}
 
 	// 살아 있는 사람이 전원 턴 종료했으면 몬스터 턴
 	for (const TWeakObjectPtr<ATerminusPlayerState>& Other : Players)
@@ -775,6 +980,22 @@ void UDungeonCombatComponent::HideDeadMonsters()
 bool UDungeonCombatComponent::CheckCombatEnd()
 {
 	if (Phase == ECombatPhase::Victory || Phase == ECombatPhase::Defeat || Phase == ECombatPhase::None) return true;
+
+	// 배신 전투: 배신자가 쓰러지면 팀 승리, 팀이 전부 쓰러지면 배신자 승리 (몬스터는 없음)
+	if (IsBetrayal())
+	{
+		if (GetBetrayalSideStats(true).Num() == 0)
+		{
+			FinishBetrayal(false);
+			return true;
+		}
+		if (GetBetrayalSideStats(false).Num() == 0)
+		{
+			FinishBetrayal(true);
+			return true;
+		}
+		return false;
+	}
 
 	if (GetAliveMonsterStats().Num() == 0)
 	{
@@ -1007,6 +1228,10 @@ void UDungeonCombatComponent::HandleRewardFinished(ATerminusPlayerState* PS, FNa
 			{
 				UE_LOG(LogDungeonCombat, Warning, TEXT("[Reward] %s: 강화 칸이 꽉 찼는데 바꿀 칸이 없어 '%s' 를 못 넣음"), *PS->GetPlayerName(), *ChosenSkill.ToString());
 			}
+			else if (CurrentRoomType == ERoomType::BOSS)
+			{
+				PS->RecordBossReward(ChosenSkill, NAME_None);   // 배신 결과용
+			}
 		}
 		else
 		{
@@ -1029,6 +1254,10 @@ void UDungeonCombatComponent::HandleRewardFinished(ATerminusPlayerState* PS, FNa
 			if (!PS->GainRelic(ChosenRelic))
 			{
 				UE_LOG(LogDungeonCombat, Warning, TEXT("[Reward] %s: 유물 '%s' 를 못 받음 (칸이 꽉 참 등)"), *PS->GetPlayerName(), *ChosenRelic.ToString());
+			}
+			else if (CurrentRoomType == ERoomType::BOSS)
+			{
+				PS->RecordBossReward(NAME_None, ChosenRelic);   // 배신 결과용
 			}
 		}
 		else
@@ -1251,9 +1480,11 @@ void UDungeonCombatComponent::ExecuteRelic(int32 HolderIndex, const FRelicRow& R
 	AsSkill.StatusValue = Relic.StatusValue;
 	AsSkill.StatusDuration = Relic.StatusDuration;
 
-	// 대상: 유물 주인 기준 (몬스터 유물이면 적 = 플레이어)
-	const TArray<UCombatStatsComponent*> Opponents = GetSideStats(!bMonster);
-	const TArray<UCombatStatsComponent*> Allies = GetSideStats(bMonster);
+	// 대상: 유물 주인 기준 (몬스터 유물이면 적 = 플레이어). 배신 전투면 적 = 상대 편 플레이어
+	const bool bBetrayalSide = IsBetrayal() && !bMonster;
+	const bool bMine = Player == Betrayer;
+	const TArray<UCombatStatsComponent*> Opponents = bBetrayalSide ? GetBetrayalSideStats(!bMine) : GetSideStats(!bMonster);
+	const TArray<UCombatStatsComponent*> Allies = bBetrayalSide ? GetBetrayalSideStats(bMine) : GetSideStats(bMonster);
 	TArray<UCombatStatsComponent*> Targets;
 	switch (Relic.TargetType)
 	{

@@ -17,6 +17,24 @@ struct FTempStatBuff
 	UPROPERTY(BlueprintReadOnly) FString Source;           // 어디서 받았는지 (표시용)
 };
 
+// 런이 끝날 때 서버가 정산에 더하거나 빼라고 알려 주는 것 (배신 결과)
+USTRUCT(BlueprintType)
+struct FSettlementAdjust
+{
+	GENERATED_BODY()
+
+	// 정산 유물 후보에 더함 (배신 성공: 동료들의 보스 유물)
+	UPROPERTY(BlueprintReadOnly) TArray<FName> ExtraRelics;
+
+	// 정산에서 뺌 (배신에서 진 쪽: 보스전에서 얻은 유물 / 스킬)
+	UPROPERTY(BlueprintReadOnly) TArray<FName> LostRelics;
+	UPROPERTY(BlueprintReadOnly) TArray<FName> LostSkills;
+
+	// 추가 골드와 그 이유 (배신자 패배: 배신자 보스 유물 판매 분배)
+	UPROPERTY(BlueprintReadOnly) int32 BonusGold = 0;
+	UPROPERTY(BlueprintReadOnly) FString BonusReason;
+};
+
 // 던전을 돌 동안 유지되는 데이터 구조체
 // 맵을 넘어가도 살아야함
 
@@ -52,6 +70,13 @@ struct FRunState
 	// 던전에 들어갈 때 창고에서 들고 간 유물. 정산에서 고르는 후보에서 뺌 (사용자 결정 10-08)
 	UPROPERTY(BlueprintReadOnly)
 	TArray<FName> StartRelics;
+
+	// 이번 층 보스방 보상으로 받은 유물 / 스킬 (배신 결과에 씀: 진 쪽은 이걸 못 가져감). 층이 바뀌면 비움
+	UPROPERTY(BlueprintReadOnly)
+	FName BossRelic;
+
+	UPROPERTY(BlueprintReadOnly)
+	FName BossSkill;
 
 	// 하드 모드 (판 전체 규칙, 주점에서 방장이 정함). 켜면 런 시작 때 들고 간 창고 유물이 창고에서 사라짐
 	// 파티 전원의 RunState 에 같은 값이 들어감. 런을 새로 시작해도 유지 (BeginRun 이 안 지움)

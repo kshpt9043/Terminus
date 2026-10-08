@@ -107,6 +107,29 @@ public:
 	// 보상 마침 (PC 의 Server_FinishRoomReward). 보여 준 후보 중에서만 인정
 	void HandleRewardFinished(ATerminusPlayerState* PS, FName ChosenSkill, int32 ReplaceSlot, FName ChosenRelic, FName ReplaceRelic);
 
+	// -------------------------------------------------------------
+	// [배신 전투] 배신자 1명 vs 나머지 (사용자 결정 2026-10-08)
+	//  - 턴: 남은 팀 전원 -> 배신자 -> 사이클 끝 (몬스터 턴 자리에 배신자 턴)
+	//  - 보정: 팀은 현재 체력의 VictimHealthCut 만큼 잃고, 배신자는 공격 / 방어 +(상대 수 x StatPerOpponent) (용기 / 견고)
+	//  - 적 = 상대 편 플레이어, 아군 = 같은 편. 대상 인덱스는 구역 Occupants(= Players) 순서
+	//  - 끝나면 맵 매니저에 결과를 알림 (보상 / 구역 클리어 없음)
+	// -------------------------------------------------------------
+	void StartBetrayal(const TArray<ATerminusPlayerState*>& InPlayers, ATerminusPlayerState* InBetrayer, float VictimHealthCut, int32 StatPerOpponent);
+
+	// 배신 전투 중 누가 나감: 배신자면 팀 승리, 팀원이면 그 사람은 쓰러진 걸로
+	void HandleBetrayalLeaver(ATerminusPlayerState* Leaver);
+
+	bool IsBetrayal() const { return Betrayer != nullptr; }
+	ATerminusPlayerState* GetBetrayer() const { return Betrayer; }
+	bool IsBetrayerTurn() const { return bBetrayerTurn; }
+	bool DidBetrayerWin() const { return bBetrayerWon; }
+
+	// 이 사람이 지금 행동할 차례인가 (플레이어 턴이고, 배신 전투면 그 사람 편 차례)
+	bool IsTurnOf(const ATerminusPlayerState* PS) const;
+
+	// 같은 편인가 (보통 전투면 플레이어끼리는 늘 같은 편)
+	bool IsSameSide(const ATerminusPlayerState* A, const ATerminusPlayerState* B) const;
+
 	// [난입] 전멸한 이 구역의 전투를 새로 들어온 사람들과 이어서 함 (몬스터 체력은 그대로). 패배 상태에서만
 	void ResumeWithPlayers(const TArray<ATerminusPlayerState*>& Joiners);
 
@@ -235,6 +258,16 @@ private:
 	UPROPERTY(Replicated)
 	TArray<FMonsterIntent> Intents;
 
+	// 배신 전투: 배신자 (없으면 보통 전투), 지금 배신자 차례인가, 결과
+	UPROPERTY(Replicated)
+	TObjectPtr<ATerminusPlayerState> Betrayer;
+
+	UPROPERTY(Replicated)
+	bool bBetrayerTurn = false;
+
+	UPROPERTY(Replicated)
+	bool bBetrayerWon = false;
+
 	// 이번 플레이어 턴에 턴 종료를 누른 사람
 	UPROPERTY(Replicated)
 	TArray<TObjectPtr<ATerminusPlayerState>> EndedTurn;
@@ -295,6 +328,13 @@ private:
 	void ClearArea();
 	void ReportWipe();
 	void ApplyTempBuffs(ATerminusPlayerState* PS);
+
+	// 배신 전투
+	void BeginBetrayerTurn();
+	void TryAdvanceBetrayalTurn();
+	void FinishBetrayal(bool bInBetrayerWon);
+	void ReportBetrayalResult();
+	TArray<UCombatStatsComponent*> GetBetrayalSideStats(bool bBetrayerSide) const;
 
 	// -------------------------------------------------------------
 	// 유물 (서버만). 전투에 참가한 쪽(플레이어 / 몬스터)마다 보유 유물을 들고, 전투 사건이 오면 발동 시점이 맞는 것을 실행

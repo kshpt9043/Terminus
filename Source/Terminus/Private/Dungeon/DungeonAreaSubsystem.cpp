@@ -8,6 +8,7 @@
 #include "Player/TerminusPlayerState.h"
 #include "Character/TerminusBattler.h"
 #include "Combat/CombatStatsComponent.h"
+#include "Dungeon/DungeonCombatComponent.h"
 #include "TimerManager.h"
 
 void UDungeonAreaSubsystem::RegisterArea(ADungeonArea* Area)
@@ -125,6 +126,27 @@ bool UDungeonAreaSubsystem::StartSelectedRooms(const TArray<ATerminusPlayerState
 	}
 
 	return true;
+}
+
+bool UDungeonAreaSubsystem::StartBetrayal(const TArray<ATerminusPlayerState*>& Players, ATerminusPlayerState* Betrayer, const UDungeonThemeData* Theme, float VictimHealthCut, int32 StatPerOpponent)
+{
+	if (IsAnyRoomInProgress()) return false;
+
+	const TArray<ADungeonArea*> Sorted = GetSortedAreas();
+	if (Sorted.Num() == 0 || !Betrayer) return false;
+
+	Sorted[0]->BeginBetrayal(Players, Betrayer, Theme, VictimHealthCut, StatPerOpponent);
+	return true;
+}
+
+bool UDungeonAreaSubsystem::IsBetrayalInProgress() const
+{
+	for (const ADungeonArea* Area : GetActiveAreas())
+	{
+		const UDungeonCombatComponent* Combat = Area->GetCombat();
+		if (Combat && Combat->IsBetrayal()) return true;
+	}
+	return false;
 }
 
 void UDungeonAreaSubsystem::NotifyAreaCleared(ADungeonArea* Area)
@@ -368,6 +390,17 @@ void UDungeonAreaSubsystem::ApplyIntervention(const TArray<ADungeonArea*>& Survi
 
 void UDungeonAreaSubsystem::HandlePlayerLeft(ATerminusPlayerState* Leaver)
 {
+	// 배신 전투 중: 나간 사람은 진 걸로 (배신자면 팀 승리). 방 롤백은 안 함
+	for (ADungeonArea* Area : GetActiveAreas())
+	{
+		UDungeonCombatComponent* Combat = Area->GetCombat();
+		if (Combat && Combat->IsBetrayal())
+		{
+			Combat->HandleBetrayalLeaver(Leaver);
+			return;
+		}
+	}
+
 	bool bAnyInUse = false;
 	bool bAllFightsOver = true;
 	for (ADungeonArea* Area : GetSortedAreas())

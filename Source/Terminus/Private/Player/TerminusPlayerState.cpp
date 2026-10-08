@@ -125,6 +125,8 @@ void ATerminusPlayerState::BeginRun()
 	RunState.TempBuffs.Reset();
 	RunState.SeenRelics.Reset();
 	RunState.StartRelics.Reset();
+	RunState.BossRelic = NAME_None;
+	RunState.BossSkill = NAME_None;
 
 	// 직업 기본 유물 = 패시브. 데이터에 아직 없는 직업은 빈 채로
 	RunState.Relics.Reset();
@@ -453,6 +455,15 @@ void ATerminusPlayerState::ApplyPermanentStat(int32 StatKind, int32 Amount)
 	OnRep_RunState();
 }
 
+void ATerminusPlayerState::RecordBossReward(FName Skill, FName Relic)
+{
+	if (!HasAuthority()) return;
+
+	if (!Skill.IsNone()) RunState.BossSkill = Skill;
+	if (!Relic.IsNone()) RunState.BossRelic = Relic;
+	OnRep_RunState();
+}
+
 void ATerminusPlayerState::AddTempBuff(const FTempStatBuff& Buff)
 {
 	if (!HasAuthority() || Buff.BattlesLeft <= 0) return;
@@ -544,6 +555,8 @@ void ATerminusPlayerState::BeginFloor()
 	RunState.CurrentMapLevel = 0;
 	RunState.SelectedRoomId = -1;
 	RunState.VisitedRoomIds.Reset();
+	RunState.BossRelic = NAME_None;
+	RunState.BossSkill = NAME_None;
 	OnRep_RunState();
 
 	// 기획: 층이 바뀌면 체력 전부 회복

@@ -55,6 +55,12 @@ public:
 	//  - 아무도 없으면 (싱글 사망 / 멀티 전멸): 런 끝 -> 사망 정산 (유물만 골드로, 강화 스킬 / 던전 재화 소멸)
 	void NotifyAreaWiped(ADungeonArea* Area);
 
+	// [서버] 배신 전투를 첫 번째 구역에서 시작. 구역이 없거나 방이 진행 중이면 false
+	bool StartBetrayal(const TArray<ATerminusPlayerState*>& Players, ATerminusPlayerState* Betrayer, const UDungeonThemeData* Theme, float VictimHealthCut, int32 StatPerOpponent);
+
+	// 배신 전투가 진행 중인가 (누가 나가도 이공간으로 가지 않음: 끝나면 런이 끝남)
+	bool IsBetrayalInProgress() const;
+
 	// [서버] 구출 / 난입 투표 (PC 의 Server_ChooseRescue). 살아남은 사람만, 한 번
 	void HandleRescueChoice(ATerminusPlayerState* Voter, bool bIntervene);
 

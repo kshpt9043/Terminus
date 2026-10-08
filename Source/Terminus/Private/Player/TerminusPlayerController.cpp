@@ -516,7 +516,7 @@ void ATerminusPlayerController::Client_RunEnded_Implementation(const FText& Mess
 	}
 }
 
-void ATerminusPlayerController::Client_BeginSettlement_Implementation(const FText& Message, bool bDeath)
+void ATerminusPlayerController::Client_BeginSettlement_Implementation(const FText& Message, bool bDeath, const FSettlementAdjust& Adjust)
 {
 	if (RescueWidget)
 	{
@@ -538,8 +538,18 @@ void ATerminusPlayerController::Client_BeginSettlement_Implementation(const FTex
 		const UTerminusRunSubsystem* Run = GetGameInstance()->GetSubsystem<UTerminusRunSubsystem>();
 		const AMapManager* MapMgr = Cast<AMapManager>(UGameplayStatics::GetActorOfClass(this, AMapManager::StaticClass()));
 		const FRunState RunState = PS->GetRunState();
-		FPendingSettlement Settlement = Profile->MakeSettlement(RunState.Relics, RunState.StartRelics, RunState.EnhanceSkills, Message.ToString(),
+
+		// 배신 결과: 잃은 보스 보상은 빼고, 빼앗은 보스 유물은 더함
+		TArray<FName> RunRelics = RunState.Relics;
+		TArray<FName> RunSkills = RunState.EnhanceSkills;
+		for (const FName& Row : Adjust.LostRelics) RunRelics.Remove(Row);
+		for (const FName& Row : Adjust.LostSkills) RunSkills.Remove(Row);
+		for (const FName& Row : Adjust.ExtraRelics) RunRelics.AddUnique(Row);
+
+		FPendingSettlement Settlement = Profile->MakeSettlement(RunRelics, RunState.StartRelics, RunSkills, Message.ToString(),
 			Run ? Run->GetRoomName() : FString(), MapMgr ? MapMgr->CurrentFloor : 0, bDeath);
+		Settlement.BonusGold = Adjust.BonusGold;
+		Settlement.BonusReason = Adjust.BonusReason;
 
 		// 하드 모드에서 죽으면 들고 간 창고 유물이 창고(도감)에서 사라짐 (사용자 결정 10-08)
 		if (bDeath && RunState.bHardMode)
