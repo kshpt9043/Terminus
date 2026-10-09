@@ -84,8 +84,12 @@ void UEventWidget::BuildDefaultLayout()
 	TitleText = MakeEventText(WidgetTree, TEXT("TitleText"), TEXT("이벤트"), 32, EventPurple);
 	AddEventCentered(Column, TitleText, 0.f);
 
+	// 카드가 접혀도(결과만 보일 때) 글이 좁게 줄바꿈되지 않게 최소 폭을 줌
 	MessageText = MakeEventText(WidgetTree, TEXT("MessageText"), TEXT(""), 16, FLinearColor(0.9f, 0.9f, 0.9f));
-	AddEventCentered(Column, MessageText, 10.f);
+	USizeBox* MessageWidth = WidgetTree->ConstructWidget<USizeBox>();
+	MessageWidth->SetMinDesiredWidth(560.f);
+	MessageWidth->SetContent(MessageText);
+	AddEventCentered(Column, MessageWidth, 10.f);
 
 	CardBox = WidgetTree->ConstructWidget<UHorizontalBox>(UHorizontalBox::StaticClass(), TEXT("CardBox"));
 	AddEventCentered(Column, CardBox, 24.f);

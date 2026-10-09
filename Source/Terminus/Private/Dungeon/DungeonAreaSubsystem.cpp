@@ -317,7 +317,7 @@ void UDungeonAreaSubsystem::ResolveRescueVote()
 	Notice.Kind = EChatMessageKind::System;
 	Notice.Text = bIntervene
 		? FString::Printf(TEXT("난입! 전멸한 방에 들어가 남은 몬스터와 싸웁니다. (구출 %d / 난입 %d)"), Rescue, Intervene)
-		: FString::Printf(TEXT("구출! 쓰러진 동료를 데리고 다음 방으로 갑니다. (구출 %d / 난입 %d)"), Rescue, Intervene);
+		: FString::Printf(TEXT("구출! 쓰러진 동료를 일으켰습니다. 다음 방은 동료가 쓰러진 방에서 고릅니다. (구출 %d / 난입 %d)"), Rescue, Intervene);
 	ATerminusPlayerController::BroadcastChat(GetWorld(), Notice);
 
 	if (bIntervene) ApplyIntervention(Survivors, Wiped[0]);

@@ -517,7 +517,7 @@ void ATerminusPlayerController::Client_RunEnded_Implementation(const FText& Mess
 	}
 }
 
-void ATerminusPlayerController::Client_BeginSettlement_Implementation(const FText& Message, bool bDeath, const FSettlementAdjust& Adjust)
+void ATerminusPlayerController::Client_BeginSettlement_Implementation(const FText& Message, bool bDeath, const FSettlementAdjust& Adjust, const FString& RoomName)
 {
 	if (RescueWidget)
 	{
@@ -548,7 +548,7 @@ void ATerminusPlayerController::Client_BeginSettlement_Implementation(const FTex
 		for (const FName& Row : Adjust.ExtraRelics) RunRelics.AddUnique(Row);
 
 		FPendingSettlement Settlement = Profile->MakeSettlement(RunRelics, RunState.StartRelics, RunSkills, Message.ToString(),
-			Run ? Run->GetRoomName() : FString(), MapMgr ? MapMgr->CurrentFloor : 0, bDeath);
+			!RoomName.IsEmpty() ? RoomName : (Run ? Run->GetRoomName() : FString()), MapMgr ? MapMgr->CurrentFloor : 0, bDeath);
 		Settlement.BonusGold = Adjust.BonusGold;
 		Settlement.BonusReason = Adjust.BonusReason;
 
@@ -562,7 +562,7 @@ void ATerminusPlayerController::Client_BeginSettlement_Implementation(const FTex
 
 	UConfirmPopupWidget* Popup = ShowPopup(FText::FromString(bDeath ? TEXT("전멸") : TEXT("던전 탈출")),
 		FText::FromString(Message.ToString() + (bDeath
-			? TEXT("\n강화 스킬과 던전 재화는 사라지고, 유물은 골드로 판매됩니다.\n메인 화면에서 정산합니다.")
+			? TEXT("\n강화 스킬과 던전 재화는 사라지고,\n유물은 골드로 판매됩니다.\n메인 화면에서 정산합니다.")
 			: TEXT("\n메인 화면에서 정산합니다."))),
 		FText::FromString(TEXT("정산하러 가기")), FText::GetEmpty());
 	auto Leave = [this]()

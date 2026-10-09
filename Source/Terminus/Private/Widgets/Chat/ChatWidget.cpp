@@ -35,8 +35,9 @@ void UChatWidget::NativeOnInitialized()
 		InputBox->SetVisibility(ESlateVisibility::Collapsed);
 	}
 
-	// 채팅창 영역은 클릭을 받음 (드래그). 크기를 정해 붙이므로 그 바깥은 아래 화면이 그대로 눌림
-	SetVisibility(ESlateVisibility::Visible);
+	// 제목줄(드래그)만 클릭을 받고, 대화 목록은 입력 중일 때만 (평소엔 아래 전투 대상 버튼이 눌리게). ApplyBackground 참고
+	SetVisibility(ESlateVisibility::SelfHitTestInvisible);
+	ApplyBackground();
 }
 
 void UChatWidget::BuildDefaultLayout()
@@ -267,6 +268,13 @@ void UChatWidget::ApplyBackground()
 	if (Background)
 	{
 		Background->SetBrushColor(bInputOpen ? ActiveBackgroundColor : IdleBackgroundColor);
+		Background->SetVisibility(bInputOpen ? ESlateVisibility::Visible : ESlateVisibility::SelfHitTestInvisible);
+	}
+
+	// 입력 중일 때만 대화 목록이 클릭 / 스크롤을 받음
+	if (MessageList)
+	{
+		MessageList->SetVisibility(bInputOpen ? ESlateVisibility::Visible : ESlateVisibility::HitTestInvisible);
 	}
 }
 

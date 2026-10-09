@@ -105,6 +105,7 @@ void UConfirmPopupWidget::Setup(const FText& InTitle, const FText& InMessage, co
 	}
 	if (MessageText)
 	{
+		MessageText->SetAutoWrapText(true);   // WBP 에서 꺼 두었어도 긴 안내가 창 밖으로 안 나가게
 		MessageText->SetText(InMessage);
 		MessageText->SetVisibility(InMessage.IsEmpty() ? ESlateVisibility::Collapsed : ESlateVisibility::HitTestInvisible);
 	}

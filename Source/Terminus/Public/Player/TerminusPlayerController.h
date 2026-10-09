@@ -185,7 +185,7 @@ public:
 	// bDeath = 전멸 (사망 정산: 유물만 골드로 자동 판매, 강화 스킬 / 던전 재화 소멸). 아니면 탈출 정산
 	// Adjust = 서버가 정한 더하기 / 빼기 (배신 결과: 빼앗은 보스 유물, 잃은 보스 보상, 분배 골드)
 	UFUNCTION(Client, Reliable)
-	void Client_BeginSettlement(const FText& Message, bool bDeath, const FSettlementAdjust& Adjust);
+	void Client_BeginSettlement(const FText& Message, bool bDeath, const FSettlementAdjust& Adjust, const FString& RoomName);
 
 	// 다른 방 동료가 전멸: 구출 / 난입 고르기 (bChooser = 살아남은 사람). 전멸한 사람은 기다리는 화면
 	UFUNCTION(Client, Reliable)

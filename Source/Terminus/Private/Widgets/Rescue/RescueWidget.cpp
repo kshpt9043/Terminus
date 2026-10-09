@@ -130,12 +130,12 @@ void URescueWidget::Setup(bool bInChooser, const TArray<FString>& WipedNames, bo
 	if (RescueDescText)
 	{
 		RescueDescText->SetText(FText::FromString(FString::Printf(
-			TEXT("내 체력이 최대 체력의 %d%% 줄고, 쓰러진 동료를 체력 1 로 데리고 다음 방으로 갑니다. (보상 없음)"), CostPercent)));
+			TEXT("내 현재 체력의 %d%% 를 잃고, 쓰러진 동료를 체력 1 로 일으킵니다. 다음 방은 동료가 쓰러진 방에서 고릅니다. (보상 없음)"), CostPercent)));
 	}
 	if (InterveneDescText)
 	{
 		InterveneDescText->SetText(FText::FromString(bCanIntervene
-			? FString(TEXT("전멸한 방에 들어가 남은 몬스터와 싸웁니다. 몬스터 체력은 그대로, 이기면 보상을 받고 동료는 체력 1 로 일어납니다."))
+			? FString(TEXT("전멸한 방에 들어가 남은 몬스터와 싸웁니다. 몬스터 체력은 그대로, 이기면 보상을 받고 동료는 체력 1 로 일어납니다. 다음 방은 그 방에서 고릅니다."))
 			: FString(TEXT("전멸한 방이 여러 곳이라 난입할 수 없습니다."))));
 	}
 

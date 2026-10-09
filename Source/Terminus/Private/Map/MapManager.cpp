@@ -1426,8 +1426,9 @@ void AMapManager::EndRun(const FString& Reason, bool bDeath, const TMap<APlayerS
         if (ATerminusPlayerController* PC = Cast<ATerminusPlayerController>(It->Get()))
         {
             const FRunEndResult* Result = Results ? Results->Find(PC->PlayerState) : nullptr;
+            const UTerminusRunSubsystem* RunSub = GetGameInstance() ? GetGameInstance()->GetSubsystem<UTerminusRunSubsystem>() : nullptr;
             PC->Client_BeginSettlement(FText::FromString(Result && !Result->Message.IsEmpty() ? Result->Message : Reason), bDeath,
-                Result ? Result->Adjust : FSettlementAdjust());
+                Result ? Result->Adjust : FSettlementAdjust(), RunSub ? RunSub->GetRoomName() : FString());
         }
     }
 }

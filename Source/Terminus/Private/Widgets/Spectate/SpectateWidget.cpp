@@ -15,6 +15,7 @@
 #include "Dungeon/DungeonCombatComponent.h"
 #include "Player/TerminusPlayerController.h"
 #include "Player/TerminusPlayerState.h"
+#include "TimerManager.h"
 
 namespace
 {
@@ -105,16 +106,23 @@ void USpectateWidget::BuildDefaultLayout()
 	Row->AddChildToHorizontalBox(ButtonBox);
 }
 
-void USpectateWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
+void USpectateWidget::NativeConstruct()
 {
-	Super::NativeTick(MyGeometry, InDeltaTime);
+	Super::NativeConstruct();
 
-	RefreshTimer += InDeltaTime;
-	if (RefreshTimer >= 0.3f)
+	if (UWorld* World = GetWorld())
 	{
-		RefreshTimer = 0.f;
-		Refresh();
+		World->GetTimerManager().SetTimer(RefreshHandle, this, &USpectateWidget::Refresh, 0.3f, true);
 	}
+}
+
+void USpectateWidget::NativeDestruct()
+{
+	if (UWorld* World = GetWorld())
+	{
+		World->GetTimerManager().ClearTimer(RefreshHandle);
+	}
+	Super::NativeDestruct();
 }
 
 void USpectateWidget::Refresh()

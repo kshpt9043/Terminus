@@ -250,9 +250,9 @@ FString UFloorVoteWidget::ChoiceDescription(EFloorChoice Choice) const
 	case EFloorChoice::NextFloor:
 		return FString::Printf(TEXT("%d층(%s)으로 내려갑니다.\n새 테마, 더 강한 적과 보상."), Shown.Floor + 1, *AMapManager::GetTierName(Shown.Floor + 1).ToString());
 	case EFloorChoice::Escape:
-		return TEXT("던전을 나가 정산합니다.\n모은 유물을 팔거나 창고에 보관합니다.\n(정산은 준비 중)");
+		return TEXT("던전을 나가 정산합니다.\n얻은 유물 중 하나를 창고에 보관하고,\n장착한 픽업 스킬 하나를 가져갑니다.");
 	case EFloorChoice::Betray:
-		return TEXT("동료를 배신하고 홀로 싸웁니다.\n선착순 1명만 고를 수 있습니다.\n(배신 전투는 준비 중)");
+		return TEXT("동료를 배신하고 홀로 싸웁니다.\n이기면 동료들의 보스 유물을 빼앗습니다.\n선착순 1명만 고를 수 있습니다.");
 	default:
 		return FString();
 	}

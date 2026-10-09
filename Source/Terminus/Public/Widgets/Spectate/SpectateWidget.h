@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
+#include "Engine/TimerHandle.h"
 #include "SpectateWidget.generated.h"
 
 class ADungeonArea;
@@ -43,7 +44,8 @@ public:
 
 protected:
 	virtual void NativeOnInitialized() override;
-	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
+	virtual void NativeConstruct() override;
+	virtual void NativeDestruct() override;
 
 	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UTextBlock> LabelText;
 
@@ -51,7 +53,8 @@ protected:
 	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UPanelWidget> ButtonBox;
 
 private:
-	float RefreshTimer = 0.f;
+	// 숨긴(Collapsed) 위젯은 NativeTick 이 안 불려서 타이머로 판단
+	FTimerHandle RefreshHandle;
 	FString ShownKey;
 
 	UPROPERTY()
