@@ -460,7 +460,7 @@ void UStorageWidget::ShowDetail(const UItemSlotWidget* InSlot)
 		if (const FSkillRow* Skill = UTerminusDataSettings::FindSkillRow(InSlot->GetItemRow()))
 		{
 			Name = Skill->DisplayName_KR.ToString();
-			Info = FString::Printf(TEXT("스킬 · %s · %s · 강화 에너지 %d"),
+			Info = FString::Printf(TEXT("스킬 · %s · %s · 스킬 에너지 %d"),
 				*StorageSkillTypeLabel(Skill->SkillType), *StorageOwnerLabel(Skill->OwnerClass), Skill->SkillEnergyCost);
 			Desc = Skill->Description_KR.ToString().Replace(TEXT("\\n"), TEXT("\n"));
 		}

@@ -137,7 +137,7 @@ void UCombatHUDWidget::BuildDefaultLayout()
 	HintText = MakeText(WidgetTree, TEXT(""), 20, FLinearColor(1.f, 0.9f, 0.4f));
 	AddToCanvas(Root, HintText, FAnchors(0.5f, 1.f), FVector2D(0.5f, 1.f), FVector2D(0.f, -200.f));
 
-	// ---- 왼쪽 아래: 에너지 + 기본 스킬 3개 / 강화 에너지
+	// ---- 왼쪽 아래: 에너지 + 기본 스킬 3개 / 스킬 에너지
 	UVerticalBox* LeftBox = WidgetTree->ConstructWidget<UVerticalBox>();
 
 	UHorizontalBox* SkillRow = WidgetTree->ConstructWidget<UHorizontalBox>();
@@ -154,7 +154,7 @@ void UCombatHUDWidget::BuildDefaultLayout()
 	LeftBox->AddChildToVerticalBox(SkillRow);
 
 	UHorizontalBox* EnhanceRow = WidgetTree->ConstructWidget<UHorizontalBox>();
-	SkillEnergyText = MakeText(WidgetTree, TEXT("강화 에너지 0/0"), 18, SkillEnergyColor);
+	SkillEnergyText = MakeText(WidgetTree, TEXT("스킬 에너지 0/0"), 18, SkillEnergyColor);
 	if (UHorizontalBoxSlot* S = EnhanceRow->AddChildToHorizontalBox(SkillEnergyText))
 	{
 		S->SetVerticalAlignment(VAlign_Center);
@@ -580,7 +580,7 @@ void UCombatHUDWidget::UpdatePanels()
 		}
 		if (SkillEnergyText)
 		{
-			SkillEnergyText->SetText(FText::FromString(FString::Printf(TEXT("강화 에너지 %d/%d"), State.SkillEnergy, Stats.MaxSkillEnergy)));
+			SkillEnergyText->SetText(FText::FromString(FString::Printf(TEXT("스킬 에너지 %d/%d"), State.SkillEnergy, Stats.MaxSkillEnergy)));
 		}
 
 		// 강화 칸 수가 캐릭터 스텟과 다르면 다시 만듦

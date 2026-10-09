@@ -54,7 +54,7 @@ struct FRunState
 	UPROPERTY(BlueprintReadOnly)
 	bool bStatsInitialized = false;
 
-	// 장착한 강화 스킬 (DT_Skill 행 이름). 강화 에너지로 씀. 최대 Stats.EnhanceSlots 칸
+	// 장착한 강화 스킬 (DT_Skill 행 이름). 스킬 에너지로 씀. 최대 Stats.EnhanceSlots 칸
 	UPROPERTY(BlueprintReadOnly)
 	TArray<FName> EnhanceSkills;
 

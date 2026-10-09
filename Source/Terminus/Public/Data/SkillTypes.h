@@ -125,7 +125,7 @@ enum class EActionKind : uint8
 	EvasionSelf,          // 자신 회피 증가. 1사이클만 유지
 	StatusPoisonAll,      // 적 전체 중독만 부여
 	EvasionSelfPoisonAll, // 조합 -> EvasionSelf + StatusPoisonAll
-	GainEnergy,           // 즉시 행동 에너지 회복
+	GainEnergy,           // 즉시 에너지 회복
 	BraveSelf,            // 자신 용기 부여만. 공격 오름
 	BraveAll,             // 아군 전체 용기 부여
 	HitEnemyProtect,      // 조합 -> HitEnemy + ProtectSelf
@@ -212,7 +212,7 @@ struct FSkillRow : public FTableRowBase
 
 	// --- 비용
 
-	// 매 턴 최대치까지 회복되는 기본 에너지. 기본 스킬은 보통 1
+	// 매 턴 최대치까지 회복되는 에너지. 기본 스킬은 보통 1
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	int32 EnergyCost = 1;
 

@@ -11,7 +11,7 @@ FText GetStatUpgradeName(EStatUpgrade Stat)
 	case EStatUpgrade::Defense:       return FText::FromString(TEXT("방어"));
 	case EStatUpgrade::Evasion:       return FText::FromString(TEXT("회피"));
 	case EStatUpgrade::Energy:        return FText::FromString(TEXT("에너지"));
-	case EStatUpgrade::SkillEnergy:   return FText::FromString(TEXT("스킬에너지"));
+	case EStatUpgrade::SkillEnergy:   return FText::FromString(TEXT("스킬 에너지"));
 	case EStatUpgrade::RelicCapacity: return FText::FromString(TEXT("유물 최대치"));
 	case EStatUpgrade::PickupSlots:   return FText::FromString(TEXT("픽업 스킬 칸"));
 	default:                          return FText::GetEmpty();

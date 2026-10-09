@@ -47,7 +47,7 @@ struct FCharacterStats
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	int32 MaxSkillEnergy = 2;
 
-	// 전투 시작 때 갖고 시작하는 스킬 에너지 (기본 0, 연무장 '스킬에너지' 강화로 늘어남)
+	// 전투 시작 때 갖고 시작하는 스킬 에너지 (기본 0, 연무장 '스킬 에너지' 강화로 늘어남)
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	int32 StartSkillEnergy = 0;
 

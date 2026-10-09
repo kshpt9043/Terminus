@@ -59,7 +59,7 @@ public:
 	FOnStatsAmount OnShieldGained;        // 보호막이 늘었을 때
 	FOnStatsAmount OnHealed;              // 체력이 실제로 회복됐을 때
 	FOnStatsAmount OnEnergySpent;         // 에너지를 썼을 때
-	FOnStatsAmount OnSkillEnergySpent;    // 강화 에너지를 썼을 때
+	FOnStatsAmount OnSkillEnergySpent;    // 스킬 에너지를 썼을 때
 	FOnStatsDied OnDiedNative;            // 죽었을 때 (누가 죽었는지 알 수 있게)
 	FPreventDeath PreventDeath;           // 죽기 직전 (부활)
 
@@ -105,7 +105,7 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Terminus|Combat")
 	bool HasStatus(EStatusEffect Type) const;
 
-	// 과욕(산성): 기본 에너지를 쓰는 스킬은 소모량 +1
+	// 과욕(산성): 에너지를 쓰는 스킬은 소모량 +1
 	int32 GetEffectiveEnergyCost(int32 BaseCost) const;
 
 	// 자기 턴 끝

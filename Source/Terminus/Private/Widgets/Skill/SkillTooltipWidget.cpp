@@ -98,7 +98,7 @@ void USkillTooltipWidget::SetSkill(const FSkillRow* InSkill)
 	{
 		FString Cost;
 		if (InSkill->EnergyCost > 0)      Cost = FString::Printf(TEXT("에너지 %d"), InSkill->EnergyCost);
-		if (InSkill->SkillEnergyCost > 0) Cost += FString::Printf(TEXT("%s강화 에너지 %d"), Cost.IsEmpty() ? TEXT("") : TEXT("  ·  "), InSkill->SkillEnergyCost);
+		if (InSkill->SkillEnergyCost > 0) Cost += FString::Printf(TEXT("%s스킬 에너지 %d"), Cost.IsEmpty() ? TEXT("") : TEXT("  ·  "), InSkill->SkillEnergyCost);
 		if (Cost.IsEmpty())               Cost = TEXT("비용 없음");
 		CostText->SetText(FText::FromString(Cost));
 	}

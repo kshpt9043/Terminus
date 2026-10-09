@@ -30,7 +30,7 @@ protected:
 	// "공격 · 적 1명"
 	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UTextBlock> TypeText;
 
-	// "에너지 1" / "강화 에너지 1"
+	// "에너지 1" / "스킬 에너지 1"
 	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UTextBlock> CostText;
 
 	// 설명 (DT 의 Description_KR)

@@ -37,7 +37,7 @@ enum class ERelicTrigger : uint8
 	OnTurnEnd,              // 자기 턴 끝
 	OnDead,                 // 사망 시 (BaseValue 만큼)
 	OnUseEnergy,            // 에너지를 쓸 때마다
-	OnUseSkillEnergy,       // 강화 에너지를 쓸 때마다
+	OnUseSkillEnergy,       // 스킬 에너지를 쓸 때마다
 	OnGainRelic,            // 이 유물을 얻었을 때 (팔아도 효과 유지)
 	OnRestStart,            // 휴식터에 들어갈 때
 	OnGuardianBattleStart,  // 가디언 전투 시작

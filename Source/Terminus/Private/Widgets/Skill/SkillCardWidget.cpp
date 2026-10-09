@@ -119,7 +119,7 @@ void USkillCardWidget::SetSkill(FName InSkillRow)
 
 	if (CostText)
 	{
-		FString Cost = FString::Printf(TEXT("강화 에너지 %d"), Row->SkillEnergyCost);
+		FString Cost = FString::Printf(TEXT("스킬 에너지 %d"), Row->SkillEnergyCost);
 		if (Row->EnergyCost > 0)
 		{
 			Cost += FString::Printf(TEXT("  ·  에너지 %d"), Row->EnergyCost);

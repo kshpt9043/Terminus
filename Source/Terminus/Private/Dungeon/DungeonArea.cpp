@@ -491,7 +491,7 @@ TArray<FEventOption> ADungeonArea::MakeEventOptions(const ATerminusPlayerState* 
 		Option.Type = Type;
 		Option.SkillRow = Row;
 		Option.Title = Skill->DisplayName_KR;
-		Option.Description = FText::FromString(FString::Printf(TEXT("%s\n(강화 에너지 %d)"), *Guide, Skill->SkillEnergyCost));
+		Option.Description = FText::FromString(FString::Printf(TEXT("%s\n(스킬 에너지 %d)"), *Guide, Skill->SkillEnergyCost));
 		Candidates.Add(Option);
 	};
 

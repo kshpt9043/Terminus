@@ -27,7 +27,7 @@ void UCombatStatsComponent::InitFrom(const FCharacterStats& InStats)
 	State.Health = Stats.MaxHealth;
 	State.Energy = Stats.MaxEnergy;
 	
-	// 연무장 '스킬에너지' 강화만큼 갖고 시작
+	// 연무장 '스킬 에너지' 강화만큼 갖고 시작
 	State.SkillEnergy = FMath::Clamp(Stats.StartSkillEnergy, 0, FMath::Max(0, Stats.MaxSkillEnergy));
 
 	NotifyStateChanged();
@@ -211,7 +211,7 @@ bool UCombatStatsComponent::SpendSkillEnergy(int32 Cost)
 		State.SkillEnergy -= Cost;
 		NotifyStateChanged();
 
-		// 내상: 강화 에너지를 쓸 때마다 수치만큼 피해
+		// 내상: 스킬 에너지를 쓸 때마다 수치만큼 피해
 		if (const int32 Injury = GetStatusValue(EStatusEffect::InternalInjury); Injury > 0)
 		{
 			ApplyDamage(Injury);
@@ -234,7 +234,7 @@ void UCombatStatsComponent::AddEnergy(int32 Amount, bool bAllowOverMax)
 
 int32 UCombatStatsComponent::GetEffectiveEnergyCost(int32 BaseCost) const
 {
-	// 과욕(산성): 기본 에너지만 적용 -> 기본 에너지를 쓰는 스킬만 +1
+	// 과욕(산성): 에너지만 적용 -> 에너지를 쓰는 스킬만 +1
 	return (BaseCost > 0 && HasStatus(EStatusEffect::Acid)) ? BaseCost + 1 : BaseCost;
 }
 
