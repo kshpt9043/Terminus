@@ -26,6 +26,7 @@
 #include "Widgets/Event/EventWidget.h"
 #include "Widgets/Rescue/RescueWidget.h"
 #include "Widgets/Spectate/SpectateWidget.h"
+#include "Widgets/Shop/ShopWidget.h"
 #include "Dungeon/DungeonAreaSubsystem.h"
 #include "Dungeon/DungeonAreaSubsystem.h"
 #include "Widgets/Common/ConfirmPopupWidget.h"
@@ -667,6 +668,63 @@ void ATerminusPlayerController::Server_ChooseRestTarget_Implementation(APlayerSt
 	{
 		Area->HandleRestChoice(PS, Cast<ATerminusPlayerState>(Target));
 	}
+}
+
+void ATerminusPlayerController::Client_ShowShop_Implementation(const FShopState& State)
+{
+	if (!ShopWidget)
+	{
+		const TSubclassOf<UShopWidget> Class = ShopClass ? ShopClass : TSubclassOf<UShopWidget>(UShopWidget::StaticClass());
+		ShopWidget = CreateWidget<UShopWidget>(this, Class);
+		if (ShopWidget)
+		{
+			ShopWidget->AddToViewport(22);   // 보상 / 휴식 / 이벤트 화면과 같은 높이, 채팅(25) 아래
+		}
+	}
+
+	if (ShopWidget)
+	{
+		ShopWidget->SetShopState(State);
+	}
+}
+
+void ATerminusPlayerController::Client_CloseShop_Implementation()
+{
+	if (ShopWidget)
+	{
+		ShopWidget->RemoveFromParent();
+		ShopWidget = nullptr;
+	}
+}
+
+void ATerminusPlayerController::Server_ShopBuyRelic_Implementation(int32 Index)
+{
+	ATerminusPlayerState* PS = GetPlayerState<ATerminusPlayerState>();
+	if (ADungeonArea* Area = PS ? PS->GetCurrentArea() : nullptr) Area->HandleShopBuyRelic(PS, Index);
+}
+
+void ATerminusPlayerController::Server_ShopBuySkill_Implementation(int32 Index, int32 ReplaceSlot)
+{
+	ATerminusPlayerState* PS = GetPlayerState<ATerminusPlayerState>();
+	if (ADungeonArea* Area = PS ? PS->GetCurrentArea() : nullptr) Area->HandleShopBuySkill(PS, Index, ReplaceSlot);
+}
+
+void ATerminusPlayerController::Server_ShopSellRelic_Implementation(FName RelicRow)
+{
+	ATerminusPlayerState* PS = GetPlayerState<ATerminusPlayerState>();
+	if (ADungeonArea* Area = PS ? PS->GetCurrentArea() : nullptr) Area->HandleShopSellRelic(PS, RelicRow);
+}
+
+void ATerminusPlayerController::Server_ShopUpgradeSkill_Implementation(FName SkillRow)
+{
+	ATerminusPlayerState* PS = GetPlayerState<ATerminusPlayerState>();
+	if (ADungeonArea* Area = PS ? PS->GetCurrentArea() : nullptr) Area->HandleShopUpgradeSkill(PS, SkillRow);
+}
+
+void ATerminusPlayerController::Server_ShopLeave_Implementation()
+{
+	ATerminusPlayerState* PS = GetPlayerState<ATerminusPlayerState>();
+	if (ADungeonArea* Area = PS ? PS->GetCurrentArea() : nullptr) Area->HandleShopLeave(PS);
 }
 
 void ATerminusPlayerController::Client_ShowEvent_Implementation(const TArray<FEventOption>& Options)

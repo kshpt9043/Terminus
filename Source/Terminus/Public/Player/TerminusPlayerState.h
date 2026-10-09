@@ -92,8 +92,17 @@ public:
 	// BeginRun 때 고른 직업의 강화를 런 스텟 / 기본 스킬 단계에 넣음
 	void SetReportedUpgrades(const TArray<FClassUpgrades>& InUpgrades) { ReportedUpgrades = InUpgrades; }
 
-	// 기본 스킬(0~2 칸)에 훈련소 강화를 더함. BaseValue 가 있으면 BaseValue, 없으면 StatusValue
+	// 스킬 강화 단계를 더함. 기본 스킬(0~2 칸)은 훈련소 강화, 강화 스킬 칸(3~)은 픽업 스킬 강화 (상점)
+	// BaseValue 가 있으면 BaseValue, 없으면 StatusValue
 	void ApplyBasicSkillUpgrade(int32 SlotIndex, FSkillRow& InOutSkill) const;
+
+	// [픽업 스킬 강화] 최대 단계 (기획 스킬 강화: 최대 +3)
+	static constexpr int32 MaxPickupSkillLevel = 3;
+
+	int32 GetPickupSkillLevel(FName SkillRow) const;
+
+	// 한 단계 올림 (서버만). 최대면 false
+	bool UpgradePickupSkill(FName SkillRow);
 
 	// 강화 스킬 장착 (서버만). 빈 칸이 있으면 거기에, 꽉 찼으면 ReplaceIndex 칸을 바꿈. 못 넣으면 false
 	bool EquipEnhanceSkill(FName SkillRow, int32 ReplaceIndex = INDEX_NONE);

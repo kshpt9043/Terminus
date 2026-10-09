@@ -27,6 +27,7 @@ class URestWidget;
 class UEventWidget;
 class URescueWidget;
 class USpectateWidget;
+class UShopWidget;
 struct FRunState;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnViewAreaChanged, ADungeonArea*, NewArea);
@@ -212,6 +213,28 @@ public:
 	UFUNCTION(Server, Reliable)
 	void Server_ChooseRestTarget(APlayerState* Target);
 
+	// 상점: 화면 열기 / 갱신 (서버가 바뀔 때마다 보냄) / 닫기 / 사고팔기 / 나가기
+	UFUNCTION(Client, Reliable)
+	void Client_ShowShop(const FShopState& State);
+
+	UFUNCTION(Client, Reliable)
+	void Client_CloseShop();
+
+	UFUNCTION(Server, Reliable)
+	void Server_ShopBuyRelic(int32 Index);
+
+	UFUNCTION(Server, Reliable)
+	void Server_ShopBuySkill(int32 Index, int32 ReplaceSlot);
+
+	UFUNCTION(Server, Reliable)
+	void Server_ShopSellRelic(FName RelicRow);
+
+	UFUNCTION(Server, Reliable)
+	void Server_ShopUpgradeSkill(FName SkillRow);
+
+	UFUNCTION(Server, Reliable)
+	void Server_ShopLeave();
+
 	// 이벤트 방: 후보 고르기 화면 (이미 떠 있으면 처음으로) / 고른 결과 / 닫기 / 고른 후보 알리기
 	UFUNCTION(Client, Reliable)
 	void Client_ShowEvent(const TArray<FEventOption>& Options);
@@ -352,6 +375,13 @@ protected:
 
 	UPROPERTY()
 	TObjectPtr<URestWidget> RestWidget;
+
+	// 상점 화면. 비워 두면 C++ 기본 모양(UShopWidget)
+	UPROPERTY(EditDefaultsOnly, Category = "Terminus|UI")
+	TSubclassOf<UShopWidget> ShopClass;
+
+	UPROPERTY()
+	TObjectPtr<UShopWidget> ShopWidget;
 
 	// 관전 바 (다른 구역 보기). 비워 두면 C++ 기본 모양(USpectateWidget)
 	UPROPERTY(EditDefaultsOnly, Category = "Terminus|UI")

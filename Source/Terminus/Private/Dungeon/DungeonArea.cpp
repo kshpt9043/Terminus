@@ -201,7 +201,8 @@ void ADungeonArea::BeginRoom(const FRoomNode& InRoom, const TArray<ATerminusPlay
 	//  - 몬스터 / 가디언 / 보스: 전투 (끝나면 전투 쪽이 MarkCleared)
 	//  - 휴식터: 회복 대상 고르기 (전원이 고르면 MarkCleared)
 	//  - 이벤트: 각자 후보 3개 중 하나 고르기 (전원이 고르면 MarkCleared)
-	//  - TODO 상점 / 퀘스트: 해당 UI. 지금은 DebugClearArea 로 넘김
+	//  - 상점: 각자 사고팔기, 전원이 나가면 MarkCleared
+	//  - TODO 퀘스트: 해당 UI. 지금은 DebugClearArea 로 넘김
 	if (Room.Type == ERoomType::BREAK)
 	{
 		BeginRest();
@@ -210,6 +211,11 @@ void ADungeonArea::BeginRoom(const FRoomNode& InRoom, const TArray<ATerminusPlay
 	if (Room.Type == ERoomType::EVENT)
 	{
 		BeginEvent();
+		return;
+	}
+	if (Room.Type == ERoomType::STORE)
+	{
+		BeginShop();
 		return;
 	}
 
@@ -688,6 +694,233 @@ void ADungeonArea::FinishEvent()
 	MarkCleared();
 }
 
+// =====================================================================
+// 상점 (사용자 결정 2026-10-09: 진열은 미정이라 도감(데이터 전체)에서 아무거나)
+// =====================================================================
+
+namespace
+{
+	template <typename T>
+	void ShopShuffle(TArray<T>& Array)
+	{
+		for (int32 i = Array.Num() - 1; i > 0; --i)
+		{
+			Array.Swap(i, FMath::RandRange(0, i));
+		}
+	}
+
+	FString ShopRelicName(FName Row)
+	{
+		const FRelicRow* Relic = UTerminusDataSettings::FindRelicRow(Row);
+		return Relic ? Relic->RelicName.ToString() : Row.ToString();
+	}
+
+	FString ShopSkillName(FName Row)
+	{
+		const FSkillRow* Skill = UTerminusDataSettings::FindSkillRow(Row);
+		return Skill ? Skill->DisplayName_KR.ToString() : Row.ToString();
+	}
+}
+
+void ADungeonArea::BeginShop()
+{
+	bShopping = true;
+	ShopStates.Reset();
+	ShopDone.Reset();
+
+	for (ATerminusPlayerState* PS : Occupants)
+	{
+		if (!PS) continue;
+		ShopStates.Add(PS, MakeShopState(PS));
+		SendShop(PS, FString());
+	}
+
+	CheckShopDone();
+}
+
+FShopState ADungeonArea::MakeShopState(ATerminusPlayerState* PS) const
+{
+	FShopState State;
+	State.UpgradeCostPerLevel = ShopUpgradeCostPerLevel;
+	if (!PS) return State;
+
+	// 유물: 상점에 나올 수 있고(가격 있음, 기본 / 업그레이드 아님) 이 직업이 가질 수 있는 것, 가진 것 / 이번 런에 나온 것 빼고
+	TArray<FName> Relics;
+	if (const UDataTable* Table = UTerminusDataSettings::Get()->RelicTable.LoadSynchronous())
+	{
+		for (const FName& Row : Table->GetRowNames())
+		{
+			const FRelicRow* Relic = UTerminusDataSettings::FindRelicRow(Row);
+			if (!Relic || !Relic->CanBuyInShop()) continue;
+			if (!ATerminusPlayerState::CanClassHoldRelic(PS->GetCharacterClass(), *Relic)) continue;
+			if (PS->GetRelics().Contains(Row) || PS->HasSeenRelic(Row)) continue;
+			Relics.Add(Row);
+		}
+	}
+	ShopShuffle(Relics);
+	Relics.SetNum(FMath::Min(Relics.Num(), ShopRelicCount));
+	for (const FName& Row : Relics)
+	{
+		State.RelicOffers.Add(Row);
+		State.RelicPrices.Add(FMath::Max(0, UTerminusDataSettings::FindRelicRow(Row)->BuyPrice_Dungeon));
+		State.RelicBought.Add(false);
+	}
+	PS->MarkRelicsSeen(State.RelicOffers);   // 상점에 나온 유물은 안 사도 이번 런엔 다시 안 나옴 (기획 유물 특이사항)
+
+	// 픽업 스킬: 이 직업이 장착할 수 있는, 스킬 에너지를 쓰는 스킬. 이미 장착한 것 빼고
+	TArray<FName> Skills;
+	const TArray<FName> Equipped = PS->GetRunState().EnhanceSkills;
+	if (const UDataTable* Table = UTerminusDataSettings::Get()->SkillTable.LoadSynchronous())
+	{
+		for (const FName& Row : Table->GetRowNames())
+		{
+			const FSkillRow* Skill = UTerminusDataSettings::FindSkillRow(Row);
+			if (!Skill || Skill->SkillEnergyCost <= 0 || Equipped.Contains(Row)) continue;
+			if (!UTerminusProfileSubsystem::IsEquippableSkill(Row, PS->GetCharacterClass())) continue;
+			Skills.Add(Row);
+		}
+	}
+	ShopShuffle(Skills);
+	Skills.SetNum(FMath::Min(Skills.Num(), ShopSkillCount));
+	for (const FName& Row : Skills)
+	{
+		State.SkillOffers.Add(Row);
+		State.SkillPrices.Add(ShopSkillPrice);
+		State.SkillBought.Add(false);
+	}
+	return State;
+}
+
+void ADungeonArea::SendShop(ATerminusPlayerState* PS, const FString& Message)
+{
+	FShopState* State = PS ? ShopStates.Find(PS) : nullptr;
+	ATerminusPlayerController* PC = PS ? Cast<ATerminusPlayerController>(PS->GetOwner()) : nullptr;
+	if (!State || !PC) return;
+
+	State->Message = FText::FromString(Message);
+	PC->Client_ShowShop(*State);
+}
+
+void ADungeonArea::HandleShopBuyRelic(ATerminusPlayerState* PS, int32 Index)
+{
+	FShopState* State = bShopping && PS && !ShopDone.Contains(PS) ? ShopStates.Find(PS) : nullptr;
+	if (!State || !State->RelicOffers.IsValidIndex(Index) || State->RelicBought[Index]) return;
+
+	const FName Row = State->RelicOffers[Index];
+	const int32 Price = State->RelicPrices[Index];
+	if (PS->GetRunState().Currency < Price)
+	{
+		SendShop(PS, TEXT("던전 재화가 부족합니다."));
+		return;
+	}
+	if (PS->GetRelics().Num() >= PS->GetRelicCapacity())
+	{
+		SendShop(PS, TEXT("유물 칸이 가득 찼습니다. 먼저 유물을 판매하세요."));
+		return;
+	}
+	if (!PS->GainRelic(Row))
+	{
+		SendShop(PS, TEXT("이 유물은 가질 수 없습니다."));
+		return;
+	}
+
+	PS->AddCurrency(-Price);
+	State->RelicBought[Index] = true;
+	SendShop(PS, FString::Printf(TEXT("구매: %s"), *ShopRelicName(Row)));
+}
+
+void ADungeonArea::HandleShopBuySkill(ATerminusPlayerState* PS, int32 Index, int32 ReplaceSlot)
+{
+	FShopState* State = bShopping && PS && !ShopDone.Contains(PS) ? ShopStates.Find(PS) : nullptr;
+	if (!State || !State->SkillOffers.IsValidIndex(Index) || State->SkillBought[Index]) return;
+
+	const FName Row = State->SkillOffers[Index];
+	const int32 Price = State->SkillPrices[Index];
+	if (PS->GetRunState().Currency < Price)
+	{
+		SendShop(PS, TEXT("던전 재화가 부족합니다."));
+		return;
+	}
+	if (!PS->EquipEnhanceSkill(Row, ReplaceSlot))
+	{
+		SendShop(PS, TEXT("강화 스킬 칸이 가득 찼습니다. 바꿀 칸을 고르세요."));
+		return;
+	}
+
+	PS->AddCurrency(-Price);
+	State->SkillBought[Index] = true;
+	SendShop(PS, FString::Printf(TEXT("구매: %s"), *ShopSkillName(Row)));
+}
+
+void ADungeonArea::HandleShopSellRelic(ATerminusPlayerState* PS, FName RelicRow)
+{
+	if (!bShopping || !PS || ShopDone.Contains(PS) || !ShopStates.Contains(PS)) return;
+
+	const FRelicRow* Relic = UTerminusDataSettings::FindRelicRow(RelicRow);
+	if (!Relic || !PS->GetRelics().Contains(RelicRow)) return;
+	if (Relic->RelicTier == ERelicTier::Basic || !Relic->CanSellInShop())
+	{
+		SendShop(PS, TEXT("이 유물은 팔 수 없습니다."));
+		return;
+	}
+
+	PS->RemoveRelic(RelicRow);
+	PS->AddCurrency(Relic->SellPrice_Dungeon);
+	PS->MarkRelicsSeen({ RelicRow });   // 판 유물은 이번 런엔 다시 안 나옴
+	SendShop(PS, FString::Printf(TEXT("판매: %s (+%d)"), *Relic->RelicName.ToString(), Relic->SellPrice_Dungeon));
+}
+
+void ADungeonArea::HandleShopUpgradeSkill(ATerminusPlayerState* PS, FName SkillRow)
+{
+	if (!bShopping || !PS || ShopDone.Contains(PS) || !ShopStates.Contains(PS)) return;
+	if (!PS->GetRunState().EnhanceSkills.Contains(SkillRow)) return;
+
+	const int32 Level = PS->GetPickupSkillLevel(SkillRow);
+	if (Level >= ATerminusPlayerState::MaxPickupSkillLevel)
+	{
+		SendShop(PS, TEXT("이미 최대로 강화했습니다."));
+		return;
+	}
+
+	const int32 Cost = ShopUpgradeCostPerLevel * (Level + 1);
+	if (PS->GetRunState().Currency < Cost)
+	{
+		SendShop(PS, TEXT("던전 재화가 부족합니다."));
+		return;
+	}
+
+	PS->UpgradePickupSkill(SkillRow);
+	PS->AddCurrency(-Cost);
+	SendShop(PS, FString::Printf(TEXT("강화: %s +%d"), *ShopSkillName(SkillRow), Level + 1));
+}
+
+void ADungeonArea::HandleShopLeave(ATerminusPlayerState* PS)
+{
+	if (!bShopping || !PS || !Occupants.Contains(PS) || ShopDone.Contains(PS)) return;
+
+	ShopDone.Add(PS);
+	if (ATerminusPlayerController* PC = Cast<ATerminusPlayerController>(PS->GetOwner()))
+	{
+		PC->Client_CloseShop();
+	}
+	CheckShopDone();
+}
+
+void ADungeonArea::CheckShopDone()
+{
+	for (ATerminusPlayerState* PS : Occupants)
+	{
+		if (PS && !ShopDone.Contains(PS)) return;
+	}
+	GetWorldTimerManager().SetTimer(ShopTimer, this, &ADungeonArea::FinishShop, 0.5f, false);
+}
+
+void ADungeonArea::FinishShop()
+{
+	if (!bShopping) return;
+	MarkCleared();
+}
+
 void ADungeonArea::MarkCleared()
 {
 	if (!HasAuthority() || !bInUse || bCleared) return;
@@ -822,6 +1055,22 @@ void ADungeonArea::Release()
 		}
 		bResting = false;
 		RestChosen.Reset();
+	}
+
+	// 상점 화면 닫기
+	if (bShopping)
+	{
+		GetWorldTimerManager().ClearTimer(ShopTimer);
+		for (ATerminusPlayerState* PS : Occupants)
+		{
+			if (ATerminusPlayerController* PC = PS ? Cast<ATerminusPlayerController>(PS->GetOwner()) : nullptr)
+			{
+				PC->Client_CloseShop();
+			}
+		}
+		bShopping = false;
+		ShopStates.Reset();
+		ShopDone.Reset();
 	}
 
 	// 이벤트 화면 닫기

@@ -85,6 +85,28 @@ public:
 	// ReplaceSlot = 강화 칸이 꽉 찼을 때 바꿀 칸, RelicRow = '유물 변화(선택)' 에서 바꿀 내 유물
 	void HandleEventChoice(ATerminusPlayerState* Chooser, int32 Index, int32 ReplaceSlot, FName RelicRow);
 
+	// [상점] 구매 / 판매 / 강화 / 나가기 (PC 의 Server_Shop*). 사람마다 따로, 전원이 나가면 방이 끝남
+	void HandleShopBuyRelic(ATerminusPlayerState* PS, int32 Index);
+	void HandleShopBuySkill(ATerminusPlayerState* PS, int32 Index, int32 ReplaceSlot);
+	void HandleShopSellRelic(ATerminusPlayerState* PS, FName RelicRow);
+	void HandleShopUpgradeSkill(ATerminusPlayerState* PS, FName SkillRow);
+	void HandleShopLeave(ATerminusPlayerState* PS);
+
+	// 상점 진열 수 (방 설명: 유물 3, 스킬 3)
+	UPROPERTY(EditAnywhere, Category = "Dungeon Area|Shop", meta = (ClampMin = "0"))
+	int32 ShopRelicCount = 3;
+
+	UPROPERTY(EditAnywhere, Category = "Dungeon Area|Shop", meta = (ClampMin = "0"))
+	int32 ShopSkillCount = 3;
+
+	// 픽업 스킬 구매가 (스킬 데이터에 가격 칸이 없어서 임시 고정가)
+	UPROPERTY(EditAnywhere, Category = "Dungeon Area|Shop", meta = (ClampMin = "0"))
+	int32 ShopSkillPrice = 30;
+
+	// 픽업 스킬 강화 비용 = 이 값 x 다음 단계 (+1 = 20, +2 = 40, +3 = 60. 임시)
+	UPROPERTY(EditAnywhere, Category = "Dungeon Area|Shop", meta = (ClampMin = "0"))
+	int32 ShopUpgradeCostPerLevel = 20;
+
 	// 이벤트 후보 수 (사용자 결정: 3개, 각자 받음)
 	UPROPERTY(EditAnywhere, Category = "Dungeon Area|Event", meta = (ClampMin = "1"))
 	int32 EventOptionCount = 3;
@@ -224,6 +246,18 @@ private:
 	void BeginRest();
 	void CheckRestDone();
 	void FinishRest();
+
+	// 상점: 각자 진열 / 나간 사람 (서버만)
+	TMap<TWeakObjectPtr<ATerminusPlayerState>, FShopState> ShopStates;
+	TSet<TWeakObjectPtr<ATerminusPlayerState>> ShopDone;
+	bool bShopping = false;
+	FTimerHandle ShopTimer;
+
+	void BeginShop();
+	FShopState MakeShopState(ATerminusPlayerState* PS) const;
+	void SendShop(ATerminusPlayerState* PS, const FString& Message);
+	void CheckShopDone();
+	void FinishShop();
 
 	// 이벤트: 각자 받은 후보 / 이미 고른 사람 (서버만)
 	TMap<TWeakObjectPtr<ATerminusPlayerState>, TArray<FEventOption>> EventOffers;

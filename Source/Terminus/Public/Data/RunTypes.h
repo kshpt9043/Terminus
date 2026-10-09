@@ -17,6 +17,16 @@ struct FTempStatBuff
 	UPROPERTY(BlueprintReadOnly) FString Source;           // 어디서 받았는지 (표시용)
 };
 
+// 픽업 스킬 강화 단계 (상점 / 유물 RandomUpgrade). 스킬 행 이름으로 찾음
+USTRUCT(BlueprintType)
+struct FSkillLevelEntry
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadOnly) FName Skill;
+	UPROPERTY(BlueprintReadOnly) int32 Level = 0;
+};
+
 // 런이 끝날 때 서버가 정산에 더하거나 빼라고 알려 주는 것 (배신 결과)
 USTRUCT(BlueprintType)
 struct FSettlementAdjust
@@ -108,6 +118,10 @@ struct FRunState
 	// 훈련소 기본 스킬 강화 단계 (0~2 칸). 런 시작 때 프로필에서 복사. 쓸 때 BaseValue(없으면 StatusValue)에 더함
 	UPROPERTY(BlueprintReadOnly)
 	TArray<int32> BasicSkillLevels;
+
+	// 픽업 스킬 강화 단계 (이번 런만). 기본 스킬 강화와 같은 방식으로 더함
+	UPROPERTY(BlueprintReadOnly)
+	TArray<FSkillLevelEntry> PickupSkillLevels;
 
 	// 이번 런에서 나한테 한 번이라도 나온 유물 (얻은 것 + 보상 / 이벤트 / 상점 후보로 보였던 것 + 판 것)
 	// 사용자 결정 2026-10-06: 한 번 나온 유물은 그 런 동안 다시 안 나옴. 멀티는 사람마다 따로

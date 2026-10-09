@@ -42,6 +42,31 @@ struct FEventOption
 };
 
 /**
+ * 상점 (서버 -> 플레이어 한 명). 사용자 결정 2026-10-09: 진열은 아직 미정이라 도감(데이터 전체)에서 아무거나
+ *  - 유물 구매 (DT 상점 구매가) / 픽업 스킬 구매 (임시 고정가) / 장착 픽업 스킬 강화 / 보유 유물 판매 (DT 상점 판매가)
+ * 진열은 사람마다 따로. 사고 나면 Bought 가 true
+ */
+USTRUCT(BlueprintType)
+struct FShopState
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadOnly) TArray<FName> RelicOffers;
+	UPROPERTY(BlueprintReadOnly) TArray<int32> RelicPrices;
+	UPROPERTY(BlueprintReadOnly) TArray<bool> RelicBought;
+
+	UPROPERTY(BlueprintReadOnly) TArray<FName> SkillOffers;
+	UPROPERTY(BlueprintReadOnly) TArray<int32> SkillPrices;
+	UPROPERTY(BlueprintReadOnly) TArray<bool> SkillBought;
+
+	// 픽업 스킬 강화 비용 = UpgradeCostPerLevel x (다음 단계)
+	UPROPERTY(BlueprintReadOnly) int32 UpgradeCostPerLevel = 20;
+
+	// 마지막 행동 결과 ("구매: 은빛 방패" / "던전 재화가 부족합니다")
+	UPROPERTY(BlueprintReadOnly) FText Message;
+};
+
+/**
  * 방 클리어 보상 (서버 -> 플레이어 한 명). 사용자 결정 2026-10-06
  *  - 몬스터방: 던전 재화 + 픽업 스킬(스킬 에너지를 쓰는 스킬) 후보 중 하나
  *  - 가디언방: 유물 하나 (공용이거나 내 직업, 지금 계층 등급)

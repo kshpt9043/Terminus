@@ -98,6 +98,7 @@ void ATerminusPlayerState::BeginRun()
 
 	// 거점 강화 (이 직업 것): 연무장 -> 런 스텟, 훈련소 -> 기본 스킬 단계
 	RunState.BasicSkillLevels.Reset();
+	RunState.PickupSkillLevels.Reset();
 	const ECharacterClass MyClass = RunState.CharacterClass;
 	if (const FClassUpgrades* Upgrades = ReportedUpgrades.FindByPredicate([MyClass](const FClassUpgrades& U) { return U.Class == MyClass; }))
 	{
@@ -229,9 +230,12 @@ const FSkillRow* ATerminusPlayerState::GetCombatSkill(int32 SlotIndex) const
 
 void ATerminusPlayerState::ApplyBasicSkillUpgrade(int32 SlotIndex, FSkillRow& InOutSkill) const
 {
-	if (SlotIndex < 0 || SlotIndex >= NumBasicSkills) return;
+	if (SlotIndex < 0) return;
 
-	const int32 Level = RunState.BasicSkillLevels.IsValidIndex(SlotIndex) ? RunState.BasicSkillLevels[SlotIndex] : 0;
+	// 0~2 기본 스킬 = 훈련소 단계, 3~ 강화 스킬 칸 = 상점 픽업 스킬 단계
+	const int32 Level = SlotIndex < NumBasicSkills
+		? (RunState.BasicSkillLevels.IsValidIndex(SlotIndex) ? RunState.BasicSkillLevels[SlotIndex] : 0)
+		: GetPickupSkillLevel(GetCombatSkillRow(SlotIndex));
 	if (Level <= 0) return;
 
 	if (InOutSkill.BaseValue != 0)
@@ -242,6 +246,29 @@ void ATerminusPlayerState::ApplyBasicSkillUpgrade(int32 SlotIndex, FSkillRow& In
 	{
 		InOutSkill.StatusValue += Level;
 	}
+}
+
+int32 ATerminusPlayerState::GetPickupSkillLevel(FName SkillRow) const
+{
+	const FSkillLevelEntry* Entry = RunState.PickupSkillLevels.FindByPredicate([SkillRow](const FSkillLevelEntry& E) { return E.Skill == SkillRow; });
+	return Entry ? Entry->Level : 0;
+}
+
+bool ATerminusPlayerState::UpgradePickupSkill(FName SkillRow)
+{
+	if (!HasAuthority() || SkillRow.IsNone()) return false;
+
+	FSkillLevelEntry* Entry = RunState.PickupSkillLevels.FindByPredicate([SkillRow](const FSkillLevelEntry& E) { return E.Skill == SkillRow; });
+	if (!Entry)
+	{
+		Entry = &RunState.PickupSkillLevels.AddDefaulted_GetRef();
+		Entry->Skill = SkillRow;
+	}
+	if (Entry->Level >= MaxPickupSkillLevel) return false;
+
+	++Entry->Level;
+	OnRep_RunState();
+	return true;
 }
 
 int32 ATerminusPlayerState::GetEnhanceSlotCount() const
@@ -513,9 +540,20 @@ void ATerminusPlayerState::ApplyRelicMetaEffect(const FRelicRow& Relic)
 		break;
 
 	case EActionKind::RandomUpgrade:
-		// TODO: 픽업 스킬 강화 단계 데이터가 생기면 (스킬 강화 기획: 최대 +3)
-		UE_LOG(LogTemp, Warning, TEXT("[Relic] %s: 픽업 스킬 강화는 아직 없어 효과 없음"), *Relic.RelicName.ToString());
+	{
+		// 장착한 픽업 스킬 중 BaseValue 번 랜덤 +1 (최대 단계인 건 빼고)
+		for (int32 i = 0; i < FMath::Max(1, Relic.BaseValue); ++i)
+		{
+			TArray<FName> Candidates;
+			for (const FName& Skill : RunState.EnhanceSkills)
+			{
+				if (GetPickupSkillLevel(Skill) < MaxPickupSkillLevel) Candidates.AddUnique(Skill);
+			}
+			if (Candidates.Num() == 0) break;
+			UpgradePickupSkill(Candidates[FMath::RandRange(0, Candidates.Num() - 1)]);
+		}
 		break;
+	}
 
 	default:
 		break;
