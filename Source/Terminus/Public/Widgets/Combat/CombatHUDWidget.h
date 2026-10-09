@@ -31,6 +31,10 @@ class UVerticalBox;
  *  - 칸 번호 0~2 = 기본 스킬, 3~ = 강화 스킬. 강화 칸 수는 캐릭터 EnhanceSlots 를 따름 (최대 3)
  *
  * 스킬 사용: 적 1명 / 아군 1명 스킬은 누르면 대상 고르기 모드 -> 대상 클릭. 우클릭이나 같은 스킬을 다시 누르면 취소
+ *
+ * 행동 계획 공유 (UPartyCommsWidget 이 표시): 대상 고르는 중이면 마우스가 올라간 대상이 동료 화면에 실시간으로 보임
+ *  - Shift + 대상 클릭 (또는 자신 / 전체 스킬을 Shift + 클릭) = 쓰지 않고 '예약' 만 공유. 이번 사이클 동안 유지
+ *  - 예약은 스킬을 쓰거나, 턴 종료하거나, 같은 스킬을 Shift + 클릭하면 사라짐
  */
 UCLASS()
 class TERMINUS_API UCombatHUDWidget : public UUserWidget
@@ -140,6 +144,24 @@ private:
 
 	void OnSkillClicked(int32 SkillIndex);
 	void CancelTargeting();
+
+	// ---- 행동 계획 공유
+	// Shift 로 예약한 계획 (INDEX_NONE = 없음). 예약한 사이클이 지나면 버림
+	int32 DeclaredSkillIndex = INDEX_NONE;
+	TWeakObjectPtr<AActor> DeclaredTarget;
+	int32 DeclaredCycle = INDEX_NONE;
+
+	void DeclarePlan(int32 SkillIndex, AActor* Target);
+	void ClearDeclaredPlan();
+
+	// 지금 계획(대상 고르는 중 / 예약)을 PC 에 알림 -> 바뀐 것만 서버로
+	void UpdateSharedPlan();
+
+	// 대상 고르는 중 마우스가 올라가 있는 대상 배틀러. 없으면 nullptr
+	ATerminusBattler* GetHoveredTarget() const;
+
+	// 스킬을 실제로 썼을 때 (예약 / 공유 계획 지우기)
+	void NotifySkillUsed();
 
 	UFUNCTION() void HandleEndTurnClicked();
 	UFUNCTION() void HandleTargetClicked();

@@ -92,6 +92,15 @@ int32 FSkillExecutor::PreviewAmount(const FSkillRow& Skill, const UCombatStatsCo
 	return Skill.BaseValue + FMath::RoundToInt(Stat * Skill.ScalingRatio);
 }
 
+void FSkillExecutor::DescribeValueUse(EActionKind Kind, bool& bOutDamage, bool& bOutShield, bool& bOutHeal, bool& bOutOnCaster)
+{
+	const FRecipe Recipe = GetRecipe(Kind);
+	bOutDamage = Recipe.Use == EValueUse::Damage;
+	bOutShield = Recipe.Use == EValueUse::Shield;
+	bOutHeal = Recipe.Use == EValueUse::Heal;
+	bOutOnCaster = Recipe.bOnCaster;
+}
+
 FSkillExecutor::FRecipe FSkillExecutor::GetRecipe(EActionKind Kind)
 {
 	FRecipe R;
