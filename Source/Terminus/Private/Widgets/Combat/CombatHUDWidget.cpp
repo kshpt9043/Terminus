@@ -23,6 +23,7 @@
 #include "Player/TerminusPlayerController.h"
 #include "Player/TerminusPlayerState.h"
 #include "Kismet/GameplayStatics.h"
+#include "Framework/Application/SlateApplication.h"
 
 namespace
 {
@@ -249,6 +250,11 @@ void UCombatHUDWidget::SetArea(ADungeonArea* InArea)
 {
 	Area = InArea;
 	CancelTargeting();
+	ClearDeclaredPlan();
+	if (ATerminusPlayerController* PC = GetOwningPlayer<ATerminusPlayerController>())
+	{
+		PC->ClearCombatPlan();
+	}
 	RebuildTags();
 
 	// 구역에 있는 동안 전투 진행 여부를 계속 보고 켜고 끔 (전투 방이 아니면 안 보임)
@@ -407,6 +413,7 @@ void UCombatHUDWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime
 
 	UpdateTags();
 	UpdatePanels();
+	UpdateSharedPlan();
 }
 
 void UCombatHUDWidget::UpdateTags()
@@ -565,7 +572,9 @@ void UCombatHUDWidget::UpdatePanels()
 
 	if (HintText)
 	{
-		HintText->SetText(FText::FromString(PendingSkillIndex != INDEX_NONE ? TEXT("대상을 선택하세요  (우클릭: 취소)") : TEXT("")));
+		HintText->SetText(FText::FromString(PendingSkillIndex != INDEX_NONE ? TEXT("대상을 선택하세요  (우클릭: 취소 · Shift+클릭: 쓰지 않고 예약만 공유)")
+			: DeclaredSkillIndex != INDEX_NONE ? TEXT("예약을 파티에 공유 중  (같은 스킬 Shift+클릭: 예약 취소)")
+			: TEXT("")));
 	}
 
 	// ---- 왼쪽 아래: 에너지 + 스킬
@@ -637,6 +646,15 @@ void UCombatHUDWidget::OnSkillClicked(int32 SkillIndex)
 		return;
 	}
 
+	const bool bShift = FSlateApplication::IsInitialized() && FSlateApplication::Get().GetModifierKeys().IsShiftDown();
+
+	// 예약한 스킬을 Shift + 클릭 = 예약 취소
+	if (bShift && DeclaredSkillIndex == SkillIndex)
+	{
+		ClearDeclaredPlan();
+		return;
+	}
+
 	const FSkillRow* Skill = LocalPS->GetCombatSkill(SkillIndex);
 	if (!Skill) return;
 
@@ -649,9 +667,18 @@ void UCombatHUDWidget::OnSkillClicked(int32 SkillIndex)
 		return;
 	}
 
-	// 대상이 정해져 있는 스킬(자신 / 전체)은 바로 사용
 	CancelTargeting();
+
+	// Shift: 쓰지 않고 예약만 공유
+	if (bShift)
+	{
+		DeclarePlan(SkillIndex, nullptr);
+		return;
+	}
+
+	// 대상이 정해져 있는 스킬(자신 / 전체)은 바로 사용
 	PC->Server_UseSkill(SkillIndex, INDEX_NONE);
+	NotifySkillUsed();
 }
 
 void UCombatHUDWidget::CancelTargeting()
@@ -665,9 +692,11 @@ void UCombatHUDWidget::CancelTargeting()
 void UCombatHUDWidget::HandleEndTurnClicked()
 {
 	CancelTargeting();
+	ClearDeclaredPlan();
 
 	if (ATerminusPlayerController* PC = GetOwningPlayer<ATerminusPlayerController>())
 	{
+		PC->ClearCombatPlan();
 		PC->Server_EndTurn();
 	}
 }
@@ -683,8 +712,18 @@ void UCombatHUDWidget::HandleTargetClicked()
 		const UButton* Target = Tag.TargetButton.Get();
 		if (Target && Target->IsVisible() && Target->IsHovered())
 		{
+			// Shift: 쓰지 않고 이 대상으로 예약만 공유
+			if (FSlateApplication::IsInitialized() && FSlateApplication::Get().GetModifierKeys().IsShiftDown())
+			{
+				const int32 SkillIndex = PendingSkillIndex;
+				CancelTargeting();
+				DeclarePlan(SkillIndex, Tag.Battler.Get());
+				return;
+			}
+
 			PC->Server_UseSkill(PendingSkillIndex, Tag.Index);
 			CancelTargeting();
+			NotifySkillUsed();
 			return;
 		}
 	}
@@ -700,4 +739,87 @@ FReply UCombatHUDWidget::NativeOnMouseButtonDown(const FGeometry& InGeometry, co
 	}
 
 	return Super::NativeOnMouseButtonDown(InGeometry, InMouseEvent);
+}
+
+// =====================================================================
+// 행동 계획 공유 (표시는 UPartyCommsWidget)
+// =====================================================================
+
+void UCombatHUDWidget::DeclarePlan(int32 SkillIndex, AActor* Target)
+{
+	const ADungeonArea* CurrentArea = Area.Get();
+	const UDungeonCombatComponent* Combat = CurrentArea ? CurrentArea->GetCombat() : nullptr;
+	if (!Combat) return;
+
+	DeclaredSkillIndex = SkillIndex;
+	DeclaredTarget = Target;
+	DeclaredCycle = Combat->GetCycle();
+}
+
+void UCombatHUDWidget::ClearDeclaredPlan()
+{
+	DeclaredSkillIndex = INDEX_NONE;
+	DeclaredTarget.Reset();
+	DeclaredCycle = INDEX_NONE;
+}
+
+void UCombatHUDWidget::NotifySkillUsed()
+{
+	ClearDeclaredPlan();
+	if (ATerminusPlayerController* PC = GetOwningPlayer<ATerminusPlayerController>())
+	{
+		PC->ClearCombatPlan();
+	}
+}
+
+ATerminusBattler* UCombatHUDWidget::GetHoveredTarget() const
+{
+	for (const FBattlerTag& Tag : Tags)
+	{
+		const UButton* Target = Tag.TargetButton.Get();
+		if (Target && Target->IsVisible() && Target->IsHovered())
+		{
+			return Tag.Battler.Get();
+		}
+	}
+	return nullptr;
+}
+
+void UCombatHUDWidget::UpdateSharedPlan()
+{
+	ATerminusPlayerController* PC = GetOwningPlayer<ATerminusPlayerController>();
+	const ATerminusPlayerState* LocalPS = PC ? PC->GetPlayerState<ATerminusPlayerState>() : nullptr;
+	const ADungeonArea* CurrentArea = Area.Get();
+	const UDungeonCombatComponent* Combat = CurrentArea ? CurrentArea->GetCombat() : nullptr;
+	if (!PC || !LocalPS || !Combat) return;
+
+	const bool bInArea = CurrentArea->GetOccupants().ContainsByPredicate(
+		[LocalPS](const TObjectPtr<ATerminusPlayerState>& P) { return P.Get() == LocalPS; });
+	const ATerminusBattler* MyBattler = Cast<ATerminusBattler>(LocalPS->GetPawn());
+	const UCombatStatsComponent* MyStats = MyBattler ? MyBattler->GetCombatStats() : nullptr;
+
+	// 계획은 내가 행동할 수 있을 때만 (관전 / 남의 차례 / 턴 끝냄 / 쓰러짐이면 지움)
+	const bool bCanPlan = bInArea && MyStats && !MyStats->IsDead() && Combat->IsTurnOf(LocalPS) && !Combat->HasEndedTurn(LocalPS);
+
+	if (!bCanPlan || DeclaredCycle != Combat->GetCycle())
+	{
+		ClearDeclaredPlan();
+	}
+
+	if (!bCanPlan)
+	{
+		PC->UpdateCombatPlan(INDEX_NONE, nullptr, false);
+	}
+	else if (PendingSkillIndex != INDEX_NONE)
+	{
+		PC->UpdateCombatPlan(PendingSkillIndex, GetHoveredTarget(), false);
+	}
+	else if (DeclaredSkillIndex != INDEX_NONE)
+	{
+		PC->UpdateCombatPlan(DeclaredSkillIndex, DeclaredTarget.Get(), true);
+	}
+	else
+	{
+		PC->UpdateCombatPlan(INDEX_NONE, nullptr, false);
+	}
 }

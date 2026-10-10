@@ -27,6 +27,11 @@
 #include "Widgets/Rescue/RescueWidget.h"
 #include "Widgets/Spectate/SpectateWidget.h"
 #include "Widgets/Shop/ShopWidget.h"
+#include "Widgets/Comms/PartyCommsWidget.h"
+#include "Character/TerminusBattler.h"
+#include "Character/TerminusMonster.h"
+#include "Combat/CombatStatsComponent.h"
+#include "Combat/SkillExecutor.h"
 #include "Dungeon/DungeonAreaSubsystem.h"
 #include "Dungeon/DungeonAreaSubsystem.h"
 #include "Widgets/Common/ConfirmPopupWidget.h"
@@ -63,6 +68,9 @@ void ATerminusPlayerController::BeginPlay()
 
 	// 주점 / 던전 어디서나 채팅 (멀티일 때만)
 	CreateChatWidget();
+
+	// 핑 / 퀵챗 / 계획 공유 / 재촉 (멀티일 때만)
+	CreatePartyCommsWidget();
 	
 	if (!TavernWidgetClass)
 	{
@@ -131,6 +139,13 @@ void ATerminusPlayerController::EndPlay(const EEndPlayReason::Type EndPlayReason
 	{
 		ChatWidget->RemoveFromParent();
 		ChatWidget = nullptr;
+	}
+
+	GetWorldTimerManager().ClearTimer(PlanSendTimer);
+	if (CommsWidget)
+	{
+		CommsWidget->RemoveFromParent();
+		CommsWidget = nullptr;
 	}
 
 	if (ATerminusPlayerState* PS = GetPlayerState<ATerminusPlayerState>())
@@ -308,6 +323,334 @@ void ATerminusPlayerController::Client_ReceiveChat_Implementation(const FChatMes
 	{
 		Chat->AddMessage(Message);
 	}
+}
+
+// =====================================================================
+// 소통 도구 (행동 계획 공유 / 핑 / 퀵챗 / 재촉)
+// =====================================================================
+
+namespace
+{
+	const ATerminusBattler* GetCommsBattler(const ATerminusPlayerState* PS)
+	{
+		return PS ? Cast<ATerminusBattler>(PS->GetPawn()) : nullptr;
+	}
+
+	bool IsCommsAlive(const AActor* Actor)
+	{
+		const ATerminusBattler* Battler = Cast<ATerminusBattler>(Actor);
+		const UCombatStatsComponent* Stats = Battler ? Battler->GetCombatStats() : nullptr;
+		return Stats && !Stats->IsDead();
+	}
+
+	// 대상이 Sender 구역의 살아 있는 배틀러인가. bWantEnemy = 적(몬스터 / 배신 전투 상대 편) / 아군(나 포함)
+	bool IsValidCommsTarget(const ATerminusPlayerState* Sender, const AActor* Target, bool bWantEnemy)
+	{
+		const ADungeonArea* Area = Sender ? Sender->GetCurrentArea() : nullptr;
+		const UDungeonCombatComponent* Combat = Area ? Area->GetCombat() : nullptr;
+		if (!Combat || !Target || !IsCommsAlive(Target)) return false;
+
+		if (const ATerminusMonster* Monster = Cast<ATerminusMonster>(Target))
+		{
+			return bWantEnemy && !Combat->IsBetrayal() && Combat->GetMonsters().ContainsByPredicate(
+				[Monster](const TObjectPtr<ATerminusMonster>& M) { return M.Get() == Monster; });
+		}
+
+		for (const ATerminusPlayerState* Occupant : Area->GetOccupants())
+		{
+			if (Occupant && Occupant->GetPawn() == Target)
+			{
+				return bWantEnemy != Combat->IsSameSide(Sender, Occupant);
+			}
+		}
+		return false;
+	}
+}
+
+void ATerminusPlayerController::CreatePartyCommsWidget()
+{
+	if (CommsWidget || !IsLocalController()) return;
+
+	// 혼자면 나눌 사람이 없음 (채팅창과 같은 기준)
+	if (GetNetMode() == NM_Standalone) return;
+
+	const TSubclassOf<UPartyCommsWidget> Class = PartyCommsClass ? PartyCommsClass : TSubclassOf<UPartyCommsWidget>(UPartyCommsWidget::StaticClass());
+	CommsWidget = CreateWidget<UPartyCommsWidget>(this, Class);
+	if (CommsWidget)
+	{
+		CommsWidget->AddToViewport(11);   // 전투 HUD(10) 바로 위. 보상 / 휴식 화면(22) 은 이걸 덮음
+	}
+}
+
+TArray<ATerminusPlayerController*> ATerminusPlayerController::GetAreaRecipients(const ATerminusPlayerState* Sender, bool bSameSideOnly)
+{
+	TArray<ATerminusPlayerController*> Out;
+	const ADungeonArea* Area = Sender ? Sender->GetCurrentArea() : nullptr;
+	if (!Area) return Out;
+
+	const UDungeonCombatComponent* Combat = Area->GetCombat();
+	for (ATerminusPlayerState* Occupant : Area->GetOccupants())
+	{
+		if (!Occupant) continue;
+		if (bSameSideOnly && Combat && !Combat->IsSameSide(Sender, Occupant)) continue;
+
+		// 서버에서 PS 의 Owner = 그 플레이어의 PC
+		if (ATerminusPlayerController* PC = Cast<ATerminusPlayerController>(Occupant->GetOwner()))
+		{
+			Out.Add(PC);
+		}
+	}
+	return Out;
+}
+
+// ---- 행동 계획
+
+void ATerminusPlayerController::UpdateCombatPlan(int32 SkillIndex, AActor* Target, bool bDeclared)
+{
+	if (!IsLocalController() || GetNetMode() == NM_Standalone) return;
+
+	PendingPlanSkill = SkillIndex;
+	PendingPlanTarget = Target;
+	bPendingPlanDeclared = bDeclared;
+
+	// 이미 보낸 것과 같으면 할 일 없음 (모아 둔 게 있으면 그대로 둠)
+	const bool bSameAsSent = SentPlanSkill == SkillIndex && SentPlanTarget.Get() == Target && bSentPlanDeclared == bDeclared;
+	if (bSameAsSent)
+	{
+		GetWorldTimerManager().ClearTimer(PlanSendTimer);
+		return;
+	}
+
+	const double Now = GetWorld()->GetRealTimeSeconds();
+	const double Wait = LastPlanSendTime < 0.0 ? 0.0 : PlanSendInterval - (Now - LastPlanSendTime);
+	if (Wait <= 0.0)
+	{
+		FlushCombatPlan();
+	}
+	else if (!GetWorldTimerManager().IsTimerActive(PlanSendTimer))
+	{
+		// 마우스를 대상 위로 빠르게 옮길 때 매번 보내지 않고, 간격이 지나면 마지막 값만
+		GetWorldTimerManager().SetTimer(PlanSendTimer, this, &ATerminusPlayerController::FlushCombatPlan, static_cast<float>(Wait), false);
+	}
+}
+
+void ATerminusPlayerController::ClearCombatPlan()
+{
+	if (!IsLocalController() || GetNetMode() == NM_Standalone) return;
+
+	// 모아 둔 계획이 나중에 나가서 지운 걸 덮지 않게
+	GetWorldTimerManager().ClearTimer(PlanSendTimer);
+	PendingPlanSkill = INDEX_NONE;
+	PendingPlanTarget.Reset();
+	bPendingPlanDeclared = false;
+
+	if (SentPlanSkill != INDEX_NONE)
+	{
+		FlushCombatPlan();
+	}
+}
+
+void ATerminusPlayerController::FlushCombatPlan()
+{
+	GetWorldTimerManager().ClearTimer(PlanSendTimer);
+
+	SentPlanSkill = PendingPlanSkill;
+	SentPlanTarget = PendingPlanTarget;
+	bSentPlanDeclared = bPendingPlanDeclared;
+	LastPlanSendTime = GetWorld()->GetRealTimeSeconds();
+
+	Server_SetCombatPlan(SentPlanSkill, SentPlanTarget.Get(), bSentPlanDeclared);
+}
+
+void ATerminusPlayerController::Server_SetCombatPlan_Implementation(int32 SkillIndex, AActor* Target, bool bDeclared)
+{
+	ATerminusPlayerState* PS = GetPlayerState<ATerminusPlayerState>();
+	ADungeonArea* Area = PS ? PS->GetCurrentArea() : nullptr;
+	UDungeonCombatComponent* Combat = Area ? Area->GetCombat() : nullptr;
+	if (!Combat || !Combat->IsInCombat()) return;
+
+	FCombatPlan Plan;
+	Plan.Planner = PS;
+	Plan.Cycle = Combat->GetCycle();
+
+	// 지우기는 늘 받음. 계획은 1초에 MaxPlansPerSecond 개까지 (클라가 0.15초 간격으로 모아 보내니 정상이면 안 걸림)
+	// 간격으로 막지 않는 이유: 네트워크가 밀려 두 개가 붙어 도착하면 '더 최신' 계획이 버려져 화면에 옛 계획이 남음
+	const double Now = GetWorld()->GetRealTimeSeconds();
+	if (PlanRecvWindowStart < 0.0 || Now - PlanRecvWindowStart >= 1.0)
+	{
+		PlanRecvWindowStart = Now;
+		PlanRecvCount = 0;
+	}
+	const bool bTooFast = SkillIndex != INDEX_NONE && ++PlanRecvCount > MaxPlansPerSecond;
+
+	const UCombatStatsComponent* Caster = GetCommsBattler(PS) ? GetCommsBattler(PS)->GetCombatStats() : nullptr;
+	const FSkillRow* SkillPtr = SkillIndex != INDEX_NONE ? PS->GetCombatSkill(SkillIndex) : nullptr;
+
+	if (SkillPtr && !bTooFast && Caster && !Caster->IsDead() && Combat->IsTurnOf(PS) && !Combat->HasEndedTurn(PS))
+	{
+		// 실제 사용과 같은 수치: 훈련소 강화(복사본) + 스텟 보정
+		FSkillRow Skill = *SkillPtr;
+		PS->ApplyBasicSkillUpgrade(SkillIndex, Skill);
+
+		bool bDamage = false, bShield = false, bHeal = false, bOnCaster = false;
+		FSkillExecutor::DescribeValueUse(Skill.ActionKind, bDamage, bShield, bHeal, bOnCaster);
+
+		Plan.SkillRow = PS->GetCombatSkillRow(SkillIndex);
+		Plan.TargetType = Skill.TargetType;
+		Plan.Effect = bDamage ? ECombatPlanEffect::Damage : bShield ? ECombatPlanEffect::Shield : bHeal ? ECombatPlanEffect::Heal : ECombatPlanEffect::None;
+		Plan.Amount = FSkillExecutor::PreviewAmount(Skill, Caster);
+		Plan.HitCount = bDamage ? FMath::Max(1, Skill.HitCount) : 1;
+		Plan.bDeclared = bDeclared;
+
+		switch (Skill.TargetType)
+		{
+		case ETargetType::Self:
+			Plan.Target = PS->GetPawn();
+			break;
+		case ETargetType::SingleEnemy:
+			Plan.Target = IsValidCommsTarget(PS, Target, true) ? Target : nullptr;
+			break;
+		case ETargetType::SingleAlly:
+			Plan.Target = IsValidCommsTarget(PS, Target, false) ? Target : nullptr;
+			break;
+		default:
+			break;   // 전체: 대상 없음 (클라가 편으로 나눠 표시)
+		}
+
+		// 보호막 / 회복이 시전자에게 가는 스킬(독 연막 등)은 시전자 머리 위에
+		if (bOnCaster && (bShield || bHeal))
+		{
+			Plan.TargetType = ETargetType::Self;
+			Plan.Target = PS->GetPawn();
+		}
+	}
+	else if (bTooFast)
+	{
+		return;   // 너무 잦은 계획은 버림 (비정상 클라)
+	}
+
+	// Plan.SkillRow 가 None 이면 '지움' 으로 감 (못 쓰는 상태가 됐을 때도)
+	for (ATerminusPlayerController* Recipient : GetAreaRecipients(PS, true))
+	{
+		Recipient->Client_ReceiveCombatPlan(Plan);
+	}
+}
+
+void ATerminusPlayerController::Client_ReceiveCombatPlan_Implementation(const FCombatPlan& Plan)
+{
+	if (CommsWidget) CommsWidget->HandlePlan(Plan);
+}
+
+// ---- 핑
+
+void ATerminusPlayerController::Server_SendPing_Implementation(EPingKind Kind, AActor* Target)
+{
+	ATerminusPlayerState* PS = GetPlayerState<ATerminusPlayerState>();
+	const ADungeonArea* Area = PS ? PS->GetCurrentArea() : nullptr;
+	const UDungeonCombatComponent* Combat = Area ? Area->GetCombat() : nullptr;
+	if (!Combat || Kind >= EPingKind::MAX) return;
+
+	const ECombatPhase Phase = Combat->GetPhase();
+	if (Phase != ECombatPhase::PlayerTurn && Phase != ECombatPhase::MonsterTurn) return;
+
+	// 적 핑은 적에게, 아군 핑은 아군(나 포함)에게만
+	if (!IsValidCommsTarget(PS, Target, PartyComms::IsEnemyPing(Kind))) return;
+
+	const double Now = GetWorld()->GetRealTimeSeconds();
+	if (LastPingTime >= 0.0 && Now - LastPingTime < 0.4) return;
+	LastPingTime = Now;
+
+	FPartyPing Ping;
+	Ping.Sender = PS;
+	Ping.Kind = Kind;
+	Ping.Target = Target;
+
+	for (ATerminusPlayerController* Recipient : GetAreaRecipients(PS, true))
+	{
+		Recipient->Client_ReceivePing(Ping);
+	}
+}
+
+void ATerminusPlayerController::Client_ReceivePing_Implementation(const FPartyPing& Ping)
+{
+	if (CommsWidget) CommsWidget->HandlePing(Ping);
+}
+
+// ---- 퀵챗
+
+void ATerminusPlayerController::Server_SendQuickChat_Implementation(EQuickChat Kind)
+{
+	ATerminusPlayerState* PS = GetPlayerState<ATerminusPlayerState>();
+	if (!PS || Kind >= EQuickChat::MAX) return;
+
+	const double Now = GetWorld()->GetRealTimeSeconds();
+	if (LastQuickChatTime >= 0.0 && Now - LastQuickChatTime < 1.0) return;
+	LastQuickChatTime = Now;
+
+	// 채팅처럼 모두에게
+	for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
+	{
+		if (ATerminusPlayerController* PC = Cast<ATerminusPlayerController>(It->Get()))
+		{
+			PC->Client_ReceiveQuickChat(PS, Kind);
+		}
+	}
+}
+
+void ATerminusPlayerController::Client_ReceiveQuickChat_Implementation(ATerminusPlayerState* Sender, EQuickChat Kind)
+{
+	if (CommsWidget)
+	{
+		CommsWidget->HandleQuickChat(Sender, Kind);
+	}
+	else if (UChatSubsystem* Chat = UChatSubsystem::Get(this); Chat && Sender)
+	{
+		// 소통 화면이 없어도(만들기 전 등) 채팅 줄은 남김
+		FChatMessage Line;
+		Line.Sender = Sender->GetPlayerName();
+		Line.Text = PartyComms::GetQuickChatText(Kind).ToString();
+		Chat->AddMessage(Line);
+	}
+}
+
+// ---- 재촉
+
+void ATerminusPlayerController::Server_Nudge_Implementation()
+{
+	ATerminusPlayerState* PS = GetPlayerState<ATerminusPlayerState>();
+	const ADungeonArea* Area = PS ? PS->GetCurrentArea() : nullptr;
+	const UDungeonCombatComponent* Combat = Area ? Area->GetCombat() : nullptr;
+	if (!Combat || Combat->GetPhase() != ECombatPhase::PlayerTurn) return;
+
+	// 재촉은 할 게 없는 사람만 (턴을 끝냈거나, 상대 편 차례이거나, 쓰러짐)
+	const bool bSenderWaiting = Combat->HasEndedTurn(PS) || !Combat->IsTurnOf(PS) || !IsCommsAlive(PS->GetPawn());
+	if (!bSenderWaiting) return;
+
+	const double Now = GetWorld()->GetRealTimeSeconds();
+	if (LastNudgeTime >= 0.0 && Now - LastNudgeTime < 8.0) return;
+
+	bool bSent = false;
+	for (ATerminusPlayerState* Occupant : Area->GetOccupants())
+	{
+		if (!Occupant || Occupant == PS) continue;
+		if (!Combat->IsTurnOf(Occupant) || Combat->HasEndedTurn(Occupant) || !IsCommsAlive(Occupant->GetPawn())) continue;
+
+		if (ATerminusPlayerController* PC = Cast<ATerminusPlayerController>(Occupant->GetOwner()))
+		{
+			PC->Client_ReceiveNudge(PS);
+			bSent = true;
+		}
+	}
+
+	if (bSent)
+	{
+		LastNudgeTime = Now;
+	}
+}
+
+void ATerminusPlayerController::Client_ReceiveNudge_Implementation(ATerminusPlayerState* Sender)
+{
+	if (CommsWidget) CommsWidget->HandleNudged(Sender);
 }
 
 UConfirmPopupWidget* ATerminusPlayerController::ShowPopup(const FText& Title, const FText& Message, const FText& ConfirmLabel, const FText& CancelLabel)

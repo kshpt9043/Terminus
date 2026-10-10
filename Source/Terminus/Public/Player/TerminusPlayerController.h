@@ -8,6 +8,7 @@
 #include "Game/ChatSubsystem.h"
 #include "Map/MapManager.h"
 #include "Data/RewardTypes.h"
+#include "Comms/PartyCommsTypes.h"
 #include "TerminusPlayerController.generated.h"
 
 class UTavernWidget;
@@ -28,6 +29,7 @@ class UEventWidget;
 class URescueWidget;
 class USpectateWidget;
 class UShopWidget;
+class UPartyCommsWidget;
 struct FRunState;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnViewAreaChanged, ADungeonArea*, NewArea);
@@ -105,6 +107,42 @@ public:
 
 	// [서버] 모두에게 채팅 한 줄 (시스템 안내에도 씀)
 	static void BroadcastChat(UWorld* World, const FChatMessage& Message);
+
+	// -------------------------------------------------------------
+	// [소통 도구] 행동 계획 공유 / 핑 / 퀵챗 / 재촉 (UPartyCommsWidget)
+	// 판정은 서버. 계획 / 핑은 같은 구역 + 같은 편에게만, 퀵챗은 모두에게, 재촉은 아직 턴을 안 끝낸 사람에게만
+	// -------------------------------------------------------------
+
+	// [로컬] 전투 HUD 가 매 틱 지금 계획을 알려 줌. 바뀐 것만, 너무 잦으면 모아서 서버로 보냄
+	// SkillIndex = 전투 스킬 칸 (INDEX_NONE = 계획 없음), Target = 마우스가 올라간 대상 배틀러 (없으면 nullptr)
+	void UpdateCombatPlan(int32 SkillIndex, AActor* Target, bool bDeclared);
+
+	// [로컬] 계획을 바로 지움 (스킬을 썼거나 턴 종료). 모아 둔 것도 버림
+	void ClearCombatPlan();
+
+	UFUNCTION(Server, Reliable)
+	void Server_SetCombatPlan(int32 SkillIndex, AActor* Target, bool bDeclared);
+
+	UFUNCTION(Client, Reliable)
+	void Client_ReceiveCombatPlan(const FCombatPlan& Plan);
+
+	UFUNCTION(Server, Reliable)
+	void Server_SendPing(EPingKind Kind, AActor* Target);
+
+	UFUNCTION(Client, Reliable)
+	void Client_ReceivePing(const FPartyPing& Ping);
+
+	UFUNCTION(Server, Reliable)
+	void Server_SendQuickChat(EQuickChat Kind);
+
+	UFUNCTION(Client, Reliable)
+	void Client_ReceiveQuickChat(ATerminusPlayerState* Sender, EQuickChat Kind);
+
+	UFUNCTION(Server, Reliable)
+	void Server_Nudge();
+
+	UFUNCTION(Client, Reliable)
+	void Client_ReceiveNudge(ATerminusPlayerState* Sender);
 
 	// -------------------------------------------------------------
 	// [팝업]
@@ -369,6 +407,13 @@ protected:
 	UPROPERTY()
 	TObjectPtr<UChatWidget> ChatWidget;
 
+	// 소통 도구 화면 (계획 / 핑 / 퀵챗 / 재촉). 비워 두면 C++ 기본 모양(UPartyCommsWidget). 싱글이면 안 만듦
+	UPROPERTY(EditDefaultsOnly, Category = "Terminus|UI")
+	TSubclassOf<UPartyCommsWidget> PartyCommsClass;
+
+	UPROPERTY()
+	TObjectPtr<UPartyCommsWidget> CommsWidget;
+
 	// 휴식터 화면. 비워 두면 C++ 기본 모양(URestWidget)
 	UPROPERTY(EditDefaultsOnly, Category = "Terminus|UI")
 	TSubclassOf<URestWidget> RestClass;
@@ -449,6 +494,32 @@ private:
 
 	// 멀티면 채팅창 만들기
 	void CreateChatWidget();
+
+	// 멀티면 소통 도구 화면 만들기
+	void CreatePartyCommsWidget();
+
+	// ---- [로컬] 계획 보내기 (바뀐 것만, 최소 간격 PlanSendInterval)
+	static constexpr double PlanSendInterval = 0.15;
+	int32 SentPlanSkill = INDEX_NONE;
+	TWeakObjectPtr<AActor> SentPlanTarget;
+	bool bSentPlanDeclared = false;
+	int32 PendingPlanSkill = INDEX_NONE;
+	TWeakObjectPtr<AActor> PendingPlanTarget;
+	bool bPendingPlanDeclared = false;
+	double LastPlanSendTime = -1.0;
+	FTimerHandle PlanSendTimer;
+	void FlushCombatPlan();
+
+	// ---- [서버] 너무 잦은 요청 막기
+	static constexpr int32 MaxPlansPerSecond = 15;
+	double PlanRecvWindowStart = -1.0;
+	int32 PlanRecvCount = 0;
+	double LastPingTime = -1.0;
+	double LastQuickChatTime = -1.0;
+	double LastNudgeTime = -1.0;
+
+	// [서버] 같은 구역에 있는 사람의 PC. bSameSideOnly 면 배신 전투에서 같은 편만
+	static TArray<ATerminusPlayerController*> GetAreaRecipients(const ATerminusPlayerState* Sender, bool bSameSideOnly);
 
 	// 던전에 들어와 내 PS 와 지도(MapManager)가 둘 다 보이면 흐름 시작
 	// 게임 시작 -> (아직 안 골랐으면) 시작 스킬 고르기 -> 서버가 고르기 완료를 확인하면 지도 화면
