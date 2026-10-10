@@ -66,8 +66,15 @@ UChatSubsystem* UChatSubsystem::Get(const UObject* WorldContext)
 	return GI ? GI->GetSubsystem<UChatSubsystem>() : nullptr;
 }
 
-void UChatSubsystem::AddMessage(const FChatMessage& Message)
+void UChatSubsystem::AddMessage(const FChatMessage& InMessage)
 {
+	// 시간이 안 찍힌 줄은 이 컴퓨터 시계로 (서버가 보낸 줄은 서버 시계로 이미 찍혀 있음)
+	FChatMessage Message = InMessage;
+	if (Message.Time.IsEmpty())
+	{
+		Message.Time = FDateTime::Now().ToString(TEXT("%H:%M"));
+	}
+
 	History.Add(Message);
 	if (History.Num() > MaxHistory)
 	{
@@ -116,6 +123,18 @@ void UChatSubsystem::WriteServerLog(const UWorld* World, const FChatMessage& Mes
 
     FFileHelper::SaveStringToFile(Line, *ServerLogPath, FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM,
         &IFileManager::Get(), EFileWrite::FILEWRITE_Append);
+}
+
+void UChatSubsystem::AddLocalMessage(const UWorld* World, const FChatMessage& InMessage)
+{
+    FChatMessage Message = InMessage;
+    if (Message.Time.IsEmpty())
+    {
+        Message.Time = FDateTime::Now().ToString(TEXT("%H:%M"));
+    }
+
+    AddMessage(Message);
+    WriteServerLog(World, Message);   // 방장 PC 일 때만 실제로 씀
 }
 
 void UChatSubsystem::ClearHistory()

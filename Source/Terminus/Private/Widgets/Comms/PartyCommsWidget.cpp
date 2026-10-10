@@ -229,7 +229,7 @@ void UPartyCommsWidget::HandlePing(const FPartyPing& Ping)
 		Line.Kind = EChatMessageKind::System;
 		Line.Text = FString::Printf(TEXT("[핑] %s -> %s: %s"),
 			*Ping.Sender->GetPlayerName(), *DescribeTarget(Ping.Target), *PartyComms::GetPingText(Ping.Kind).ToString());
-		Chat->AddMessage(Line);
+		Chat->AddLocalMessage(GetWorld(), Line);   // 시간 + 방장 PC 로그
 	}
 }
 
@@ -247,7 +247,7 @@ void UPartyCommsWidget::HandleQuickChat(ATerminusPlayerState* Sender, EQuickChat
 		Line.Kind = EChatMessageKind::Player;
 		Line.Sender = Sender->GetPlayerName();
 		Line.Text = Text.ToString();
-		Chat->AddMessage(Line);
+		Chat->AddLocalMessage(GetWorld(), Line);   // 시간 + 방장 PC 로그
 	}
 
 	// 보낸 사람이 지금 화면에 있으면 머리 위 말풍선
@@ -271,7 +271,7 @@ void UPartyCommsWidget::HandleNudged(ATerminusPlayerState* Sender)
 		FChatMessage Line;
 		Line.Kind = EChatMessageKind::System;
 		Line.Text = FString::Printf(TEXT("%s 님이 재촉합니다."), *Name);
-		Chat->AddMessage(Line);
+		Chat->AddLocalMessage(GetWorld(), Line);   // 시간 + 방장 PC 로그
 	}
 }
 

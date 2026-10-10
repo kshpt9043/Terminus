@@ -61,6 +61,10 @@ public:
 
 	const TArray<FChatMessage>& GetHistory() const { return History; }
 
+	// 서버를 거치지 않고 이 컴퓨터에서 바로 넣는 줄 (핑 / 퀵챗 / 재촉: 각자 받은 알림으로 만듦)
+	// 시간을 찍고, 방장 PC 면 메모장 로그에도 남김
+	void AddLocalMessage(const UWorld* World, const FChatMessage& Message);
+
 	// 새 방(세션)을 열거나 들어갈 때 이전 대화 지움
 	void ClearHistory();
 
