@@ -16,6 +16,7 @@
 #include "Engine/GameInstance.h"
 #include "TimerManager.h"
 #include "Game/TerminusRunSubsystem.h"
+#include "Game/ChatSubsystem.h"
 #include "Game/LoadingScreenSubsystem.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogTerminusSession, Log, All);
@@ -142,6 +143,12 @@ IOnlineSessionPtr USessionSubsystem::GetSessionInterface() const
 
 void USessionSubsystem::HostSession(int32 MaxPlayers, const FString& MapPath, const FTerminusRoomOptions& InOptions)
 {
+	// 새 방: 이전 방의 대화는 화면에서 지움
+	if (UChatSubsystem* Chat = GetGameInstance()->GetSubsystem<UChatSubsystem>())
+	{
+		Chat->ClearHistory();
+	}
+
 	// 로딩 화면 (이어하기처럼 이미 더 구체적인 문구로 덮고 있으면 그대로). 실패하면 로딩 서브시스템이 걷음
 	if (ULoadingScreenSubsystem* Loading = GetGameInstance()->GetSubsystem<ULoadingScreenSubsystem>())
 	{
@@ -158,6 +165,12 @@ void USessionSubsystem::HostSession(int32 MaxPlayers, const FString& MapPath, co
 	if (UTerminusRunSubsystem* Run = GetGameInstance()->GetSubsystem<UTerminusRunSubsystem>())
 	{
 		Run->SetRoomName(Options.RoomName);
+	}
+
+	// 이 방의 채팅을 서버 PC 에 메모장 로그로 (Saved/ChatLogs)
+	if (UChatSubsystem* Chat = GetGameInstance()->GetSubsystem<UChatSubsystem>())
+	{
+		Chat->BeginServerLog(Options.RoomName);
 	}
 
 	// 만들어둔 헬퍼 함수로 접근
@@ -301,6 +314,12 @@ void USessionSubsystem::JoinSessionByIndex(int32 Index, const FString& Password)
 	}
 
 	PendingTravelOptions = Password.IsEmpty() ? FString() : FString::Printf(TEXT("?pw=%s"), *Password);
+
+	// 다른 방에 들어감: 이전 방의 대화는 화면에서 지움
+	if (UChatSubsystem* Chat = GetGameInstance()->GetSubsystem<UChatSubsystem>())
+	{
+		Chat->ClearHistory();
+	}
 	
 	JoinSearchResult(LastSearch->SearchResults[Index]);
 }

@@ -237,6 +237,15 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Map")
 	TArray<FRoomNode> GenerateMap();
 
+	// 한 파티 최대 인원. 퀘스트 / 보스 / 방이 하나뿐인 줄은 정원을 이 값으로 (인원을 잘못 알아도 막히지 않게)
+	static constexpr int32 MaxPartySize = 4;
+
+	// 지도에 쓸 인원: 주점에서 정한 인원과 지금 접속한 인원 중 큰 값 (주점을 안 거친 PIE / 이어하기 대비)
+	void RefreshPlayerCount();
+
+	// 방이 하나뿐인 줄(퀘스트 / 보스 포함)은 정원을 최대 인원으로. 예전에 저장된 지도도 고쳐짐
+	static void OpenSingleRoomRows(TArray<FRoomNode>& InOutRooms);
+
 	// [서버] 전멸 (싱글 사망 / 멀티 전원 사망)로 런 끝. 세이브 삭제 + 사망 정산 (유물만 골드로, 강화 스킬 / 던전 재화 소멸)
 	void EndRunByDeath(const FString& Reason);
 
