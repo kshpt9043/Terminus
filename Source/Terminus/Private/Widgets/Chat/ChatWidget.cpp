@@ -97,26 +97,31 @@ void UChatWidget::NativeConstruct()
 		SetPositionInViewport(Viewport * DefaultPositionRatio, false);
 	}
 
-	// 지난 대화 (레벨 이동 전 것 포함) 다시 그리고, 새 메시지 받기
-	if (MessageList)
-	{
-		MessageList->ClearChildren();
-	}
+	// 지난 대화 (레벨 이동 전 것 포함) 다시 그리고, 새 메시지 / 기록 교체 받기
+	RebuildFromHistory();
 	if (Chat)
+	{
+		MessageAddedHandle = Chat->OnMessageAdded.AddUObject(this, &UChatWidget::HandleMessageAdded);
+		HistoryReplacedHandle = Chat->OnHistoryReplaced.AddUObject(this, &UChatWidget::RebuildFromHistory);
+		Chat->SetActiveWidget(this);
+	}
+
+	ApplyBackground();
+}
+
+void UChatWidget::RebuildFromHistory()
+{
+	if (!MessageList) return;
+
+	MessageList->ClearChildren();
+	if (const UChatSubsystem* Chat = UChatSubsystem::Get(this))
 	{
 		for (const FChatMessage& Message : Chat->GetHistory())
 		{
 			AddLine(Message);
 		}
-		MessageAddedHandle = Chat->OnMessageAdded.AddUObject(this, &UChatWidget::HandleMessageAdded);
-		Chat->SetActiveWidget(this);
 	}
-	if (MessageList)
-	{
-		MessageList->ScrollToEnd();
-	}
-
-	ApplyBackground();
+	MessageList->ScrollToEnd();
 }
 
 void UChatWidget::NativeDestruct()
@@ -124,6 +129,7 @@ void UChatWidget::NativeDestruct()
 	if (UChatSubsystem* Chat = UChatSubsystem::Get(this))
 	{
 		Chat->OnMessageAdded.Remove(MessageAddedHandle);
+		Chat->OnHistoryReplaced.Remove(HistoryReplacedHandle);
 		Chat->ClearActiveWidget(this);
 	}
 	if (UEscapeStackSubsystem* Escape = UEscapeStackSubsystem::Get(this))
@@ -179,14 +185,17 @@ void UChatWidget::AddLine(const FChatMessage& Message)
 	Line->SetShadowOffset(FVector2D(1.f, 1.f));
 	Line->SetShadowColorAndOpacity(FLinearColor(0.f, 0.f, 0.f, 0.8f));
 
+	// [HH:MM] 닉네임: 내용 (시간이 없는 옛 메시지는 시간 없이)
+	const FString Stamp = Message.Time.IsEmpty() ? FString() : FString::Printf(TEXT("[%s] "), *Message.Time);
+
 	if (Message.Kind == EChatMessageKind::System)
 	{
-		Line->SetText(FText::FromString(Message.Text));
+		Line->SetText(FText::FromString(Stamp + Message.Text));
 		Line->SetColorAndOpacity(FSlateColor(SystemMessageColor));
 	}
 	else
 	{
-		Line->SetText(FText::FromString(FString::Printf(TEXT("%s: %s"), *Message.Sender, *Message.Text)));
+		Line->SetText(FText::FromString(FString::Printf(TEXT("%s%s: %s"), *Stamp, *Message.Sender, *Message.Text)));
 		Line->SetColorAndOpacity(FSlateColor(bMine ? MyMessageColor : OtherMessageColor));
 	}
 

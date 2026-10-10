@@ -151,9 +151,13 @@ void AMapManager::BeginPlay()
         UGameInstance* GI = GetGameInstance();
         UTerminusRunSubsystem* Run = GI ? GI->GetSubsystem<UTerminusRunSubsystem>() : nullptr;
 
+        RefreshPlayerCount();
+
         if (Run && Run->HasMap())
         {
             Rooms = Run->GetRooms();
+            OpenSingleRoomRows(Rooms);   // 예전 지도에 정원 1 인 외길이 있으면 열어 둠
+            Run->SetRooms(Rooms);
             if (Run->GetFloor() > 0)
             {
                 CurrentFloor = Run->GetFloor();   // 세이브에서 이어하는 런 / 층을 넘어간 런
@@ -166,12 +170,6 @@ void AMapManager::BeginPlay()
         }
         else
         {
-            // 주점에서 확정된 실제 인원. 주점을 안 거쳤으면(0) 디테일 패널 값 그대로
-            if (Run && Run->GetPartySize() > 0)
-            {
-                CurrentPlayerCount = Run->GetPartySize();
-            }
-            CurrentPlayerCount = FMath::Max(1, CurrentPlayerCount);
 
             // 첫 층 테마 (계층 후보가 있으면 거기서)
             if (UDungeonThemeData* Theme = PickThemeForFloor(CurrentFloor))
@@ -264,14 +262,14 @@ TArray<FRoomNode> AMapManager::GenerateMap()
             // 1. [1레벨 / Row 0] 퀘스트방 1개 고정 (퀘스트 방이 있는 층만)
             if (bQuestRow && Row == 0)
             {
-                Map.Add(CreateRoom(GlobalRoomId++, Row, CenterCol, ERoomType::QUEST, CurrentPlayerCount));
+                Map.Add(CreateRoom(GlobalRoomId++, Row, CenterCol, ERoomType::QUEST, MaxPartySize));
                 continue;
             }
 
             // 2. [마지막 레벨 / LastRowIndex] 보스방 1개 고정
             if (Row == LastRowIndex)
             {
-                Map.Add(CreateRoom(GlobalRoomId++, Row, CenterCol, ERoomType::BOSS, CurrentPlayerCount));
+                Map.Add(CreateRoom(GlobalRoomId++, Row, CenterCol, ERoomType::BOSS, MaxPartySize));
                 continue;
             }
 
@@ -361,9 +359,9 @@ TArray<FRoomNode> AMapManager::GenerateMap()
             // 퀘스트 / 보스는 생성할 때 전원 수용으로 이미 정함
             if ((bQuestRow && Node.Row == 0) || Node.Row == LastRowIndex) continue;
 
-            // 방이 하나뿐인 층은 파티 전원이 여길 지나가야 함 -> 정원 = 전체 인원
+            // 방이 하나뿐인 층은 파티 전원이 여길 지나가야 함 -> 정원 = 최대 인원 (인원을 잘못 알아도 막히지 않게)
             Node.MaxPlayers = ChosenSingleRoomRows.Contains(Node.Row)
-                ? CurrentPlayerCount
+                ? MaxPartySize
                 : GetRoomCapacity(Node.Type);
         }
 
@@ -389,6 +387,42 @@ TArray<FRoomNode> AMapManager::GenerateMap()
 
     UE_LOG(LogTemp, Log, TEXT("[MapGenerator] Map Generated with SingleRoomRows at [ %s] (Attempts: %d)"), *SingleRowsStr, RetryCount);
     return Map;
+}
+
+void AMapManager::RefreshPlayerCount()
+{
+    int32 Count = 0;
+
+    // 주점에서 확정된 인원 (주점을 안 거쳤으면 0)
+    if (const UTerminusRunSubsystem* Run = GetGameInstance() ? GetGameInstance()->GetSubsystem<UTerminusRunSubsystem>() : nullptr)
+    {
+        Count = Run->GetPartySize();
+    }
+
+    // 지금 접속한 인원 (PIE 에서 던전 맵을 바로 연 경우 등)
+    if (const AGameStateBase* GS = GetWorld() ? GetWorld()->GetGameState() : nullptr)
+    {
+        Count = FMath::Max(Count, GS->PlayerArray.Num());
+    }
+
+    // 둘 다 모르면 디테일 패널 값
+    CurrentPlayerCount = FMath::Clamp(Count > 0 ? Count : CurrentPlayerCount, 1, MaxPartySize);
+}
+
+void AMapManager::OpenSingleRoomRows(TArray<FRoomNode>& InOutRooms)
+{
+    TMap<int32, int32> RoomsPerRow;
+    for (const FRoomNode& Node : InOutRooms)
+    {
+        RoomsPerRow.FindOrAdd(Node.Row) += 1;
+    }
+    for (FRoomNode& Node : InOutRooms)
+    {
+        if (RoomsPerRow.FindRef(Node.Row) == 1)
+        {
+            Node.MaxPlayers = MaxPartySize;
+        }
+    }
 }
 
 int32 AMapManager::GetLevelCount() const
@@ -1442,6 +1476,9 @@ void AMapManager::AdvanceFloor()
     {
         FloorTheme = Theme;
     }
+
+    // 새 지도는 지금 인원 기준 (이어하기로 들어와 BeginPlay 에서 지도를 새로 안 만든 경우 포함)
+    RefreshPlayerCount();
 
     // 새 지도 (인원은 이 런 그대로)
     Rooms = GenerateMap();

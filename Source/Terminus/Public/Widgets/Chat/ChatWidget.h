@@ -91,6 +91,10 @@ private:
 	FVector2D DragOffset = FVector2D::ZeroVector;
 
 	FDelegateHandle MessageAddedHandle;
+	FDelegateHandle HistoryReplacedHandle;
+
+	// 채팅 기록 전체를 다시 그림 (처음 / 서버가 기록을 보냈을 때)
+	void RebuildFromHistory();
 
 	void BuildDefaultLayout();
 	void ApplyBackground();

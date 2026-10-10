@@ -1,5 +1,10 @@
 #include "Game/ChatSubsystem.h"
 
+#include "Game/TerminusRunSubsystem.h"
+#include "HAL/FileManager.h"
+#include "Misc/FileHelper.h"
+#include "Misc/Paths.h"
+
 #include "Engine/GameInstance.h"
 #include "Engine/GameViewportClient.h"
 #include "Framework/Application/IInputProcessor.h"
@@ -70,6 +75,53 @@ void UChatSubsystem::AddMessage(const FChatMessage& Message)
 	}
 
 	OnMessageAdded.Broadcast(Message);
+}
+
+void UChatSubsystem::BeginServerLog(const FString& RoomName)
+{
+    // 파일 이름에 못 쓰는 글자는 _ 로
+    FString SafeName = RoomName.IsEmpty() ? FString(TEXT("Room")) : RoomName;
+    for (const TCHAR Bad : FString(TEXT("\\/:*?\"<>| ")))
+    {
+        SafeName.ReplaceCharInline(Bad, TEXT('_'));
+    }
+
+    const FDateTime Now = FDateTime::Now();
+    ServerLogPath = FPaths::Combine(FPaths::ProjectSavedDir(), TEXT("ChatLogs"),
+        FString::Printf(TEXT("Chat_%s_%s.txt"), *Now.ToString(TEXT("%Y%m%d_%H%M%S")), *SafeName));
+
+    // 머리말 (메모장에서 한글이 안 깨지게 BOM 있는 UTF-8 로 시작, 이후 줄은 덧붙이기)
+    const FString Header = FString::Printf(TEXT("Terminus 채팅 기록\r\n방: %s\r\n시작: %s\r\n----------------------------------------\r\n"),
+        *RoomName, *Now.ToString(TEXT("%Y-%m-%d %H:%M:%S")));
+    FFileHelper::SaveStringToFile(Header, *ServerLogPath, FFileHelper::EEncodingOptions::ForceUTF8);
+}
+
+void UChatSubsystem::WriteServerLog(const UWorld* World, const FChatMessage& Message)
+{
+    if (!World) return;
+
+    const ENetMode Mode = World->GetNetMode();
+    if (Mode != NM_ListenServer && Mode != NM_DedicatedServer) return;   // 싱글 / 클라는 안 남김
+
+    if (ServerLogPath.IsEmpty())
+    {
+        const UTerminusRunSubsystem* Run = GetGameInstance() ? GetGameInstance()->GetSubsystem<UTerminusRunSubsystem>() : nullptr;
+        BeginServerLog(Run ? Run->GetRoomName() : FString());
+    }
+
+    const FString Stamp = FDateTime::Now().ToString(TEXT("%Y-%m-%d %H:%M:%S"));
+    const FString Line = Message.Kind == EChatMessageKind::System
+        ? FString::Printf(TEXT("[%s] [안내] %s\r\n"), *Stamp, *Message.Text)
+        : FString::Printf(TEXT("[%s] %s: %s\r\n"), *Stamp, *Message.Sender, *Message.Text);
+
+    FFileHelper::SaveStringToFile(Line, *ServerLogPath, FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM,
+        &IFileManager::Get(), EFileWrite::FILEWRITE_Append);
+}
+
+void UChatSubsystem::ClearHistory()
+{
+    History.Reset();
+    OnHistoryReplaced.Broadcast();
 }
 
 void UChatSubsystem::SetActiveWidget(UChatWidget* InWidget)

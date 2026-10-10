@@ -289,9 +289,22 @@ void ATerminusPlayerController::Server_SendChat_Implementation(const FString& Me
 	BroadcastChat(GetWorld(), Chat);
 }
 
-void ATerminusPlayerController::BroadcastChat(UWorld* World, const FChatMessage& Message)
+void ATerminusPlayerController::BroadcastChat(UWorld* World, const FChatMessage& InMessage)
 {
 	if (!World) return;
+
+	// 보낸 시간은 서버(방장) 시계 기준 -> 모두에게 같은 시간으로 보임
+	FChatMessage Message = InMessage;
+	if (Message.Time.IsEmpty())
+	{
+		Message.Time = FDateTime::Now().ToString(TEXT("%H:%M"));
+	}
+
+	// 멀티면 서버 PC 에 메모장 로그로도 남김
+	if (UChatSubsystem* Chat = UChatSubsystem::Get(World))
+	{
+		Chat->WriteServerLog(World, Message);
+	}
 
 	for (FConstPlayerControllerIterator It = World->GetPlayerControllerIterator(); It; ++It)
 	{
@@ -371,7 +384,7 @@ void ATerminusPlayerController::ViewDungeonArea(ADungeonArea* Area)
 		SpectateWidget = CreateWidget<USpectateWidget>(this, Class);
 		if (SpectateWidget)
 		{
-			SpectateWidget->AddToViewport(21);
+			SpectateWidget->AddToViewport(24);   // 상점 / 휴식 / 이벤트(22), 구출(23) 화면 위, 채팅(25) 아래 -> 패널이 떠 있어도 누를 수 있게
 		}
 	}
 
