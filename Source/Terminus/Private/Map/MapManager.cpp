@@ -359,10 +359,12 @@ TArray<FRoomNode> AMapManager::GenerateMap()
             // 퀘스트 / 보스는 생성할 때 전원 수용으로 이미 정함
             if ((bQuestRow && Node.Row == 0) || Node.Row == LastRowIndex) continue;
 
-            // 방이 하나뿐인 층은 파티 전원이 여길 지나가야 함 -> 정원 = 최대 인원 (인원을 잘못 알아도 막히지 않게)
-            Node.MaxPlayers = ChosenSingleRoomRows.Contains(Node.Row)
-                ? MaxPartySize
-                : GetRoomCapacity(Node.Type);
+            // 정원 = 최대 인원 (인원을 잘못 알아도 막히지 않게)
+            //  - 방이 하나뿐인 층: 파티 전원이 여길 지나가야 함
+            //  - 퀘스트 방이 없는 층(2 / 4 / 6층)의 첫 줄: 갈라져 나올 방이 없어 정원으로 나눌 이유가 없음
+            //    (정원 1 방끼리만 있으면 같은 방을 고른 사람이 막힘: 사용자 제보 10-10)
+            const bool bOpenRow = ChosenSingleRoomRows.Contains(Node.Row) || (!bQuestRow && Node.Row == FirstNormalRow);
+            Node.MaxPlayers = bOpenRow ? MaxPartySize : GetRoomCapacity(Node.Type);
         }
 
         // ==========================================
@@ -412,13 +414,16 @@ void AMapManager::RefreshPlayerCount()
 void AMapManager::OpenSingleRoomRows(TArray<FRoomNode>& InOutRooms)
 {
     TMap<int32, int32> RoomsPerRow;
+    bool bHasQuest = false;
     for (const FRoomNode& Node : InOutRooms)
     {
         RoomsPerRow.FindOrAdd(Node.Row) += 1;
+        bHasQuest |= Node.Type == ERoomType::QUEST;
     }
     for (FRoomNode& Node : InOutRooms)
     {
-        if (RoomsPerRow.FindRef(Node.Row) == 1)
+        // 방이 하나뿐인 줄 + 퀘스트 방이 없는 층의 첫 줄 (GenerateMap 과 같은 규칙)
+        if (RoomsPerRow.FindRef(Node.Row) == 1 || (!bHasQuest && Node.Row == 0))
         {
             Node.MaxPlayers = MaxPartySize;
         }
