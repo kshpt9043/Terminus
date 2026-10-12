@@ -24,6 +24,7 @@
 #include "Player/TerminusPlayerState.h"
 #include "Kismet/GameplayStatics.h"
 #include "Framework/Application/SlateApplication.h"
+#include "Widgets/Common/TerminusUIBuilder.h"
 
 namespace
 {
@@ -33,16 +34,11 @@ namespace
 	const FLinearColor PlayerHealthColor(0.3f, 0.85f, 0.35f);   // 시안: 아군은 초록
 	const FLinearColor MonsterHealthColor(0.9f, 0.25f, 0.2f);   // 시안: 적은 빨강
 
-	UTextBlock* MakeText(UWidgetTree* Tree, const FString& Initial, int32 Size, const FLinearColor& Color = FLinearColor::White)
+	// 배경 없이 월드 위에 뜨는 글자라 그림자
+	UTextBlock* MakeHUDText(UWidgetTree* Tree, const FString& Initial, int32 Size, const FLinearColor& Color = FLinearColor::White)
 	{
-		UTextBlock* Text = Tree->ConstructWidget<UTextBlock>();
-		Text->SetText(FText::FromString(Initial));
-		FSlateFontInfo Font = Text->GetFont();
-		Font.Size = Size;
-		Text->SetFont(Font);
-		Text->SetColorAndOpacity(FSlateColor(Color));
-		Text->SetShadowOffset(FVector2D(1.f, 1.f));
-		Text->SetShadowColorAndOpacity(FLinearColor(0.f, 0.f, 0.f, 0.85f));
+		UTextBlock* Text = TerminusUI::MakeText(Tree, NAME_None, Initial, Size, Color, ETextJustify::Left);
+		TerminusUI::AddShadow(Text, 0.85f);
 		return Text;
 	}
 
@@ -102,7 +98,7 @@ void UCombatHUDWidget::NativeOnInitialized()
 	// 보유 유물 줄이 WBP 에 없으면 오른쪽 아래(턴 종료 / 상태 위)에
 	if (!RelicBar && TagLayer)
 	{
-		RelicBar = CreateWidget<URelicBarWidget>(this, URelicBarWidget::StaticClass());
+		RelicBar = CreateWidget<URelicBarWidget>(this, RelicBarClass ? RelicBarClass : TSubclassOf<URelicBarWidget>(URelicBarWidget::StaticClass()));
 		if (RelicBar)
 		{
 			AddToCanvas(TagLayer, RelicBar, FAnchors(1.f, 1.f), FVector2D(1.f, 1.f), FVector2D(-24.f, -130.f));
@@ -129,20 +125,20 @@ void UCombatHUDWidget::BuildDefaultLayout()
 	}
 
 	// ---- 위: 방 / 턴 안내
-	RoomText = MakeText(WidgetTree, TEXT(""), 20);
+	RoomText = MakeHUDText(WidgetTree, TEXT(""), 20);
 	AddToCanvas(Root, MakePanel(WidgetTree, RoomText), FAnchors(0.f, 0.f), FVector2D(0.f, 0.f), FVector2D(24.f, 20.f));
 
-	PhaseText = MakeText(WidgetTree, TEXT(""), 26);
+	PhaseText = MakeHUDText(WidgetTree, TEXT(""), 26);
 	AddToCanvas(Root, MakePanel(WidgetTree, PhaseText, FMargin(20.f, 8.f)), FAnchors(0.5f, 0.f), FVector2D(0.5f, 0.f), FVector2D(0.f, 20.f));
 
-	HintText = MakeText(WidgetTree, TEXT(""), 20, FLinearColor(1.f, 0.9f, 0.4f));
+	HintText = MakeHUDText(WidgetTree, TEXT(""), 20, FLinearColor(1.f, 0.9f, 0.4f));
 	AddToCanvas(Root, HintText, FAnchors(0.5f, 1.f), FVector2D(0.5f, 1.f), FVector2D(0.f, -200.f));
 
 	// ---- 왼쪽 아래: 에너지 + 기본 스킬 3개 / 스킬 에너지
 	UVerticalBox* LeftBox = WidgetTree->ConstructWidget<UVerticalBox>();
 
 	UHorizontalBox* SkillRow = WidgetTree->ConstructWidget<UHorizontalBox>();
-	EnergyText = MakeText(WidgetTree, TEXT("에너지 0/0"), 22, EnergyColor);
+	EnergyText = MakeHUDText(WidgetTree, TEXT("에너지 0/0"), 22, EnergyColor);
 	if (UHorizontalBoxSlot* S = SkillRow->AddChildToHorizontalBox(EnergyText))
 	{
 		S->SetVerticalAlignment(VAlign_Center);
@@ -155,7 +151,7 @@ void UCombatHUDWidget::BuildDefaultLayout()
 	LeftBox->AddChildToVerticalBox(SkillRow);
 
 	UHorizontalBox* EnhanceRow = WidgetTree->ConstructWidget<UHorizontalBox>();
-	SkillEnergyText = MakeText(WidgetTree, TEXT("스킬 에너지 0/0"), 18, SkillEnergyColor);
+	SkillEnergyText = MakeHUDText(WidgetTree, TEXT("스킬 에너지 0/0"), 18, SkillEnergyColor);
 	if (UHorizontalBoxSlot* S = EnhanceRow->AddChildToHorizontalBox(SkillEnergyText))
 	{
 		S->SetVerticalAlignment(VAlign_Center);
@@ -175,13 +171,13 @@ void UCombatHUDWidget::BuildDefaultLayout()
 	UVerticalBox* RightBox = WidgetTree->ConstructWidget<UVerticalBox>();
 
 	EndTurnButton = WidgetTree->ConstructWidget<UButton>();
-	EndTurnButton->SetContent(MakeText(WidgetTree, TEXT("턴 종료"), 22));
+	EndTurnButton->SetContent(MakeHUDText(WidgetTree, TEXT("턴 종료"), 22));
 	if (UVerticalBoxSlot* S = RightBox->AddChildToVerticalBox(EndTurnButton))
 	{
 		S->SetHorizontalAlignment(HAlign_Right);
 	}
 
-	StatusText = MakeText(WidgetTree, TEXT(""), 18);
+	StatusText = MakeHUDText(WidgetTree, TEXT(""), 18);
 	if (UVerticalBoxSlot* S = RightBox->AddChildToVerticalBox(StatusText))
 	{
 		S->SetPadding(FMargin(0.f, 8.f, 0.f, 0.f));
@@ -328,7 +324,7 @@ void UCombatHUDWidget::RebuildTags()
 		// 머리 위 행동 예고 (몬스터만)
 		if (bMonster)
 		{
-			UTextBlock* Intent = MakeText(WidgetTree, TEXT(""), 20, FLinearColor(1.f, 0.85f, 0.4f));
+			UTextBlock* Intent = MakeHUDText(WidgetTree, TEXT(""), 20, FLinearColor(1.f, 0.85f, 0.4f));
 			UCanvasPanelSlot* CanvasSlot = TagLayer->AddChildToCanvas(Intent);
 			CanvasSlot->SetAutoSize(true);
 			CanvasSlot->SetAlignment(FVector2D(0.5f, 1.f));
@@ -343,7 +339,7 @@ void UCombatHUDWidget::RebuildTags()
 		{
 			S->SetHorizontalAlignment(HAlign_Fill);
 		}
-		UTextBlock* HpText = MakeText(WidgetTree, TEXT(""), 14);
+		UTextBlock* HpText = MakeHUDText(WidgetTree, TEXT(""), 14);
 		HpText->SetJustification(ETextJustify::Center);
 		if (UVerticalBoxSlot* S = Box->AddChildToVerticalBox(HpText))
 		{
@@ -360,7 +356,7 @@ void UCombatHUDWidget::RebuildTags()
 		// 대상 선택 버튼 (대상 고르는 중일 때만 보임)
 		UButton* Target = WidgetTree->ConstructWidget<UButton>();
 		Target->SetBackgroundColor(FLinearColor(1.f, 0.85f, 0.3f, 0.35f));
-		Target->SetContent(MakeText(WidgetTree, TEXT("선택"), 16));
+		Target->SetContent(MakeHUDText(WidgetTree, TEXT("선택"), 16));
 		Target->OnClicked.AddDynamic(this, &UCombatHUDWidget::HandleTargetClicked);
 		UCanvasPanelSlot* TargetSlot = TagLayer->AddChildToCanvas(Target);
 		TargetSlot->SetAutoSize(false);
@@ -465,7 +461,7 @@ void UCombatHUDWidget::UpdateTags()
 			Intent->SetVisibility(bVisible ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Collapsed);
 			if (bVisible)
 			{
-				Intent->SetText(FText::FromString(IntentLabel(*Found)));
+				TerminusUI::SetTextIfChanged(Intent, IntentLabel(*Found));
 				Place(Intent, HeadHeight);
 			}
 		}
@@ -486,7 +482,7 @@ void UCombatHUDWidget::UpdateTags()
 				{
 					FString Label = FString::Printf(TEXT("%d/%d"), State.Health, MaxHealth);
 					if (State.Shield > 0) Label += FString::Printf(TEXT("  +%d"), State.Shield);
-					HpText->SetText(FText::FromString(Label));
+					TerminusUI::SetTextIfChanged(HpText, Label);
 				}
 				Place(Box, -4.f);
 			}
@@ -540,9 +536,9 @@ void UCombatHUDWidget::UpdatePanels()
 			CachedMap = Cast<AMapManager>(UGameplayStatics::GetActorOfClass(this, AMapManager::StaticClass()));
 		}
 		const int32 Floor = CachedMap.IsValid() ? CachedMap->CurrentFloor : 1;
-		RoomText->SetText(FText::FromString(bBetrayal
+		TerminusUI::SetTextIfChanged(RoomText, bBetrayal
 			? FString::Printf(TEXT("%d층 배신 전투  ·  사이클 %d"), Floor, Combat->GetCycle())
-			: FString::Printf(TEXT("%d층 %d번째 방  ·  사이클 %d"), Floor, CurrentArea->GetRoom().Row + 1, Combat->GetCycle())));
+			: FString::Printf(TEXT("%d층 %d번째 방  ·  사이클 %d"), Floor, CurrentArea->GetRoom().Row + 1, Combat->GetCycle()));
 	}
 
 	if (PhaseText)
@@ -567,14 +563,14 @@ void UCombatHUDWidget::UpdatePanels()
 		default: break;
 		}
 		if (bSpectating) Label = TEXT("관전 중  ·  ") + Label;
-		PhaseText->SetText(FText::FromString(Label));
+		TerminusUI::SetTextIfChanged(PhaseText, Label);
 	}
 
 	if (HintText)
 	{
-		HintText->SetText(FText::FromString(PendingSkillIndex != INDEX_NONE ? TEXT("대상을 선택하세요  (우클릭: 취소 · Shift+클릭: 쓰지 않고 예약만 공유)")
+		TerminusUI::SetTextIfChanged(HintText, PendingSkillIndex != INDEX_NONE ? TEXT("대상을 선택하세요  (우클릭: 취소 · Shift+클릭: 쓰지 않고 예약만 공유)")
 			: DeclaredSkillIndex != INDEX_NONE ? TEXT("예약을 파티에 공유 중  (같은 스킬 Shift+클릭: 예약 취소)")
-			: TEXT("")));
+			: TEXT(""));
 	}
 
 	// ---- 왼쪽 아래: 에너지 + 스킬
@@ -585,11 +581,11 @@ void UCombatHUDWidget::UpdatePanels()
 
 		if (EnergyText)
 		{
-			EnergyText->SetText(FText::FromString(FString::Printf(TEXT("에너지 %d/%d"), State.Energy, Stats.MaxEnergy)));
+			TerminusUI::SetTextIfChanged(EnergyText, FString::Printf(TEXT("에너지 %d/%d"), State.Energy, Stats.MaxEnergy));
 		}
 		if (SkillEnergyText)
 		{
-			SkillEnergyText->SetText(FText::FromString(FString::Printf(TEXT("스킬 에너지 %d/%d"), State.SkillEnergy, Stats.MaxSkillEnergy)));
+			TerminusUI::SetTextIfChanged(SkillEnergyText, FString::Printf(TEXT("스킬 에너지 %d/%d"), State.SkillEnergy, Stats.MaxSkillEnergy));
 		}
 
 		// 강화 칸 수가 캐릭터 스텟과 다르면 다시 만듦
@@ -612,7 +608,7 @@ void UCombatHUDWidget::UpdatePanels()
 			FString Label = FString::Printf(TEXT("체력 [%d/%d]"), Stats.MaxHealth, State.Health);
 			if (State.Shield > 0) Label += FString::Printf(TEXT("  보호막 %d"), State.Shield);
 			Label += FString::Printf(TEXT("   힘 %d  방어 %d  회피 %d"), Stats.Attack, Stats.Defense, Stats.Evasion);
-			StatusText->SetText(FText::FromString(Label));
+			TerminusUI::SetTextIfChanged(StatusText, Label);
 		}
 	}
 

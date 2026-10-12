@@ -166,8 +166,9 @@ public:
 	// -------------------------------------------------------------
 	// [Getter 함수들]
 	// -------------------------------------------------------------
+	// 참조로 돌려줌 (UI 가 매 틱 불러도 배열째 복사하지 않게). 고쳐 쓸 땐 복사해서 SetRunState
 	UFUNCTION(BlueprintCallable, Category = "Run")
-	FORCEINLINE FRunState GetRunState() const { return RunState; }
+	const FRunState& GetRunState() const { return RunState; }
 
 	UFUNCTION(BlueprintCallable, Category = "Run")
 	FORCEINLINE int32 GetSelectedRoomId() const { return RunState.SelectedRoomId; }

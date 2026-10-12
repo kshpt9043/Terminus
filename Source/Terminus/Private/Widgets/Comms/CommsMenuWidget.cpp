@@ -11,21 +11,8 @@
 #include "Components/VerticalBox.h"
 #include "Components/VerticalBoxSlot.h"
 #include "Widgets/Common/EscapeStackSubsystem.h"
-
-namespace
-{
-	// 유니티 빌드에서 다른 파일의 MakeText 와 겹치지 않게 이름을 따로
-	UTextBlock* MakeCommsMenuText(UWidgetTree* Tree, const FText& Text, int32 Size, const FLinearColor& Color)
-	{
-		UTextBlock* Block = Tree->ConstructWidget<UTextBlock>();
-		Block->SetText(Text);
-		FSlateFontInfo Font = Block->GetFont();
-		Font.Size = Size;
-		Block->SetFont(Font);
-		Block->SetColorAndOpacity(FSlateColor(Color));
-		return Block;
-	}
-}
+#include "Widgets/Common/TerminusUIBuilder.h"
+#include "Widgets/TerminusUILayers.h"
 
 void UCommsMenuWidget::NativeOnInitialized()
 {
@@ -43,7 +30,7 @@ void UCommsMenuWidget::BuildLayout()
 	Panel->SetPadding(FMargin(10.f, 8.f));
 
 	UVerticalBox* Box = WidgetTree->ConstructWidget<UVerticalBox>();
-	TitleText = MakeCommsMenuText(WidgetTree, FText::GetEmpty(), FontSize - 2, FLinearColor(1.f, 0.85f, 0.45f));
+	TitleText = TerminusUI::MakeText(WidgetTree, NAME_None, FText::GetEmpty(), FontSize - 2, FLinearColor(1.f, 0.85f, 0.45f), ETextJustify::Left);
 	if (UVerticalBoxSlot* S = Box->AddChildToVerticalBox(TitleText))
 	{
 		S->SetPadding(FMargin(2.f, 0.f, 2.f, 6.f));
@@ -81,7 +68,7 @@ void UCommsMenuWidget::Open(const FText& Title, const TArray<FText>& Options, co
 
 		USizeBox* Size = WidgetTree->ConstructWidget<USizeBox>();
 		Size->SetMinDesiredWidth(ButtonWidth);
-		Size->SetContent(MakeCommsMenuText(WidgetTree, FText::Format(INVTEXT("{0}. {1}"), FText::AsNumber(i + 1), Options[i]), FontSize, FLinearColor::White));
+		Size->SetContent(TerminusUI::MakeText(WidgetTree, NAME_None, FText::Format(INVTEXT("{0}. {1}"), FText::AsNumber(i + 1), Options[i]), FontSize, FLinearColor::White, ETextJustify::Left));
 		Button->SetContent(Size);
 		Button->OnClicked.AddDynamic(this, &UCommsMenuWidget::HandleButtonClicked);
 
@@ -103,7 +90,7 @@ void UCommsMenuWidget::Open(const FText& Title, const TArray<FText>& Options, co
 
 	if (!IsInViewport())
 	{
-		AddToViewport(26);   // 채팅(25) 위, 팝업(50) 아래
+		AddToViewport(TerminusUI::Layer::CommsMenu);   // 채팅(25) 위, 팝업(50) 아래
 	}
 	bOpen = true;
 

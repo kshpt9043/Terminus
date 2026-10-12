@@ -56,6 +56,10 @@ private:
 	// 지금 카드를 만든 참가자들 (바뀌면 다시 만듦)
 	TArray<TWeakObjectPtr<ATerminusPlayerState>> ShownPlayers;
 
+	// 매 틱 레벨의 액터를 다시 뒤지지 않게 한 번 찾은 지도 관리자를 들고 있음
+	TWeakObjectPtr<class AMapManager> CachedMapManager;
+	AMapManager* GetMapManager();
+
 	void BuildDefaultLayout();
 
 	void RefreshParty();

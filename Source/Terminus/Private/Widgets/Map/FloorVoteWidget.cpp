@@ -12,32 +12,13 @@
 #include "GameFramework/GameStateBase.h"
 #include "GameFramework/PlayerState.h"
 #include "Player/TerminusPlayerController.h"
+#include "Widgets/Common/TerminusUIBuilder.h"
+#include "Widgets/TerminusUIColors.h"
+#include "Widgets/Common/TerminusClickRelay.h"
 
 namespace
 {
-	UTextBlock* MakeVoteText(UWidgetTree* Tree, const FName& Name, const FString& Initial, int32 Size, const FLinearColor& Color)
-	{
-		UTextBlock* Text = Tree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), Name);
-		Text->SetText(FText::FromString(Initial));
-		FSlateFontInfo Font = Text->GetFont();
-		Font.Size = Size;
-		Text->SetFont(Font);
-		Text->SetColorAndOpacity(FSlateColor(Color));
-		Text->SetJustification(ETextJustify::Center);
-		Text->SetAutoWrapText(true);
-		return Text;
-	}
-
-	const FLinearColor VoteGold(1.f, 0.85f, 0.35f);
 	const FLinearColor VoteRed(0.85f, 0.3f, 0.28f);
-}
-
-void UFloorVoteClickRelay::HandleClicked()
-{
-	if (UFloorVoteWidget* Widget = Owner.Get())
-	{
-		Widget->HandleCardClicked(Choice);
-	}
 }
 
 void UFloorVoteWidget::NativeOnInitialized()
@@ -55,19 +36,15 @@ void UFloorVoteWidget::NativeOnInitialized()
 
 void UFloorVoteWidget::BuildDefaultLayout()
 {
-	UBorder* Dim = WidgetTree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("FloorVoteDim"));
-	Dim->SetBrushColor(FLinearColor(0.f, 0.f, 0.f, 0.8f));
-	Dim->SetHorizontalAlignment(HAlign_Center);
-	Dim->SetVerticalAlignment(VAlign_Center);
-	WidgetTree->RootWidget = Dim;
+	UBorder* Dim = TerminusUI::MakeDimRoot(WidgetTree, TEXT("FloorVoteDim"), FLinearColor(0.f, 0.f, 0.f, 0.8f));
 
 	UVerticalBox* Column = WidgetTree->ConstructWidget<UVerticalBox>();
 	Dim->SetContent(Column);
 
-	TitleText = MakeVoteText(WidgetTree, TEXT("TitleText"), TEXT(""), 30, FLinearColor::White);
+	TitleText = TerminusUI::MakeWrapText(WidgetTree, TEXT("TitleText"), TEXT(""), 30, FLinearColor::White);
 	if (UVerticalBoxSlot* S = Column->AddChildToVerticalBox(TitleText)) S->SetHorizontalAlignment(HAlign_Center);
 
-	StatusText = MakeVoteText(WidgetTree, TEXT("StatusText"), TEXT(""), 17, VoteGold);
+	StatusText = TerminusUI::MakeWrapText(WidgetTree, TEXT("StatusText"), TEXT(""), 17, TerminusUI::Color::Gold);
 	if (UVerticalBoxSlot* S = Column->AddChildToVerticalBox(StatusText))
 	{
 		S->SetHorizontalAlignment(HAlign_Center);
@@ -131,7 +108,7 @@ void UFloorVoteWidget::UpdateStatus()
 	default:
 		break;
 	}
-	StatusText->SetText(FText::FromString(Status));
+	TerminusUI::SetTextIfChanged(StatusText, Status);   // 매 틱 불림 -> 초가 바뀔 때만 실제로 넣음
 }
 
 void UFloorVoteWidget::RebuildCards()
@@ -153,14 +130,10 @@ void UFloorVoteWidget::RebuildCards()
 		const bool bWinner = bRevealed && Shown.Result == Choice;
 
 		UButton* Card = WidgetTree->ConstructWidget<UButton>();
-		Card->SetBackgroundColor(bWinner ? VoteGold : (bMine ? FLinearColor(0.55f, 0.5f, 0.35f) : (Choice == EFloorChoice::Betray ? VoteRed : FLinearColor(0.35f, 0.35f, 0.35f))));
+		Card->SetBackgroundColor(bWinner ? TerminusUI::Color::Gold : (bMine ? FLinearColor(0.55f, 0.5f, 0.35f) : (Choice == EFloorChoice::Betray ? VoteRed : FLinearColor(0.35f, 0.35f, 0.35f))));
 		Card->SetIsEnabled(bVoting && MyChoice == EFloorChoice::None && !bBetrayTaken);
 
-		UFloorVoteClickRelay* Relay = NewObject<UFloorVoteClickRelay>(this);
-		Relay->Owner = this;
-		Relay->Choice = Choice;
-		Card->OnClicked.AddDynamic(Relay, &UFloorVoteClickRelay::HandleClicked);
-		Relays.Add(Relay);
+		UTerminusClickRelay::Bind(Card, this, FSimpleDelegate::CreateUObject(this, &UFloorVoteWidget::HandleCardClicked, Choice), Relays);
 
 		USizeBox* Size = WidgetTree->ConstructWidget<USizeBox>();
 		Size->SetWidthOverride(CardSize.X);
@@ -170,9 +143,9 @@ void UFloorVoteWidget::RebuildCards()
 		UVerticalBox* Inside = WidgetTree->ConstructWidget<UVerticalBox>();
 		Size->SetContent(Inside);
 
-		Inside->AddChildToVerticalBox(MakeVoteText(WidgetTree, NAME_None, ChoiceName(Choice), 24, FLinearColor::White));
+		Inside->AddChildToVerticalBox(TerminusUI::MakeWrapText(WidgetTree, NAME_None, ChoiceName(Choice), 24, FLinearColor::White));
 
-		UTextBlock* Desc = MakeVoteText(WidgetTree, NAME_None, ChoiceDescription(Choice), 14, FLinearColor(0.9f, 0.9f, 0.9f));
+		UTextBlock* Desc = TerminusUI::MakeWrapText(WidgetTree, NAME_None, ChoiceDescription(Choice), 14, TerminusUI::Color::TextBright);
 		if (UVerticalBoxSlot* S = Inside->AddChildToVerticalBox(Desc))
 		{
 			S->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
@@ -182,7 +155,7 @@ void UFloorVoteWidget::RebuildCards()
 		// 표 수 (누가 골랐는지는 공개 뒤에)
 		FString CountLabel = Shown.TotalVoters > 1 ? FString::Printf(TEXT("%d명 선택"), Count) : FString();
 		if (bMine) CountLabel += TEXT("  (내 선택)");
-		Inside->AddChildToVerticalBox(MakeVoteText(WidgetTree, NAME_None, CountLabel, 16, VoteGold));
+		Inside->AddChildToVerticalBox(TerminusUI::MakeWrapText(WidgetTree, NAME_None, CountLabel, 16, TerminusUI::Color::Gold));
 
 		// 공개: 카드 아래에 고른 사람
 		UVerticalBox* CardColumn = WidgetTree->ConstructWidget<UVerticalBox>();
@@ -194,7 +167,7 @@ void UFloorVoteWidget::RebuildCards()
 			{
 				if (Entry.Choice == Choice && Entry.Player) Names.Add(Entry.Player->GetPlayerName());
 			}
-			UTextBlock* Who = MakeVoteText(WidgetTree, NAME_None, Names.Num() > 0 ? FString::Join(Names, TEXT("\n")) : FString(TEXT("-")), 15, FLinearColor::White);
+			UTextBlock* Who = TerminusUI::MakeWrapText(WidgetTree, NAME_None, Names.Num() > 0 ? FString::Join(Names, TEXT("\n")) : FString(TEXT("-")), 15, FLinearColor::White);
 			if (UVerticalBoxSlot* S = CardColumn->AddChildToVerticalBox(Who)) S->SetPadding(FMargin(0.f, 10.f, 0.f, 0.f));
 		}
 

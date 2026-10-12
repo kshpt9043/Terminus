@@ -10,21 +10,8 @@
 #include "Components/VerticalBox.h"
 #include "Components/VerticalBoxSlot.h"
 #include "Widgets/Common/EscapeStackSubsystem.h"
-
-namespace
-{
-	UTextBlock* MakePopupText(UWidgetTree* Tree, const FName& Name, int32 Size, const FLinearColor& Color)
-	{
-		UTextBlock* Text = Tree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), Name);
-		FSlateFontInfo Font = Text->GetFont();
-		Font.Size = Size;
-		Text->SetFont(Font);
-		Text->SetColorAndOpacity(FSlateColor(Color));
-		Text->SetJustification(ETextJustify::Center);
-		Text->SetAutoWrapText(true);
-		return Text;
-	}
-}
+#include "Widgets/Common/TerminusUIBuilder.h"
+#include "Widgets/TerminusUIColors.h"
 
 void UConfirmPopupWidget::NativeOnInitialized()
 {
@@ -45,11 +32,7 @@ void UConfirmPopupWidget::NativeOnInitialized()
 
 void UConfirmPopupWidget::BuildDefaultLayout()
 {
-	UBorder* Dim = WidgetTree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("PopupDim"));
-	Dim->SetBrushColor(FLinearColor(0.f, 0.f, 0.f, 0.6f));
-	Dim->SetHorizontalAlignment(HAlign_Center);
-	Dim->SetVerticalAlignment(VAlign_Center);
-	WidgetTree->RootWidget = Dim;
+	UBorder* Dim = TerminusUI::MakeDimRoot(WidgetTree, TEXT("PopupDim"), TerminusUI::Color::Dim);
 
 	USizeBox* Size = WidgetTree->ConstructWidget<USizeBox>();
 	Size->SetMinDesiredWidth(420.f);
@@ -64,8 +47,8 @@ void UConfirmPopupWidget::BuildDefaultLayout()
 	UVerticalBox* Column = WidgetTree->ConstructWidget<UVerticalBox>();
 	Box->SetContent(Column);
 
-	TitleText = MakePopupText(WidgetTree, TEXT("TitleText"), 22, FLinearColor::White);
-	MessageText = MakePopupText(WidgetTree, TEXT("MessageText"), 16, FLinearColor(0.85f, 0.85f, 0.85f));
+	TitleText = TerminusUI::MakeWrapText(WidgetTree, TEXT("TitleText"), TEXT(""), 22, FLinearColor::White);
+	MessageText = TerminusUI::MakeWrapText(WidgetTree, TEXT("MessageText"), TEXT(""), 16, TerminusUI::Color::TextSoft);
 	if (UVerticalBoxSlot* S = Column->AddChildToVerticalBox(TitleText)) S->SetHorizontalAlignment(HAlign_Fill);
 	if (UVerticalBoxSlot* S = Column->AddChildToVerticalBox(MessageText))
 	{
@@ -83,7 +66,7 @@ void UConfirmPopupWidget::BuildDefaultLayout()
 	auto MakeButton = [&](const FName& ButtonName, const FName& LabelName, TObjectPtr<UButton>& OutButton, TObjectPtr<UTextBlock>& OutLabel)
 	{
 		OutButton = WidgetTree->ConstructWidget<UButton>(UButton::StaticClass(), ButtonName);
-		OutLabel = MakePopupText(WidgetTree, LabelName, 16, FLinearColor::Black);
+		OutLabel = TerminusUI::MakeWrapText(WidgetTree, LabelName, TEXT(""), 16, FLinearColor::Black);
 		OutButton->SetContent(OutLabel);
 		if (UHorizontalBoxSlot* S = Buttons->AddChildToHorizontalBox(OutButton))
 		{

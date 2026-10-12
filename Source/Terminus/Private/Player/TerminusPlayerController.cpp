@@ -42,7 +42,38 @@
 #include "Data/TerminusDataSettings.h"
 #include "TimerManager.h"
 #include "EngineUtils.h"
+#include "Widgets/TerminusUILayers.h"
 
+
+
+namespace
+{
+	// 없으면 만들어 화면에 붙임 (Class 가 비면 C++ 기본). 이미 떠 있으면 그대로
+	template <typename T>
+	T* ShowPCWidget(APlayerController* PC, TObjectPtr<T>& Widget, const TSubclassOf<T>& Class, int32 Layer)
+	{
+		if (!Widget)
+		{
+			Widget = CreateWidget<T>(PC, Class ? Class : TSubclassOf<T>(T::StaticClass()));
+			if (Widget)
+			{
+				Widget->AddToViewport(Layer);
+			}
+		}
+		return Widget;
+	}
+
+	// 화면에서 떼고 비움
+	template <typename T>
+	void ClosePCWidget(TObjectPtr<T>& Widget)
+	{
+		if (Widget)
+		{
+			Widget->RemoveFromParent();
+			Widget = nullptr;
+		}
+	}
+}
 
 void ATerminusPlayerController::BeginPlay()
 {
@@ -123,41 +154,21 @@ void ATerminusPlayerController::EndPlay(const EEndPlayReason::Type EndPlayReason
 {
 	GetWorldTimerManager().ClearTimer(StartSkillCheckTimer);
 
-	if (StartSkillPick)
-	{
-		StartSkillPick->RemoveFromParent();
-		StartSkillPick = nullptr;
-	}
+	ClosePCWidget(StartSkillPick);
 
-	if (MapScreen)
-	{
-		MapScreen->RemoveFromParent();
-		MapScreen = nullptr;
-	}
+	ClosePCWidget(MapScreen);
 
-	if (ChatWidget)
-	{
-		ChatWidget->RemoveFromParent();
-		ChatWidget = nullptr;
-	}
+	ClosePCWidget(ChatWidget);
 
 	GetWorldTimerManager().ClearTimer(PlanSendTimer);
-	if (CommsWidget)
-	{
-		CommsWidget->RemoveFromParent();
-		CommsWidget = nullptr;
-	}
+	ClosePCWidget(CommsWidget);
 
 	if (ATerminusPlayerState* PS = GetPlayerState<ATerminusPlayerState>())
 	{
 		PS->OnRunStateChanged.RemoveAll(this);
 	}
 
-	if (TavernWidget)
-	{
-		TavernWidget->RemoveFromParent();
-		TavernWidget = nullptr;
-	}
+	ClosePCWidget(TavernWidget);
 	
 	Super::EndPlay(EndPlayReason);
 }
@@ -280,7 +291,7 @@ void ATerminusPlayerController::CreateChatWidget()
 	ChatWidget = CreateWidget<UChatWidget>(this, Class);
 	if (ChatWidget)
 	{
-		ChatWidget->AddToViewport(25);   // 지도 / 전투 HUD / 스킬 고르기 위, 팝업(50) 아래
+		ChatWidget->AddToViewport(TerminusUI::Layer::Chat);   // 지도 / 전투 HUD / 스킬 고르기 위, 팝업(50) 아래
 	}
 }
 
@@ -391,7 +402,7 @@ void ATerminusPlayerController::CreatePartyCommsWidget()
 	CommsWidget = CreateWidget<UPartyCommsWidget>(this, Class);
 	if (CommsWidget)
 	{
-		CommsWidget->AddToViewport(11);   // 전투 HUD(10) 바로 위. 보상 / 휴식 화면(22) 은 이걸 덮음
+		CommsWidget->AddToViewport(TerminusUI::Layer::Comms);   // 전투 HUD(10) 바로 위. 보상 / 휴식 화면(22) 은 이걸 덮음
 	}
 }
 
@@ -681,7 +692,7 @@ UConfirmPopupWidget* ATerminusPlayerController::ShowPopup(const FText& Title, co
 	}
 
 	Popup->Setup(Title, Message, ConfirmLabel, CancelLabel);
-	Popup->AddToViewport(50);   // 어떤 화면보다도 위
+	Popup->AddToViewport(TerminusUI::Layer::Popup);   // 어떤 화면보다도 위
 	Popup->SetUserFocus(this);  // Enter / Esc
 	return Popup;
 }
@@ -706,30 +717,14 @@ void ATerminusPlayerController::ViewDungeonArea(ADungeonArea* Area)
 	}
 
 	// 전투 HUD: 구역에 들어가면 그 구역을 넘김. 전투 방일 때만 HUD 가 스스로 보임
-	if (Area && !CombatHUD)
-	{
-		TSubclassOf<UCombatHUDWidget> HUDClass = CombatHUDClass ? CombatHUDClass : TSubclassOf<UCombatHUDWidget>(UCombatHUDWidget::StaticClass());
-		CombatHUD = CreateWidget<UCombatHUDWidget>(this, HUDClass);
-		if (CombatHUD)
-		{
-			CombatHUD->AddToViewport(10);   // 지도 위젯보다 위
-		}
-	}
+	if (Area) ShowPCWidget(this, CombatHUD, CombatHUDClass, TerminusUI::Layer::CombatHUD);   // 지도 위젯보다 위
 	if (CombatHUD)
 	{
 		CombatHUD->SetArea(Area);
 	}
 
 	// 관전 바: 구역에 처음 들어갈 때 만들어 둠. 보일지는 스스로 판단 (내 싸움이 끝났고 다른 구역이 진행 중일 때)
-	if (Area && !SpectateWidget)
-	{
-		const TSubclassOf<USpectateWidget> Class = SpectateClass ? SpectateClass : TSubclassOf<USpectateWidget>(USpectateWidget::StaticClass());
-		SpectateWidget = CreateWidget<USpectateWidget>(this, Class);
-		if (SpectateWidget)
-		{
-			SpectateWidget->AddToViewport(24);   // 상점 / 휴식 / 이벤트(22), 구출(23) 화면 위, 채팅(25) 아래 -> 패널이 떠 있어도 누를 수 있게
-		}
-	}
+	if (Area) ShowPCWidget(this, SpectateWidget, SpectateClass, TerminusUI::Layer::Overlay);   // 상점 / 휴식 / 이벤트(22), 구출(23) 화면 위, 채팅(25) 아래 -> 패널이 떠 있어도 누를 수 있게
 
 	OnViewAreaChanged.Broadcast(Area);
 }
@@ -762,15 +757,7 @@ void ATerminusPlayerController::Client_EnterRift_Implementation(const TArray<FSt
 		Loading->Hide();
 	}
 
-	if (!Rift)
-	{
-		const TSubclassOf<URiftWidget> Class = RiftClass ? RiftClass : TSubclassOf<URiftWidget>(URiftWidget::StaticClass());
-		Rift = CreateWidget<URiftWidget>(this, Class);
-		if (Rift)
-		{
-			Rift->AddToViewport(24);   // 지도 / 전투 HUD / 고르기 / 보상 위, 채팅(25) 아래 -> 기다리면서 채팅 가능
-		}
-	}
+	ShowPCWidget(this, Rift, RiftClass, TerminusUI::Layer::Overlay);   // 지도 / 전투 HUD / 고르기 / 보상 위, 채팅(25) 아래 -> 기다리면서 채팅 가능
 
 	if (Rift)
 	{
@@ -781,11 +768,7 @@ void ATerminusPlayerController::Client_EnterRift_Implementation(const TArray<FSt
 
 void ATerminusPlayerController::Client_LeaveRift_Implementation()
 {
-	if (Rift)
-	{
-		Rift->RemoveFromParent();
-		Rift = nullptr;
-	}
+	ClosePCWidget(Rift);
 }
 
 void ATerminusPlayerController::Client_ShowFloorTitle_Implementation(const FText& Title, const FText& Subtitle)
@@ -794,7 +777,7 @@ void ATerminusPlayerController::Client_ShowFloorTitle_Implementation(const FText
 	if (UFloorTitleWidget* Widget = CreateWidget<UFloorTitleWidget>(this, Class))
 	{
 		Widget->Setup(Title, Subtitle, FText::FromString(TEXT("체력이 모두 회복되었습니다")));
-		Widget->AddToViewport(30);   // 지도 / 보상 / 이공간 위, 팝업(50) 아래
+		Widget->AddToViewport(TerminusUI::Layer::FloorTitle);   // 지도 / 보상 / 이공간 위, 팝업(50) 아래
 	}
 }
 
@@ -822,23 +805,11 @@ void ATerminusPlayerController::UpdateFloorVote(const FFloorVoteState& State)
 {
 	if (State.Phase == EFloorVotePhase::None)
 	{
-		if (FloorVote)
-		{
-			FloorVote->RemoveFromParent();
-			FloorVote = nullptr;
-		}
+		ClosePCWidget(FloorVote);
 		return;
 	}
 
-	if (!FloorVote)
-	{
-		const TSubclassOf<UFloorVoteWidget> Class = FloorVoteClass ? FloorVoteClass : TSubclassOf<UFloorVoteWidget>(UFloorVoteWidget::StaticClass());
-		FloorVote = CreateWidget<UFloorVoteWidget>(this, Class);
-		if (FloorVote)
-		{
-			FloorVote->AddToViewport(24);   // 지도 / 보상 위, 채팅(25) 아래 -> 투표하면서 채팅 가능
-		}
-	}
+	ShowPCWidget(this, FloorVote, FloorVoteClass, TerminusUI::Layer::Overlay);   // 지도 / 보상 위, 채팅(25) 아래 -> 투표하면서 채팅 가능
 
 	if (FloorVote)
 	{
@@ -848,11 +819,7 @@ void ATerminusPlayerController::UpdateFloorVote(const FFloorVoteState& State)
 
 void ATerminusPlayerController::Client_RunEnded_Implementation(const FText& Message)
 {
-	if (FloorVote)
-	{
-		FloorVote->RemoveFromParent();
-		FloorVote = nullptr;
-	}
+	ClosePCWidget(FloorVote);
 
 	UConfirmPopupWidget* Popup = ShowPopup(FText::FromString(TEXT("던전 종료")), Message, FText::FromString(TEXT("메인 화면으로")), FText::GetEmpty());
 	auto Leave = [this]()
@@ -875,17 +842,9 @@ void ATerminusPlayerController::Client_RunEnded_Implementation(const FText& Mess
 
 void ATerminusPlayerController::Client_BeginSettlement_Implementation(const FText& Message, bool bDeath, const FSettlementAdjust& Adjust, const FString& RoomName)
 {
-	if (RescueWidget)
-	{
-		RescueWidget->RemoveFromParent();
-		RescueWidget = nullptr;
-	}
+	ClosePCWidget(RescueWidget);
 
-	if (FloorVote)
-	{
-		FloorVote->RemoveFromParent();
-		FloorVote = nullptr;
-	}
+	ClosePCWidget(FloorVote);
 
 	// 정산 내용은 바로 내 프로필에 저장 (방장이 먼저 나가 끊겨도 메인 화면에서 이어서 정산)
 	const ATerminusPlayerState* PS = GetPlayerState<ATerminusPlayerState>();
@@ -941,15 +900,7 @@ void ATerminusPlayerController::Client_BeginSettlement_Implementation(const FTex
 
 void ATerminusPlayerController::Client_ShowRescue_Implementation(bool bChooser, const TArray<FString>& WipedNames, bool bCanIntervene, float HealthCost, float Seconds)
 {
-	if (!RescueWidget)
-	{
-		const TSubclassOf<URescueWidget> Class = RescueClass ? RescueClass : TSubclassOf<URescueWidget>(URescueWidget::StaticClass());
-		RescueWidget = CreateWidget<URescueWidget>(this, Class);
-		if (RescueWidget)
-		{
-			RescueWidget->AddToViewport(23);   // 보상 / 휴식 화면 위, 채팅(25) 아래
-		}
-	}
+	ShowPCWidget(this, RescueWidget, RescueClass, TerminusUI::Layer::Rescue);   // 보상 / 휴식 화면 위, 채팅(25) 아래
 
 	if (RescueWidget)
 	{
@@ -959,11 +910,7 @@ void ATerminusPlayerController::Client_ShowRescue_Implementation(bool bChooser, 
 
 void ATerminusPlayerController::Client_CloseRescue_Implementation()
 {
-	if (RescueWidget)
-	{
-		RescueWidget->RemoveFromParent();
-		RescueWidget = nullptr;
-	}
+	ClosePCWidget(RescueWidget);
 }
 
 void ATerminusPlayerController::Server_ChooseRescue_Implementation(bool bIntervene)
@@ -976,28 +923,20 @@ void ATerminusPlayerController::Server_ChooseRescue_Implementation(bool bInterve
 
 void ATerminusPlayerController::Client_ShowRest_Implementation(const TArray<APlayerState*>& Occupants, float HealRatio, FIntPoint ExploreCurrency, float ExploreRelicChance)
 {
-	if (RestWidget)
-	{
-		RestWidget->RemoveFromParent();
-		RestWidget = nullptr;
-	}
+	ClosePCWidget(RestWidget);
 
 	const TSubclassOf<URestWidget> Class = RestClass ? RestClass : TSubclassOf<URestWidget>(URestWidget::StaticClass());
 	RestWidget = CreateWidget<URestWidget>(this, Class);
 	if (RestWidget)
 	{
 		RestWidget->Setup(Occupants, HealRatio, ExploreCurrency, ExploreRelicChance);
-		RestWidget->AddToViewport(22);   // 보상 화면과 같은 높이, 채팅(25) 아래
+		RestWidget->AddToViewport(TerminusUI::Layer::RoomPanel);   // 보상 화면과 같은 높이, 채팅(25) 아래
 	}
 }
 
 void ATerminusPlayerController::Client_CloseRest_Implementation()
 {
-	if (RestWidget)
-	{
-		RestWidget->RemoveFromParent();
-		RestWidget = nullptr;
-	}
+	ClosePCWidget(RestWidget);
 }
 
 void ATerminusPlayerController::Client_RestResult_Implementation(const FText& Result)
@@ -1028,15 +967,7 @@ void ATerminusPlayerController::Server_ChooseRestTarget_Implementation(APlayerSt
 
 void ATerminusPlayerController::Client_ShowShop_Implementation(const FShopState& State)
 {
-	if (!ShopWidget)
-	{
-		const TSubclassOf<UShopWidget> Class = ShopClass ? ShopClass : TSubclassOf<UShopWidget>(UShopWidget::StaticClass());
-		ShopWidget = CreateWidget<UShopWidget>(this, Class);
-		if (ShopWidget)
-		{
-			ShopWidget->AddToViewport(22);   // 보상 / 휴식 / 이벤트 화면과 같은 높이, 채팅(25) 아래
-		}
-	}
+	ShowPCWidget(this, ShopWidget, ShopClass, TerminusUI::Layer::RoomPanel);   // 보상 / 휴식 / 이벤트 화면과 같은 높이, 채팅(25) 아래
 
 	if (ShopWidget)
 	{
@@ -1046,11 +977,7 @@ void ATerminusPlayerController::Client_ShowShop_Implementation(const FShopState&
 
 void ATerminusPlayerController::Client_CloseShop_Implementation()
 {
-	if (ShopWidget)
-	{
-		ShopWidget->RemoveFromParent();
-		ShopWidget = nullptr;
-	}
+	ClosePCWidget(ShopWidget);
 }
 
 void ATerminusPlayerController::Server_ShopBuyRelic_Implementation(int32 Index)
@@ -1085,15 +1012,7 @@ void ATerminusPlayerController::Server_ShopLeave_Implementation()
 
 void ATerminusPlayerController::Client_ShowEvent_Implementation(const TArray<FEventOption>& Options)
 {
-	if (!EventWidget)
-	{
-		const TSubclassOf<UEventWidget> Class = EventClass ? EventClass : TSubclassOf<UEventWidget>(UEventWidget::StaticClass());
-		EventWidget = CreateWidget<UEventWidget>(this, Class);
-		if (EventWidget)
-		{
-			EventWidget->AddToViewport(22);   // 보상 / 휴식터 화면과 같은 높이, 채팅(25) 아래
-		}
-	}
+	ShowPCWidget(this, EventWidget, EventClass, TerminusUI::Layer::RoomPanel);   // 보상 / 휴식터 화면과 같은 높이, 채팅(25) 아래
 
 	if (EventWidget)
 	{
@@ -1111,11 +1030,7 @@ void ATerminusPlayerController::Client_EventResult_Implementation(const FText& R
 
 void ATerminusPlayerController::Client_CloseEvent_Implementation()
 {
-	if (EventWidget)
-	{
-		EventWidget->RemoveFromParent();
-		EventWidget = nullptr;
-	}
+	ClosePCWidget(EventWidget);
 }
 
 void ATerminusPlayerController::Server_ChooseEvent_Implementation(int32 Index, int32 ReplaceSlot, FName RelicRow)
@@ -1129,27 +1044,19 @@ void ATerminusPlayerController::Server_ChooseEvent_Implementation(int32 Index, i
 
 void ATerminusPlayerController::Client_CloseMonsterReward_Implementation()
 {
-	if (MonsterReward)
-	{
-		MonsterReward->RemoveFromParent();
-		MonsterReward = nullptr;
-	}
+	ClosePCWidget(MonsterReward);
 }
 
 void ATerminusPlayerController::Client_ShowRoomReward_Implementation(const FRoomRewardOffer& Offer)
 {
-	if (MonsterReward)
-	{
-		MonsterReward->RemoveFromParent();
-		MonsterReward = nullptr;
-	}
+	ClosePCWidget(MonsterReward);
 
 	const TSubclassOf<UMonsterRewardWidget> Class = MonsterRewardClass ? MonsterRewardClass : TSubclassOf<UMonsterRewardWidget>(UMonsterRewardWidget::StaticClass());
 	MonsterReward = CreateWidget<UMonsterRewardWidget>(this, Class);
 	if (MonsterReward)
 	{
 		MonsterReward->Setup(Offer);
-		MonsterReward->AddToViewport(22);   // 전투 HUD(10) / 스킬 고르기(20) 위, 채팅(25) 아래
+		MonsterReward->AddToViewport(TerminusUI::Layer::RoomPanel);   // 전투 HUD(10) / 스킬 고르기(20) 위, 채팅(25) 아래
 	}
 }
 
@@ -1309,7 +1216,7 @@ void ATerminusPlayerController::OpenStartRelicPick()
 	if (StartRelicPick)
 	{
 		StartRelicPick->SetCandidates(Stored, PS->GetCharacterClass(), PS->IsHardMode());
-		StartRelicPick->AddToViewport(20);   // 지도 / 전투 HUD 위
+		StartRelicPick->AddToViewport(TerminusUI::Layer::Pick);   // 지도 / 전투 HUD 위
 	}
 }
 
@@ -1323,11 +1230,7 @@ void ATerminusPlayerController::Server_ChooseStartRelics_Implementation(const TA
 
 void ATerminusPlayerController::DebugShowStartRelicPick()
 {
-	if (StartRelicPick)
-	{
-		StartRelicPick->RemoveFromParent();
-		StartRelicPick = nullptr;
-	}
+	ClosePCWidget(StartRelicPick);
 	bStartRelicPickOpened = false;
 
 	// 같은 PC 의 Reliable RPC 라 순서 보장 -> 초기화 뒤 RunState 가 바뀌면 흐름이 다시 유물 고르기를 띄움
@@ -1362,7 +1265,7 @@ void ATerminusPlayerController::OpenMapScreen()
 	MapScreen = CreateWidget<UMapScreenWidget>(this, MapScreenClass);
 	if (MapScreen)
 	{
-		MapScreen->AddToViewport(0);   // 맨 아래. 전투 HUD(10) / 고르기 화면(20) 이 위
+		MapScreen->AddToViewport(TerminusUI::Layer::Map);   // 맨 아래. 전투 HUD(10) / 고르기 화면(20) 이 위
 	}
 }
 
@@ -1390,7 +1293,7 @@ void ATerminusPlayerController::OpenStartSkillPick()
 	if (StartSkillPick)
 	{
 		StartSkillPick->SetChoices(Pool);
-		StartSkillPick->AddToViewport(20);   // 지도 / 전투 HUD 보다 위
+		StartSkillPick->AddToViewport(TerminusUI::Layer::Pick);   // 지도 / 전투 HUD 보다 위
 
 		// 아무 키 입력이 이 화면으로 오게 포커스. 마우스 커서는 그대로 (지도는 클릭으로 씀)
 		ApplyUIInputMode(StartSkillPick);
@@ -1445,11 +1348,7 @@ void ATerminusPlayerController::DebugClearOwnedSkills()
 void ATerminusPlayerController::DebugShowStartSkillPick()
 {
 	// 같은 PC 의 Reliable RPC 라 순서가 지켜짐 -> 고른 결과는 초기화 뒤에 도착
-	if (StartSkillPick)
-	{
-		StartSkillPick->RemoveFromParent();
-		StartSkillPick = nullptr;
-	}
+	ClosePCWidget(StartSkillPick);
 	Server_DebugResetStartSkill();
 	OpenStartSkillPick();
 }

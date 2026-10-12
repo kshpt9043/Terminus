@@ -14,54 +14,9 @@
 #include "Data/SkillTypes.h"
 #include "Data/TerminusDataSettings.h"
 #include "Widgets/Common/ItemSlotWidget.h"
-
-namespace
-{
-	UTextBlock* MakeSettleText(UWidgetTree* Tree, const FName& Name, const FString& Initial, int32 Size, const FLinearColor& Color,
-		ETextJustify::Type Justify = ETextJustify::Center)
-	{
-		UTextBlock* Text = Tree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), Name);
-		Text->SetText(FText::FromString(Initial));
-		FSlateFontInfo Font = Text->GetFont();
-		Font.Size = Size;
-		Text->SetFont(Font);
-		Text->SetColorAndOpacity(FSlateColor(Color));
-		Text->SetJustification(Justify);
-		Text->SetAutoWrapText(true);
-		return Text;
-	}
-
-	UButton* MakeSettleButton(UWidgetTree* Tree, const FName& Name, const FString& Label, const FLinearColor& Color)
-	{
-		UButton* Button = Tree->ConstructWidget<UButton>(UButton::StaticClass(), Name);
-		Button->SetBackgroundColor(Color);
-		Button->SetContent(MakeSettleText(Tree, NAME_None, Label, 15, FLinearColor::White));
-		return Button;
-	}
-
-	void AddSettleRow(UVerticalBox* Column, UWidget* Widget, float Top, EHorizontalAlignment Align = HAlign_Fill)
-	{
-		if (UVerticalBoxSlot* S = Column->AddChildToVerticalBox(Widget))
-		{
-			S->SetHorizontalAlignment(Align);
-			S->SetPadding(FMargin(0.f, Top, 0.f, 0.f));
-		}
-	}
-
-	FString SettleGoldText(int32 Gold)
-	{
-		return FText::AsNumber(Gold).ToString() + TEXT(" G");
-	}
-
-	FString SettleRelicName(FName Row)
-	{
-		const FRelicRow* Relic = UTerminusDataSettings::FindRelicRow(Row);
-		return Relic ? Relic->RelicName.ToString() : Row.ToString();
-	}
-
-	const FLinearColor SettleTitleColor(1.f, 0.82f, 0.35f);
-	const FLinearColor SettleConfirmColor(0.25f, 0.55f, 0.3f);
-}
+#include "Widgets/Common/TerminusUIBuilder.h"
+#include "Widgets/Common/TerminusUIText.h"
+#include "Widgets/TerminusUIColors.h"
 
 void USettlementWidget::NativeOnInitialized()
 {
@@ -93,7 +48,7 @@ void USettlementWidget::NativeOnInitialized()
 		}
 		if (Settlement.BonusGold > 0)
 		{
-			Sub += FString::Printf(TEXT("\n%s  +%s"), *Settlement.BonusReason, *SettleGoldText(Settlement.BonusGold));
+			Sub += FString::Printf(TEXT("\n%s  +%s"), *Settlement.BonusReason, *TerminusUI::GoldText(Settlement.BonusGold));
 		}
 		SubtitleText->SetText(FText::FromString(Sub));
 	}
@@ -122,7 +77,7 @@ void USettlementWidget::NativeOnInitialized()
 		if (Settlement.LostStoredRelics.Num() > 0)
 		{
 			TArray<FString> Names;
-			for (const FName& Row : Settlement.LostStoredRelics) Names.Add(SettleRelicName(Row));
+			for (const FName& Row : Settlement.LostStoredRelics) Names.Add(UTerminusDataSettings::GetRelicName(Row));
 			Help += FString::Printf(TEXT("\n하드 모드: 들고 간 [%s] 이(가) 창고에서 사라집니다."), *FString::Join(Names, TEXT(", ")));
 		}
 		if (RelicHelpText) RelicHelpText->SetText(FText::FromString(Help));
@@ -137,14 +92,10 @@ void USettlementWidget::NativeOnInitialized()
 
 void USettlementWidget::BuildDefaultLayout()
 {
-	UBorder* Dim = WidgetTree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("SettlementDim"));
-	Dim->SetBrushColor(FLinearColor(0.f, 0.f, 0.f, 0.75f));
-	Dim->SetHorizontalAlignment(HAlign_Center);
-	Dim->SetVerticalAlignment(VAlign_Center);
-	WidgetTree->RootWidget = Dim;
+	UBorder* Dim = TerminusUI::MakeDimRoot(WidgetTree, TEXT("SettlementDim"), TerminusUI::Color::DimStrong);
 
 	UBorder* Panel = WidgetTree->ConstructWidget<UBorder>();
-	Panel->SetBrushColor(FLinearColor(0.05f, 0.05f, 0.07f, 0.97f));
+	Panel->SetBrushColor(TerminusUI::Color::Panel);
 	Panel->SetPadding(FMargin(30.f, 24.f));
 	Dim->SetContent(Panel);
 
@@ -155,22 +106,20 @@ void USettlementWidget::BuildDefaultLayout()
 	UVerticalBox* Root = WidgetTree->ConstructWidget<UVerticalBox>();
 	Width->SetContent(Root);
 
-	TitleText = MakeSettleText(WidgetTree, TEXT("TitleText"), TEXT("정산"), 30, SettleTitleColor);
-	AddSettleRow(Root, TitleText, 0.f);
-	SubtitleText = MakeSettleText(WidgetTree, TEXT("SubtitleText"), TEXT(""), 15, FLinearColor(0.8f, 0.8f, 0.8f));
-	AddSettleRow(Root, SubtitleText, 6.f);
+	TitleText = TerminusUI::MakeWrapText(WidgetTree, TEXT("TitleText"), TEXT("정산"), 30, TerminusUI::Color::Gold);
+	TerminusUI::AddRow(Root, TitleText, 0.f, HAlign_Fill);
+	SubtitleText = TerminusUI::MakeWrapText(WidgetTree, TEXT("SubtitleText"), TEXT(""), 15, TerminusUI::Color::TextMuted);
+	TerminusUI::AddRow(Root, SubtitleText, 6.f, HAlign_Fill);
 
 	// ---- 정산 목록
 	UVerticalBox* Main = WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), TEXT("MainPanel"));
 	MainPanel = Main;
-	AddSettleRow(Root, Main, 18.f);
+	TerminusUI::AddRow(Root, Main, 18.f, HAlign_Fill);
 
-	RelicHeaderText = MakeSettleText(WidgetTree, TEXT("RelicHeaderText"), TEXT("1. 보관할 유물"), 19, FLinearColor::White, ETextJustify::Left);
-	AddSettleRow(Main, RelicHeaderText, 0.f);
-	RelicHelpText = MakeSettleText(WidgetTree, TEXT("RelicHelpText"),
-		TEXT("던전에서 얻은 유물 중 하나를 골라 창고에 보관합니다. 나머지 유물은 사라집니다."),
-		13, FLinearColor(0.7f, 0.7f, 0.7f), ETextJustify::Left);
-	AddSettleRow(Main, RelicHelpText, 4.f);
+	RelicHeaderText = TerminusUI::MakeWrapText(WidgetTree, TEXT("RelicHeaderText"), TEXT("1. 보관할 유물"), 19, FLinearColor::White, ETextJustify::Left);
+	TerminusUI::AddRow(Main, RelicHeaderText, 0.f, HAlign_Fill);
+	RelicHelpText = TerminusUI::MakeWrapText(WidgetTree, TEXT("RelicHelpText"), TEXT("던전에서 얻은 유물 중 하나를 골라 창고에 보관합니다. 나머지 유물은 사라집니다."), 13, TerminusUI::Color::TextDim, ETextJustify::Left);
+	TerminusUI::AddRow(Main, RelicHelpText, 4.f, HAlign_Fill);
 
 	USizeBox* ListHeight = WidgetTree->ConstructWidget<USizeBox>();
 	ListHeight->SetMaxDesiredHeight(300.f);
@@ -180,32 +129,32 @@ void USettlementWidget::BuildDefaultLayout()
 	Wrap->SetInnerSlotPadding(FVector2D(8.f, 8.f));
 	RelicList = Wrap;
 	Scroll->AddChild(Wrap);
-	AddSettleRow(Main, ListHeight, 10.f);
+	TerminusUI::AddRow(Main, ListHeight, 10.f, HAlign_Fill);
 
-	RelicGuideText = MakeSettleText(WidgetTree, TEXT("RelicGuideText"), TEXT(""), 15, SettleTitleColor, ETextJustify::Left);
-	AddSettleRow(Main, RelicGuideText, 8.f);
+	RelicGuideText = TerminusUI::MakeWrapText(WidgetTree, TEXT("RelicGuideText"), TEXT(""), 15, TerminusUI::Color::Gold, ETextJustify::Left);
+	TerminusUI::AddRow(Main, RelicGuideText, 8.f, HAlign_Fill);
 
-	AddSettleRow(Main, MakeSettleText(WidgetTree, NAME_None, TEXT("2. 완료된 퀘스트"), 19, FLinearColor::White, ETextJustify::Left), 18.f);
-	QuestText = MakeSettleText(WidgetTree, TEXT("QuestText"), TEXT(""), 14, FLinearColor(0.85f, 0.85f, 0.85f), ETextJustify::Left);
-	AddSettleRow(Main, QuestText, 4.f);
+	TerminusUI::AddRow(Main, TerminusUI::MakeWrapText(WidgetTree, NAME_None, TEXT("2. 완료된 퀘스트"), 19, FLinearColor::White, ETextJustify::Left), 18.f, HAlign_Fill);
+	QuestText = TerminusUI::MakeWrapText(WidgetTree, TEXT("QuestText"), TEXT(""), 14, TerminusUI::Color::TextSoft, ETextJustify::Left);
+	TerminusUI::AddRow(Main, QuestText, 4.f, HAlign_Fill);
 
-	AddSettleRow(Main, MakeSettleText(WidgetTree, NAME_None, TEXT("3. 가져가는 스킬"), 19, FLinearColor::White, ETextJustify::Left), 18.f);
-	SkillText = MakeSettleText(WidgetTree, TEXT("SkillText"), TEXT(""), 14, FLinearColor(0.85f, 0.85f, 0.85f), ETextJustify::Left);
-	AddSettleRow(Main, SkillText, 4.f);
+	TerminusUI::AddRow(Main, TerminusUI::MakeWrapText(WidgetTree, NAME_None, TEXT("3. 가져가는 스킬"), 19, FLinearColor::White, ETextJustify::Left), 18.f, HAlign_Fill);
+	SkillText = TerminusUI::MakeWrapText(WidgetTree, TEXT("SkillText"), TEXT(""), 14, TerminusUI::Color::TextSoft, ETextJustify::Left);
+	TerminusUI::AddRow(Main, SkillText, 4.f, HAlign_Fill);
 
-	ConfirmButton = MakeSettleButton(WidgetTree, TEXT("ConfirmButton"), TEXT("  정산 완료  "), SettleConfirmColor);
-	AddSettleRow(Main, ConfirmButton, 22.f, HAlign_Right);
+	ConfirmButton = TerminusUI::MakeButton(WidgetTree, TEXT("ConfirmButton"), TEXT("  정산 완료  "), 15, FLinearColor::White, TerminusUI::Color::ButtonConfirm);
+	TerminusUI::AddRow(Main, ConfirmButton, 22.f, HAlign_Right);
 
 	// ---- 최종 골드
 	UVerticalBox* Summary = WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), TEXT("SummaryPanel"));
 	SummaryPanel = Summary;
-	AddSettleRow(Root, Summary, 18.f);
+	TerminusUI::AddRow(Root, Summary, 18.f, HAlign_Fill);
 
-	AddSettleRow(Summary, MakeSettleText(WidgetTree, NAME_None, TEXT("최종 골드"), 19, FLinearColor::White), 0.f);
-	SummaryText = MakeSettleText(WidgetTree, TEXT("SummaryText"), TEXT(""), 17, FLinearColor(0.92f, 0.92f, 0.92f));
-	AddSettleRow(Summary, SummaryText, 10.f);
-	CloseButton = MakeSettleButton(WidgetTree, TEXT("CloseButton"), TEXT("  확인  "), SettleConfirmColor);
-	AddSettleRow(Summary, CloseButton, 18.f, HAlign_Center);
+	TerminusUI::AddRow(Summary, TerminusUI::MakeWrapText(WidgetTree, NAME_None, TEXT("최종 골드"), 19, FLinearColor::White), 0.f, HAlign_Fill);
+	SummaryText = TerminusUI::MakeWrapText(WidgetTree, TEXT("SummaryText"), TEXT(""), 17, FLinearColor(0.92f, 0.92f, 0.92f));
+	TerminusUI::AddRow(Summary, SummaryText, 10.f, HAlign_Fill);
+	CloseButton = TerminusUI::MakeButton(WidgetTree, TEXT("CloseButton"), TEXT("  확인  "), 15, FLinearColor::White, TerminusUI::Color::ButtonConfirm);
+	TerminusUI::AddRow(Summary, CloseButton, 18.f, HAlign_Center);
 }
 
 bool USettlementWidget::IsAlreadyStored(FName Row) const
@@ -255,7 +204,7 @@ void USettlementWidget::RefreshGuide()
 		if (RelicGuideText)
 		{
 			RelicGuideText->SetText(FText::FromString(bHasRelics
-				? FString::Printf(TEXT("유물 판매  +%s"), *SettleGoldText(DeathGold()))
+				? FString::Printf(TEXT("유물 판매  +%s"), *TerminusUI::GoldText(DeathGold()))
 				: FString(TEXT("던전에서 얻은 유물이 없습니다."))));
 		}
 		if (ConfirmButton) ConfirmButton->SetIsEnabled(true);
@@ -275,7 +224,7 @@ void USettlementWidget::RefreshGuide()
 		}
 		else
 		{
-			Guide = FString::Printf(TEXT("고른 유물: %s"), *SettleRelicName(Chosen));
+			Guide = FString::Printf(TEXT("고른 유물: %s"), *UTerminusDataSettings::GetRelicName(Chosen));
 			if (IsAlreadyStored(Chosen)) Guide += TEXT("  (창고에 이미 있어 아무 일도 일어나지 않습니다)");
 		}
 		RelicGuideText->SetText(FText::FromString(Guide));
@@ -316,15 +265,11 @@ void USettlementWidget::HandleConfirm()
 	if (SummaryText)
 	{
 		FString Summary = Settlement.bDeath
-			? FString::Printf(TEXT("유물 판매  +%s\n\n보유 골드  %s"), *SettleGoldText(RelicGold), *SettleGoldText(Profile->GetGold()))
-			: FString::Printf(TEXT("퀘스트 골드  +%s\n\n보유 골드  %s"), *SettleGoldText(QuestGold), *SettleGoldText(Profile->GetGold()));
-		if (BonusGold > 0) Summary = FString::Printf(TEXT("%s  +%s\n"), *Settlement.BonusReason, *SettleGoldText(BonusGold)) + Summary;
-		if (bNewRelic) Summary += FString::Printf(TEXT("\n\n창고에 보관: %s"), *SettleRelicName(Chosen));
-		if (bNewSkill)
-		{
-			const FSkillRow* Skill = UTerminusDataSettings::FindSkillRow(Settlement.KeptSkill);
-			Summary += FString::Printf(TEXT("\n새 보유 스킬: %s"), Skill ? *Skill->DisplayName_KR.ToString() : *Settlement.KeptSkill.ToString());
-		}
+			? FString::Printf(TEXT("유물 판매  +%s\n\n보유 골드  %s"), *TerminusUI::GoldText(RelicGold), *TerminusUI::GoldText(Profile->GetGold()))
+			: FString::Printf(TEXT("퀘스트 골드  +%s\n\n보유 골드  %s"), *TerminusUI::GoldText(QuestGold), *TerminusUI::GoldText(Profile->GetGold()));
+		if (BonusGold > 0) Summary = FString::Printf(TEXT("%s  +%s\n"), *Settlement.BonusReason, *TerminusUI::GoldText(BonusGold)) + Summary;
+		if (bNewRelic) Summary += FString::Printf(TEXT("\n\n창고에 보관: %s"), *UTerminusDataSettings::GetRelicName(Chosen));
+		if (bNewSkill) Summary += FString::Printf(TEXT("\n새 보유 스킬: %s"), *UTerminusDataSettings::GetSkillName(Settlement.KeptSkill));
 		SummaryText->SetText(FText::FromString(Summary));
 	}
 

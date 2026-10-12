@@ -15,6 +15,7 @@
 #include "GameFramework/PlayerState.h"
 #include "Player/TerminusPlayerController.h"
 #include "Widgets/Common/EscapeStackSubsystem.h"
+#include "Widgets/TerminusUIColors.h"
 
 // =====================================================================
 // 초기화 / 배치
@@ -58,7 +59,7 @@ void UChatWidget::BuildDefaultLayout()
 	FSlateFontInfo TitleFont = Title->GetFont();
 	TitleFont.Size = 11;
 	Title->SetFont(TitleFont);
-	Title->SetColorAndOpacity(FSlateColor(FLinearColor(0.8f, 0.8f, 0.8f)));
+	Title->SetColorAndOpacity(FSlateColor(TerminusUI::Color::TextMuted));
 	Header->SetContent(Title);
 	Column->AddChildToVerticalBox(Header);
 	DragHandle = Header;

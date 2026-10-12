@@ -10,6 +10,7 @@ class UPanelWidget;
 class UTextBlock;
 class USkillCardWidget;
 class UItemSlotWidget;
+class UItemPickPanelWidget;
 
 /**
  * 방 클리어 보상 화면 (몬스터 / 가디언 / 보스). 이름은 처음 만든 몬스터방 그대로 (블루프린트 연결 유지)
@@ -45,15 +46,11 @@ protected:
 	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UWidget> RelicSection;
 	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UPanelWidget> RelicBox;
 
-	// 강화 칸이 꽉 찼을 때: 바꿀 스킬 고르기
-	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UWidget> ReplacePanel;
-	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UPanelWidget> ReplaceBox;
-	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UButton> ReplaceCancelButton;
+	// 강화 칸이 꽉 찼을 때: 바꿀 스킬 고르기 (공통 패널)
+	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UItemPickPanelWidget> ReplacePanel;
 
-	// 유물 칸이 꽉 찼을 때: 바꿀 유물 고르기
-	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UWidget> RelicReplacePanel;
-	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UPanelWidget> RelicReplaceBox;
-	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UButton> RelicReplaceCancelButton;
+	// 유물 칸이 꽉 찼을 때: 바꿀 유물 고르기 (공통 패널)
+	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UItemPickPanelWidget> RelicReplacePanel;
 
 	// 고른 결과 ("획득: 성스러운 돌진 / 은빛 방패")
 	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UTextBlock> ResultText;
@@ -66,6 +63,10 @@ protected:
 
 	UPROPERTY(EditAnywhere, Category = "Reward")
 	TSubclassOf<UItemSlotWidget> SlotClass;
+
+	// 기본 레이아웃일 때 바꿀 칸 고르기 패널 (비우면 C++ 기본)
+	UPROPERTY(EditAnywhere, Category = "Reward")
+	TSubclassOf<UItemPickPanelWidget> PickPanelClass;
 
 	UPROPERTY(EditAnywhere, Category = "Reward")
 	float CardSpacing = 24.f;
@@ -99,7 +100,7 @@ private:
 	void HandleReplaceSlotClicked(UItemSlotWidget* ClickedSlot);
 	void HandleRelicReplaceClicked(UItemSlotWidget* ClickedSlot);
 
-	UFUNCTION() void HandleReplaceCancel();
-	UFUNCTION() void HandleRelicReplaceCancel();
+	void HandleReplaceCancel();
+	void HandleRelicReplaceCancel();
 	UFUNCTION() void HandleNextClicked();
 };

@@ -17,31 +17,14 @@
 #include "Player/TerminusPlayerState.h"
 #include "Widgets/Common/ConfirmPopupWidget.h"
 #include "Widgets/Map/PartyProfileCardWidget.h"
+#include "Widgets/Common/TerminusUIBuilder.h"
+#include "Widgets/TerminusUIColors.h"
 
 namespace
 {
 	const FLinearColor BarColor(0.03f, 0.03f, 0.04f, 0.85f);
 	const FLinearColor CurrencyColor(1.f, 0.82f, 0.3f);
 
-	UTextBlock* MakeBarText(UWidgetTree* Tree, const FString& Initial, int32 Size, const FLinearColor& Color = FLinearColor::White)
-	{
-		UTextBlock* Text = Tree->ConstructWidget<UTextBlock>();
-		Text->SetText(FText::FromString(Initial));
-		FSlateFontInfo Font = Text->GetFont();
-		Font.Size = Size;
-		Text->SetFont(Font);
-		Text->SetColorAndOpacity(FSlateColor(Color));
-		return Text;
-	}
-
-	UButton* MakeTextButton(UWidgetTree* Tree, const FString& Label, int32 Size)
-	{
-		UButton* Button = Tree->ConstructWidget<UButton>();
-		UTextBlock* Text = MakeBarText(Tree, Label, Size, FLinearColor::Black);
-		Text->SetJustification(ETextJustify::Center);
-		Button->SetContent(Text);
-		return Button;
-	}
 }
 
 // =====================================================================
@@ -74,8 +57,8 @@ void UMapTopBarWidget::BuildDefaultLayout()
 
 	// 왼쪽: 층 / 진행
 	UVerticalBox* FloorBox = WidgetTree->ConstructWidget<UVerticalBox>();
-	FloorText = MakeBarText(WidgetTree, TEXT(""), 20);
-	RoomText = MakeBarText(WidgetTree, TEXT(""), 14, FLinearColor(0.75f, 0.75f, 0.75f));
+	FloorText = TerminusUI::MakeText(WidgetTree, NAME_None, TEXT(""), 20, FLinearColor::White, ETextJustify::Left);
+	RoomText = TerminusUI::MakeText(WidgetTree, NAME_None, TEXT(""), 14, TerminusUI::Color::TextMuted, ETextJustify::Left);
 	FloorBox->AddChildToVerticalBox(FloorText);
 	FloorBox->AddChildToVerticalBox(RoomText);
 	if (UHorizontalBoxSlot* S = Row->AddChildToHorizontalBox(FloorBox))
@@ -94,14 +77,14 @@ void UMapTopBarWidget::BuildDefaultLayout()
 	}
 
 	// 오른쪽: 재화 / 나가기
-	CurrencyText = MakeBarText(WidgetTree, TEXT(""), 20, CurrencyColor);
+	CurrencyText = TerminusUI::MakeText(WidgetTree, NAME_None, TEXT(""), 20, CurrencyColor, ETextJustify::Left);
 	if (UHorizontalBoxSlot* S = Row->AddChildToHorizontalBox(CurrencyText))
 	{
 		S->SetVerticalAlignment(VAlign_Center);
 		S->SetPadding(FMargin(24.f, 0.f, 20.f, 0.f));
 	}
 
-	ExitButton = MakeTextButton(WidgetTree, TEXT("나가기"), 16);
+	ExitButton = TerminusUI::MakeButton(WidgetTree, NAME_None, TEXT("나가기"), 16);
 	if (UHorizontalBoxSlot* S = Row->AddChildToHorizontalBox(ExitButton))
 	{
 		S->SetVerticalAlignment(VAlign_Center);
@@ -172,10 +155,20 @@ void UMapTopBarWidget::RefreshParty()
 	}
 }
 
+AMapManager* UMapTopBarWidget::GetMapManager()
+{
+	if (!CachedMapManager.IsValid())
+	{
+		CachedMapManager = Cast<AMapManager>(UGameplayStatics::GetActorOfClass(this, AMapManager::StaticClass()));
+	}
+	return CachedMapManager.Get();
+}
+
 void UMapTopBarWidget::RefreshTexts()
 {
+	// 매 틱 불림 -> 글자는 바뀌었을 때만 넣음 (SetTextIfChanged)
 	const ATerminusPlayerState* LocalPS = GetOwningPlayer() ? GetOwningPlayer()->GetPlayerState<ATerminusPlayerState>() : nullptr;
-	const AMapManager* MapMgr = Cast<AMapManager>(UGameplayStatics::GetActorOfClass(this, AMapManager::StaticClass()));
+	const AMapManager* MapMgr = GetMapManager();
 
 	if (FloorText)
 	{
@@ -185,7 +178,7 @@ void UMapTopBarWidget::RefreshTexts()
 		{
 			Label += FString::Printf(TEXT(" · %s"), *MapMgr->FloorTheme->DisplayName.ToString());
 		}
-		FloorText->SetText(FText::FromString(Label));
+		TerminusUI::SetTextIfChanged(FloorText, Label);
 	}
 
 	if (RoomText)
@@ -193,12 +186,12 @@ void UMapTopBarWidget::RefreshTexts()
 		// CurrentMapLevel = 지금까지 지난 방 수 -> 다음에 들어갈 방은 그 다음
 		const int32 Total = MapMgr ? MapMgr->GetLevelCount() : 12;   // 퀘스트 방이 없는 층은 한 줄 적음
 		const int32 Next = FMath::Min((LocalPS ? LocalPS->GetCurrentMapLevel() : 0) + 1, Total);
-		RoomText->SetText(FText::FromString(FString::Printf(TEXT("다음 방 %d / %d"), Next, Total)));
+		TerminusUI::SetTextIfChanged(RoomText, FString::Printf(TEXT("다음 방 %d / %d"), Next, Total));
 	}
 
 	if (CurrencyText)
 	{
-		CurrencyText->SetText(FText::FromString(FString::Printf(TEXT("재화 %d"), LocalPS ? LocalPS->GetRunState().Currency : 0)));
+		TerminusUI::SetTextIfChanged(CurrencyText, FString::Printf(TEXT("재화 %d"), LocalPS ? LocalPS->GetRunState().Currency : 0));
 	}
 }
 

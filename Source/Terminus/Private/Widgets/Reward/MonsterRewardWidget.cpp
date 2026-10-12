@@ -13,71 +13,11 @@
 #include "Data/TerminusDataSettings.h"
 #include "Player/TerminusPlayerController.h"
 #include "Player/TerminusPlayerState.h"
+#include "Widgets/Common/ItemPickPanelWidget.h"
 #include "Widgets/Common/ItemSlotWidget.h"
 #include "Widgets/Skill/SkillCardWidget.h"
-
-namespace
-{
-	UTextBlock* MakeRewardText(UWidgetTree* Tree, const FName& Name, int32 Size, const FLinearColor& Color)
-	{
-		UTextBlock* Text = Tree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), Name);
-		FSlateFontInfo Font = Text->GetFont();
-		Font.Size = Size;
-		Text->SetFont(Font);
-		Text->SetColorAndOpacity(FSlateColor(Color));
-		Text->SetJustification(ETextJustify::Center);
-		return Text;
-	}
-
-	UButton* MakeRewardButton(UWidgetTree* Tree, const FName& Name, const FString& Label)
-	{
-		UButton* Button = Tree->ConstructWidget<UButton>(UButton::StaticClass(), Name);
-		UTextBlock* Text = MakeRewardText(Tree, NAME_None, 17, FLinearColor::Black);
-		Text->SetText(FText::FromString(Label));
-		Button->SetContent(Text);
-		return Button;
-	}
-
-	void AddCentered(UVerticalBox* Column, UWidget* Widget, float Top)
-	{
-		if (UVerticalBoxSlot* S = Column->AddChildToVerticalBox(Widget))
-		{
-			S->SetHorizontalAlignment(HAlign_Center);
-			S->SetPadding(FMargin(0.f, Top, 0.f, 0.f));
-		}
-	}
-
-	// 바꾸기 패널 하나 (안내 + 칸 줄 + 취소)
-	UVerticalBox* MakeRewardReplacePanel(UWidgetTree* Tree, const FName& PanelName, const FString& Guide,
-		const FName& BoxName, TObjectPtr<UPanelWidget>& OutBox, const FName& CancelName, TObjectPtr<UButton>& OutCancel)
-	{
-		UVerticalBox* Panel = Tree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), PanelName);
-
-		UTextBlock* GuideText = MakeRewardText(Tree, NAME_None, 16, FLinearColor(0.85f, 0.85f, 0.85f));
-		GuideText->SetText(FText::FromString(Guide));
-		AddCentered(Panel, GuideText, 0.f);
-
-		UHorizontalBox* Box = Tree->ConstructWidget<UHorizontalBox>(UHorizontalBox::StaticClass(), BoxName);
-		OutBox = Box;
-		AddCentered(Panel, Box, 12.f);
-
-		OutCancel = MakeRewardButton(Tree, CancelName, TEXT("  취소  "));
-		AddCentered(Panel, OutCancel, 12.f);
-		return Panel;
-	}
-
-	FString RewardRelicName(FName Row)
-	{
-		const FRelicRow* Relic = UTerminusDataSettings::FindRelicRow(Row);
-		return Relic ? Relic->RelicName.ToString() : Row.ToString();
-	}
-
-	FString RewardSkillName(FName Row)
-	{
-		const FSkillRow* Skill = UTerminusDataSettings::FindSkillRow(Row);
-		return Skill ? Skill->DisplayName_KR.ToString() : Row.ToString();
-	}
-}
+#include "Widgets/Common/TerminusUIBuilder.h"
+#include "Widgets/TerminusUIColors.h"
 
 // =====================================================================
 // 초기화 / 배치
@@ -93,8 +33,18 @@ void UMonsterRewardWidget::NativeOnInitialized()
 	}
 
 	if (NextButton)               NextButton->OnClicked.AddDynamic(this, &UMonsterRewardWidget::HandleNextClicked);
-	if (ReplaceCancelButton)      ReplaceCancelButton->OnClicked.AddDynamic(this, &UMonsterRewardWidget::HandleReplaceCancel);
-	if (RelicReplaceCancelButton) RelicReplaceCancelButton->OnClicked.AddDynamic(this, &UMonsterRewardWidget::HandleRelicReplaceCancel);
+	if (ReplacePanel)
+	{
+		ReplacePanel->SetSlotClass(SlotClass);
+		ReplacePanel->OnPicked.BindUObject(this, &UMonsterRewardWidget::HandleReplaceSlotClicked);
+		ReplacePanel->OnCancelled.BindUObject(this, &UMonsterRewardWidget::HandleReplaceCancel);
+	}
+	if (RelicReplacePanel)
+	{
+		RelicReplacePanel->SetSlotClass(SlotClass);
+		RelicReplacePanel->OnPicked.BindUObject(this, &UMonsterRewardWidget::HandleRelicReplaceClicked);
+		RelicReplacePanel->OnCancelled.BindUObject(this, &UMonsterRewardWidget::HandleRelicReplaceCancel);
+	}
 
 	// 아래 화면(전투 HUD)을 못 누르게
 	SetVisibility(ESlateVisibility::Visible);
@@ -102,57 +52,52 @@ void UMonsterRewardWidget::NativeOnInitialized()
 
 void UMonsterRewardWidget::BuildDefaultLayout()
 {
-	UBorder* Dim = WidgetTree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("RewardDim"));
-	Dim->SetBrushColor(FLinearColor(0.f, 0.f, 0.f, 0.75f));
-	Dim->SetHorizontalAlignment(HAlign_Center);
-	Dim->SetVerticalAlignment(VAlign_Center);
-	WidgetTree->RootWidget = Dim;
+	UBorder* Dim = TerminusUI::MakeDimRoot(WidgetTree, TEXT("RewardDim"), TerminusUI::Color::DimStrong);
 
 	UVerticalBox* Column = WidgetTree->ConstructWidget<UVerticalBox>();
 	Dim->SetContent(Column);
 
-	TitleText = MakeRewardText(WidgetTree, TEXT("TitleText"), 30, FLinearColor(1.f, 0.85f, 0.35f));
-	AddCentered(Column, TitleText, 0.f);
+	TitleText = TerminusUI::MakeText(WidgetTree, TEXT("TitleText"), TEXT(""), 30, TerminusUI::Color::Gold);
+	TerminusUI::AddRow(Column, TitleText, 0.f);
 
-	CurrencyText = MakeRewardText(WidgetTree, TEXT("CurrencyText"), 18, FLinearColor::White);
-	AddCentered(Column, CurrencyText, 10.f);
+	CurrencyText = TerminusUI::MakeText(WidgetTree, TEXT("CurrencyText"), TEXT(""), 18, FLinearColor::White);
+	TerminusUI::AddRow(Column, CurrencyText, 10.f);
 
 	// 스킬 / 유물 섹션을 나란히
 	UHorizontalBox* Sections = WidgetTree->ConstructWidget<UHorizontalBox>();
-	AddCentered(Column, Sections, 24.f);
+	TerminusUI::AddRow(Column, Sections, 24.f);
 
 	UVerticalBox* Skill = WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), TEXT("SkillSection"));
 	SkillSection = Skill;
 	if (UHorizontalBoxSlot* S = Sections->AddChildToHorizontalBox(Skill)) S->SetPadding(FMargin(20.f, 0.f));
-	UTextBlock* SkillTitle = MakeRewardText(WidgetTree, NAME_None, 17, FLinearColor(0.8f, 0.8f, 0.8f));
+	UTextBlock* SkillTitle = TerminusUI::MakeText(WidgetTree, NAME_None, TEXT(""), 17, TerminusUI::Color::TextMuted);
 	SkillTitle->SetText(FText::FromString(TEXT("픽업 스킬")));
-	AddCentered(Skill, SkillTitle, 0.f);
+	TerminusUI::AddRow(Skill, SkillTitle, 0.f);
 	CardBox = WidgetTree->ConstructWidget<UHorizontalBox>(UHorizontalBox::StaticClass(), TEXT("CardBox"));
-	AddCentered(Skill, CardBox, 10.f);
+	TerminusUI::AddRow(Skill, CardBox, 10.f);
 
 	UVerticalBox* Relic = WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), TEXT("RelicSection"));
 	RelicSection = Relic;
 	if (UHorizontalBoxSlot* S = Sections->AddChildToHorizontalBox(Relic)) S->SetPadding(FMargin(20.f, 0.f));
-	UTextBlock* RelicTitle = MakeRewardText(WidgetTree, NAME_None, 17, FLinearColor(0.8f, 0.8f, 0.8f));
+	UTextBlock* RelicTitle = TerminusUI::MakeText(WidgetTree, NAME_None, TEXT(""), 17, TerminusUI::Color::TextMuted);
 	RelicTitle->SetText(FText::FromString(TEXT("유물")));
-	AddCentered(Relic, RelicTitle, 0.f);
+	TerminusUI::AddRow(Relic, RelicTitle, 0.f);
 	RelicBox = WidgetTree->ConstructWidget<UHorizontalBox>(UHorizontalBox::StaticClass(), TEXT("RelicBox"));
-	AddCentered(Relic, RelicBox, 10.f);
+	TerminusUI::AddRow(Relic, RelicBox, 10.f);
 
 	// 바꾸기 패널
-	ReplacePanel = MakeRewardReplacePanel(WidgetTree, TEXT("ReplacePanel"), TEXT("강화 스킬 칸이 가득 찼습니다. 바꿀 스킬을 고르세요"),
-		TEXT("ReplaceBox"), ReplaceBox, TEXT("ReplaceCancelButton"), ReplaceCancelButton);
-	AddCentered(Column, ReplacePanel, 24.f);
+	const TSubclassOf<UItemPickPanelWidget> PickClass = PickPanelClass ? PickPanelClass : TSubclassOf<UItemPickPanelWidget>(UItemPickPanelWidget::StaticClass());
+	ReplacePanel = WidgetTree->ConstructWidget<UItemPickPanelWidget>(PickClass, TEXT("ReplacePanel"));
+	TerminusUI::AddRow(Column, ReplacePanel, 24.f);
 
-	RelicReplacePanel = MakeRewardReplacePanel(WidgetTree, TEXT("RelicReplacePanel"), TEXT("유물 칸이 가득 찼습니다. 버릴 유물을 고르세요"),
-		TEXT("RelicReplaceBox"), RelicReplaceBox, TEXT("RelicReplaceCancelButton"), RelicReplaceCancelButton);
-	AddCentered(Column, RelicReplacePanel, 24.f);
+	RelicReplacePanel = WidgetTree->ConstructWidget<UItemPickPanelWidget>(PickClass, TEXT("RelicReplacePanel"));
+	TerminusUI::AddRow(Column, RelicReplacePanel, 24.f);
 
-	ResultText = MakeRewardText(WidgetTree, TEXT("ResultText"), 18, FLinearColor::White);
-	AddCentered(Column, ResultText, 24.f);
+	ResultText = TerminusUI::MakeText(WidgetTree, TEXT("ResultText"), TEXT(""), 18, FLinearColor::White);
+	TerminusUI::AddRow(Column, ResultText, 24.f);
 
-	NextButton = MakeRewardButton(WidgetTree, TEXT("NextButton"), TEXT("   다음으로   "));
-	AddCentered(Column, NextButton, 24.f);
+	NextButton = TerminusUI::MakeButton(WidgetTree, TEXT("NextButton"), TEXT("   다음으로   "), 17);
+	TerminusUI::AddRow(Column, NextButton, 24.f);
 }
 
 // =====================================================================
@@ -229,15 +174,15 @@ void UMonsterRewardWidget::BuildRelicCards()
 
 		// 칸 + 설명
 		UVerticalBox* Card = WidgetTree->ConstructWidget<UVerticalBox>();
-		AddCentered(Card, RelicSlot, 0.f);
+		TerminusUI::AddRow(Card, RelicSlot, 0.f);
 
 		USizeBox* DescSize = WidgetTree->ConstructWidget<USizeBox>();
 		DescSize->SetWidthOverride(220.f);
-		UTextBlock* Desc = MakeRewardText(WidgetTree, NAME_None, 14, FLinearColor(0.9f, 0.9f, 0.9f));
+		UTextBlock* Desc = TerminusUI::MakeText(WidgetTree, NAME_None, TEXT(""), 14, TerminusUI::Color::TextBright);
 		Desc->SetText(Relic->RelicDesc);
 		Desc->SetAutoWrapText(true);
 		DescSize->SetContent(Desc);
-		AddCentered(Card, DescSize, 8.f);
+		TerminusUI::AddRow(Card, DescSize, 8.f);
 
 		if (UHorizontalBoxSlot* HSlot = Cast<UHorizontalBoxSlot>(RelicBox->AddChild(Card)))
 		{
@@ -282,13 +227,13 @@ void UMonsterRewardWidget::Refresh()
 	TArray<FString> Lines;
 	if (!ChosenSkill.IsNone())
 	{
-		Lines.Add(FString::Printf(TEXT("획득: %s%s"), *RewardSkillName(ChosenSkill),
+		Lines.Add(FString::Printf(TEXT("획득: %s%s"), *UTerminusDataSettings::GetSkillName(ChosenSkill),
 			ReplaceSlot != INDEX_NONE ? *FString::Printf(TEXT("  (강화 칸 %d 교체)"), ReplaceSlot + 1) : TEXT("")));
 	}
 	if (!ChosenRelic.IsNone())
 	{
-		Lines.Add(FString::Printf(TEXT("획득: %s%s"), *RewardRelicName(ChosenRelic),
-			!ReplaceRelic.IsNone() ? *FString::Printf(TEXT("  (%s 버림)"), *RewardRelicName(ReplaceRelic)) : TEXT("")));
+		Lines.Add(FString::Printf(TEXT("획득: %s%s"), *UTerminusDataSettings::GetRelicName(ChosenRelic),
+			!ReplaceRelic.IsNone() ? *FString::Printf(TEXT("  (%s 버림)"), *UTerminusDataSettings::GetRelicName(ReplaceRelic)) : TEXT("")));
 	}
 
 	const bool bAnyLeft = (ChosenSkill.IsNone() && Offer.SkillOffers.Num() > 0) || (ChosenRelic.IsNone() && Offer.RelicOffers.Num() > 0);
@@ -329,25 +274,9 @@ void UMonsterRewardWidget::HandleCardClicked(FName SkillRow)
 
 void UMonsterRewardWidget::ShowSkillReplace()
 {
-	if (!ReplaceBox) return;
-	ReplaceBox->ClearChildren();
-
-	const APlayerController* PC = GetOwningPlayer();
-	const ATerminusPlayerState* PS = PC ? PC->GetPlayerState<ATerminusPlayerState>() : nullptr;
-	const TArray<FName> Equipped = PS ? PS->GetRunState().EnhanceSkills : TArray<FName>();
-
-	for (int32 i = 0; i < Equipped.Num(); ++i)
+	if (ReplacePanel)
 	{
-		UItemSlotWidget* EquippedSlot = MakeSlot();
-		if (!EquippedSlot) continue;
-
-		EquippedSlot->SetSlotIndex(i);
-		EquippedSlot->SetSkill(Equipped[i]);
-		EquippedSlot->OnSlotClicked.BindUObject(this, &UMonsterRewardWidget::HandleReplaceSlotClicked);
-		if (UHorizontalBoxSlot* HSlot = Cast<UHorizontalBoxSlot>(ReplaceBox->AddChild(EquippedSlot)))
-		{
-			HSlot->SetPadding(FMargin(6.f, 0.f));
-		}
+		ReplacePanel->ShowEnhanceSkills(FText::FromString(TEXT("강화 스킬 칸이 가득 찼습니다. 바꿀 스킬을 고르세요")));
 	}
 }
 
@@ -394,29 +323,11 @@ void UMonsterRewardWidget::HandleRelicClicked(UItemSlotWidget* ClickedSlot)
 
 void UMonsterRewardWidget::ShowRelicReplace()
 {
-	if (!RelicReplaceBox) return;
-	RelicReplaceBox->ClearChildren();
-
-	const APlayerController* PC = GetOwningPlayer();
-	const ATerminusPlayerState* PS = PC ? PC->GetPlayerState<ATerminusPlayerState>() : nullptr;
-	if (!PS) return;
-
-	for (const FName& Owned : PS->GetRelics())
+	if (RelicReplacePanel)
 	{
 		// 직업 기본 유물(패시브)은 못 버림
-		const FRelicRow* Relic = UTerminusDataSettings::FindRelicRow(Owned);
-		if (!Relic || Relic->RelicTier == ERelicTier::Basic) continue;
-
-		UItemSlotWidget* OwnedSlot = MakeSlot();
-		if (!OwnedSlot) continue;
-
-		OwnedSlot->SetShowName(true);
-		OwnedSlot->SetRelic(Owned);
-		OwnedSlot->OnSlotClicked.BindUObject(this, &UMonsterRewardWidget::HandleRelicReplaceClicked);
-		if (UHorizontalBoxSlot* HSlot = Cast<UHorizontalBoxSlot>(RelicReplaceBox->AddChild(OwnedSlot)))
-		{
-			HSlot->SetPadding(FMargin(6.f, 0.f));
-		}
+		RelicReplacePanel->ShowRelics(FText::FromString(TEXT("유물 칸이 가득 찼습니다. 버릴 유물을 고르세요")),
+			[](const FRelicRow& Relic) { return Relic.RelicTier != ERelicTier::Basic; });
 	}
 }
 

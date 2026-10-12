@@ -5,6 +5,7 @@
 #include "RestWidget.generated.h"
 
 class APlayerState;
+class UTerminusClickRelay;
 class UButton;
 class UImage;
 class UPanelWidget;
@@ -20,20 +21,6 @@ enum class ERestOption : uint8
 	Explore,    // 탐색
 	Target,     // 회복 대상 (Target)
 	Back        // 대상 고르기에서 처음으로
-};
-
-UCLASS()
-class TERMINUS_API URestClickRelay : public UObject
-{
-	GENERATED_BODY()
-
-public:
-	TWeakObjectPtr<URestWidget> Owner;
-	ERestOption Option = ERestOption::Rest;
-	TWeakObjectPtr<APlayerState> Target;
-
-	UFUNCTION()
-	void HandleClicked();
 };
 
 /**
@@ -62,7 +49,7 @@ public:
 
 protected:
 	virtual void NativeOnInitialized() override;
-	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
+	virtual void NativeDestruct() override;
 
 	// 왼쪽 그림
 	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UImage> ArtImage;
@@ -94,15 +81,22 @@ private:
 	float HealRatio = 0.2f;
 	FIntPoint ExploreCurrency = FIntPoint(5, 10);
 	float ExploreRelicChance = 0.05f;
-	float RefreshTimer = 0.f;
 	FText ResultText;
 
 	// 대상 고르기에서 마지막으로 그린 체력 (바뀌었을 때만 다시 그림 -> 누르는 도중에 버튼이 바뀌지 않게)
 	TArray<int32> ShownHealth;
 	TArray<int32> ReadHealth() const;
 
+	// 같은 휴식터 사람들의 전투 스탯 (체력이 바뀌면 알림을 받음)
+	TArray<TWeakObjectPtr<class UCombatStatsComponent>> WatchedStats;
+	void WatchHealth();
+	void UnwatchHealth();
+
+	UFUNCTION()
+	void HandleHealthChanged();
+
 	UPROPERTY()
-	TArray<TObjectPtr<URestClickRelay>> Relays;
+	TArray<TObjectPtr<UTerminusClickRelay>> Relays;
 
 	void BuildDefaultLayout();
 	void Rebuild();

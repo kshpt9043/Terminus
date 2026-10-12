@@ -6,23 +6,10 @@
 #include "FloorVoteWidget.generated.h"
 
 class UButton;
+class UTerminusClickRelay;
 class UPanelWidget;
 class UTextBlock;
 class UFloorVoteWidget;
-
-// 카드 버튼마다 어느 선택지인지 넘기는 중계 (UButton 의 OnClicked 는 인자가 없음)
-UCLASS()
-class TERMINUS_API UFloorVoteClickRelay : public UObject
-{
-	GENERATED_BODY()
-
-public:
-	TWeakObjectPtr<UFloorVoteWidget> Owner;
-	EFloorChoice Choice = EFloorChoice::None;
-
-	UFUNCTION()
-	void HandleClicked();
-};
 
 /**
  * 테마 끝 층 보스 뒤 선택 화면 (다음 층 / 탈출 / 배신). 멀티는 투표
@@ -68,7 +55,7 @@ private:
 	EFloorChoice MyChoice = EFloorChoice::None;
 
 	UPROPERTY()
-	TArray<TObjectPtr<UFloorVoteClickRelay>> Relays;
+	TArray<TObjectPtr<UTerminusClickRelay>> Relays;
 
 	void BuildDefaultLayout();
 	void RebuildCards();

@@ -17,19 +17,8 @@
 #include "Player/TerminusPlayerController.h"
 #include "Player/TerminusPlayerState.h"
 #include "Widgets/Common/ItemSlotWidget.h"
-
-namespace
-{
-	UTextBlock* MakeRelicPickText(UWidgetTree* Tree, const FName& Name, int32 Size, const FLinearColor& Color)
-	{
-		UTextBlock* Text = Tree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), Name);
-		FSlateFontInfo Font = Text->GetFont();
-		Font.Size = Size;
-		Text->SetFont(Font);
-		Text->SetColorAndOpacity(FSlateColor(Color));
-		return Text;
-	}
-}
+#include "Widgets/Common/TerminusUIBuilder.h"
+#include "Widgets/TerminusUIColors.h"
 
 void UStartRelicPickWidget::NativeOnInitialized()
 {
@@ -51,11 +40,7 @@ void UStartRelicPickWidget::NativeOnInitialized()
 
 void UStartRelicPickWidget::BuildDefaultLayout()
 {
-	UBorder* Dim = WidgetTree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("RelicPickDim"));
-	Dim->SetBrushColor(FLinearColor(0.02f, 0.02f, 0.03f, 0.92f));
-	Dim->SetHorizontalAlignment(HAlign_Center);
-	Dim->SetVerticalAlignment(VAlign_Center);
-	WidgetTree->RootWidget = Dim;
+	UBorder* Dim = TerminusUI::MakeDimRoot(WidgetTree, TEXT("RelicPickDim"), FLinearColor(0.02f, 0.02f, 0.03f, 0.92f));
 
 	USizeBox* WindowSize = WidgetTree->ConstructWidget<USizeBox>();
 	WindowSize->SetWidthOverride(640.f);
@@ -65,20 +50,20 @@ void UStartRelicPickWidget::BuildDefaultLayout()
 	UVerticalBox* Column = WidgetTree->ConstructWidget<UVerticalBox>();
 	WindowSize->SetContent(Column);
 
-	TitleText = MakeRelicPickText(WidgetTree, TEXT("TitleText"), 24, FLinearColor::White);
+	TitleText = TerminusUI::MakeText(WidgetTree, TEXT("TitleText"), TEXT(""), 24, FLinearColor::White, ETextJustify::Left);
 	if (UVerticalBoxSlot* S = Column->AddChildToVerticalBox(TitleText))
 	{
 		S->SetHorizontalAlignment(HAlign_Center);
 	}
 
-	ModeText = MakeRelicPickText(WidgetTree, TEXT("ModeText"), 13, FLinearColor(0.75f, 0.75f, 0.75f));
+	ModeText = TerminusUI::MakeText(WidgetTree, TEXT("ModeText"), TEXT(""), 13, TerminusUI::Color::TextMuted, ETextJustify::Left);
 	if (UVerticalBoxSlot* S = Column->AddChildToVerticalBox(ModeText))
 	{
 		S->SetHorizontalAlignment(HAlign_Center);
 		S->SetPadding(FMargin(0.f, 6.f, 0.f, 0.f));
 	}
 
-	CountText = MakeRelicPickText(WidgetTree, TEXT("CountText"), 16, FLinearColor(1.f, 0.85f, 0.35f));
+	CountText = TerminusUI::MakeText(WidgetTree, TEXT("CountText"), TEXT(""), 16, TerminusUI::Color::Gold, ETextJustify::Left);
 	if (UVerticalBoxSlot* S = Column->AddChildToVerticalBox(CountText))
 	{
 		S->SetHorizontalAlignment(HAlign_Center);
@@ -96,7 +81,7 @@ void UStartRelicPickWidget::BuildDefaultLayout()
 	Scroll->AddChild(ItemGrid);
 
 	StartButton = WidgetTree->ConstructWidget<UButton>(UButton::StaticClass(), TEXT("StartButton"));
-	UTextBlock* StartLabel = MakeRelicPickText(WidgetTree, NAME_None, 18, FLinearColor::Black);
+	UTextBlock* StartLabel = TerminusUI::MakeText(WidgetTree, NAME_None, TEXT(""), 18, FLinearColor::Black, ETextJustify::Left);
 	StartLabel->SetText(FText::FromString(TEXT("    시작    ")));
 	StartButton->SetContent(StartLabel);
 	if (UVerticalBoxSlot* S = Column->AddChildToVerticalBox(StartButton))
@@ -119,7 +104,7 @@ void UStartRelicPickWidget::SetCandidates(const TArray<FName>& StoredRelics, ECh
 		ModeText->SetText(FText::FromString(bHardMode
 			? TEXT("하드 모드: 죽으면 들고 간 유물이 창고에서 사라집니다")
 			: TEXT("들고 간 유물은 창고에 그대로 남습니다")));
-		ModeText->SetColorAndOpacity(FSlateColor(bHardMode ? FLinearColor(1.f, 0.4f, 0.35f) : FLinearColor(0.75f, 0.75f, 0.75f)));
+		ModeText->SetColorAndOpacity(FSlateColor(bHardMode ? FLinearColor(1.f, 0.4f, 0.35f) : TerminusUI::Color::TextMuted));
 	}
 
 	if (TitleText)

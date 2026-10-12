@@ -14,19 +14,8 @@
 #include "Components/VerticalBoxSlot.h"
 #include "Data/TerminusDataSettings.h"
 #include "Player/TerminusPlayerState.h"
-
-namespace
-{
-	UTextBlock* MakeProfileText(UWidgetTree* Tree, int32 Size, const FLinearColor& Color)
-	{
-		UTextBlock* Text = Tree->ConstructWidget<UTextBlock>();
-		FSlateFontInfo Font = Text->GetFont();
-		Font.Size = Size;
-		Text->SetFont(Font);
-		Text->SetColorAndOpacity(FSlateColor(Color));
-		return Text;
-	}
-}
+#include "Widgets/Common/TerminusUIBuilder.h"
+#include "Widgets/TerminusUIColors.h"
 
 void UPartyProfileCardWidget::NativeOnInitialized()
 {
@@ -68,8 +57,8 @@ void UPartyProfileCardWidget::BuildDefaultLayout()
 		S->SetVerticalAlignment(VAlign_Center);
 	}
 
-	NameText = MakeProfileText(WidgetTree, 15, FLinearColor::White);
-	ClassText = MakeProfileText(WidgetTree, 12, FLinearColor(0.75f, 0.75f, 0.75f));
+	NameText = TerminusUI::MakeText(WidgetTree, NAME_None, TEXT(""), 15, FLinearColor::White, ETextJustify::Left);
+	ClassText = TerminusUI::MakeText(WidgetTree, NAME_None, TEXT(""), 12, TerminusUI::Color::TextMuted, ETextJustify::Left);
 	Info->AddChildToVerticalBox(NameText);
 	Info->AddChildToVerticalBox(ClassText);
 
@@ -80,13 +69,14 @@ void UPartyProfileCardWidget::BuildDefaultLayout()
 		S->SetPadding(FMargin(0.f, 4.f, 0.f, 0.f));
 	}
 
-	HealthText = MakeProfileText(WidgetTree, 12, FLinearColor::White);
+	HealthText = TerminusUI::MakeText(WidgetTree, NAME_None, TEXT(""), 12, FLinearColor::White, ETextJustify::Left);
 	Info->AddChildToVerticalBox(HealthText);
 }
 
 void UPartyProfileCardWidget::SetPlayer(ATerminusPlayerState* InPlayer)
 {
 	Player = InPlayer;
+	ShownHealth = ShownMaxHealth = INDEX_NONE;   // 사람이 바뀌면 체력도 다시 그림
 	RefreshStatic();
 	RefreshHealth();
 }
@@ -150,7 +140,7 @@ void UPartyProfileCardWidget::RefreshHealth()
 	if (!PS) return;
 
 	// 최대 체력은 런 스텟. 현재 체력은 배틀러가 전투에서 들고 있는 값 (아직 없으면 가득 찬 걸로)
-	const FRunState Run = PS->GetRunState();
+	const FRunState& Run = PS->GetRunState();
 	int32 MaxHealth = Run.bStatsInitialized ? Run.Stats.MaxHealth : 0;
 	int32 Health = MaxHealth;
 
@@ -165,6 +155,11 @@ void UPartyProfileCardWidget::RefreshHealth()
 			}
 		}
 	}
+
+	// 매 틱 불리므로 바뀌었을 때만 넣음
+	if (Health == ShownHealth && MaxHealth == ShownMaxHealth) return;
+	ShownHealth = Health;
+	ShownMaxHealth = MaxHealth;
 
 	if (HealthText)
 	{

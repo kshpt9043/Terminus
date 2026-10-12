@@ -25,6 +25,7 @@
 #include "Widgets/Comms/CommsMenuWidget.h"
 #include "Widgets/Common/EscapeStackSubsystem.h"
 #include "Widgets/SWindow.h"
+#include "Widgets/Common/TerminusUIBuilder.h"
 
 // Slate 가 키 / 클릭을 위젯에 나눠주기 전에 먼저 보는 곳. 판단은 위젯이 함
 class FPartyCommsInputProcessor : public IInputProcessor
@@ -59,17 +60,10 @@ namespace
 	const FLinearColor CommsEstimateColor(1.f, 0.85f, 0.5f);
 	const FLinearColor CommsLethalColor(1.f, 0.35f, 0.3f);
 
-	// 유니티 빌드에서 다른 파일의 MakeText 와 겹치지 않게 이름을 따로
 	UTextBlock* MakeCommsText(UWidgetTree* Tree, int32 Size, const FLinearColor& Color)
 	{
-		UTextBlock* Text = Tree->ConstructWidget<UTextBlock>();
-		FSlateFontInfo Font = Text->GetFont();
-		Font.Size = Size;
-		Text->SetFont(Font);
-		Text->SetColorAndOpacity(FSlateColor(Color));
-		Text->SetShadowOffset(FVector2D(1.f, 1.f));
-		Text->SetShadowColorAndOpacity(FLinearColor(0.f, 0.f, 0.f, 0.9f));
-		Text->SetJustification(ETextJustify::Center);
+		UTextBlock* Text = TerminusUI::MakeText(Tree, NAME_None, FString(), Size, Color);
+		TerminusUI::AddShadow(Text, 0.9f);
 		return Text;
 	}
 
@@ -77,10 +71,7 @@ namespace
 	void SetCommsText(UTextBlock* Text, const FString& Value)
 	{
 		if (!Text) return;
-		if (Text->GetText().ToString() != Value)
-		{
-			Text->SetText(FText::FromString(Value));
-		}
+		TerminusUI::SetTextIfChanged(Text, Value);
 		const ESlateVisibility Wanted = Value.IsEmpty() ? ESlateVisibility::Collapsed : ESlateVisibility::HitTestInvisible;
 		if (Text->GetVisibility() != Wanted)
 		{

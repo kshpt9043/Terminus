@@ -6,24 +6,10 @@
 #include "SpectateWidget.generated.h"
 
 class ADungeonArea;
+class UTerminusClickRelay;
 class UPanelWidget;
 class UTextBlock;
 class USpectateWidget;
-
-// 구역 버튼마다 어느 구역을 볼지 넘기는 중계 (UButton 의 OnClicked 는 인자가 없음). Area 가 비어 있으면 내 구역
-UCLASS()
-class TERMINUS_API USpectateClickRelay : public UObject
-{
-	GENERATED_BODY()
-
-public:
-	TWeakObjectPtr<USpectateWidget> Owner;
-	TWeakObjectPtr<ADungeonArea> Area;
-	bool bMine = false;
-
-	UFUNCTION()
-	void HandleClicked();
-};
 
 /**
  * 관전 바 (기획: 한쪽 파티가 먼저 끝날 경우 관전 가능). 화면 위쪽 가운데
@@ -58,7 +44,7 @@ private:
 	FString ShownKey;
 
 	UPROPERTY()
-	TArray<TObjectPtr<USpectateClickRelay>> Relays;
+	TArray<TObjectPtr<UTerminusClickRelay>> Relays;
 
 	void BuildDefaultLayout();
 	void Refresh();

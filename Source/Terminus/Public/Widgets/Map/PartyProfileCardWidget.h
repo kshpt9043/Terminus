@@ -56,6 +56,8 @@ private:
 	// 지금 카드에 그려진 이름 / 직업. 복제가 늦게 와서 바뀌면 다시 그림
 	FString ShownName;
 	uint8 ShownClass = 0xFF;
+	int32 ShownHealth = INDEX_NONE;
+	int32 ShownMaxHealth = INDEX_NONE;
 
 	void BuildDefaultLayout();
 

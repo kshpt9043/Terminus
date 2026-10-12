@@ -39,6 +39,10 @@ protected:
 	// 보유 유물 줄. 전투 HUD 와 같은 자리(오른쪽 아래). WBP 에 없으면 루트가 캔버스일 때 C++ 이 만듦
 	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<URelicBarWidget> RelicBar;
 
+	// RelicBar 를 안 뒀을 때 만들 유물 줄 (비우면 C++ 기본)
+	UPROPERTY(EditAnywhere, Category = "Map Screen")
+	TSubclassOf<URelicBarWidget> RelicBarClass;
+
 private:
 	// 숨겼다가 되돌릴 원래 가시성
 	ESlateVisibility VisibleState = ESlateVisibility::SelfHitTestInvisible;

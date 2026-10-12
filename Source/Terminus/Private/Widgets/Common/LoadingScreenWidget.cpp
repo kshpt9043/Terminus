@@ -7,21 +7,8 @@
 #include "Components/TextBlock.h"
 #include "Components/VerticalBox.h"
 #include "Components/VerticalBoxSlot.h"
-
-namespace
-{
-	UTextBlock* MakeLoadingText(UWidgetTree* Tree, const FName& Name, const FString& Initial, int32 Size, const FLinearColor& Color)
-	{
-		UTextBlock* Text = Tree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), Name);
-		Text->SetText(FText::FromString(Initial));
-		FSlateFontInfo Font = Text->GetFont();
-		Font.Size = Size;
-		Text->SetFont(Font);
-		Text->SetColorAndOpacity(FSlateColor(Color));
-		Text->SetJustification(ETextJustify::Center);
-		return Text;
-	}
-}
+#include "Widgets/Common/TerminusUIBuilder.h"
+#include "Widgets/TerminusUIColors.h"
 
 void ULoadingScreenWidget::NativeOnInitialized()
 {
@@ -43,16 +30,12 @@ void ULoadingScreenWidget::NativeOnInitialized()
 
 void ULoadingScreenWidget::BuildDefaultLayout()
 {
-	UBorder* Background = WidgetTree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("LoadingBackground"));
-	Background->SetBrushColor(FLinearColor(0.03f, 0.028f, 0.025f, 1.f));
-	Background->SetHorizontalAlignment(HAlign_Center);
-	Background->SetVerticalAlignment(VAlign_Center);
-	WidgetTree->RootWidget = Background;
+	UBorder* Background = TerminusUI::MakeDimRoot(WidgetTree, TEXT("LoadingBackground"), FLinearColor(0.03f, 0.028f, 0.025f, 1.f));
 
 	UVerticalBox* Column = WidgetTree->ConstructWidget<UVerticalBox>();
 	Background->SetContent(Column);
 
-	TitleText = MakeLoadingText(WidgetTree, TEXT("TitleText"), TEXT("불러오는 중"), 28, FLinearColor(1.f, 0.85f, 0.35f));
+	TitleText = TerminusUI::MakeText(WidgetTree, TEXT("TitleText"), TEXT("불러오는 중"), 28, TerminusUI::Color::Gold);
 	if (UVerticalBoxSlot* S = Column->AddChildToVerticalBox(TitleText)) S->SetHorizontalAlignment(HAlign_Center);
 
 	UCircularThrobber* Throbber = WidgetTree->ConstructWidget<UCircularThrobber>(UCircularThrobber::StaticClass(), TEXT("Throbber"));
@@ -63,7 +46,7 @@ void ULoadingScreenWidget::BuildDefaultLayout()
 		S->SetPadding(FMargin(0.f, 24.f));
 	}
 
-	MessageText = MakeLoadingText(WidgetTree, TEXT("MessageText"), TEXT(""), 16, FLinearColor(0.85f, 0.85f, 0.85f));
+	MessageText = TerminusUI::MakeText(WidgetTree, TEXT("MessageText"), TEXT(""), 16, TerminusUI::Color::TextSoft);
 	if (UVerticalBoxSlot* S = Column->AddChildToVerticalBox(MessageText)) S->SetHorizontalAlignment(HAlign_Center);
 }
 

@@ -307,8 +307,7 @@ void ADungeonArea::HandleRestExplore(ATerminusPlayerState* Chooser)
 		const TArray<FName> Found = Combat ? Combat->PickRewardRelics(Chooser, 1) : TArray<FName>();
 		if (Found.Num() > 0)
 		{
-			const FRelicRow* Relic = UTerminusDataSettings::FindRelicRow(Found[0]);
-			const FString RelicName = Relic ? Relic->RelicName.ToString() : Found[0].ToString();
+			const FString RelicName = UTerminusDataSettings::GetRelicName(Found[0]);
 
 			Chooser->MarkRelicsSeen(Found);   // 못 가져가도 이번 런엔 다시 안 나옴
 			Result += Chooser->GainRelic(Found[0])
@@ -415,11 +414,6 @@ namespace
 		return Result;
 	}
 
-	FString EventRelicName(FName Row)
-	{
-		const FRelicRow* Relic = UTerminusDataSettings::FindRelicRow(Row);
-		return Relic ? Relic->RelicName.ToString() : Row.ToString();
-	}
 }
 
 void ADungeonArea::BeginEvent()
@@ -634,7 +628,7 @@ bool ADungeonArea::ApplyEventOption(ATerminusPlayerState* PS, const FEventOption
 		const FName New = EventPickRandom(EventSwapPool(PS, Old));
 		if (!PS->SwapRelic(Old, New)) return false;
 
-		OutResult = FString::Printf(TEXT("유물 변화: %s → %s"), *EventRelicName(Old), *EventRelicName(New));
+		OutResult = FString::Printf(TEXT("유물 변화: %s → %s"), *UTerminusDataSettings::GetRelicName(Old), *UTerminusDataSettings::GetRelicName(New));
 		return true;
 	}
 	}
@@ -709,17 +703,6 @@ namespace
 		}
 	}
 
-	FString ShopRelicName(FName Row)
-	{
-		const FRelicRow* Relic = UTerminusDataSettings::FindRelicRow(Row);
-		return Relic ? Relic->RelicName.ToString() : Row.ToString();
-	}
-
-	FString ShopSkillName(FName Row)
-	{
-		const FSkillRow* Skill = UTerminusDataSettings::FindSkillRow(Row);
-		return Skill ? Skill->DisplayName_KR.ToString() : Row.ToString();
-	}
 }
 
 void ADungeonArea::BeginShop()
@@ -826,7 +809,7 @@ void ADungeonArea::HandleShopBuyRelic(ATerminusPlayerState* PS, int32 Index)
 
 	PS->AddCurrency(-Price);
 	State->RelicBought[Index] = true;
-	SendShop(PS, FString::Printf(TEXT("구매: %s"), *ShopRelicName(Row)));
+	SendShop(PS, FString::Printf(TEXT("구매: %s"), *UTerminusDataSettings::GetRelicName(Row)));
 }
 
 void ADungeonArea::HandleShopBuySkill(ATerminusPlayerState* PS, int32 Index, int32 ReplaceSlot)
@@ -849,7 +832,7 @@ void ADungeonArea::HandleShopBuySkill(ATerminusPlayerState* PS, int32 Index, int
 
 	PS->AddCurrency(-Price);
 	State->SkillBought[Index] = true;
-	SendShop(PS, FString::Printf(TEXT("구매: %s"), *ShopSkillName(Row)));
+	SendShop(PS, FString::Printf(TEXT("구매: %s"), *UTerminusDataSettings::GetSkillName(Row)));
 }
 
 void ADungeonArea::HandleShopSellRelic(ATerminusPlayerState* PS, FName RelicRow)
@@ -891,7 +874,7 @@ void ADungeonArea::HandleShopUpgradeSkill(ATerminusPlayerState* PS, FName SkillR
 
 	PS->UpgradePickupSkill(SkillRow);
 	PS->AddCurrency(-Cost);
-	SendShop(PS, FString::Printf(TEXT("강화: %s +%d"), *ShopSkillName(SkillRow), Level + 1));
+	SendShop(PS, FString::Printf(TEXT("강화: %s +%d"), *UTerminusDataSettings::GetSkillName(SkillRow), Level + 1));
 }
 
 void ADungeonArea::HandleShopLeave(ATerminusPlayerState* PS)

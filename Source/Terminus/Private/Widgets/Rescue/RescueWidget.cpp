@@ -8,23 +8,11 @@
 #include "Components/VerticalBox.h"
 #include "Components/VerticalBoxSlot.h"
 #include "Player/TerminusPlayerController.h"
+#include "Widgets/Common/TerminusUIBuilder.h"
+#include "Widgets/TerminusUIColors.h"
 
 namespace
 {
-	UTextBlock* MakeRescueText(UWidgetTree* Tree, const FName& Name, const FString& Initial, int32 Size, const FLinearColor& Color,
-		ETextJustify::Type Justify = ETextJustify::Center)
-	{
-		UTextBlock* Text = Tree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), Name);
-		Text->SetText(FText::FromString(Initial));
-		FSlateFontInfo Font = Text->GetFont();
-		Font.Size = Size;
-		Text->SetFont(Font);
-		Text->SetColorAndOpacity(FSlateColor(Color));
-		Text->SetJustification(Justify);
-		Text->SetAutoWrapText(true);
-		return Text;
-	}
-
 	// 제목 + 설명 두 줄짜리 선택지 버튼. 설명 글자는 OutDesc 로
 	UButton* MakeRescueOption(UWidgetTree* Tree, const FName& Name, const FString& Title, UTextBlock*& OutDesc)
 	{
@@ -38,11 +26,11 @@ namespace
 
 		UVerticalBox* Inside = Tree->ConstructWidget<UVerticalBox>();
 		Size->SetContent(Inside);
-		if (UVerticalBoxSlot* S = Inside->AddChildToVerticalBox(MakeRescueText(Tree, NAME_None, Title, 18, FLinearColor(1.f, 0.82f, 0.35f), ETextJustify::Left)))
+		if (UVerticalBoxSlot* S = Inside->AddChildToVerticalBox(TerminusUI::MakeWrapText(Tree, NAME_None, Title, 18, TerminusUI::Color::Gold, ETextJustify::Left)))
 		{
 			S->SetPadding(FMargin(14.f, 6.f, 14.f, 0.f));
 		}
-		OutDesc = MakeRescueText(Tree, NAME_None, TEXT(""), 14, FLinearColor(0.9f, 0.9f, 0.9f), ETextJustify::Left);
+		OutDesc = TerminusUI::MakeWrapText(Tree, NAME_None, TEXT(""), 14, TerminusUI::Color::TextBright, ETextJustify::Left);
 		if (UVerticalBoxSlot* S = Inside->AddChildToVerticalBox(OutDesc))
 		{
 			S->SetPadding(FMargin(14.f, 2.f, 14.f, 6.f));
@@ -68,11 +56,7 @@ void URescueWidget::NativeOnInitialized()
 
 void URescueWidget::BuildDefaultLayout()
 {
-	UBorder* Dim = WidgetTree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("RescueDim"));
-	Dim->SetBrushColor(FLinearColor(0.08f, 0.f, 0.f, 0.6f));
-	Dim->SetHorizontalAlignment(HAlign_Center);
-	Dim->SetVerticalAlignment(VAlign_Center);
-	WidgetTree->RootWidget = Dim;
+	UBorder* Dim = TerminusUI::MakeDimRoot(WidgetTree, TEXT("RescueDim"), FLinearColor(0.08f, 0.f, 0.f, 0.6f));
 
 	UBorder* Panel = WidgetTree->ConstructWidget<UBorder>();
 	Panel->SetBrushColor(FLinearColor(0.05f, 0.04f, 0.05f, 0.96f));
@@ -82,13 +66,13 @@ void URescueWidget::BuildDefaultLayout()
 	UVerticalBox* Column = WidgetTree->ConstructWidget<UVerticalBox>();
 	Panel->SetContent(Column);
 
-	TitleText = MakeRescueText(WidgetTree, TEXT("TitleText"), TEXT("동료 전멸"), 28, FLinearColor(1.f, 0.45f, 0.4f));
+	TitleText = TerminusUI::MakeWrapText(WidgetTree, TEXT("TitleText"), TEXT("동료 전멸"), 28, TerminusUI::Color::Warning);
 	Column->AddChildToVerticalBox(TitleText);
 
-	MessageText = MakeRescueText(WidgetTree, TEXT("MessageText"), TEXT(""), 16, FLinearColor(0.92f, 0.9f, 0.88f));
+	MessageText = TerminusUI::MakeWrapText(WidgetTree, TEXT("MessageText"), TEXT(""), 16, FLinearColor(0.92f, 0.9f, 0.88f));
 	if (UVerticalBoxSlot* S = Column->AddChildToVerticalBox(MessageText)) S->SetPadding(FMargin(0.f, 10.f, 0.f, 0.f));
 
-	TimerText = MakeRescueText(WidgetTree, TEXT("TimerText"), TEXT(""), 15, FLinearColor(0.75f, 0.75f, 0.75f));
+	TimerText = TerminusUI::MakeWrapText(WidgetTree, TEXT("TimerText"), TEXT(""), 15, TerminusUI::Color::TextMuted);
 	if (UVerticalBoxSlot* S = Column->AddChildToVerticalBox(TimerText)) S->SetPadding(FMargin(0.f, 6.f, 0.f, 0.f));
 
 	UVerticalBox* Options = WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), TEXT("OptionBox"));
@@ -151,7 +135,7 @@ void URescueWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 	TimeLeft = FMath::Max(0.f, TimeLeft - InDeltaTime);
 	if (TimerText)
 	{
-		TimerText->SetText(FText::FromString(FString::Printf(TEXT("남은 시간 %d초"), FMath::CeilToInt(TimeLeft))));
+		TerminusUI::SetTextIfChanged(TimerText, FString::Printf(TEXT("남은 시간 %d초"), FMath::CeilToInt(TimeLeft)));   // 초가 바뀔 때만
 	}
 }
 

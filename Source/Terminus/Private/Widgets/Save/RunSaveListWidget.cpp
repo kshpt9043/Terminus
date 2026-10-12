@@ -15,20 +15,9 @@
 #include "Widgets/Common/ConfirmPopupWidget.h"
 #include "Widgets/Common/EscapeStackSubsystem.h"
 #include "Widgets/Save/RunSaveEntryWidget.h"
-
-namespace
-{
-	UTextBlock* MakeSaveListText(UWidgetTree* Tree, const FName& Name, const FString& Initial, int32 Size, const FLinearColor& Color)
-	{
-		UTextBlock* Text = Tree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), Name);
-		Text->SetText(FText::FromString(Initial));
-		FSlateFontInfo Font = Text->GetFont();
-		Font.Size = Size;
-		Text->SetFont(Font);
-		Text->SetColorAndOpacity(FSlateColor(Color));
-		return Text;
-	}
-}
+#include "Widgets/Common/TerminusUIBuilder.h"
+#include "Widgets/TerminusUIColors.h"
+#include "Widgets/TerminusUILayers.h"
 
 // =====================================================================
 // 초기화 / 배치
@@ -61,11 +50,7 @@ void URunSaveListWidget::NativeDestruct()
 void URunSaveListWidget::BuildDefaultLayout()
 {
 	// 화면 전체 어둡게 + 가운데 창
-	UBorder* Dim = WidgetTree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("SaveListDim"));
-	Dim->SetBrushColor(FLinearColor(0.f, 0.f, 0.f, 0.7f));
-	Dim->SetHorizontalAlignment(HAlign_Center);
-	Dim->SetVerticalAlignment(VAlign_Center);
-	WidgetTree->RootWidget = Dim;
+	UBorder* Dim = TerminusUI::MakeDimRoot(WidgetTree, TEXT("SaveListDim"), FLinearColor(0.f, 0.f, 0.f, 0.7f));
 
 	USizeBox* WindowSize = WidgetTree->ConstructWidget<USizeBox>();
 	WindowSize->SetWidthOverride(760.f);
@@ -84,7 +69,7 @@ void URunSaveListWidget::BuildDefaultLayout()
 	UHorizontalBox* Top = WidgetTree->ConstructWidget<UHorizontalBox>();
 	if (UVerticalBoxSlot* S = Column->AddChildToVerticalBox(Top)) S->SetPadding(FMargin(0.f, 0.f, 0.f, 14.f));
 
-	UTextBlock* Title = MakeSaveListText(WidgetTree, TEXT("TitleText"), TEXT("이어하기"), 22, FLinearColor::White);
+	UTextBlock* Title = TerminusUI::MakeText(WidgetTree, TEXT("TitleText"), TEXT("이어하기"), 22, FLinearColor::White, ETextJustify::Left);
 	if (UHorizontalBoxSlot* S = Top->AddChildToHorizontalBox(Title))
 	{
 		S->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
@@ -92,14 +77,14 @@ void URunSaveListWidget::BuildDefaultLayout()
 	}
 
 	CloseButton = WidgetTree->ConstructWidget<UButton>(UButton::StaticClass(), TEXT("CloseButton"));
-	UTextBlock* CloseLabel = MakeSaveListText(WidgetTree, NAME_None, TEXT("  닫기  "), 15, FLinearColor::Black);
+	UTextBlock* CloseLabel = TerminusUI::MakeText(WidgetTree, NAME_None, TEXT("  닫기  "), 15, FLinearColor::Black, ETextJustify::Left);
 	CloseButton->SetContent(CloseLabel);
 	if (UHorizontalBoxSlot* S = Top->AddChildToHorizontalBox(CloseButton)) S->SetVerticalAlignment(VAlign_Center);
 
-	StatusText = MakeSaveListText(WidgetTree, TEXT("StatusText"), FString(), 14, FLinearColor(1.f, 0.45f, 0.4f));
+	StatusText = TerminusUI::MakeText(WidgetTree, TEXT("StatusText"), FString(), 14, TerminusUI::Color::Warning, ETextJustify::Left);
 	if (UVerticalBoxSlot* S = Column->AddChildToVerticalBox(StatusText)) S->SetPadding(FMargin(0.f, 0.f, 0.f, 8.f));
 
-	EmptyText = MakeSaveListText(WidgetTree, TEXT("EmptyText"), TEXT("저장된 진행이 없습니다. 던전에서 방을 끝내면 자동으로 저장됩니다."), 15, FLinearColor(0.7f, 0.7f, 0.7f));
+	EmptyText = TerminusUI::MakeText(WidgetTree, TEXT("EmptyText"), TEXT("저장된 진행이 없습니다. 던전에서 방을 끝내면 자동으로 저장됩니다."), 15, TerminusUI::Color::TextDim, ETextJustify::Left);
 	EmptyText->SetAutoWrapText(true);
 	Column->AddChildToVerticalBox(EmptyText);
 
@@ -223,7 +208,7 @@ void URunSaveListWidget::HandleDelete(const FString& SlotName)
 		FText::FromString(TEXT("이 진행을 삭제할까요? 되돌릴 수 없습니다.")),
 		FText::FromString(TEXT("삭제")), FText::FromString(TEXT("취소")));
 	Popup->OnConfirmedNative.BindUObject(this, &URunSaveListWidget::HandleDeleteConfirmed);
-	Popup->AddToViewport(50);
+	Popup->AddToViewport(TerminusUI::Layer::Popup);
 }
 
 void URunSaveListWidget::HandleDeleteConfirmed()

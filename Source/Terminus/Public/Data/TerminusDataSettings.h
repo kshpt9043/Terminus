@@ -59,6 +59,10 @@ public:
 	// 행 이름으로 유물 찾기 (RLC_Common_001 등). 스킬 / 몬스터와 같은 방식
 	static const FRelicRow* FindRelicRow(FName RowName);
 
+	// 화면에 보일 이름. 표에 없으면 행 이름 그대로
+	static FString GetSkillName(FName RowName);
+	static FString GetRelicName(FName RowName);
+
 	UPROPERTY(Config, EditAnywhere, Category = "Relic",
 		meta = (RequiredAssetDataTags = "RowStructure=/Script/Terminus.RelicRow"))
 	TSoftObjectPtr<UDataTable> RelicTable;

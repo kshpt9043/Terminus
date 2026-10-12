@@ -13,36 +13,19 @@
 #include "Data/TerminusDataSettings.h"
 #include "Player/TerminusPlayerController.h"
 #include "Player/TerminusPlayerState.h"
+#include "Widgets/Common/ItemPickPanelWidget.h"
 #include "Widgets/Common/ItemSlotWidget.h"
+#include "Widgets/Common/TerminusUIBuilder.h"
+#include "Widgets/TerminusUIColors.h"
+#include "Widgets/Common/TerminusClickRelay.h"
 
 namespace
 {
-	UTextBlock* MakeShopText(UWidgetTree* Tree, const FName& Name, const FString& Initial, int32 Size, const FLinearColor& Color,
-		ETextJustify::Type Justify = ETextJustify::Center)
-	{
-		UTextBlock* Text = Tree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), Name);
-		Text->SetText(FText::FromString(Initial));
-		FSlateFontInfo Font = Text->GetFont();
-		Font.Size = Size;
-		Text->SetFont(Font);
-		Text->SetColorAndOpacity(FSlateColor(Color));
-		Text->SetJustification(Justify);
-		return Text;
-	}
-
-	UButton* MakeShopButton(UWidgetTree* Tree, const FName& Name, const FString& Label, const FLinearColor& Color)
-	{
-		UButton* Button = Tree->ConstructWidget<UButton>(UButton::StaticClass(), Name);
-		Button->SetBackgroundColor(Color);
-		Button->SetContent(MakeShopText(Tree, NAME_None, Label, 13, FLinearColor::White));
-		return Button;
-	}
-
 	// 제목 + 칸 상자 한 묶음
 	UPanelWidget* AddShopSection(UWidgetTree* Tree, UPanelWidget* Parent, const FString& Title, const FName& BoxName, bool bWrap)
 	{
 		UVerticalBox* Section = Tree->ConstructWidget<UVerticalBox>();
-		Section->AddChildToVerticalBox(MakeShopText(Tree, NAME_None, Title, 16, FLinearColor(1.f, 0.82f, 0.35f), ETextJustify::Left));
+		Section->AddChildToVerticalBox(TerminusUI::MakeText(Tree, NAME_None, Title, 16, TerminusUI::Color::Gold, ETextJustify::Left));
 
 		UPanelWidget* Box = nullptr;
 		if (bWrap)
@@ -70,15 +53,6 @@ namespace
 	}
 
 	const FLinearColor ShopBuyColor(0.2f, 0.42f, 0.28f);
-	const FLinearColor ShopIdleColor(0.24f, 0.24f, 0.28f);
-}
-
-void UShopClickRelay::HandleClicked()
-{
-	if (UShopWidget* Widget = Owner.Get())
-	{
-		Widget->HandleAction(Action, Index, Row);
-	}
 }
 
 void UShopWidget::NativeOnInitialized()
@@ -90,7 +64,13 @@ void UShopWidget::NativeOnInitialized()
 		BuildDefaultLayout();
 	}
 
-	if (ReplaceCancelButton) ReplaceCancelButton->OnClicked.AddDynamic(this, &UShopWidget::HandleReplaceCancel);
+	if (ReplacePanel)
+	{
+		ReplacePanel->SetSlotClass(SlotClass);
+		ReplacePanel->SetSlotSize(SlotSize);
+		ReplacePanel->OnPicked.BindUObject(this, &UShopWidget::HandleReplacePicked);
+		ReplacePanel->OnCancelled.BindUObject(this, &UShopWidget::HandleReplaceCancel);
+	}
 	if (LeaveButton) LeaveButton->OnClicked.AddDynamic(this, &UShopWidget::HandleLeave);
 
 	SetVisibility(ESlateVisibility::Visible);
@@ -98,14 +78,10 @@ void UShopWidget::NativeOnInitialized()
 
 void UShopWidget::BuildDefaultLayout()
 {
-	UBorder* Dim = WidgetTree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("ShopDim"));
-	Dim->SetBrushColor(FLinearColor(0.f, 0.f, 0.f, 0.6f));
-	Dim->SetHorizontalAlignment(HAlign_Center);
-	Dim->SetVerticalAlignment(VAlign_Center);
-	WidgetTree->RootWidget = Dim;
+	UBorder* Dim = TerminusUI::MakeDimRoot(WidgetTree, TEXT("ShopDim"), TerminusUI::Color::Dim);
 
 	UBorder* Panel = WidgetTree->ConstructWidget<UBorder>();
-	Panel->SetBrushColor(FLinearColor(0.05f, 0.05f, 0.07f, 0.97f));
+	Panel->SetBrushColor(TerminusUI::Color::Panel);
 	Panel->SetPadding(FMargin(28.f, 22.f));
 	Dim->SetContent(Panel);
 
@@ -115,12 +91,12 @@ void UShopWidget::BuildDefaultLayout()
 	// 제목 + 던전 재화
 	UHorizontalBox* Header = WidgetTree->ConstructWidget<UHorizontalBox>();
 	Root->AddChildToVerticalBox(Header);
-	TitleText = MakeShopText(WidgetTree, TEXT("TitleText"), TEXT("상점"), 28, FLinearColor(1.f, 0.82f, 0.35f), ETextJustify::Left);
+	TitleText = TerminusUI::MakeText(WidgetTree, TEXT("TitleText"), TEXT("상점"), 28, TerminusUI::Color::Gold, ETextJustify::Left);
 	if (UHorizontalBoxSlot* S = Header->AddChildToHorizontalBox(TitleText)) S->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
-	CurrencyText = MakeShopText(WidgetTree, TEXT("CurrencyText"), TEXT(""), 18, FLinearColor::White, ETextJustify::Right);
+	CurrencyText = TerminusUI::MakeText(WidgetTree, TEXT("CurrencyText"), TEXT(""), 18, FLinearColor::White, ETextJustify::Right);
 	if (UHorizontalBoxSlot* S = Header->AddChildToHorizontalBox(CurrencyText)) S->SetVerticalAlignment(VAlign_Center);
 
-	MessageText = MakeShopText(WidgetTree, TEXT("MessageText"), TEXT(""), 14, FLinearColor(0.85f, 0.95f, 0.85f), ETextJustify::Left);
+	MessageText = TerminusUI::MakeText(WidgetTree, TEXT("MessageText"), TEXT(""), 14, FLinearColor(0.85f, 0.95f, 0.85f), ETextJustify::Left);
 	if (UVerticalBoxSlot* S = Root->AddChildToVerticalBox(MessageText)) S->SetPadding(FMargin(0.f, 6.f, 0.f, 10.f));
 
 	// 구매 줄
@@ -139,17 +115,11 @@ void UShopWidget::BuildDefaultLayout()
 	SellBox = AddShopSection(WidgetTree, SellRow, TEXT("유물 판매"), TEXT("SellBox"), true);
 
 	// 바꿀 칸 고르기
-	UVerticalBox* Replace = WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), TEXT("ReplacePanel"));
-	ReplacePanel = Replace;
-	if (UVerticalBoxSlot* S = Root->AddChildToVerticalBox(Replace)) S->SetPadding(FMargin(0.f, 16.f, 0.f, 0.f));
-	Replace->AddChildToVerticalBox(MakeShopText(WidgetTree, NAME_None, TEXT("강화 스킬 칸이 가득 찼습니다. 바꿀 스킬을 고르세요."), 15, FLinearColor::White, ETextJustify::Left));
-	ReplaceBox = WidgetTree->ConstructWidget<UHorizontalBox>(UHorizontalBox::StaticClass(), TEXT("ReplaceBox"));
-	if (UVerticalBoxSlot* S = Replace->AddChildToVerticalBox(ReplaceBox)) S->SetPadding(FMargin(0.f, 6.f, 0.f, 6.f));
-	ReplaceCancelButton = MakeShopButton(WidgetTree, TEXT("ReplaceCancelButton"), TEXT("  취소  "), ShopIdleColor);
-	if (UVerticalBoxSlot* S = Replace->AddChildToVerticalBox(ReplaceCancelButton)) S->SetHorizontalAlignment(HAlign_Left);
-	Replace->SetVisibility(ESlateVisibility::Collapsed);
+	const TSubclassOf<UItemPickPanelWidget> PickClass = PickPanelClass ? PickPanelClass : TSubclassOf<UItemPickPanelWidget>(UItemPickPanelWidget::StaticClass());
+	ReplacePanel = WidgetTree->ConstructWidget<UItemPickPanelWidget>(PickClass, TEXT("ReplacePanel"));
+	TerminusUI::AddRow(Root, ReplacePanel, 16.f);
 
-	LeaveButton = MakeShopButton(WidgetTree, TEXT("LeaveButton"), TEXT("  나가기  "), FLinearColor(0.45f, 0.2f, 0.2f));
+	LeaveButton = TerminusUI::MakeButton(WidgetTree, TEXT("LeaveButton"), TEXT("  나가기  "), 13, FLinearColor::White, FLinearColor(0.45f, 0.2f, 0.2f));
 	if (UVerticalBoxSlot* S = Root->AddChildToVerticalBox(LeaveButton))
 	{
 		S->SetHorizontalAlignment(HAlign_Right);
@@ -161,21 +131,34 @@ void UShopWidget::SetShopState(const FShopState& InState)
 {
 	State = InState;
 	PendingSkillIndex = INDEX_NONE;
-	if (ReplacePanel) ReplacePanel->SetVisibility(ESlateVisibility::Collapsed);
+	if (ReplacePanel) ReplacePanel->Hide();
+
+	// 내 상태(재화 / 유물 / 스킬 / 강화)가 복제로 바뀌면 다시 그림
+	ATerminusPlayerState* PS = GetOwningPlayer() ? GetOwningPlayer()->GetPlayerState<ATerminusPlayerState>() : nullptr;
+	if (PS && WatchedPS.Get() != PS)
+	{
+		if (ATerminusPlayerState* Old = WatchedPS.Get()) Old->OnRunStateChanged.RemoveDynamic(this, &UShopWidget::HandleRunStateChanged);
+		PS->OnRunStateChanged.AddUniqueDynamic(this, &UShopWidget::HandleRunStateChanged);
+		WatchedPS = PS;
+	}
+
 	Rebuild();
 }
 
-void UShopWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
+void UShopWidget::NativeDestruct()
 {
-	Super::NativeTick(MyGeometry, InDeltaTime);
-
-	// 내 상태(재화 / 유물 / 스킬 / 강화)가 복제로 바뀌면 다시 그림
-	RefreshTimer += InDeltaTime;
-	if (RefreshTimer >= 0.25f)
+	if (ATerminusPlayerState* PS = WatchedPS.Get())
 	{
-		RefreshTimer = 0.f;
-		if (MakeStateKey() != ShownKey) Rebuild();
+		PS->OnRunStateChanged.RemoveDynamic(this, &UShopWidget::HandleRunStateChanged);
 	}
+	WatchedPS = nullptr;
+	Super::NativeDestruct();
+}
+
+void UShopWidget::HandleRunStateChanged(const FRunState& NewRunState)
+{
+	// 방문 기록처럼 상점과 상관없는 변화면 그대로
+	if (MakeStateKey() != ShownKey) Rebuild();
 }
 
 FString UShopWidget::MakeStateKey() const
@@ -210,21 +193,15 @@ void UShopWidget::AddCard(UPanelWidget* Box, bool bRelic, FName Row, const FStri
 
 	if (!Caption.IsEmpty())
 	{
-		if (UVerticalBoxSlot* S = Card->AddChildToVerticalBox(MakeShopText(WidgetTree, NAME_None, Caption, 13, FLinearColor(0.8f, 0.8f, 0.8f))))
+		if (UVerticalBoxSlot* S = Card->AddChildToVerticalBox(TerminusUI::MakeText(WidgetTree, NAME_None, Caption, 13, TerminusUI::Color::TextMuted)))
 		{
 			S->SetHorizontalAlignment(HAlign_Center);
 		}
 	}
 
-	UButton* Button = MakeShopButton(WidgetTree, NAME_None, ButtonLabel, bEnabled ? ShopBuyColor : ShopIdleColor);
+	UButton* Button = TerminusUI::MakeButton(WidgetTree, NAME_None, ButtonLabel, 13, FLinearColor::White, bEnabled ? ShopBuyColor : TerminusUI::Color::ButtonIdle);
 	Button->SetIsEnabled(bEnabled);
-	UShopClickRelay* Relay = NewObject<UShopClickRelay>(this);
-	Relay->Owner = this;
-	Relay->Action = Action;
-	Relay->Index = Index;
-	Relay->Row = Row;
-	Button->OnClicked.AddDynamic(Relay, &UShopClickRelay::HandleClicked);
-	Relays.Add(Relay);
+	UTerminusClickRelay::Bind(Button, this, FSimpleDelegate::CreateUObject(this, &UShopWidget::HandleAction, Action, Index, Row), Relays);
 	if (UVerticalBoxSlot* S = Card->AddChildToVerticalBox(Button))
 	{
 		S->SetHorizontalAlignment(HAlign_Center);
@@ -262,7 +239,7 @@ void UShopWidget::Rebuild()
 		}
 		if (State.RelicOffers.Num() == 0)
 		{
-			RelicBuyBox->AddChild(MakeShopText(WidgetTree, NAME_None, TEXT("살 수 있는 유물이 없습니다."), 13, FLinearColor(0.7f, 0.7f, 0.7f)));
+			RelicBuyBox->AddChild(TerminusUI::MakeText(WidgetTree, NAME_None, TEXT("살 수 있는 유물이 없습니다."), 13, TerminusUI::Color::TextDim));
 		}
 	}
 
@@ -280,7 +257,7 @@ void UShopWidget::Rebuild()
 		}
 		if (State.SkillOffers.Num() == 0)
 		{
-			SkillBuyBox->AddChild(MakeShopText(WidgetTree, NAME_None, TEXT("살 수 있는 스킬이 없습니다."), 13, FLinearColor(0.7f, 0.7f, 0.7f)));
+			SkillBuyBox->AddChild(TerminusUI::MakeText(WidgetTree, NAME_None, TEXT("살 수 있는 스킬이 없습니다."), 13, TerminusUI::Color::TextDim));
 		}
 	}
 
@@ -299,7 +276,7 @@ void UShopWidget::Rebuild()
 		}
 		if (Run.EnhanceSkills.Num() == 0)
 		{
-			UpgradeBox->AddChild(MakeShopText(WidgetTree, NAME_None, TEXT("장착한 픽업 스킬이 없습니다."), 13, FLinearColor(0.7f, 0.7f, 0.7f)));
+			UpgradeBox->AddChild(TerminusUI::MakeText(WidgetTree, NAME_None, TEXT("장착한 픽업 스킬이 없습니다."), 13, TerminusUI::Color::TextDim));
 		}
 	}
 
@@ -355,28 +332,9 @@ void UShopWidget::HandleAction(EShopAction Action, int32 Index, FName Row)
 
 void UShopWidget::ShowReplace()
 {
-	if (!ReplacePanel || !ReplaceBox) return;
-
-	ReplacePanel->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
-	ReplaceBox->ClearChildren();
-
-	const APlayerController* PC = GetOwningPlayer();
-	const ATerminusPlayerState* PS = PC ? PC->GetPlayerState<ATerminusPlayerState>() : nullptr;
-	if (!PS) return;
-
-	const TSubclassOf<UItemSlotWidget> Class = SlotClass ? SlotClass : TSubclassOf<UItemSlotWidget>(UItemSlotWidget::StaticClass());
-	const TArray<FName> Equipped = PS->GetRunState().EnhanceSkills;
-	for (int32 i = 0; i < Equipped.Num(); ++i)
+	if (ReplacePanel)
 	{
-		if (UItemSlotWidget* SkillSlot = CreateWidget<UItemSlotWidget>(this, Class))
-		{
-			SkillSlot->SetSlotIndex(i);
-			SkillSlot->SetSlotSize(SlotSize);
-			SkillSlot->SetShowName(true);
-			SkillSlot->SetSkill(Equipped[i]);
-			SkillSlot->OnSlotClicked.BindUObject(this, &UShopWidget::HandleReplacePicked);
-			if (UHorizontalBoxSlot* S = Cast<UHorizontalBoxSlot>(ReplaceBox->AddChild(SkillSlot))) S->SetPadding(FMargin(0.f, 0.f, 8.f, 0.f));
-		}
+		ReplacePanel->ShowEnhanceSkills(FText::FromString(TEXT("강화 스킬 칸이 가득 찼습니다. 바꿀 스킬을 고르세요.")));
 	}
 }
 
@@ -392,7 +350,7 @@ void UShopWidget::HandleReplacePicked(UItemSlotWidget* ClickedSlot)
 void UShopWidget::HandleReplaceCancel()
 {
 	PendingSkillIndex = INDEX_NONE;
-	if (ReplacePanel) ReplacePanel->SetVisibility(ESlateVisibility::Collapsed);
+	if (ReplacePanel) ReplacePanel->Hide();
 }
 
 void UShopWidget::HandleLeave()

@@ -9,20 +9,8 @@
 #include "Components/VerticalBoxSlot.h"
 #include "Player/TerminusPlayerController.h"
 #include "Widgets/Skill/SkillCardWidget.h"
-
-namespace
-{
-	UTextBlock* MakeCenteredText(UWidgetTree* Tree, const FName& Name, int32 Size, const FLinearColor& Color)
-	{
-		UTextBlock* Text = Tree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), Name);
-		FSlateFontInfo Font = Text->GetFont();
-		Font.Size = Size;
-		Text->SetFont(Font);
-		Text->SetColorAndOpacity(FSlateColor(Color));
-		Text->SetJustification(ETextJustify::Center);
-		return Text;
-	}
-}
+#include "Widgets/Common/TerminusUIBuilder.h"
+#include "Widgets/TerminusUIColors.h"
 
 void UStartSkillPickWidget::NativeOnInitialized()
 {
@@ -41,22 +29,18 @@ void UStartSkillPickWidget::NativeOnInitialized()
 void UStartSkillPickWidget::BuildDefaultLayout()
 {
 	// 화면 전체를 어둡게 덮는 바탕 + 가운데 제목 / 안내 / 카드 줄
-	UBorder* Root = WidgetTree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("PickRoot"));
-	Root->SetBrushColor(FLinearColor(0.02f, 0.02f, 0.03f, 0.92f));
-	Root->SetHorizontalAlignment(HAlign_Center);
-	Root->SetVerticalAlignment(VAlign_Center);
-	WidgetTree->RootWidget = Root;
+	UBorder* Root = TerminusUI::MakeDimRoot(WidgetTree, TEXT("PickRoot"), FLinearColor(0.02f, 0.02f, 0.03f, 0.92f));
 
 	UVerticalBox* Column = WidgetTree->ConstructWidget<UVerticalBox>();
 	Root->SetContent(Column);
 
-	TitleText = MakeCenteredText(WidgetTree, TEXT("TitleText"), 30, FLinearColor::White);
+	TitleText = TerminusUI::MakeText(WidgetTree, TEXT("TitleText"), TEXT(""), 30, FLinearColor::White);
 	if (UVerticalBoxSlot* S = Column->AddChildToVerticalBox(TitleText))
 	{
 		S->SetHorizontalAlignment(HAlign_Center);
 	}
 
-	MessageText = MakeCenteredText(WidgetTree, TEXT("MessageText"), 18, FLinearColor(0.8f, 0.8f, 0.8f));
+	MessageText = TerminusUI::MakeText(WidgetTree, TEXT("MessageText"), TEXT(""), 18, TerminusUI::Color::TextMuted);
 	if (UVerticalBoxSlot* S = Column->AddChildToVerticalBox(MessageText))
 	{
 		S->SetHorizontalAlignment(HAlign_Center);

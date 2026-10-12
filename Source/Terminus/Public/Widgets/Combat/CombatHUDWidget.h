@@ -72,6 +72,10 @@ protected:
 	// 보유 유물 줄 (오른쪽 아래). WBP 에 없으면 C++ 이 턴 종료 위쪽에 만듦
 	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<URelicBarWidget> RelicBar;
 
+	// 기본 레이아웃일 때 만들 유물 줄 (비우면 C++ 기본)
+	UPROPERTY(EditAnywhere, Category = "Combat HUD")
+	TSubclassOf<URelicBarWidget> RelicBarClass;
+
 	UPROPERTY(meta = (BindWidget)) TObjectPtr<UButton> EndTurnButton;
 	UPROPERTY(meta = (BindWidget)) TObjectPtr<UTextBlock> StatusText;
 

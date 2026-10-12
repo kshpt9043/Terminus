@@ -18,6 +18,7 @@
 #include "Widgets/Base/BaseWidget.h"
 #include "Game/LoadingScreenSubsystem.h"
 #include "Widgets/Common/ConfirmPopupWidget.h"
+#include "Widgets/TerminusUILayers.h"
 
 namespace
 {
@@ -102,7 +103,7 @@ void UMainMenuWidget::NativeConstruct()
 			SettlementWindow = CreateWidget<USettlementWidget>(GetOwningPlayer(), Class);
 			if (SettlementWindow)
 			{
-				SettlementWindow->AddToViewport(45);
+				SettlementWindow->AddToViewport(TerminusUI::Layer::Settlement);
 			}
 		}
 		return;
@@ -156,7 +157,7 @@ void UMainMenuWidget::HandleDungeonClicked()
 					*UTerminusSaveSubsystem::DescribeTitle(Single).ToString())),
 				FText::FromString(TEXT("삭제하고 시작")), FText::FromString(TEXT("취소")));
 			Popup->OnConfirmedNative.BindUObject(this, &UMainMenuWidget::HandleOverwriteSingleConfirmed);
-			Popup->AddToViewport(50);
+			Popup->AddToViewport(TerminusUI::Layer::Popup);
 			return;
 		}
 	}
@@ -255,7 +256,7 @@ void UMainMenuWidget::HandleStorageClicked()
 		StorageWindow = CreateWidget<UStorageWidget>(GetOwningPlayer(), Class);
 		if (StorageWindow)
 		{
-			StorageWindow->AddToViewport(40);
+			StorageWindow->AddToViewport(TerminusUI::Layer::MenuWindow);
 		}
 	}
 
@@ -274,7 +275,7 @@ void UMainMenuWidget::HandleContinueClicked()
 		SaveListWindow = CreateWidget<URunSaveListWidget>(GetOwningPlayer(), Class);
 		if (SaveListWindow)
 		{
-			SaveListWindow->AddToViewport(40);
+			SaveListWindow->AddToViewport(TerminusUI::Layer::MenuWindow);
 		}
 	}
 
@@ -316,7 +317,7 @@ void UMainMenuWidget::HandleBaseClicked()
 		BaseWindow = CreateWidget<UBaseWidget>(GetOwningPlayer(), Class);
 		if (BaseWindow)
 		{
-			BaseWindow->AddToViewport(40);
+			BaseWindow->AddToViewport(TerminusUI::Layer::MenuWindow);
 		}
 	}
 

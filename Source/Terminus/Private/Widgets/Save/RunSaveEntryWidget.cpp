@@ -8,28 +8,8 @@
 #include "Components/TextBlock.h"
 #include "Components/VerticalBox.h"
 #include "Components/VerticalBoxSlot.h"
-
-namespace
-{
-	UTextBlock* MakeSaveEntryText(UWidgetTree* Tree, const FName& Name, int32 Size, const FLinearColor& Color)
-	{
-		UTextBlock* Text = Tree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), Name);
-		FSlateFontInfo Font = Text->GetFont();
-		Font.Size = Size;
-		Text->SetFont(Font);
-		Text->SetColorAndOpacity(FSlateColor(Color));
-		return Text;
-	}
-
-	UButton* MakeSaveEntryButton(UWidgetTree* Tree, const FName& Name, const FString& Label)
-	{
-		UButton* Button = Tree->ConstructWidget<UButton>(UButton::StaticClass(), Name);
-		UTextBlock* Text = MakeSaveEntryText(Tree, NAME_None, 15, FLinearColor::Black);
-		Text->SetText(FText::FromString(Label));
-		Button->SetContent(Text);
-		return Button;
-	}
-}
+#include "Widgets/Common/TerminusUIBuilder.h"
+#include "Widgets/TerminusUIColors.h"
 
 void URunSaveEntryWidget::NativeOnInitialized()
 {
@@ -62,27 +42,27 @@ void URunSaveEntryWidget::BuildDefaultLayout()
 		S->SetVerticalAlignment(VAlign_Center);
 	}
 
-	TitleText = MakeSaveEntryText(WidgetTree, TEXT("TitleText"), 18, FLinearColor(1.f, 0.85f, 0.35f));
+	TitleText = TerminusUI::MakeText(WidgetTree, TEXT("TitleText"), TEXT(""), 18, TerminusUI::Color::Gold, ETextJustify::Left);
 	Info->AddChildToVerticalBox(TitleText);
 
-	InfoText = MakeSaveEntryText(WidgetTree, TEXT("InfoText"), 14, FLinearColor(0.85f, 0.85f, 0.85f));
+	InfoText = TerminusUI::MakeText(WidgetTree, TEXT("InfoText"), TEXT(""), 14, TerminusUI::Color::TextSoft, ETextJustify::Left);
 	if (UVerticalBoxSlot* S = Info->AddChildToVerticalBox(InfoText)) S->SetPadding(FMargin(0.f, 4.f, 0.f, 0.f));
 
-	PlayersText = MakeSaveEntryText(WidgetTree, TEXT("PlayersText"), 14, FLinearColor::White);
+	PlayersText = TerminusUI::MakeText(WidgetTree, TEXT("PlayersText"), TEXT(""), 14, FLinearColor::White, ETextJustify::Left);
 	if (UVerticalBoxSlot* S = Info->AddChildToVerticalBox(PlayersText)) S->SetPadding(FMargin(0.f, 4.f, 0.f, 0.f));
 
-	DateText = MakeSaveEntryText(WidgetTree, TEXT("DateText"), 12, FLinearColor(0.6f, 0.6f, 0.6f));
+	DateText = TerminusUI::MakeText(WidgetTree, TEXT("DateText"), TEXT(""), 12, FLinearColor(0.6f, 0.6f, 0.6f), ETextJustify::Left);
 	if (UVerticalBoxSlot* S = Info->AddChildToVerticalBox(DateText)) S->SetPadding(FMargin(0.f, 4.f, 0.f, 0.f));
 
 	// 오른쪽: 버튼
-	LoadButton = MakeSaveEntryButton(WidgetTree, TEXT("LoadButton"), TEXT("  불러오기  "));
+	LoadButton = TerminusUI::MakeButton(WidgetTree, TEXT("LoadButton"), TEXT("  불러오기  "), 15);
 	if (UHorizontalBoxSlot* S = Line->AddChildToHorizontalBox(LoadButton))
 	{
 		S->SetVerticalAlignment(VAlign_Center);
 		S->SetPadding(FMargin(12.f, 0.f, 6.f, 0.f));
 	}
 
-	DeleteButton = MakeSaveEntryButton(WidgetTree, TEXT("DeleteButton"), TEXT("  삭제  "));
+	DeleteButton = TerminusUI::MakeButton(WidgetTree, TEXT("DeleteButton"), TEXT("  삭제  "), 15);
 	DeleteButton->SetBackgroundColor(FLinearColor(0.75f, 0.4f, 0.35f));
 	if (UHorizontalBoxSlot* S = Line->AddChildToHorizontalBox(DeleteButton))
 	{

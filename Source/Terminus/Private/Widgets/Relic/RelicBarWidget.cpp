@@ -5,6 +5,8 @@
 #include "Components/HorizontalBox.h"
 #include "Components/HorizontalBoxSlot.h"
 #include "Player/TerminusPlayerState.h"
+#include "Engine/World.h"
+#include "TimerManager.h"
 
 void URelicBarWidget::NativeOnInitialized()
 {
@@ -24,17 +26,63 @@ void URelicBarWidget::BuildDefaultLayout()
 	WidgetTree->RootWidget = RelicBox;
 }
 
-void URelicBarWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
+void URelicBarWidget::NativeConstruct()
 {
-	Super::NativeTick(MyGeometry, InDeltaTime);
+	Super::NativeConstruct();
+	TryBind();
+}
 
+void URelicBarWidget::NativeDestruct()
+{
+	Unbind();
+	Super::NativeDestruct();
+}
+
+void URelicBarWidget::TryBind()
+{
 	const APlayerController* PC = GetOwningPlayer();
-	const ATerminusPlayerState* PS = PC ? PC->GetPlayerState<ATerminusPlayerState>() : nullptr;
-	const TArray<FName> Relics = PS ? PS->GetRelics() : TArray<FName>();
+	ATerminusPlayerState* PS = PC ? PC->GetPlayerState<ATerminusPlayerState>() : nullptr;
+	UWorld* World = GetWorld();
 
-	if (!bShownOnce || Relics != ShownRelics)
+	if (!PS)
 	{
-		Rebuild(Relics);
+		// 클라: PlayerState 가 아직 안 옴 -> 잠깐 뒤 다시
+		if (World && !BindTimer.IsValid())
+		{
+			World->GetTimerManager().SetTimer(BindTimer, this, &URelicBarWidget::TryBind, 0.25f, true);
+		}
+		if (!bShownOnce) Rebuild(TArray<FName>());
+		return;
+	}
+
+	if (World) World->GetTimerManager().ClearTimer(BindTimer);
+	if (WatchedPS.Get() != PS)
+	{
+		Unbind();
+		PS->OnRunStateChanged.AddUniqueDynamic(this, &URelicBarWidget::HandleRunStateChanged);
+		WatchedPS = PS;
+	}
+	Rebuild(PS->GetRelics());
+}
+
+void URelicBarWidget::Unbind()
+{
+	if (UWorld* World = GetWorld())
+	{
+		World->GetTimerManager().ClearTimer(BindTimer);
+	}
+	if (ATerminusPlayerState* PS = WatchedPS.Get())
+	{
+		PS->OnRunStateChanged.RemoveDynamic(this, &URelicBarWidget::HandleRunStateChanged);
+	}
+	WatchedPS = nullptr;
+}
+
+void URelicBarWidget::HandleRunStateChanged(const FRunState& NewRunState)
+{
+	if (!bShownOnce || NewRunState.Relics != ShownRelics)
+	{
+		Rebuild(NewRunState.Relics);
 	}
 }
 

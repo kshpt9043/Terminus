@@ -15,7 +15,7 @@ void UMapScreenWidget::NativeOnInitialized()
 	{
 		if (UCanvasPanel* Root = Cast<UCanvasPanel>(WidgetTree->RootWidget))
 		{
-			RelicBar = CreateWidget<URelicBarWidget>(this, URelicBarWidget::StaticClass());
+			RelicBar = CreateWidget<URelicBarWidget>(this, RelicBarClass ? RelicBarClass : TSubclassOf<URelicBarWidget>(URelicBarWidget::StaticClass()));
 			if (UCanvasPanelSlot* CanvasSlot = RelicBar ? Root->AddChildToCanvas(RelicBar) : nullptr)
 			{
 				CanvasSlot->SetAnchors(FAnchors(1.f, 1.f));

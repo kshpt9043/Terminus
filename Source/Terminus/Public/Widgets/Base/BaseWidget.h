@@ -7,6 +7,7 @@
 #include "BaseWidget.generated.h"
 
 class UButton;
+class UTerminusClickRelay;
 class UPanelWidget;
 class UTextBlock;
 class UBaseWidget;
@@ -19,21 +20,6 @@ enum class EBaseView : uint8
 	Facility,   // 연무장 / 훈련소 고르기
 	StatHall,   // 연무장: 스테이터스 강화
 	SkillHall   // 훈련소: 기본 스킬 강화
-};
-
-// 버튼마다 "몇 번째 것" 을 넘기려고 쓰는 작은 중계 (UButton 의 OnClicked 는 인자가 없음)
-UCLASS()
-class TERMINUS_API UBaseClickRelay : public UObject
-{
-	GENERATED_BODY()
-
-public:
-	TWeakObjectPtr<UBaseWidget> Owner;
-	EBaseView View = EBaseView::Faction;
-	int32 Index = 0;
-
-	UFUNCTION()
-	void HandleClicked();
 };
 
 /**
@@ -98,7 +84,7 @@ private:
 	TArray<ECharacterClass> ShownClasses;
 
 	UPROPERTY()
-	TArray<TObjectPtr<UBaseClickRelay>> Relays;
+	TArray<TObjectPtr<UTerminusClickRelay>> Relays;
 
 	FDelegateHandle UpgradesChangedHandle;
 

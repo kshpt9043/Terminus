@@ -90,6 +90,18 @@ const FRelicRow* UTerminusDataSettings::FindRelicRow(FName RowName)
 	return Table->FindRow<FRelicRow>(RowName, Ctx);
 }
 
+FString UTerminusDataSettings::GetSkillName(FName RowName)
+{
+	const FSkillRow* Skill = FindSkillRow(RowName);
+	return Skill ? Skill->DisplayName_KR.ToString() : RowName.ToString();
+}
+
+FString UTerminusDataSettings::GetRelicName(FName RowName)
+{
+	const FRelicRow* Relic = FindRelicRow(RowName);
+	return Relic ? Relic->RelicName.ToString() : RowName.ToString();
+}
+
 const FMonsterRow* UTerminusDataSettings::FindMonsterRow(FName RowName)
 {
 	const UDataTable* Table = Get()->MonsterTable.LoadSynchronous();

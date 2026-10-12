@@ -16,36 +16,13 @@
 #include "Player/TerminusPlayerController.h"
 #include "Player/TerminusPlayerState.h"
 #include "TimerManager.h"
+#include "Widgets/Common/TerminusUIBuilder.h"
+#include "Widgets/Common/TerminusUIText.h"
+#include "Widgets/TerminusUIColors.h"
+#include "Widgets/Common/TerminusClickRelay.h"
 
 namespace
 {
-	UTextBlock* MakeSpectateText(UWidgetTree* Tree, const FString& Initial, int32 Size, const FLinearColor& Color)
-	{
-		UTextBlock* Text = Tree->ConstructWidget<UTextBlock>();
-		Text->SetText(FText::FromString(Initial));
-		FSlateFontInfo Font = Text->GetFont();
-		Font.Size = Size;
-		Text->SetFont(Font);
-		Text->SetColorAndOpacity(FSlateColor(Color));
-		Text->SetJustification(ETextJustify::Center);
-		return Text;
-	}
-
-	FString SpectateRoomTypeName(ERoomType Type)
-	{
-		switch (Type)
-		{
-		case ERoomType::MONSTER:  return TEXT("몬스터");
-		case ERoomType::GUARDIAN: return TEXT("가디언");
-		case ERoomType::BOSS:     return TEXT("보스");
-		case ERoomType::BREAK:    return TEXT("휴식터");
-		case ERoomType::EVENT:    return TEXT("이벤트");
-		case ERoomType::STORE:    return TEXT("상점");
-		case ERoomType::QUEST:    return TEXT("퀘스트");
-		default:                  return TEXT("방");
-		}
-	}
-
 	FString SpectateAreaLabel(const ADungeonArea* Area)
 	{
 		TArray<FString> Names;
@@ -53,15 +30,7 @@ namespace
 		{
 			if (PS) Names.Add(PS->GetPlayerName());
 		}
-		return FString::Printf(TEXT("%s (%s)"), *FString::Join(Names, TEXT(", ")), *SpectateRoomTypeName(Area->GetRoom().Type));
-	}
-}
-
-void USpectateClickRelay::HandleClicked()
-{
-	if (USpectateWidget* Widget = Owner.Get())
-	{
-		Widget->HandleAreaClicked(Area.Get(), bMine);
+		return FString::Printf(TEXT("%s (%s)"), *FString::Join(Names, TEXT(", ")), *TerminusUI::RoomTypeLabel(Area->GetRoom().Type));
 	}
 }
 
@@ -84,7 +53,7 @@ void USpectateWidget::BuildDefaultLayout()
 	WidgetTree->RootWidget = Root;
 
 	UBorder* Bar = WidgetTree->ConstructWidget<UBorder>();
-	Bar->SetBrushColor(FLinearColor(0.f, 0.f, 0.f, 0.6f));
+	Bar->SetBrushColor(TerminusUI::Color::Dim);
 	Bar->SetPadding(FMargin(12.f, 6.f));
 	if (UVerticalBoxSlot* S = Root->AddChildToVerticalBox(Bar))
 	{
@@ -95,7 +64,7 @@ void USpectateWidget::BuildDefaultLayout()
 	UHorizontalBox* Row = WidgetTree->ConstructWidget<UHorizontalBox>();
 	Bar->SetContent(Row);
 
-	LabelText = MakeSpectateText(WidgetTree, TEXT("관전"), 15, FLinearColor(1.f, 0.82f, 0.35f));
+	LabelText = TerminusUI::MakeText(WidgetTree, NAME_None, TEXT("관전"), 15, TerminusUI::Color::Gold);
 	if (UHorizontalBoxSlot* S = Row->AddChildToHorizontalBox(LabelText))
 	{
 		S->SetVerticalAlignment(VAlign_Center);
@@ -198,14 +167,9 @@ void USpectateWidget::RebuildButtons(ADungeonArea* MyArea, const TArray<ADungeon
 		UButton* Button = WidgetTree->ConstructWidget<UButton>();
 		const bool bViewing = bMine ? (Viewed == Area) : (Viewed == Area);
 		Button->SetBackgroundColor(bViewing ? FLinearColor(0.25f, 0.5f, 0.3f) : FLinearColor(0.2f, 0.2f, 0.24f));
-		Button->SetContent(MakeSpectateText(WidgetTree, Label, 14, FLinearColor::White));
+		Button->SetContent(TerminusUI::MakeText(WidgetTree, NAME_None, Label, 14, FLinearColor::White));
 
-		USpectateClickRelay* Relay = NewObject<USpectateClickRelay>(this);
-		Relay->Owner = this;
-		Relay->Area = Area;
-		Relay->bMine = bMine;
-		Button->OnClicked.AddDynamic(Relay, &USpectateClickRelay::HandleClicked);
-		Relays.Add(Relay);
+		UTerminusClickRelay::Bind(Button, this, FSimpleDelegate::CreateWeakLambda(this, [this, Area = TWeakObjectPtr<ADungeonArea>(Area), bMine = bMine]() { HandleAreaClicked(Area.Get(), bMine); }), Relays);
 
 		if (UHorizontalBoxSlot* S = Cast<UHorizontalBoxSlot>(ButtonBox->AddChild(Button)))
 		{

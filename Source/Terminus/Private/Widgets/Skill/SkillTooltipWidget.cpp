@@ -7,42 +7,9 @@
 #include "Components/VerticalBox.h"
 #include "Components/VerticalBoxSlot.h"
 #include "Data/SkillTypes.h"
-
-namespace
-{
-	UTextBlock* MakeTooltipText(UWidgetTree* Tree, const FName& Name, int32 Size, const FLinearColor& Color)
-	{
-		UTextBlock* Text = Tree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), Name);
-		FSlateFontInfo Font = Text->GetFont();
-		Font.Size = Size;
-		Text->SetFont(Font);
-		Text->SetColorAndOpacity(FSlateColor(Color));
-		Text->SetAutoWrapText(true);
-		return Text;
-	}
-
-	FString TooltipTypeLabel(ESkillType Type)
-	{
-		switch (Type)
-		{
-		case ESkillType::Attack:  return TEXT("공격");
-		case ESkillType::Defense: return TEXT("방어");
-		default:                  return TEXT("특수");
-		}
-	}
-
-	FString TooltipTargetLabel(ETargetType Type)
-	{
-		switch (Type)
-		{
-		case ETargetType::SingleEnemy: return TEXT("적 1명");
-		case ETargetType::AllEnemies:  return TEXT("적 전체");
-		case ETargetType::SingleAlly:  return TEXT("아군 1명");
-		case ETargetType::AllAllies:   return TEXT("아군 전체");
-		default:                       return TEXT("자신");
-		}
-	}
-}
+#include "Widgets/Common/TerminusUIBuilder.h"
+#include "Widgets/Common/TerminusUIText.h"
+#include "Widgets/TerminusUIColors.h"
 
 void USkillTooltipWidget::NativeOnInitialized()
 {
@@ -68,10 +35,10 @@ void USkillTooltipWidget::BuildDefaultLayout()
 	UVerticalBox* Column = WidgetTree->ConstructWidget<UVerticalBox>();
 	Box->SetContent(Column);
 
-	NameText = MakeTooltipText(WidgetTree, TEXT("NameText"), 17, FLinearColor::White);
-	TypeText = MakeTooltipText(WidgetTree, TEXT("TypeText"), 12, FLinearColor(0.75f, 0.75f, 0.75f));
-	CostText = MakeTooltipText(WidgetTree, TEXT("CostText"), 12, FLinearColor(0.7f, 0.6f, 1.f));
-	DescText = MakeTooltipText(WidgetTree, TEXT("DescText"), 14, FLinearColor(1.f, 0.95f, 0.85f));
+	NameText = TerminusUI::MakeWrapText(WidgetTree, TEXT("NameText"), TEXT(""), 17, FLinearColor::White, ETextJustify::Left);
+	TypeText = TerminusUI::MakeWrapText(WidgetTree, TEXT("TypeText"), TEXT(""), 12, TerminusUI::Color::TextMuted, ETextJustify::Left);
+	CostText = TerminusUI::MakeWrapText(WidgetTree, TEXT("CostText"), TEXT(""), 12, FLinearColor(0.7f, 0.6f, 1.f), ETextJustify::Left);
+	DescText = TerminusUI::MakeWrapText(WidgetTree, TEXT("DescText"), TEXT(""), 14, FLinearColor(1.f, 0.95f, 0.85f), ETextJustify::Left);
 
 	Column->AddChildToVerticalBox(NameText);
 	Column->AddChildToVerticalBox(TypeText);
@@ -92,7 +59,7 @@ void USkillTooltipWidget::SetSkill(const FSkillRow* InSkill)
 	}
 	if (TypeText)
 	{
-		TypeText->SetText(FText::FromString(FString::Printf(TEXT("%s · %s"), *TooltipTypeLabel(InSkill->SkillType), *TooltipTargetLabel(InSkill->TargetType))));
+		TypeText->SetText(FText::FromString(FString::Printf(TEXT("%s · %s"), *TerminusUI::SkillTypeLabel(InSkill->SkillType), *TerminusUI::TargetTypeLabel(InSkill->TargetType))));
 	}
 	if (CostText)
 	{

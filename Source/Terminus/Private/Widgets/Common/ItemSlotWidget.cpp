@@ -14,43 +14,7 @@
 #include "Data/TerminusDataSettings.h"
 #include "Engine/Texture2D.h"
 #include "Widgets/Skill/SkillTooltipWidget.h"
-
-namespace
-{
-	FLinearColor ItemSlotRelicColor(ERelicTier Tier)
-	{
-		switch (Tier)
-		{
-		case ERelicTier::Basic:   return FLinearColor(0.55f, 0.55f, 0.55f);
-		case ERelicTier::Upgrade: return FLinearColor(1.f, 0.8f, 0.3f);
-		case ERelicTier::Mid:     return FLinearColor(0.35f, 0.6f, 1.f);
-		case ERelicTier::Deep:    return FLinearColor(0.95f, 0.3f, 0.3f);
-		default:                  return FLinearColor(0.85f, 0.85f, 0.85f);
-		}
-	}
-
-	FLinearColor ItemSlotSkillColor(ESkillType Type)
-	{
-		switch (Type)
-		{
-		case ESkillType::Attack:  return FLinearColor(0.9f, 0.35f, 0.3f);
-		case ESkillType::Defense: return FLinearColor(0.35f, 0.6f, 0.95f);
-		default:                  return FLinearColor(0.7f, 0.45f, 0.95f);
-		}
-	}
-
-	FString ItemSlotTierLabel(ERelicTier Tier)
-	{
-		switch (Tier)
-		{
-		case ERelicTier::Basic:   return TEXT("기본");
-		case ERelicTier::Upgrade: return TEXT("업그레이드");
-		case ERelicTier::Mid:     return TEXT("중층");
-		case ERelicTier::Deep:    return TEXT("심층");
-		default:                  return TEXT("표층");
-		}
-	}
-}
+#include "Widgets/Common/TerminusUIText.h"
 
 // =====================================================================
 // 초기화 / 배치
@@ -206,7 +170,7 @@ void UItemSlotWidget::SetSkill(FName SkillRow)
 
 	Kind = EItemSlotKind::Skill;
 	ItemRow = SkillRow;
-	ItemColor = ItemSlotSkillColor(Skill->SkillType);
+	ItemColor = TerminusUI::SkillTypeColor(Skill->SkillType);
 	ShowIcon(UTerminusDataSettings::FindSkillIcon(*Skill), Skill->DisplayName_KR);
 
 	// 스킬 툴팁 (칸마다 하나 만들어 두고 내용만 바꿈)
@@ -239,12 +203,12 @@ void UItemSlotWidget::SetRelic(FName RelicRow)
 
 	Kind = EItemSlotKind::Relic;
 	ItemRow = RelicRow;
-	ItemColor = ItemSlotRelicColor(Relic->RelicTier);
+	ItemColor = TerminusUI::RelicTierColor(Relic->RelicTier);
 	ShowIcon(Relic->Icon.LoadSynchronous(), Relic->RelicName);
 
 	SetToolTip(nullptr);
 	SetToolTipText(FText::FromString(FString::Printf(TEXT("%s  [%s]\n%s"),
-		*Relic->RelicName.ToString(), *ItemSlotTierLabel(Relic->RelicTier), *Relic->RelicDesc.ToString())));
+		*Relic->RelicName.ToString(), *TerminusUI::RelicTierLabel(Relic->RelicTier), *Relic->RelicDesc.ToString())));
 
 	ApplyFrameColor();
 	ApplyButtonEnabled();

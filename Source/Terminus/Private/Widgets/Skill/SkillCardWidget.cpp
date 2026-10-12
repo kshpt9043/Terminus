@@ -7,43 +7,9 @@
 #include "Components/VerticalBox.h"
 #include "Components/VerticalBoxSlot.h"
 #include "Data/TerminusDataSettings.h"
-
-namespace
-{
-	UTextBlock* MakeCardText(UWidgetTree* Tree, int32 Size, const FLinearColor& Color)
-	{
-		UTextBlock* Text = Tree->ConstructWidget<UTextBlock>();
-		FSlateFontInfo Font = Text->GetFont();
-		Font.Size = Size;
-		Text->SetFont(Font);
-		Text->SetColorAndOpacity(FSlateColor(Color));
-		Text->SetJustification(ETextJustify::Center);
-		Text->SetAutoWrapText(true);
-		return Text;
-	}
-
-	FString SkillTypeLabel(ESkillType Type)
-	{
-		switch (Type)
-		{
-		case ESkillType::Attack:  return TEXT("공격");
-		case ESkillType::Defense: return TEXT("방어");
-		default:                  return TEXT("특수");
-		}
-	}
-
-	FString TargetTypeLabel(ETargetType Type)
-	{
-		switch (Type)
-		{
-		case ETargetType::SingleEnemy: return TEXT("적 1명");
-		case ETargetType::AllEnemies:  return TEXT("적 전체");
-		case ETargetType::SingleAlly:  return TEXT("아군 1명");
-		case ETargetType::AllAllies:   return TEXT("아군 전체");
-		default:                       return TEXT("자신");
-		}
-	}
-}
+#include "Widgets/Common/TerminusUIBuilder.h"
+#include "Widgets/Common/TerminusUIText.h"
+#include "Widgets/TerminusUIColors.h"
 
 void USkillCardWidget::NativeOnInitialized()
 {
@@ -84,10 +50,10 @@ void USkillCardWidget::BuildDefaultLayout()
 		}
 	};
 
-	NameText = MakeCardText(WidgetTree, 22, FLinearColor::White);
-	TypeText = MakeCardText(WidgetTree, 14, FLinearColor(0.8f, 0.8f, 0.8f));
-	CostText = MakeCardText(WidgetTree, 15, FLinearColor(0.75f, 0.55f, 1.f));
-	DescText = MakeCardText(WidgetTree, 15, FLinearColor(1.f, 0.95f, 0.85f));
+	NameText = TerminusUI::MakeWrapText(WidgetTree, NAME_None, TEXT(""), 22, FLinearColor::White);
+	TypeText = TerminusUI::MakeWrapText(WidgetTree, NAME_None, TEXT(""), 14, TerminusUI::Color::TextMuted);
+	CostText = TerminusUI::MakeWrapText(WidgetTree, NAME_None, TEXT(""), 15, FLinearColor(0.75f, 0.55f, 1.f));
+	DescText = TerminusUI::MakeWrapText(WidgetTree, NAME_None, TEXT(""), 15, FLinearColor(1.f, 0.95f, 0.85f));
 
 	Add(NameText, 18.f);
 	Add(TypeText, 6.f);
@@ -114,7 +80,7 @@ void USkillCardWidget::SetSkill(FName InSkillRow)
 
 	if (TypeText)
 	{
-		TypeText->SetText(FText::FromString(FString::Printf(TEXT("%s · %s"), *SkillTypeLabel(Row->SkillType), *TargetTypeLabel(Row->TargetType))));
+		TypeText->SetText(FText::FromString(FString::Printf(TEXT("%s · %s"), *TerminusUI::SkillTypeLabel(Row->SkillType), *TerminusUI::TargetTypeLabel(Row->TargetType))));
 	}
 
 	if (CostText)

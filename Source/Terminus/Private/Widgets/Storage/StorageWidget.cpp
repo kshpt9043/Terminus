@@ -19,36 +19,12 @@
 #include "Game/TerminusProfileSubsystem.h"
 #include "Widgets/Common/EscapeStackSubsystem.h"
 #include "Widgets/Common/ItemSlotWidget.h"
+#include "Widgets/Common/TerminusUIBuilder.h"
+#include "Widgets/Common/TerminusUIText.h"
+#include "Widgets/TerminusUIColors.h"
 
 namespace
 {
-	UTextBlock* MakeStorageText(UWidgetTree* Tree, const FName& Name, const FString& Initial, int32 Size, const FLinearColor& Color)
-	{
-		UTextBlock* Text = Tree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), Name);
-		Text->SetText(FText::FromString(Initial));
-		FSlateFontInfo Font = Text->GetFont();
-		Font.Size = Size;
-		Text->SetFont(Font);
-		Text->SetColorAndOpacity(FSlateColor(Color));
-		Text->SetAutoWrapText(true);
-		return Text;
-	}
-
-	UButton* MakeStorageButton(UWidgetTree* Tree, const FName& Name, const FString& Label)
-	{
-		UButton* Button = Tree->ConstructWidget<UButton>(UButton::StaticClass(), Name);
-		UTextBlock* Text = Tree->ConstructWidget<UTextBlock>();
-		Text->SetText(FText::FromString(Label));
-		FSlateFontInfo Font = Text->GetFont();
-		Font.Size = 16;
-		Text->SetFont(Font);
-		Text->SetColorAndOpacity(FSlateColor(FLinearColor::White));
-		Text->SetJustification(ETextJustify::Center);
-		Button->SetContent(Text);
-		Button->SetBackgroundColor(FLinearColor(0.18f, 0.18f, 0.18f));
-		return Button;
-	}
-
 	// 큰 카드 버튼 (시안의 회색 상자, 아래쪽에 이름)
 	UButton* MakeStorageCard(UWidgetTree* Tree, const FName& Name, const FString& Label)
 	{
@@ -63,7 +39,7 @@ namespace
 		UOverlay* Inner = Tree->ConstructWidget<UOverlay>();
 		Size->SetContent(Inner);
 
-		UTextBlock* Text = MakeStorageText(Tree, NAME_None, Label, 24, FLinearColor::White);
+		UTextBlock* Text = TerminusUI::MakeWrapText(Tree, NAME_None, Label, 24, FLinearColor::White, ETextJustify::Left);
 		Text->SetJustification(ETextJustify::Center);
 		if (UOverlaySlot* S = Inner->AddChildToOverlay(Text))
 		{
@@ -74,39 +50,6 @@ namespace
 		return Button;
 	}
 
-	FString StorageTierLabel(ERelicTier Tier)
-	{
-		switch (Tier)
-		{
-		case ERelicTier::Basic:   return TEXT("기본");
-		case ERelicTier::Upgrade: return TEXT("업그레이드");
-		case ERelicTier::Mid:     return TEXT("중층");
-		case ERelicTier::Deep:    return TEXT("심층");
-		default:                  return TEXT("표층");
-		}
-	}
-
-	FString StorageSkillTypeLabel(ESkillType Type)
-	{
-		switch (Type)
-		{
-		case ESkillType::Attack:  return TEXT("공격");
-		case ESkillType::Defense: return TEXT("방어");
-		default:                  return TEXT("특수");
-		}
-	}
-
-	FString StorageOwnerLabel(ESkillOwner Owner)
-	{
-		switch (Owner)
-		{
-		case ESkillOwner::Fighter:  return TEXT("무도가");
-		case ESkillOwner::Engineer: return TEXT("마도 공학자");
-		case ESkillOwner::Paladin:  return TEXT("성기사");
-		case ESkillOwner::Assassin: return TEXT("암살자");
-		default:                    return TEXT("공용");
-		}
-	}
 }
 
 // =====================================================================
@@ -156,7 +99,7 @@ void UStorageWidget::BuildDefaultLayout()
 {
 	// 화면 전체 (시안: 회색 바탕, 가운데 제목, 우상단 골드 / 버튼)
 	UBorder* Background = WidgetTree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("StorageBackground"));
-	Background->SetBrushColor(FLinearColor(0.07f, 0.065f, 0.06f, 0.97f));
+	Background->SetBrushColor(TerminusUI::Color::Window);
 	Background->SetPadding(FMargin(48.f, 32.f));
 	WidgetTree->RootWidget = Background;
 
@@ -171,13 +114,13 @@ void UStorageWidget::BuildDefaultLayout()
 		S->SetVerticalAlignment(VAlign_Top);
 	}
 
-	GoldText = MakeStorageText(WidgetTree, TEXT("GoldText"), TEXT(""), 14, FLinearColor(1.f, 0.85f, 0.35f));
+	GoldText = TerminusUI::MakeWrapText(WidgetTree, TEXT("GoldText"), TEXT(""), 14, TerminusUI::Color::Gold, ETextJustify::Left);
 	GoldText->SetAutoWrapText(false);
 	if (UVerticalBoxSlot* S = Corner->AddChildToVerticalBox(GoldText)) S->SetHorizontalAlignment(HAlign_Left);
 
 	auto AddCornerButton = [&](const FName& Name, const FString& Label) -> UButton*
 	{
-		UButton* Button = MakeStorageButton(WidgetTree, Name, Label);
+		UButton* Button = TerminusUI::MakeButton(WidgetTree, Name, Label, 16, FLinearColor::White, FLinearColor(0.18f, 0.18f, 0.18f));
 		USizeBox* Size = WidgetTree->ConstructWidget<USizeBox>();
 		Size->SetWidthOverride(170.f);
 		Size->SetHeightOverride(46.f);
@@ -198,7 +141,7 @@ void UStorageWidget::BuildDefaultLayout()
 		S->SetVerticalAlignment(VAlign_Fill);
 	}
 
-	UTextBlock* HubTitle = MakeStorageText(WidgetTree, NAME_None, TEXT("창고"), 30, FLinearColor::White);
+	UTextBlock* HubTitle = TerminusUI::MakeWrapText(WidgetTree, NAME_None, TEXT("창고"), 30, FLinearColor::White, ETextJustify::Left);
 	HubTitle->SetAutoWrapText(false);
 	if (UVerticalBoxSlot* S = Hub->AddChildToVerticalBox(HubTitle)) S->SetHorizontalAlignment(HAlign_Center);
 
@@ -223,11 +166,11 @@ void UStorageWidget::BuildDefaultLayout()
 		S->SetVerticalAlignment(VAlign_Fill);
 	}
 
-	ListTitleText = MakeStorageText(WidgetTree, TEXT("ListTitleText"), TEXT(""), 30, FLinearColor::White);
+	ListTitleText = TerminusUI::MakeWrapText(WidgetTree, TEXT("ListTitleText"), TEXT(""), 30, FLinearColor::White, ETextJustify::Left);
 	ListTitleText->SetAutoWrapText(false);
 	if (UVerticalBoxSlot* S = List->AddChildToVerticalBox(ListTitleText)) S->SetHorizontalAlignment(HAlign_Center);
 
-	CountText = MakeStorageText(WidgetTree, TEXT("CountText"), TEXT(""), 14, FLinearColor(0.75f, 0.75f, 0.75f));
+	CountText = TerminusUI::MakeWrapText(WidgetTree, TEXT("CountText"), TEXT(""), 14, TerminusUI::Color::TextMuted, ETextJustify::Left);
 	CountText->SetAutoWrapText(false);
 	if (UVerticalBoxSlot* S = List->AddChildToVerticalBox(CountText))
 	{
@@ -268,9 +211,9 @@ void UStorageWidget::BuildDefaultLayout()
 
 	UVerticalBox* Detail = WidgetTree->ConstructWidget<UVerticalBox>();
 	DetailBox->SetContent(Detail);
-	DetailName = MakeStorageText(WidgetTree, TEXT("DetailName"), TEXT(""), 18, FLinearColor::White);
-	DetailInfo = MakeStorageText(WidgetTree, TEXT("DetailInfo"), TEXT(""), 12, FLinearColor(0.75f, 0.75f, 0.75f));
-	DetailDesc = MakeStorageText(WidgetTree, TEXT("DetailDesc"), TEXT(""), 14, FLinearColor(1.f, 0.95f, 0.85f));
+	DetailName = TerminusUI::MakeWrapText(WidgetTree, TEXT("DetailName"), TEXT(""), 18, FLinearColor::White, ETextJustify::Left);
+	DetailInfo = TerminusUI::MakeWrapText(WidgetTree, TEXT("DetailInfo"), TEXT(""), 12, TerminusUI::Color::TextMuted, ETextJustify::Left);
+	DetailDesc = TerminusUI::MakeWrapText(WidgetTree, TEXT("DetailDesc"), TEXT(""), 14, FLinearColor(1.f, 0.95f, 0.85f), ETextJustify::Left);
 	Detail->AddChildToVerticalBox(DetailName);
 	if (UVerticalBoxSlot* S = Detail->AddChildToVerticalBox(DetailInfo)) S->SetPadding(FMargin(0.f, 4.f, 0.f, 0.f));
 	if (UVerticalBoxSlot* S = Detail->AddChildToVerticalBox(DetailDesc)) S->SetPadding(FMargin(0.f, 12.f, 0.f, 0.f));
@@ -447,7 +390,7 @@ void UStorageWidget::ShowDetail(const UItemSlotWidget* InSlot)
 		if (const FRelicRow* Relic = UTerminusDataSettings::FindRelicRow(InSlot->GetItemRow()))
 		{
 			Name = Relic->RelicName.ToString();
-			Info = FString::Printf(TEXT("유물 · %s · %s"), *StorageTierLabel(Relic->RelicTier), *StorageOwnerLabel(Relic->OwnerClass));
+			Info = FString::Printf(TEXT("유물 · %s · %s"), *TerminusUI::RelicTierLabel(Relic->RelicTier), *TerminusUI::SkillOwnerLabel(Relic->OwnerClass));
 			if (Relic->CanSellAtSettlement())
 			{
 				Info += FString::Printf(TEXT("\n정산 판매가 %d 골드"), Relic->SellPrice_Gold);
@@ -461,7 +404,7 @@ void UStorageWidget::ShowDetail(const UItemSlotWidget* InSlot)
 		{
 			Name = Skill->DisplayName_KR.ToString();
 			Info = FString::Printf(TEXT("스킬 · %s · %s · 스킬 에너지 %d"),
-				*StorageSkillTypeLabel(Skill->SkillType), *StorageOwnerLabel(Skill->OwnerClass), Skill->SkillEnergyCost);
+				*TerminusUI::SkillTypeLabel(Skill->SkillType), *TerminusUI::SkillOwnerLabel(Skill->OwnerClass), Skill->SkillEnergyCost);
 			Desc = Skill->Description_KR.ToString().Replace(TEXT("\\n"), TEXT("\n"));
 		}
 	}
