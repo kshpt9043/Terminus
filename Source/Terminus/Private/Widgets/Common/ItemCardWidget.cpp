@@ -9,6 +9,7 @@
 #include "Widgets/Common/ItemSlotWidget.h"
 #include "Widgets/Common/TerminusUIBuilder.h"
 #include "Widgets/TerminusUIColors.h"
+#include "Widgets/TerminusUISettings.h"
 
 void UItemCardWidget::NativeOnInitialized()
 {
@@ -52,7 +53,7 @@ void UItemCardWidget::SetItem(bool bInRelic, FName Row, FVector2D SlotSize, bool
 
 	if (!ItemSlot && SlotHolder)
 	{
-		const TSubclassOf<UItemSlotWidget> Class = SlotClass ? SlotClass : TSubclassOf<UItemSlotWidget>(UItemSlotWidget::StaticClass());
+		const TSubclassOf<UItemSlotWidget> Class = UTerminusUISettings::Pick(SlotClass, &UTerminusUISettings::ItemSlot);
 		ItemSlot = CreateWidget<UItemSlotWidget>(this, Class);
 		if (ItemSlot) SlotHolder->AddChild(ItemSlot);
 	}

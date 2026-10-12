@@ -72,7 +72,7 @@ protected:
 	// 보유 유물 줄 (오른쪽 아래). WBP 에 없으면 C++ 이 턴 종료 위쪽에 만듦
 	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<URelicBarWidget> RelicBar;
 
-	// 기본 레이아웃일 때 만들 유물 줄 (비우면 C++ 기본)
+	// 기본 레이아웃일 때 만들 유물 줄 (비우면 프로젝트 설정(Terminus UI) -> C++ 기본)
 	UPROPERTY(EditAnywhere, Category = "Combat HUD")
 	TSubclassOf<URelicBarWidget> RelicBarClass;
 
@@ -90,7 +90,7 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Combat HUD")
 	FVector2D TargetButtonSize = FVector2D(90.f, 110.f);
 
-	// 스킬 칸 위젯 (공용 칸 UItemSlotWidget 또는 그걸 부모로 한 WBP). 비워 두면 C++ 기본 칸
+	// 스킬 칸 위젯 (공용 칸 UItemSlotWidget 또는 그걸 부모로 한 WBP). 비워 두면 프로젝트 설정(Terminus UI) -> C++ 기본 칸
 	UPROPERTY(EditAnywhere, Category = "Combat HUD")
 	TSubclassOf<UItemSlotWidget> SkillSlotClass;
 

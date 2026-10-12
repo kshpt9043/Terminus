@@ -16,6 +16,7 @@
 #include "Widgets/Skill/SkillTooltipWidget.h"
 #include "Widgets/Relic/RelicTooltipWidget.h"
 #include "Widgets/Common/TerminusUIText.h"
+#include "Widgets/TerminusUISettings.h"
 
 // =====================================================================
 // 초기화 / 배치
@@ -195,7 +196,7 @@ void UItemSlotWidget::SetSkill(FName SkillRow)
 	// 스킬 툴팁 (칸마다 하나 만들어 두고 내용만 바꿈)
 	if (!SkillTooltip)
 	{
-		const TSubclassOf<USkillTooltipWidget> Class = SkillTooltipClass ? SkillTooltipClass : TSubclassOf<USkillTooltipWidget>(USkillTooltipWidget::StaticClass());
+		const TSubclassOf<USkillTooltipWidget> Class = UTerminusUISettings::Pick(SkillTooltipClass, &UTerminusUISettings::SkillTooltip);
 		SkillTooltip = CreateWidget<USkillTooltipWidget>(this, Class);
 	}
 	if (SkillTooltip)
@@ -228,7 +229,7 @@ void UItemSlotWidget::SetRelic(FName RelicRow)
 	// 유물 툴팁 (칸마다 하나 만들어 두고 내용만 바꿈)
 	if (!RelicTooltip)
 	{
-		const TSubclassOf<URelicTooltipWidget> Class = RelicTooltipClass ? RelicTooltipClass : TSubclassOf<URelicTooltipWidget>(URelicTooltipWidget::StaticClass());
+		const TSubclassOf<URelicTooltipWidget> Class = UTerminusUISettings::Pick(RelicTooltipClass, &UTerminusUISettings::RelicTooltip);
 		RelicTooltip = CreateWidget<URelicTooltipWidget>(this, Class);
 	}
 	if (RelicTooltip)

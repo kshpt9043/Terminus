@@ -7,6 +7,7 @@
 #include "Player/TerminusPlayerState.h"
 #include "Engine/World.h"
 #include "TimerManager.h"
+#include "Widgets/TerminusUISettings.h"
 
 void URelicBarWidget::NativeOnInitialized()
 {
@@ -95,7 +96,7 @@ void URelicBarWidget::Rebuild(const TArray<FName>& Relics)
 	RelicBox->ClearChildren();
 
 	// 칸 위젯은 모자랄 때만 더 만들고 재사용
-	const TSubclassOf<UItemSlotWidget> Class = SlotClass ? SlotClass : TSubclassOf<UItemSlotWidget>(UItemSlotWidget::StaticClass());
+	const TSubclassOf<UItemSlotWidget> Class = UTerminusUISettings::Pick(SlotClass, &UTerminusUISettings::ItemSlot);
 	while (Slots.Num() < Relics.Num())
 	{
 		UItemSlotWidget* NewSlot = CreateWidget<UItemSlotWidget>(this, Class);

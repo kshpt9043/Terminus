@@ -58,18 +58,18 @@ protected:
 
 	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UButton> NextButton;
 
-	// 카드 / 칸 위젯. 비워 두면 C++ 기본
+	// 카드 / 칸 위젯. 비워 두면 프로젝트 설정(Terminus UI) -> C++ 기본
 	UPROPERTY(EditAnywhere, Category = "Reward")
 	TSubclassOf<USkillCardWidget> CardClass;
 
 	UPROPERTY(EditAnywhere, Category = "Reward")
 	TSubclassOf<UItemSlotWidget> SlotClass;
 
-	// 유물 후보 카드 하나 (칸 + 설명). 비우면 C++ 기본 모양. 칸을 누르면 고름
+	// 유물 후보 카드 하나 (칸 + 설명). 비우면 프로젝트 설정(Terminus UI) -> C++ 기본 모양. 칸을 누르면 고름
 	UPROPERTY(EditAnywhere, Category = "Reward")
 	TSubclassOf<UItemCardWidget> RelicCardClass;
 
-	// 기본 레이아웃일 때 바꿀 칸 고르기 패널 (비우면 C++ 기본)
+	// 기본 레이아웃일 때 바꿀 칸 고르기 패널 (비우면 프로젝트 설정(Terminus UI) -> C++ 기본)
 	UPROPERTY(EditAnywhere, Category = "Reward")
 	TSubclassOf<UItemPickPanelWidget> PickPanelClass;
 

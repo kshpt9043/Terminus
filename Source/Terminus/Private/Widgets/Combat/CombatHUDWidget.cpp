@@ -25,6 +25,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "Framework/Application/SlateApplication.h"
 #include "Widgets/Common/TerminusUIBuilder.h"
+#include "Widgets/TerminusUISettings.h"
 
 namespace
 {
@@ -98,7 +99,7 @@ void UCombatHUDWidget::NativeOnInitialized()
 	// 보유 유물 줄이 WBP 에 없으면 오른쪽 아래(턴 종료 / 상태 위)에
 	if (!RelicBar && TagLayer)
 	{
-		RelicBar = CreateWidget<URelicBarWidget>(this, RelicBarClass ? RelicBarClass : TSubclassOf<URelicBarWidget>(URelicBarWidget::StaticClass()));
+		RelicBar = CreateWidget<URelicBarWidget>(this, UTerminusUISettings::Pick(RelicBarClass, &UTerminusUISettings::RelicBar));
 		if (RelicBar)
 		{
 			AddToCanvas(TagLayer, RelicBar, FAnchors(1.f, 1.f), FVector2D(1.f, 1.f), FVector2D(-24.f, -130.f));
@@ -219,7 +220,7 @@ UItemSlotWidget* UCombatHUDWidget::AddSkillSlot(UPanelWidget* Box, int32 SlotInd
 {
 	if (!Box) return nullptr;
 
-	const TSubclassOf<UItemSlotWidget> Class = SkillSlotClass ? SkillSlotClass : TSubclassOf<UItemSlotWidget>(UItemSlotWidget::StaticClass());
+	const TSubclassOf<UItemSlotWidget> Class = UTerminusUISettings::Pick(SkillSlotClass, &UTerminusUISettings::ItemSlot);
 	UItemSlotWidget* SkillSlot = CreateWidget<UItemSlotWidget>(this, Class);
 	if (!SkillSlot) return nullptr;
 

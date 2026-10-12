@@ -38,7 +38,7 @@ protected:
 	// 거점 창. WBP 안에 같은 이름으로 넣어 두면 그걸 쓰고, 없으면 BaseWidgetClass 로 만들어 화면에 띄움
 	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UBaseWidget> BaseWindow;
 
-	// 거점 창 클래스 (WBP_Base). 비워 두면 C++ 기본 모양
+	// 거점 창 클래스 (WBP_Base). 비워 두면 프로젝트 설정(Terminus UI) -> C++ 기본 모양
 	UPROPERTY(EditDefaultsOnly, Category = "Terminus|UI")
 	TSubclassOf<UBaseWidget> BaseWidgetClass;
 
@@ -48,7 +48,7 @@ protected:
 	// 창고 창. WBP 안에 같은 이름으로 넣어 두면 그걸 쓰고, 없으면 StorageWidgetClass 로 만들어 화면에 띄움
 	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UStorageWidget> StorageWindow;
 
-	// 창고 창 클래스 (WBP_Storage). 비워 두면 C++ 기본 모양
+	// 창고 창 클래스 (WBP_Storage). 비워 두면 프로젝트 설정(Terminus UI) -> C++ 기본 모양
 	UPROPERTY(EditDefaultsOnly, Category = "Terminus|UI")
 	TSubclassOf<UStorageWidget> StorageWidgetClass;
 
@@ -58,11 +58,11 @@ protected:
 	// 이어하기 창. WBP 안에 같은 이름으로 넣어 두면 그걸 쓰고, 없으면 SaveListWidgetClass 로 만들어 화면에 띄움
 	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<URunSaveListWidget> SaveListWindow;
 
-	// 이어하기 창 클래스 (WBP_SaveList). 비워 두면 C++ 기본 모양
+	// 이어하기 창 클래스 (WBP_SaveList). 비워 두면 프로젝트 설정(Terminus UI) -> C++ 기본 모양
 	UPROPERTY(EditDefaultsOnly, Category = "Terminus|UI")
 	TSubclassOf<URunSaveListWidget> SaveListWidgetClass;
 
-	// 정산 창 클래스 (WBP_Settlement). 던전을 탈출하고 돌아오면 이것부터 뜸. 비워 두면 C++ 기본 모양
+	// 정산 창 클래스 (WBP_Settlement). 던전을 탈출하고 돌아오면 이것부터 뜸. 비워 두면 프로젝트 설정(Terminus UI) -> C++ 기본 모양
 	UPROPERTY(EditDefaultsOnly, Category = "Terminus|UI")
 	TSubclassOf<USettlementWidget> SettlementWidgetClass;
 

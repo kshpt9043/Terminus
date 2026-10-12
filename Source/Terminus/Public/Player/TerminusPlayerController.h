@@ -376,21 +376,21 @@ public:
 	void DebugListRelics();
 
 protected:
-	// 전투 HUD 클래스. 비워 두면 C++ 기본 배치(UCombatHUDWidget)를 씀. WBP 를 만들면 BP_DungeonPC 에서 지정
+	// 전투 HUD 클래스. 비워 두면 프로젝트 설정(Terminus UI) -> C++ 기본 배치(UCombatHUDWidget)를 씀. WBP 를 만들면 BP_DungeonPC 에서 지정
 	UPROPERTY(EditDefaultsOnly, Category = "Terminus|UI")
 	TSubclassOf<UCombatHUDWidget> CombatHUDClass;
 
 	UPROPERTY()
 	TObjectPtr<UCombatHUDWidget> CombatHUD;
 
-	// 런 시작 강화 스킬 고르기 화면. 비워 두면 C++ 기본 모양(UStartSkillPickWidget)
+	// 런 시작 강화 스킬 고르기 화면. 비워 두면 프로젝트 설정(Terminus UI) -> C++ 기본 모양(UStartSkillPickWidget)
 	UPROPERTY(EditDefaultsOnly, Category = "Terminus|UI")
 	TSubclassOf<UStartSkillPickWidget> StartSkillPickClass;
 
 	UPROPERTY()
 	TObjectPtr<UStartSkillPickWidget> StartSkillPick;
 
-	// 런 시작 유물 고르기 화면. 비워 두면 C++ 기본 모양(UStartRelicPickWidget)
+	// 런 시작 유물 고르기 화면. 비워 두면 프로젝트 설정(Terminus UI) -> C++ 기본 모양(UStartRelicPickWidget)
 	UPROPERTY(EditDefaultsOnly, Category = "Terminus|UI")
 	TSubclassOf<UStartRelicPickWidget> StartRelicPickClass;
 
@@ -400,81 +400,81 @@ protected:
 	// 유물 고르기를 이미 띄웠거나(또는 고를 게 없어 바로 보냈거나) -> 다시 띄우지 않게
 	bool bStartRelicPickOpened = false;
 
-	// 채팅창 클래스. 비워 두면 C++ 기본 모양(UChatWidget). 싱글(혼자 오프라인)이면 안 만듦
+	// 채팅창 클래스. 비워 두면 프로젝트 설정(Terminus UI) -> C++ 기본 모양(UChatWidget). 싱글(혼자 오프라인)이면 안 만듦
 	UPROPERTY(EditDefaultsOnly, Category = "Terminus|UI")
 	TSubclassOf<UChatWidget> ChatWidgetClass;
 
 	UPROPERTY()
 	TObjectPtr<UChatWidget> ChatWidget;
 
-	// 소통 도구 화면 (계획 / 핑 / 퀵챗 / 재촉). 비워 두면 C++ 기본 모양(UPartyCommsWidget). 싱글이면 안 만듦
+	// 소통 도구 화면 (계획 / 핑 / 퀵챗 / 재촉). 비워 두면 프로젝트 설정(Terminus UI) -> C++ 기본 모양(UPartyCommsWidget). 싱글이면 안 만듦
 	UPROPERTY(EditDefaultsOnly, Category = "Terminus|UI")
 	TSubclassOf<UPartyCommsWidget> PartyCommsClass;
 
 	UPROPERTY()
 	TObjectPtr<UPartyCommsWidget> CommsWidget;
 
-	// 휴식터 화면. 비워 두면 C++ 기본 모양(URestWidget)
+	// 휴식터 화면. 비워 두면 프로젝트 설정(Terminus UI) -> C++ 기본 모양(URestWidget)
 	UPROPERTY(EditDefaultsOnly, Category = "Terminus|UI")
 	TSubclassOf<URestWidget> RestClass;
 
 	UPROPERTY()
 	TObjectPtr<URestWidget> RestWidget;
 
-	// 상점 화면. 비워 두면 C++ 기본 모양(UShopWidget)
+	// 상점 화면. 비워 두면 프로젝트 설정(Terminus UI) -> C++ 기본 모양(UShopWidget)
 	UPROPERTY(EditDefaultsOnly, Category = "Terminus|UI")
 	TSubclassOf<UShopWidget> ShopClass;
 
 	UPROPERTY()
 	TObjectPtr<UShopWidget> ShopWidget;
 
-	// 관전 바 (다른 구역 보기). 비워 두면 C++ 기본 모양(USpectateWidget)
+	// 관전 바 (다른 구역 보기). 비워 두면 프로젝트 설정(Terminus UI) -> C++ 기본 모양(USpectateWidget)
 	UPROPERTY(EditDefaultsOnly, Category = "Terminus|UI")
 	TSubclassOf<USpectateWidget> SpectateClass;
 
 	UPROPERTY()
 	TObjectPtr<USpectateWidget> SpectateWidget;
 
-	// 구출 / 난입 화면. 비워 두면 C++ 기본 모양(URescueWidget)
+	// 구출 / 난입 화면. 비워 두면 프로젝트 설정(Terminus UI) -> C++ 기본 모양(URescueWidget)
 	UPROPERTY(EditDefaultsOnly, Category = "Terminus|UI")
 	TSubclassOf<URescueWidget> RescueClass;
 
 	UPROPERTY()
 	TObjectPtr<URescueWidget> RescueWidget;
 
-	// 이벤트 방 화면. 비워 두면 C++ 기본 모양(UEventWidget)
+	// 이벤트 방 화면. 비워 두면 프로젝트 설정(Terminus UI) -> C++ 기본 모양(UEventWidget)
 	UPROPERTY(EditDefaultsOnly, Category = "Terminus|UI")
 	TSubclassOf<UEventWidget> EventClass;
 
 	UPROPERTY()
 	TObjectPtr<UEventWidget> EventWidget;
 
-	// 행선지 투표 화면. 비워 두면 C++ 기본 모양(UFloorVoteWidget)
+	// 행선지 투표 화면. 비워 두면 프로젝트 설정(Terminus UI) -> C++ 기본 모양(UFloorVoteWidget)
 	UPROPERTY(EditDefaultsOnly, Category = "Terminus|UI")
 	TSubclassOf<UFloorVoteWidget> FloorVoteClass;
 
 	UPROPERTY()
 	TObjectPtr<UFloorVoteWidget> FloorVote;
 
-	// 층 도착 화면. 비워 두면 C++ 기본 모양(UFloorTitleWidget)
+	// 층 도착 화면. 비워 두면 프로젝트 설정(Terminus UI) -> C++ 기본 모양(UFloorTitleWidget)
 	UPROPERTY(EditDefaultsOnly, Category = "Terminus|UI")
 	TSubclassOf<UFloorTitleWidget> FloorTitleClass;
 
-	// 이공간 화면. 비워 두면 C++ 기본 모양(URiftWidget)
+	// 이공간 화면. 비워 두면 프로젝트 설정(Terminus UI) -> C++ 기본 모양(URiftWidget)
 	UPROPERTY(EditDefaultsOnly, Category = "Terminus|UI")
 	TSubclassOf<URiftWidget> RiftClass;
 
 	UPROPERTY()
 	TObjectPtr<URiftWidget> Rift;
 
-	// 몬스터방 보상 화면. 비워 두면 C++ 기본 모양(UMonsterRewardWidget)
+	// 몬스터방 보상 화면. 비워 두면 프로젝트 설정(Terminus UI) -> C++ 기본 모양(UMonsterRewardWidget)
 	UPROPERTY(EditDefaultsOnly, Category = "Terminus|UI")
 	TSubclassOf<UMonsterRewardWidget> MonsterRewardClass;
 
 	UPROPERTY()
 	TObjectPtr<UMonsterRewardWidget> MonsterReward;
 
-	// 범용 팝업 클래스. 비워 두면 C++ 기본 모양(UConfirmPopupWidget)
+	// 범용 팝업 클래스. 비워 두면 프로젝트 설정(Terminus UI) -> C++ 기본 모양(UConfirmPopupWidget)
 	UPROPERTY(EditDefaultsOnly, Category = "Terminus|UI")
 	TSubclassOf<UConfirmPopupWidget> PopupClass;
 

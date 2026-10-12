@@ -44,7 +44,7 @@ protected:
 
 	UPROPERTY(meta = (BindWidget)) TObjectPtr<UButton> ExitButton;
 
-	// 프로필 카드 클래스. 비워 두면 C++ 기본 카드
+	// 프로필 카드 클래스. 비워 두면 프로젝트 설정(Terminus UI) -> C++ 기본 카드
 	UPROPERTY(EditAnywhere, Category = "Map Top Bar")
 	TSubclassOf<UPartyProfileCardWidget> ProfileCardClass;
 

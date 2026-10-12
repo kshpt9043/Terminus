@@ -12,6 +12,7 @@
 #include "Widgets/Common/ItemSlotWidget.h"
 #include "Widgets/Common/TerminusUIBuilder.h"
 #include "Widgets/TerminusUIColors.h"
+#include "Widgets/TerminusUISettings.h"
 
 void UItemPickPanelWidget::NativeOnInitialized()
 {
@@ -52,7 +53,7 @@ UItemSlotWidget* UItemPickPanelWidget::AddSlot()
 {
 	if (!SlotBox) return nullptr;
 
-	const TSubclassOf<UItemSlotWidget> Class = SlotClass ? SlotClass : TSubclassOf<UItemSlotWidget>(UItemSlotWidget::StaticClass());
+	const TSubclassOf<UItemSlotWidget> Class = UTerminusUISettings::Pick(SlotClass, &UTerminusUISettings::ItemSlot);
 	UItemSlotWidget* NewSlot = CreateWidget<UItemSlotWidget>(this, Class);
 	if (!NewSlot) return nullptr;
 

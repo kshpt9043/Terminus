@@ -53,7 +53,7 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Event")
 	FVector2D CardSize = FVector2D(250.f, 300.f);
 
-	// 후보 카드 하나. 비우면 C++ 기본 모양. 스킬 후보면 ItemSlot 에 그 스킬이 보임
+	// 후보 카드 하나. 비우면 프로젝트 설정(Terminus UI) -> C++ 기본 모양. 스킬 후보면 ItemSlot 에 그 스킬이 보임
 	// ChoiceId: EEventOptionType 이름 (Currency / ClassSkill / RelicSwapChosen ...)
 	UPROPERTY(EditAnywhere, Category = "Event")
 	TSubclassOf<UChoiceCardWidget> CardClass;
@@ -61,7 +61,7 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Event")
 	TSubclassOf<UItemSlotWidget> SlotClass;
 
-	// 기본 레이아웃일 때 칸 고르기 패널 (비우면 C++ 기본)
+	// 기본 레이아웃일 때 칸 고르기 패널 (비우면 프로젝트 설정(Terminus UI) -> C++ 기본)
 	UPROPERTY(EditAnywhere, Category = "Event")
 	TSubclassOf<UItemPickPanelWidget> PickPanelClass;
 

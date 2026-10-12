@@ -18,6 +18,7 @@
 #include "Widgets/Common/TerminusUIBuilder.h"
 #include "Widgets/TerminusUIColors.h"
 #include "Widgets/Common/ItemCardWidget.h"
+#include "Widgets/TerminusUISettings.h"
 
 namespace
 {
@@ -115,7 +116,7 @@ void UShopWidget::BuildDefaultLayout()
 	SellBox = AddShopSection(WidgetTree, SellRow, TEXT("유물 판매"), TEXT("SellBox"), true);
 
 	// 바꿀 칸 고르기
-	const TSubclassOf<UItemPickPanelWidget> PickClass = PickPanelClass ? PickPanelClass : TSubclassOf<UItemPickPanelWidget>(UItemPickPanelWidget::StaticClass());
+	const TSubclassOf<UItemPickPanelWidget> PickClass = UTerminusUISettings::Pick(PickPanelClass, &UTerminusUISettings::ItemPickPanel);
 	ReplacePanel = WidgetTree->ConstructWidget<UItemPickPanelWidget>(PickClass, TEXT("ReplacePanel"));
 	TerminusUI::AddRow(Root, ReplacePanel, 16.f);
 
@@ -179,7 +180,7 @@ void UShopWidget::AddCard(UPanelWidget* Box, bool bRelic, FName Row, const FStri
 {
 	if (!Box) return;
 
-	UItemCardWidget* Card = CreateWidget<UItemCardWidget>(this, CardClass ? CardClass : TSubclassOf<UItemCardWidget>(UItemCardWidget::StaticClass()));
+	UItemCardWidget* Card = CreateWidget<UItemCardWidget>(this, UTerminusUISettings::Pick(CardClass, &UTerminusUISettings::ItemCard));
 	if (!Card) return;
 
 	Card->SetSlotClass(SlotClass);

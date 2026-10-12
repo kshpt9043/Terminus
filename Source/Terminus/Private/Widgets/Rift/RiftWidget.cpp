@@ -12,6 +12,7 @@
 #include "Widgets/Common/TerminusUIBuilder.h"
 #include "Widgets/TerminusUIColors.h"
 #include "Widgets/TerminusUILayers.h"
+#include "Widgets/TerminusUISettings.h"
 
 void URiftWidget::NativeOnInitialized()
 {
@@ -75,7 +76,7 @@ void URiftWidget::HandleLeaveClicked()
 	const APlayerController* PC = GetOwningPlayer();
 	const bool bIsHost = PC && PC->HasAuthority();
 
-	const TSubclassOf<UConfirmPopupWidget> Class = PopupClass ? PopupClass : TSubclassOf<UConfirmPopupWidget>(UConfirmPopupWidget::StaticClass());
+	const TSubclassOf<UConfirmPopupWidget> Class = UTerminusUISettings::Pick(PopupClass, &UTerminusUISettings::ConfirmPopup);
 	UConfirmPopupWidget* Popup = CreateWidget<UConfirmPopupWidget>(GetOwningPlayer(), Class);
 	if (!Popup)
 	{

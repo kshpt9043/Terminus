@@ -102,7 +102,7 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Party Comms|Timing")
 	float NudgeCooldown = 10.f;
 
-	// 핑 / 퀵챗 메뉴 클래스. 비워 두면 C++ 기본 모양
+	// 핑 / 퀵챗 메뉴 클래스. 비워 두면 프로젝트 설정(Terminus UI) -> C++ 기본 모양
 	UPROPERTY(EditAnywhere, Category = "Party Comms")
 	TSubclassOf<UCommsMenuWidget> MenuClass;
 

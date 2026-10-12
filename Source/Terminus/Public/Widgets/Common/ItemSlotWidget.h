@@ -92,11 +92,11 @@ protected:
 
 	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UTextBlock> NameText;
 
-	// 스킬 칸 툴팁. 비워 두면 C++ 기본 스킬 툴팁
+	// 스킬 칸 툴팁. 비워 두면 프로젝트 설정(Terminus UI) -> C++ 기본 스킬 툴팁
 	UPROPERTY(EditAnywhere, Category = "Item Slot")
 	TSubclassOf<USkillTooltipWidget> SkillTooltipClass;
 
-	// 유물 칸 툴팁. 비워 두면 C++ 기본 유물 툴팁
+	// 유물 칸 툴팁. 비워 두면 프로젝트 설정(Terminus UI) -> C++ 기본 유물 툴팁
 	UPROPERTY(EditAnywhere, Category = "Item Slot")
 	TSubclassOf<URelicTooltipWidget> RelicTooltipClass;
 

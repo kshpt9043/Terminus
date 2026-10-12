@@ -19,6 +19,7 @@
 #include "Widgets/Map/PartyProfileCardWidget.h"
 #include "Widgets/Common/TerminusUIBuilder.h"
 #include "Widgets/TerminusUIColors.h"
+#include "Widgets/TerminusUISettings.h"
 
 namespace
 {
@@ -138,7 +139,7 @@ void UMapTopBarWidget::RefreshParty()
 	if (!PartyBox) return;
 	PartyBox->ClearChildren();
 
-	const TSubclassOf<UPartyProfileCardWidget> Class = ProfileCardClass ? ProfileCardClass : TSubclassOf<UPartyProfileCardWidget>(UPartyProfileCardWidget::StaticClass());
+	const TSubclassOf<UPartyProfileCardWidget> Class = UTerminusUISettings::Pick(ProfileCardClass, &UTerminusUISettings::ProfileCard);
 
 	for (int32 i = 0; i < ShownPlayers.Num(); ++i)
 	{

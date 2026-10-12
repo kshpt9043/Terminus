@@ -75,7 +75,7 @@ protected:
 	// 보유 골드 (두 화면 공통, 우상단)
 	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UTextBlock> GoldText;
 
-	// 칸 위젯 (공용 칸 UItemSlotWidget 또는 그걸 부모로 한 WBP). 비워 두면 C++ 기본 칸
+	// 칸 위젯 (공용 칸 UItemSlotWidget 또는 그걸 부모로 한 WBP). 비워 두면 프로젝트 설정(Terminus UI) -> C++ 기본 칸
 	UPROPERTY(EditAnywhere, Category = "Storage")
 	TSubclassOf<UItemSlotWidget> SlotClass;
 

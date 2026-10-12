@@ -11,6 +11,7 @@
 #include "Widgets/Skill/SkillCardWidget.h"
 #include "Widgets/Common/TerminusUIBuilder.h"
 #include "Widgets/TerminusUIColors.h"
+#include "Widgets/TerminusUISettings.h"
 
 void UStartSkillPickWidget::NativeOnInitialized()
 {
@@ -78,7 +79,7 @@ void UStartSkillPickWidget::SetChoices(const TArray<FName>& SkillRows)
 	CardBox->ClearChildren();
 	CardBox->SetVisibility(bNoSkills ? ESlateVisibility::Collapsed : ESlateVisibility::SelfHitTestInvisible);
 
-	const TSubclassOf<USkillCardWidget> Class = CardClass ? CardClass : TSubclassOf<USkillCardWidget>(USkillCardWidget::StaticClass());
+	const TSubclassOf<USkillCardWidget> Class = UTerminusUISettings::Pick(CardClass, &UTerminusUISettings::SkillCard);
 
 	for (int32 i = 0; i < SkillRows.Num(); ++i)
 	{

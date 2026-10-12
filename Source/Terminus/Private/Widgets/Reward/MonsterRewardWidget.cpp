@@ -19,6 +19,7 @@
 #include "Widgets/Common/TerminusUIBuilder.h"
 #include "Widgets/TerminusUIColors.h"
 #include "Widgets/Common/ItemCardWidget.h"
+#include "Widgets/TerminusUISettings.h"
 
 // =====================================================================
 // 초기화 / 배치
@@ -87,7 +88,7 @@ void UMonsterRewardWidget::BuildDefaultLayout()
 	TerminusUI::AddRow(Relic, RelicBox, 10.f);
 
 	// 바꾸기 패널
-	const TSubclassOf<UItemPickPanelWidget> PickClass = PickPanelClass ? PickPanelClass : TSubclassOf<UItemPickPanelWidget>(UItemPickPanelWidget::StaticClass());
+	const TSubclassOf<UItemPickPanelWidget> PickClass = UTerminusUISettings::Pick(PickPanelClass, &UTerminusUISettings::ItemPickPanel);
 	ReplacePanel = WidgetTree->ConstructWidget<UItemPickPanelWidget>(PickClass, TEXT("ReplacePanel"));
 	TerminusUI::AddRow(Column, ReplacePanel, 24.f);
 
@@ -135,7 +136,7 @@ void UMonsterRewardWidget::BuildSkillCards()
 	if (!CardBox) return;
 	CardBox->ClearChildren();
 
-	const TSubclassOf<USkillCardWidget> Class = CardClass ? CardClass : TSubclassOf<USkillCardWidget>(USkillCardWidget::StaticClass());
+	const TSubclassOf<USkillCardWidget> Class = UTerminusUISettings::Pick(CardClass, &UTerminusUISettings::SkillCard);
 	for (int32 i = 0; i < Offer.SkillOffers.Num(); ++i)
 	{
 		USkillCardWidget* Card = CreateWidget<USkillCardWidget>(this, Class);
@@ -159,7 +160,7 @@ void UMonsterRewardWidget::BuildRelicCards()
 	for (const FName& Row : Offer.RelicOffers)
 	{
 		const FRelicRow* Relic = UTerminusDataSettings::FindRelicRow(Row);
-		UItemCardWidget* Card = Relic ? CreateWidget<UItemCardWidget>(this, RelicCardClass ? RelicCardClass : TSubclassOf<UItemCardWidget>(UItemCardWidget::StaticClass())) : nullptr;
+		UItemCardWidget* Card = Relic ? CreateWidget<UItemCardWidget>(this, UTerminusUISettings::Pick(RelicCardClass, &UTerminusUISettings::ItemCard)) : nullptr;
 		if (!Card) continue;
 
 		Card->SetSlotClass(SlotClass);

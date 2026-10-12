@@ -19,6 +19,7 @@
 #include "Game/LoadingScreenSubsystem.h"
 #include "Widgets/Common/ConfirmPopupWidget.h"
 #include "Widgets/TerminusUILayers.h"
+#include "Widgets/TerminusUISettings.h"
 
 namespace
 {
@@ -99,7 +100,7 @@ void UMainMenuWidget::NativeConstruct()
 		Sessions->ConsumeDisconnectReason();
 		if (!SettlementWindow)
 		{
-			const TSubclassOf<USettlementWidget> Class = SettlementWidgetClass ? SettlementWidgetClass : TSubclassOf<USettlementWidget>(USettlementWidget::StaticClass());
+			const TSubclassOf<USettlementWidget> Class = UTerminusUISettings::Pick(SettlementWidgetClass, &UTerminusUISettings::Settlement);
 			SettlementWindow = CreateWidget<USettlementWidget>(GetOwningPlayer(), Class);
 			if (SettlementWindow)
 			{
@@ -252,7 +253,7 @@ void UMainMenuWidget::HandleStorageClicked()
 	// WBP 안에 둔 창이 없으면 처음 열 때 만들어서 메뉴 위에 띄움
 	if (!StorageWindow)
 	{
-		const TSubclassOf<UStorageWidget> Class = StorageWidgetClass ? StorageWidgetClass : TSubclassOf<UStorageWidget>(UStorageWidget::StaticClass());
+		const TSubclassOf<UStorageWidget> Class = UTerminusUISettings::Pick(StorageWidgetClass, &UTerminusUISettings::Storage);
 		StorageWindow = CreateWidget<UStorageWidget>(GetOwningPlayer(), Class);
 		if (StorageWindow)
 		{
@@ -271,7 +272,7 @@ void UMainMenuWidget::HandleContinueClicked()
 	// 창고와 같은 방식. WBP 안에 둔 창이 없으면 처음 열 때 만들어서 메뉴 위에 띄움
 	if (!SaveListWindow)
 	{
-		const TSubclassOf<URunSaveListWidget> Class = SaveListWidgetClass ? SaveListWidgetClass : TSubclassOf<URunSaveListWidget>(URunSaveListWidget::StaticClass());
+		const TSubclassOf<URunSaveListWidget> Class = UTerminusUISettings::Pick(SaveListWidgetClass, &UTerminusUISettings::SaveList);
 		SaveListWindow = CreateWidget<URunSaveListWidget>(GetOwningPlayer(), Class);
 		if (SaveListWindow)
 		{
@@ -313,7 +314,7 @@ void UMainMenuWidget::HandleBaseClicked()
 	// 창고와 같은 방식. WBP 안에 둔 창이 없으면 처음 열 때 만들어서 메뉴 위에 띄움
 	if (!BaseWindow)
 	{
-		const TSubclassOf<UBaseWidget> Class = BaseWidgetClass ? BaseWidgetClass : TSubclassOf<UBaseWidget>(UBaseWidget::StaticClass());
+		const TSubclassOf<UBaseWidget> Class = UTerminusUISettings::Pick(BaseWidgetClass, &UTerminusUISettings::Base);
 		BaseWindow = CreateWidget<UBaseWidget>(GetOwningPlayer(), Class);
 		if (BaseWindow)
 		{

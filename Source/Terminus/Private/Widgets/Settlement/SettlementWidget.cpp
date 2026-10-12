@@ -17,6 +17,7 @@
 #include "Widgets/Common/TerminusUIBuilder.h"
 #include "Widgets/Common/TerminusUIText.h"
 #include "Widgets/TerminusUIColors.h"
+#include "Widgets/TerminusUISettings.h"
 
 void USettlementWidget::NativeOnInitialized()
 {
@@ -169,7 +170,7 @@ void USettlementWidget::RebuildRelics()
 
 	RelicList->ClearChildren();
 
-	const TSubclassOf<UItemSlotWidget> Class = SlotClass ? SlotClass : TSubclassOf<UItemSlotWidget>(UItemSlotWidget::StaticClass());
+	const TSubclassOf<UItemSlotWidget> Class = UTerminusUISettings::Pick(SlotClass, &UTerminusUISettings::ItemSlot);
 	for (int32 i = 0; i < Settlement.Relics.Num(); ++i)
 	{
 		if (UItemSlotWidget* RelicSlot = CreateWidget<UItemSlotWidget>(this, Class))

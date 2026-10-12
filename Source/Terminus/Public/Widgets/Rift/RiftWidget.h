@@ -43,7 +43,7 @@ protected:
 
 	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UButton> LeaveButton;
 
-	// 나가기 확인 팝업. 비워 두면 C++ 기본
+	// 나가기 확인 팝업. 비워 두면 프로젝트 설정(Terminus UI) -> C++ 기본
 	UPROPERTY(EditAnywhere, Category = "Rift")
 	TSubclassOf<UConfirmPopupWidget> PopupClass;
 

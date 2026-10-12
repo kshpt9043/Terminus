@@ -18,6 +18,7 @@
 #include "Widgets/Common/TerminusUIBuilder.h"
 #include "Widgets/TerminusUIColors.h"
 #include "Widgets/Common/ChoiceCardWidget.h"
+#include "Widgets/TerminusUISettings.h"
 
 namespace
 {
@@ -188,7 +189,7 @@ void URestWidget::AddOption(ERestOption Option, APlayerState* Target, const FStr
 {
 	if (!OptionBox) return;
 
-	const TSubclassOf<UChoiceCardWidget> Class = OptionClass ? OptionClass : TSubclassOf<UChoiceCardWidget>(UChoiceCardWidget::StaticClass());
+	const TSubclassOf<UChoiceCardWidget> Class = UTerminusUISettings::Pick(OptionClass, &UTerminusUISettings::ChoiceCard);
 	UChoiceCardWidget* Card = CreateWidget<UChoiceCardWidget>(this, Class);
 	if (!Card) return;
 

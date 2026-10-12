@@ -41,7 +41,7 @@ protected:
 	// 카드가 들어갈 칸 (가로 상자 추천). 있던 자식은 지우고 카드를 채움
 	UPROPERTY(meta = (BindWidget)) TObjectPtr<UPanelWidget> CardBox;
 
-	// 카드 위젯 클래스. 비워 두면 C++ 기본 카드
+	// 카드 위젯 클래스. 비워 두면 프로젝트 설정(Terminus UI) -> C++ 기본 카드
 	UPROPERTY(EditAnywhere, Category = "Start Skill")
 	TSubclassOf<USkillCardWidget> CardClass;
 

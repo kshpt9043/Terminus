@@ -39,7 +39,7 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Relic Bar")
 	float Spacing = 4.f;
 
-	// 칸 위젯 (공용 칸). 비워 두면 C++ 기본 칸
+	// 칸 위젯 (공용 칸). 비워 두면 프로젝트 설정(Terminus UI) -> C++ 기본 칸
 	UPROPERTY(EditAnywhere, Category = "Relic Bar")
 	TSubclassOf<UItemSlotWidget> SlotClass;
 

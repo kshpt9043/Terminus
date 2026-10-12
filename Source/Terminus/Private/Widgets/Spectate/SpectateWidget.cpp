@@ -20,6 +20,7 @@
 #include "Widgets/Common/TerminusUIText.h"
 #include "Widgets/TerminusUIColors.h"
 #include "Widgets/Common/ChoiceCardWidget.h"
+#include "Widgets/TerminusUISettings.h"
 
 namespace
 {
@@ -163,7 +164,7 @@ void USpectateWidget::RebuildButtons(ADungeonArea* MyArea, const TArray<ADungeon
 
 	auto AddButton = [this, Viewed](ADungeonArea* Area, bool bMine, const FString& Label)
 	{
-		UChoiceCardWidget* Card = CreateWidget<UChoiceCardWidget>(this, ButtonClass ? ButtonClass : TSubclassOf<UChoiceCardWidget>(UChoiceCardWidget::StaticClass()));
+		UChoiceCardWidget* Card = CreateWidget<UChoiceCardWidget>(this, UTerminusUISettings::Pick(ButtonClass, &UTerminusUISettings::ChoiceCard));
 		if (!Card) return;
 
 		FChoiceCardStyle CardStyle;

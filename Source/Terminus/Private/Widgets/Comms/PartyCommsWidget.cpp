@@ -26,6 +26,7 @@
 #include "Widgets/Common/EscapeStackSubsystem.h"
 #include "Widgets/SWindow.h"
 #include "Widgets/Common/TerminusUIBuilder.h"
+#include "Widgets/TerminusUISettings.h"
 
 // Slate 가 키 / 클릭을 위젯에 나눠주기 전에 먼저 보는 곳. 판단은 위젯이 함
 class FPartyCommsInputProcessor : public IInputProcessor
@@ -175,7 +176,7 @@ UCommsMenuWidget* UPartyCommsWidget::GetMenu()
 {
 	if (!Menu)
 	{
-		const TSubclassOf<UCommsMenuWidget> Class = MenuClass ? MenuClass : TSubclassOf<UCommsMenuWidget>(UCommsMenuWidget::StaticClass());
+		const TSubclassOf<UCommsMenuWidget> Class = UTerminusUISettings::Pick(MenuClass, &UTerminusUISettings::CommsMenu);
 		Menu = CreateWidget<UCommsMenuWidget>(GetOwningPlayer(), Class);
 	}
 	return Menu;

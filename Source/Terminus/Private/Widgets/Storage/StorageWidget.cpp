@@ -22,6 +22,7 @@
 #include "Widgets/Common/TerminusUIBuilder.h"
 #include "Widgets/Common/TerminusUIText.h"
 #include "Widgets/TerminusUIColors.h"
+#include "Widgets/TerminusUISettings.h"
 
 namespace
 {
@@ -336,7 +337,7 @@ void UStorageWidget::Refresh()
 	const int32 Total = FMath::DivideAndRoundUp(Needed, Cols) * Cols;
 
 	// 칸 위젯은 모자랄 때만 더 만들고 재사용
-	const TSubclassOf<UItemSlotWidget> Class = SlotClass ? SlotClass : TSubclassOf<UItemSlotWidget>(UItemSlotWidget::StaticClass());
+	const TSubclassOf<UItemSlotWidget> Class = UTerminusUISettings::Pick(SlotClass, &UTerminusUISettings::ItemSlot);
 	while (Slots.Num() < Total)
 	{
 		UItemSlotWidget* NewSlot = CreateWidget<UItemSlotWidget>(this, Class);

@@ -6,6 +6,7 @@
 #include "Blueprint/WidgetTree.h"
 #include "Components/CanvasPanel.h"
 #include "Components/CanvasPanelSlot.h"
+#include "Widgets/TerminusUISettings.h"
 
 void UMapScreenWidget::NativeOnInitialized()
 {
@@ -15,7 +16,7 @@ void UMapScreenWidget::NativeOnInitialized()
 	{
 		if (UCanvasPanel* Root = Cast<UCanvasPanel>(WidgetTree->RootWidget))
 		{
-			RelicBar = CreateWidget<URelicBarWidget>(this, RelicBarClass ? RelicBarClass : TSubclassOf<URelicBarWidget>(URelicBarWidget::StaticClass()));
+			RelicBar = CreateWidget<URelicBarWidget>(this, UTerminusUISettings::Pick(RelicBarClass, &UTerminusUISettings::RelicBar));
 			if (UCanvasPanelSlot* CanvasSlot = RelicBar ? Root->AddChildToCanvas(RelicBar) : nullptr)
 			{
 				CanvasSlot->SetAnchors(FAnchors(1.f, 1.f));

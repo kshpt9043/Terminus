@@ -18,6 +18,7 @@
 #include "Widgets/Common/TerminusUIBuilder.h"
 #include "Widgets/TerminusUIColors.h"
 #include "Widgets/Common/ChoiceCardWidget.h"
+#include "Widgets/TerminusUISettings.h"
 
 namespace
 {
@@ -68,7 +69,7 @@ void UEventWidget::BuildDefaultLayout()
 	CardBox = WidgetTree->ConstructWidget<UHorizontalBox>(UHorizontalBox::StaticClass(), TEXT("CardBox"));
 	TerminusUI::AddRow(Column, CardBox, 24.f);
 
-	const TSubclassOf<UItemPickPanelWidget> PickClass = PickPanelClass ? PickPanelClass : TSubclassOf<UItemPickPanelWidget>(UItemPickPanelWidget::StaticClass());
+	const TSubclassOf<UItemPickPanelWidget> PickClass = UTerminusUISettings::Pick(PickPanelClass, &UTerminusUISettings::ItemPickPanel);
 	PickPanel = WidgetTree->ConstructWidget<UItemPickPanelWidget>(PickClass, TEXT("PickPanel"));
 	TerminusUI::AddRow(Column, PickPanel, 24.f);
 }
@@ -97,7 +98,7 @@ void UEventWidget::RebuildCards()
 	CardBox->ClearChildren();
 	CardBox->SetVisibility(PendingIndex == INDEX_NONE ? ESlateVisibility::SelfHitTestInvisible : ESlateVisibility::Collapsed);
 
-	const TSubclassOf<UChoiceCardWidget> Class = CardClass ? CardClass : TSubclassOf<UChoiceCardWidget>(UChoiceCardWidget::StaticClass());
+	const TSubclassOf<UChoiceCardWidget> Class = UTerminusUISettings::Pick(CardClass, &UTerminusUISettings::ChoiceCard);
 	const UEnum* TypeEnum = StaticEnum<EEventOptionType>();
 
 	for (int32 i = 0; i < Options.Num(); ++i)

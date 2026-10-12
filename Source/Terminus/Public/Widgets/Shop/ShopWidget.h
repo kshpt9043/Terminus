@@ -74,11 +74,11 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Shop")
 	bool bIconOnlySlots = true;
 
-	// 진열 칸 하나 (칸 + 설명 + 구매 / 강화 / 판매 버튼). 비우면 C++ 기본 모양. 칸 모양은 SlotClass
+	// 진열 칸 하나 (칸 + 설명 + 구매 / 강화 / 판매 버튼). 비우면 프로젝트 설정(Terminus UI) -> C++ 기본 모양. 칸 모양은 SlotClass
 	UPROPERTY(EditAnywhere, Category = "Shop")
 	TSubclassOf<UItemCardWidget> CardClass;
 
-	// 기본 레이아웃일 때 바꿀 칸 고르기 패널 (비우면 C++ 기본)
+	// 기본 레이아웃일 때 바꿀 칸 고르기 패널 (비우면 프로젝트 설정(Terminus UI) -> C++ 기본)
 	UPROPERTY(EditAnywhere, Category = "Shop")
 	TSubclassOf<UItemPickPanelWidget> PickPanelClass;
 

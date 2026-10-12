@@ -45,6 +45,7 @@
 #include "TimerManager.h"
 #include "EngineUtils.h"
 #include "Widgets/TerminusUILayers.h"
+#include "Widgets/TerminusUISettings.h"
 
 
 
@@ -105,14 +106,16 @@ void ATerminusPlayerController::BeginPlay()
 	// 핑 / 퀵챗 / 계획 공유 / 재촉 (멀티일 때만)
 	CreatePartyCommsWidget();
 	
-	if (!TavernWidgetClass)
+	// BP 에 지정한 값 -> 프로젝트 설정(Terminus UI) 순서. 주점 화면은 C++ 기본 모양이 없어 둘 다 비면 못 띄움
+	const TSubclassOf<UTavernWidget> TavernClass = TavernWidgetClass ? TavernWidgetClass : TSubclassOf<UTavernWidget>(UTerminusUISettings::Get()->Tavern.LoadSynchronous());
+	if (!TavernClass)
 	{
 		UE_LOG(LogTemp, Warning,
-			TEXT("PC: TavernWidgetClass 가 비어 있음. BP 디폴트에서 WBP_TavernWidget 을 지정할 것"));
+			TEXT("PC: 주점 화면 클래스가 비어 있음. 프로젝트 설정 > Terminus UI > Tavern 에 WBP_TavernWidget 을 지정할 것"));
 		return;
 	}
-	
-	TavernWidget = CreateWidget<UTavernWidget>(this, TavernWidgetClass);
+
+	TavernWidget = CreateWidget<UTavernWidget>(this, TavernClass);
 	if (!TavernWidget)
 	{
 		return;
@@ -290,7 +293,7 @@ void ATerminusPlayerController::CreateChatWidget()
 	// 혼자 하는 오프라인(던전 입장 싱글)은 채팅할 사람이 없음
 	if (GetNetMode() == NM_Standalone) return;
 
-	const TSubclassOf<UChatWidget> Class = ChatWidgetClass ? ChatWidgetClass : TSubclassOf<UChatWidget>(UChatWidget::StaticClass());
+	const TSubclassOf<UChatWidget> Class = UTerminusUISettings::Pick(ChatWidgetClass, &UTerminusUISettings::Chat);
 	ChatWidget = CreateWidget<UChatWidget>(this, Class);
 	if (ChatWidget)
 	{
@@ -401,7 +404,7 @@ void ATerminusPlayerController::CreatePartyCommsWidget()
 	// 혼자면 나눌 사람이 없음 (채팅창과 같은 기준)
 	if (GetNetMode() == NM_Standalone) return;
 
-	const TSubclassOf<UPartyCommsWidget> Class = PartyCommsClass ? PartyCommsClass : TSubclassOf<UPartyCommsWidget>(UPartyCommsWidget::StaticClass());
+	const TSubclassOf<UPartyCommsWidget> Class = UTerminusUISettings::Pick(PartyCommsClass, &UTerminusUISettings::PartyComms);
 	CommsWidget = CreateWidget<UPartyCommsWidget>(this, Class);
 	if (CommsWidget)
 	{
@@ -687,7 +690,7 @@ UConfirmPopupWidget* ATerminusPlayerController::ShowPopup(const FText& Title, co
 		return nullptr;
 	}
 
-	const TSubclassOf<UConfirmPopupWidget> Class = PopupClass ? PopupClass : TSubclassOf<UConfirmPopupWidget>(UConfirmPopupWidget::StaticClass());
+	const TSubclassOf<UConfirmPopupWidget> Class = UTerminusUISettings::Pick(PopupClass, &UTerminusUISettings::ConfirmPopup);
 	UConfirmPopupWidget* Popup = CreateWidget<UConfirmPopupWidget>(this, Class);
 	if (!Popup)
 	{
@@ -720,14 +723,14 @@ void ATerminusPlayerController::ViewDungeonArea(ADungeonArea* Area)
 	}
 
 	// 전투 HUD: 구역에 들어가면 그 구역을 넘김. 전투 방일 때만 HUD 가 스스로 보임
-	if (Area) ShowPCWidget(this, CombatHUD, CombatHUDClass, TerminusUI::Layer::CombatHUD);   // 지도 위젯보다 위
+	if (Area) ShowPCWidget(this, CombatHUD, UTerminusUISettings::Pick(CombatHUDClass, &UTerminusUISettings::CombatHUD), TerminusUI::Layer::CombatHUD);   // 지도 위젯보다 위
 	if (CombatHUD)
 	{
 		CombatHUD->SetArea(Area);
 	}
 
 	// 관전 바: 구역에 처음 들어갈 때 만들어 둠. 보일지는 스스로 판단 (내 싸움이 끝났고 다른 구역이 진행 중일 때)
-	if (Area) ShowPCWidget(this, SpectateWidget, SpectateClass, TerminusUI::Layer::Overlay);   // 상점 / 휴식 / 이벤트, 구출 화면 위, 채팅 아래 -> 패널이 떠 있어도 누를 수 있게
+	if (Area) ShowPCWidget(this, SpectateWidget, UTerminusUISettings::Pick(SpectateClass, &UTerminusUISettings::Spectate), TerminusUI::Layer::Overlay);   // 상점 / 휴식 / 이벤트, 구출 화면 위, 채팅 아래 -> 패널이 떠 있어도 누를 수 있게
 
 	OnViewAreaChanged.Broadcast(Area);
 }
@@ -760,7 +763,7 @@ void ATerminusPlayerController::Client_EnterRift_Implementation(const TArray<FSt
 		Loading->Hide();
 	}
 
-	ShowPCWidget(this, Rift, RiftClass, TerminusUI::Layer::Overlay);   // 지도 / 전투 HUD / 고르기 / 보상 위, 채팅 아래 -> 기다리면서 채팅 가능
+	ShowPCWidget(this, Rift, UTerminusUISettings::Pick(RiftClass, &UTerminusUISettings::Rift), TerminusUI::Layer::Overlay);   // 지도 / 전투 HUD / 고르기 / 보상 위, 채팅 아래 -> 기다리면서 채팅 가능
 
 	if (Rift)
 	{
@@ -776,7 +779,7 @@ void ATerminusPlayerController::Client_LeaveRift_Implementation()
 
 void ATerminusPlayerController::Client_ShowFloorTitle_Implementation(const FText& Title, const FText& Subtitle)
 {
-	const TSubclassOf<UFloorTitleWidget> Class = FloorTitleClass ? FloorTitleClass : TSubclassOf<UFloorTitleWidget>(UFloorTitleWidget::StaticClass());
+	const TSubclassOf<UFloorTitleWidget> Class = UTerminusUISettings::Pick(FloorTitleClass, &UTerminusUISettings::FloorTitle);
 	if (UFloorTitleWidget* Widget = CreateWidget<UFloorTitleWidget>(this, Class))
 	{
 		Widget->Setup(Title, Subtitle, FText::FromString(TEXT("체력이 모두 회복되었습니다")));
@@ -812,7 +815,7 @@ void ATerminusPlayerController::UpdateFloorVote(const FFloorVoteState& State)
 		return;
 	}
 
-	ShowPCWidget(this, FloorVote, FloorVoteClass, TerminusUI::Layer::Overlay);   // 지도 / 보상 위, 채팅 아래 -> 투표하면서 채팅 가능
+	ShowPCWidget(this, FloorVote, UTerminusUISettings::Pick(FloorVoteClass, &UTerminusUISettings::FloorVote), TerminusUI::Layer::Overlay);   // 지도 / 보상 위, 채팅 아래 -> 투표하면서 채팅 가능
 
 	if (FloorVote)
 	{
@@ -903,7 +906,7 @@ void ATerminusPlayerController::Client_BeginSettlement_Implementation(const FTex
 
 void ATerminusPlayerController::Client_ShowRescue_Implementation(bool bChooser, const TArray<FString>& WipedNames, bool bCanIntervene, float HealthCost, float Seconds)
 {
-	ShowPCWidget(this, RescueWidget, RescueClass, TerminusUI::Layer::Rescue);   // 보상 / 휴식 화면 위, 채팅 아래
+	ShowPCWidget(this, RescueWidget, UTerminusUISettings::Pick(RescueClass, &UTerminusUISettings::Rescue), TerminusUI::Layer::Rescue);   // 보상 / 휴식 화면 위, 채팅 아래
 
 	if (RescueWidget)
 	{
@@ -928,7 +931,7 @@ void ATerminusPlayerController::Client_ShowRest_Implementation(const TArray<APla
 {
 	ClosePCWidget(RestWidget);
 
-	const TSubclassOf<URestWidget> Class = RestClass ? RestClass : TSubclassOf<URestWidget>(URestWidget::StaticClass());
+	const TSubclassOf<URestWidget> Class = UTerminusUISettings::Pick(RestClass, &UTerminusUISettings::Rest);
 	RestWidget = CreateWidget<URestWidget>(this, Class);
 	if (RestWidget)
 	{
@@ -994,7 +997,7 @@ void ATerminusPlayerController::Server_ChooseRestTarget_Implementation(APlayerSt
 
 void ATerminusPlayerController::Client_ShowShop_Implementation(const FShopState& State)
 {
-	ShowPCWidget(this, ShopWidget, ShopClass, TerminusUI::Layer::RoomPanel);   // 보상 / 휴식 / 이벤트 화면과 같은 높이, 채팅 아래
+	ShowPCWidget(this, ShopWidget, UTerminusUISettings::Pick(ShopClass, &UTerminusUISettings::Shop), TerminusUI::Layer::RoomPanel);   // 보상 / 휴식 / 이벤트 화면과 같은 높이, 채팅 아래
 	UpdateRoomTopBar();
 
 	if (ShopWidget)
@@ -1041,7 +1044,7 @@ void ATerminusPlayerController::Server_ShopLeave_Implementation()
 
 void ATerminusPlayerController::Client_ShowEvent_Implementation(const TArray<FEventOption>& Options)
 {
-	ShowPCWidget(this, EventWidget, EventClass, TerminusUI::Layer::RoomPanel);   // 보상 / 휴식터 화면과 같은 높이, 채팅 아래
+	ShowPCWidget(this, EventWidget, UTerminusUISettings::Pick(EventClass, &UTerminusUISettings::Event), TerminusUI::Layer::RoomPanel);   // 보상 / 휴식터 화면과 같은 높이, 채팅 아래
 	UpdateRoomTopBar();
 
 	if (EventWidget)
@@ -1082,7 +1085,7 @@ void ATerminusPlayerController::Client_ShowRoomReward_Implementation(const FRoom
 {
 	ClosePCWidget(MonsterReward);
 
-	const TSubclassOf<UMonsterRewardWidget> Class = MonsterRewardClass ? MonsterRewardClass : TSubclassOf<UMonsterRewardWidget>(UMonsterRewardWidget::StaticClass());
+	const TSubclassOf<UMonsterRewardWidget> Class = UTerminusUISettings::Pick(MonsterRewardClass, &UTerminusUISettings::MonsterReward);
 	MonsterReward = CreateWidget<UMonsterRewardWidget>(this, Class);
 	if (MonsterReward)
 	{
@@ -1242,7 +1245,7 @@ void ATerminusPlayerController::OpenStartRelicPick()
 		return;
 	}
 
-	const TSubclassOf<UStartRelicPickWidget> Class = StartRelicPickClass ? StartRelicPickClass : TSubclassOf<UStartRelicPickWidget>(UStartRelicPickWidget::StaticClass());
+	const TSubclassOf<UStartRelicPickWidget> Class = UTerminusUISettings::Pick(StartRelicPickClass, &UTerminusUISettings::StartRelicPick);
 	StartRelicPick = CreateWidget<UStartRelicPickWidget>(this, Class);
 	if (StartRelicPick)
 	{
@@ -1283,17 +1286,19 @@ void ATerminusPlayerController::OpenMapScreen()
 		return;
 	}
 
-	if (!MapScreenClass)
+	// BP 에 지정한 값 -> 프로젝트 설정(Terminus UI) 순서. 지도는 C++ 기본 모양이 없어 둘 다 비면 못 띄움
+	const TSubclassOf<UMapScreenWidget> MapClass = MapScreenClass ? MapScreenClass : TSubclassOf<UMapScreenWidget>(UTerminusUISettings::Get()->MapScreen.LoadSynchronous());
+	if (!MapClass)
 	{
-		UE_LOG(LogTemp, Error, TEXT("PC: MapScreenClass 가 비어 있어 지도를 못 띄움. BP_DungeonPC 에서 WBP_MapScreen 을 지정할 것"));
+		UE_LOG(LogTemp, Error, TEXT("PC: 지도 화면 클래스가 비어 있어 지도를 못 띄움. 프로젝트 설정 > Terminus UI > Map Screen 에 WBP_MapScreen 을 지정할 것"));
 		if (GEngine)
 		{
-			GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, TEXT("BP_DungeonPC 의 Map Screen Class 가 비어 있음 (WBP_MapScreen 지정)"));
+			GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, TEXT("지도 화면 클래스가 비어 있음 (프로젝트 설정 > Terminus UI > Map Screen)"));
 		}
 		return;
 	}
 
-	MapScreen = CreateWidget<UMapScreenWidget>(this, MapScreenClass);
+	MapScreen = CreateWidget<UMapScreenWidget>(this, MapClass);
 	if (MapScreen)
 	{
 		MapScreen->AddToViewport(TerminusUI::Layer::Map);   // 맨 아래. 전투 HUD / 고르기 화면 이 위
@@ -1319,7 +1324,7 @@ void ATerminusPlayerController::OpenStartSkillPick()
 	}
 	Pool.SetNum(FMath::Min(Pool.Num(), 3));
 
-	const TSubclassOf<UStartSkillPickWidget> Class = StartSkillPickClass ? StartSkillPickClass : TSubclassOf<UStartSkillPickWidget>(UStartSkillPickWidget::StaticClass());
+	const TSubclassOf<UStartSkillPickWidget> Class = UTerminusUISettings::Pick(StartSkillPickClass, &UTerminusUISettings::StartSkillPick);
 	StartSkillPick = CreateWidget<UStartSkillPickWidget>(this, Class);
 	if (StartSkillPick)
 	{

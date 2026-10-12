@@ -44,7 +44,7 @@ protected:
 
 	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UButton> CloseButton;
 
-	// 줄 위젯. 비워 두면 C++ 기본
+	// 줄 위젯. 비워 두면 프로젝트 설정(Terminus UI) -> C++ 기본
 	UPROPERTY(EditAnywhere, Category = "Save")
 	TSubclassOf<URunSaveEntryWidget> EntryClass;
 
@@ -52,7 +52,7 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Save")
 	FString DungeonMapPath = TEXT("/Game/Maps/Lv_Dungeon");
 
-	// 삭제 확인 팝업. 비워 두면 C++ 기본
+	// 삭제 확인 팝업. 비워 두면 프로젝트 설정(Terminus UI) -> C++ 기본
 	UPROPERTY(EditAnywhere, Category = "Save")
 	TSubclassOf<UConfirmPopupWidget> PopupClass;
 

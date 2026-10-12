@@ -15,6 +15,7 @@
 #include "Widgets/Common/TerminusUIBuilder.h"
 #include "Widgets/TerminusUIColors.h"
 #include "Widgets/Common/ChoiceCardWidget.h"
+#include "Widgets/TerminusUISettings.h"
 
 void UFloorVoteWidget::NativeOnInitialized()
 {
@@ -127,7 +128,7 @@ void UFloorVoteWidget::RebuildCards()
 		FString CountLabel = Shown.TotalVoters > 1 ? FString::Printf(TEXT("%d명 선택"), Count) : FString();
 		if (bMine) CountLabel += TEXT("  (내 선택)");
 
-		UChoiceCardWidget* Card = CreateWidget<UChoiceCardWidget>(this, CardClass ? CardClass : TSubclassOf<UChoiceCardWidget>(UChoiceCardWidget::StaticClass()));
+		UChoiceCardWidget* Card = CreateWidget<UChoiceCardWidget>(this, UTerminusUISettings::Pick(CardClass, &UTerminusUISettings::ChoiceCard));
 		if (!Card) continue;
 
 		FChoiceCardStyle CardStyle;

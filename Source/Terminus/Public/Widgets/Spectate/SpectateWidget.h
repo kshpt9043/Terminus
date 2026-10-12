@@ -38,7 +38,7 @@ protected:
 	// 구역 버튼이 들어갈 곳 (가로 상자 추천)
 	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UPanelWidget> ButtonBox;
 
-	// 구역 버튼 하나. 비우면 C++ 기본 모양. ChoiceId: Mine / Other, 지금 보는 구역 = Selected
+	// 구역 버튼 하나. 비우면 프로젝트 설정(Terminus UI) -> C++ 기본 모양. ChoiceId: Mine / Other, 지금 보는 구역 = Selected
 	UPROPERTY(EditAnywhere, Category = "Spectate")
 	TSubclassOf<UChoiceCardWidget> ButtonClass;
 

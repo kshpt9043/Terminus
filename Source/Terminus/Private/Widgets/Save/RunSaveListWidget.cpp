@@ -18,6 +18,7 @@
 #include "Widgets/Common/TerminusUIBuilder.h"
 #include "Widgets/TerminusUIColors.h"
 #include "Widgets/TerminusUILayers.h"
+#include "Widgets/TerminusUISettings.h"
 
 // =====================================================================
 // 초기화 / 배치
@@ -136,7 +137,7 @@ void URunSaveListWidget::Refresh()
 	if (!EntryBox) return;
 
 	EntryBox->ClearChildren();
-	const TSubclassOf<URunSaveEntryWidget> Class = EntryClass ? EntryClass : TSubclassOf<URunSaveEntryWidget>(URunSaveEntryWidget::StaticClass());
+	const TSubclassOf<URunSaveEntryWidget> Class = UTerminusUISettings::Pick(EntryClass, &UTerminusUISettings::SaveEntry);
 
 	for (const FRunSaveSummary& Summary : Saves)
 	{
@@ -196,7 +197,7 @@ void URunSaveListWidget::HandleDelete(const FString& SlotName)
 {
 	PendingDeleteSlot = SlotName;
 
-	const TSubclassOf<UConfirmPopupWidget> Class = PopupClass ? PopupClass : TSubclassOf<UConfirmPopupWidget>(UConfirmPopupWidget::StaticClass());
+	const TSubclassOf<UConfirmPopupWidget> Class = UTerminusUISettings::Pick(PopupClass, &UTerminusUISettings::ConfirmPopup);
 	UConfirmPopupWidget* Popup = CreateWidget<UConfirmPopupWidget>(GetOwningPlayer(), Class);
 	if (!Popup)
 	{

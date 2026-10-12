@@ -19,6 +19,7 @@
 #include "Widgets/Common/ItemSlotWidget.h"
 #include "Widgets/Common/TerminusUIBuilder.h"
 #include "Widgets/TerminusUIColors.h"
+#include "Widgets/TerminusUISettings.h"
 
 void UStartRelicPickWidget::NativeOnInitialized()
 {
@@ -119,7 +120,7 @@ void UStartRelicPickWidget::SetCandidates(const TArray<FName>& StoredRelics, ECh
 
 	const int32 Cols = FMath::Max(1, Columns);
 	const int32 Total = FMath::DivideAndRoundUp(FMath::Max(MinSlots, StoredRelics.Num()), Cols) * Cols;
-	const TSubclassOf<UItemSlotWidget> Class = SlotClass ? SlotClass : TSubclassOf<UItemSlotWidget>(UItemSlotWidget::StaticClass());
+	const TSubclassOf<UItemSlotWidget> Class = UTerminusUISettings::Pick(SlotClass, &UTerminusUISettings::ItemSlot);
 
 	Slots.Reset();
 	for (int32 i = 0; i < Total; ++i)

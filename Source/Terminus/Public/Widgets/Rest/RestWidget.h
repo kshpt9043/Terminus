@@ -73,7 +73,7 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Rest")
 	FVector2D OptionSize = FVector2D(520.f, 74.f);
 
-	// 선택지 하나 (휴식 / 탐색 / 회복 대상 / 돌아가기). 비우면 C++ 기본 모양
+	// 선택지 하나 (휴식 / 탐색 / 회복 대상 / 돌아가기). 비우면 프로젝트 설정(Terminus UI) -> C++ 기본 모양
 	// ChoiceId: Rest / Explore / Target / Back
 	UPROPERTY(EditAnywhere, Category = "Rest")
 	TSubclassOf<UChoiceCardWidget> OptionClass;
