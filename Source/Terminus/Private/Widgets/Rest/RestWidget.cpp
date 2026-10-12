@@ -17,7 +17,7 @@
 #include "Player/TerminusPlayerController.h"
 #include "Widgets/Common/TerminusUIBuilder.h"
 #include "Widgets/TerminusUIColors.h"
-#include "Widgets/Common/TerminusClickRelay.h"
+#include "Widgets/Common/ChoiceCardWidget.h"
 
 namespace
 {
@@ -188,32 +188,27 @@ void URestWidget::AddOption(ERestOption Option, APlayerState* Target, const FStr
 {
 	if (!OptionBox) return;
 
-	UButton* Button = WidgetTree->ConstructWidget<UButton>();
-	Button->SetBackgroundColor(RestOptionColor);
-	Button->SetIsEnabled(bEnabled);
+	const TSubclassOf<UChoiceCardWidget> Class = OptionClass ? OptionClass : TSubclassOf<UChoiceCardWidget>(UChoiceCardWidget::StaticClass());
+	UChoiceCardWidget* Card = CreateWidget<UChoiceCardWidget>(this, Class);
+	if (!Card) return;
 
-	UTerminusClickRelay::Bind(Button, this, FSimpleDelegate::CreateWeakLambda(this, [this, Option = Option, Target = TWeakObjectPtr<APlayerState>(Target)]() { HandleOption(Option, Target.Get()); }), Relays);
+	FChoiceCardStyle CardStyle;
+	CardStyle.Size = OptionSize;
+	CardStyle.bFixedHeight = false;
+	CardStyle.TitleSize = 17;
+	CardStyle.TitleColor = TerminusUI::Color::Gold;
+	CardStyle.Justify = ETextJustify::Left;
+	CardStyle.Padding = FMargin(14.f, 6.f);
+	CardStyle.NormalColor = RestOptionColor;
+	Card->ApplyDefaultStyle(CardStyle);
 
-	USizeBox* Size = WidgetTree->ConstructWidget<USizeBox>();
-	Size->SetWidthOverride(OptionSize.X);
-	Size->SetMinDesiredHeight(OptionSize.Y);
-	Button->SetContent(Size);
+	static const FName OptionIds[] = { TEXT("Rest"), TEXT("Explore"), TEXT("Target"), TEXT("Back") };
+	Card->SetChoiceId(OptionIds[static_cast<uint8>(Option)]);
+	Card->SetTexts(Title, Description);
+	Card->SetChoiceEnabled(bEnabled);
+	Card->OnChosen = FSimpleDelegate::CreateWeakLambda(this, [this, Option, Target = TWeakObjectPtr<APlayerState>(Target)]() { HandleOption(Option, Target.Get()); });
 
-	UVerticalBox* Inside = WidgetTree->ConstructWidget<UVerticalBox>();
-	Size->SetContent(Inside);
-	if (UVerticalBoxSlot* S = Inside->AddChildToVerticalBox(TerminusUI::MakeWrapText(WidgetTree, NAME_None, Title, 17, TerminusUI::Color::Gold, ETextJustify::Left)))
-	{
-		S->SetPadding(FMargin(14.f, 6.f, 14.f, 0.f));
-	}
-	if (!Description.IsEmpty())
-	{
-		if (UVerticalBoxSlot* S = Inside->AddChildToVerticalBox(TerminusUI::MakeWrapText(WidgetTree, NAME_None, Description, 14, TerminusUI::Color::TextBright, ETextJustify::Left)))
-		{
-			S->SetPadding(FMargin(14.f, 2.f, 14.f, 6.f));
-		}
-	}
-
-	if (UVerticalBoxSlot* S = Cast<UVerticalBoxSlot>(OptionBox->AddChild(Button)))
+	if (UVerticalBoxSlot* S = Cast<UVerticalBoxSlot>(OptionBox->AddChild(Card)))
 	{
 		S->SetPadding(FMargin(0.f, 0.f, 0.f, 12.f));
 	}
@@ -225,7 +220,6 @@ void URestWidget::Rebuild()
 	{
 		OptionBox->ClearChildren();
 	}
-	Relays.Reset();
 	ShownHealth = ReadHealth();
 
 	const int32 Percent = FMath::RoundToInt(HealRatio * 100.f);

@@ -6,7 +6,7 @@
 #include "EventWidget.generated.h"
 
 class UButton;
-class UTerminusClickRelay;
+class UChoiceCardWidget;
 class UPanelWidget;
 class UTextBlock;
 class UItemSlotWidget;
@@ -53,6 +53,11 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Event")
 	FVector2D CardSize = FVector2D(250.f, 300.f);
 
+	// 후보 카드 하나. 비우면 C++ 기본 모양. 스킬 후보면 ItemSlot 에 그 스킬이 보임
+	// ChoiceId: EEventOptionType 이름 (Currency / ClassSkill / RelicSwapChosen ...)
+	UPROPERTY(EditAnywhere, Category = "Event")
+	TSubclassOf<UChoiceCardWidget> CardClass;
+
 	UPROPERTY(EditAnywhere, Category = "Event")
 	TSubclassOf<UItemSlotWidget> SlotClass;
 
@@ -65,8 +70,6 @@ private:
 	int32 PendingIndex = INDEX_NONE;   // 칸을 고르는 중인 후보
 	bool bChosen = false;
 
-	UPROPERTY()
-	TArray<TObjectPtr<UTerminusClickRelay>> Relays;
 
 	void BuildDefaultLayout();
 	void RebuildCards();

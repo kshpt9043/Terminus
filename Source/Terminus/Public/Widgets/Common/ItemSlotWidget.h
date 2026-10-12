@@ -10,6 +10,7 @@ class UImage;
 class USizeBox;
 class UTextBlock;
 class USkillTooltipWidget;
+class URelicTooltipWidget;
 class UItemSlotWidget;
 
 DECLARE_DELEGATE_OneParam(FOnItemSlotClicked, UItemSlotWidget* /*Slot*/);
@@ -28,7 +29,8 @@ enum class EItemSlotKind : uint8
  *
  *  - 아이콘 (없으면 이름 앞 두 글자) + 이름 (SetShowName 으로 숨길 수 있음)
  *  - 테두리 색: 유물은 등급, 스킬은 공격 / 방어 / 특수. 선택(SetSelected)이면 강조 색
- *  - 마우스를 올리면 툴팁 (스킬 = 스킬 툴팁 위젯, 유물 = 이름 / 등급 / 설명)
+ *  - 마우스를 올리면 툴팁 (스킬 = 스킬 툴팁 위젯, 유물 = 유물 툴팁 위젯). 둘 다 WBP 로 바꿀 수 있음
+ *  - 아이콘만 모드(SetIconOnly / bIconOnly): 이름 / 테두리 / 배경을 숨기고 아이콘만. 정보는 툴팁으로 (상점)
  *  - SetUsable(false) 면 버튼이 꺼짐 (전투에서 비용 부족 등). 빈 칸은 항상 꺼짐
  *  - SlotIndex 는 쓰는 쪽이 정하는 번호 (전투 스킬 칸 번호 등). 눌리면 OnSlotClicked(this)
  *
@@ -58,6 +60,9 @@ public:
 	// 칸 크기 바꾸기 (기본 모양의 SlotSizeBox 또는 WBP 의 SlotSizeBox)
 	void SetSlotSize(FVector2D Size);
 
+	// 아이콘만 보이기 (이름 / 테두리 / 배경 숨김, 선택 강조는 보임). 정보는 툴팁으로
+	void SetIconOnly(bool bInIconOnly);
+
 	void SetSlotIndex(int32 InIndex) { SlotIndex = InIndex; }
 	int32 GetSlotIndex() const { return SlotIndex; }
 
@@ -77,6 +82,9 @@ protected:
 	// 등급 / 종류 색 테두리
 	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UBorder> Frame;
 
+	// 아이콘 뒤 어두운 판 (아이콘만 모드면 투명)
+	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UBorder> Background;
+
 	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UImage> Icon;
 
 	// 아이콘이 없을 때 대신 보이는 이름 앞 두 글자
@@ -87,6 +95,14 @@ protected:
 	// 스킬 칸 툴팁. 비워 두면 C++ 기본 스킬 툴팁
 	UPROPERTY(EditAnywhere, Category = "Item Slot")
 	TSubclassOf<USkillTooltipWidget> SkillTooltipClass;
+
+	// 유물 칸 툴팁. 비워 두면 C++ 기본 유물 툴팁
+	UPROPERTY(EditAnywhere, Category = "Item Slot")
+	TSubclassOf<URelicTooltipWidget> RelicTooltipClass;
+
+	// 처음부터 아이콘만 보이기 (상점용 칸 WBP 면 켜 두면 됨)
+	UPROPERTY(EditAnywhere, Category = "Item Slot")
+	bool bIconOnly = false;
 
 	UPROPERTY(EditAnywhere, Category = "Item Slot")
 	FVector2D DefaultSlotSize = FVector2D(84.f, 104.f);
@@ -109,6 +125,13 @@ private:
 
 	UPROPERTY()
 	TObjectPtr<USkillTooltipWidget> SkillTooltip;
+
+	UPROPERTY()
+	TObjectPtr<URelicTooltipWidget> RelicTooltip;
+
+	bool bShowNameWanted = true;            // SetShowName 으로 받은 값 (아이콘만 모드가 꺼지면 되돌림)
+	FLinearColor BackgroundColor = FLinearColor(0.07f, 0.06f, 0.06f, 0.95f);
+	void ApplyIconOnly();
 
 	void BuildDefaultLayout();
 	void ShowIcon(class UTexture2D* Texture, const FText& Name);

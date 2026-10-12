@@ -17,7 +17,7 @@
 #include "Widgets/Common/ItemSlotWidget.h"
 #include "Widgets/Common/TerminusUIBuilder.h"
 #include "Widgets/TerminusUIColors.h"
-#include "Widgets/Common/TerminusClickRelay.h"
+#include "Widgets/Common/ChoiceCardWidget.h"
 
 namespace
 {
@@ -95,33 +95,29 @@ void UEventWidget::RebuildCards()
 	if (!CardBox) return;
 
 	CardBox->ClearChildren();
-	Relays.Reset();
 	CardBox->SetVisibility(PendingIndex == INDEX_NONE ? ESlateVisibility::SelfHitTestInvisible : ESlateVisibility::Collapsed);
+
+	const TSubclassOf<UChoiceCardWidget> Class = CardClass ? CardClass : TSubclassOf<UChoiceCardWidget>(UChoiceCardWidget::StaticClass());
+	const UEnum* TypeEnum = StaticEnum<EEventOptionType>();
 
 	for (int32 i = 0; i < Options.Num(); ++i)
 	{
 		const FEventOption& Option = Options[i];
 
-		UButton* Card = WidgetTree->ConstructWidget<UButton>();
-		Card->SetBackgroundColor(FLinearColor(0.32f, 0.28f, 0.38f));
-		Card->SetIsEnabled(!bChosen);
+		UChoiceCardWidget* Card = CreateWidget<UChoiceCardWidget>(this, Class);
+		if (!Card) continue;
 
-		UTerminusClickRelay::Bind(Card, this, FSimpleDelegate::CreateUObject(this, &UEventWidget::HandleCardClicked, i), Relays);
+		FChoiceCardStyle CardStyle;
+		CardStyle.Size = CardSize;
+		CardStyle.TitleSize = 21;
+		CardStyle.NormalColor = FLinearColor(0.32f, 0.28f, 0.38f);
+		Card->ApplyDefaultStyle(CardStyle);
 
-		USizeBox* Size = WidgetTree->ConstructWidget<USizeBox>();
-		Size->SetWidthOverride(CardSize.X);
-		Size->SetHeightOverride(CardSize.Y);
-		Card->SetContent(Size);
-
-		UVerticalBox* Inside = WidgetTree->ConstructWidget<UVerticalBox>();
-		Size->SetContent(Inside);
-		Inside->AddChildToVerticalBox(TerminusUI::MakeWrapText(WidgetTree, NAME_None, Option.Title.ToString(), 21, FLinearColor::White));
-
-		UTextBlock* Desc = TerminusUI::MakeWrapText(WidgetTree, NAME_None, Option.Description.ToString(), 14, TerminusUI::Color::TextBright);
-		if (UVerticalBoxSlot* S = Inside->AddChildToVerticalBox(Desc))
-		{
-			S->SetPadding(FMargin(0.f, 14.f, 0.f, 0.f));
-		}
+		Card->SetChoiceId(TypeEnum ? FName(*TypeEnum->GetNameStringByValue(static_cast<int64>(Option.Type))) : NAME_None);
+		Card->SetTexts(Option.Title.ToString(), Option.Description.ToString());
+		Card->SetItem(false, IsEventSkillOption(Option.Type) ? Option.SkillRow : NAME_None);
+		Card->SetChoiceEnabled(!bChosen);
+		Card->OnChosen = FSimpleDelegate::CreateUObject(this, &UEventWidget::HandleCardClicked, i);
 
 		if (UHorizontalBoxSlot* S = Cast<UHorizontalBoxSlot>(CardBox->AddChild(Card)))
 		{

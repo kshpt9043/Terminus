@@ -90,7 +90,7 @@ void UCommsMenuWidget::Open(const FText& Title, const TArray<FText>& Options, co
 
 	if (!IsInViewport())
 	{
-		AddToViewport(TerminusUI::Layer::CommsMenu);   // 채팅(25) 위, 팝업(50) 아래
+		AddToViewport(TerminusUI::Layer::CommsMenu);   // 채팅 위, 팝업 아래
 	}
 	bOpen = true;
 

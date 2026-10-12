@@ -19,7 +19,7 @@
 #include "Widgets/Common/TerminusUIBuilder.h"
 #include "Widgets/Common/TerminusUIText.h"
 #include "Widgets/TerminusUIColors.h"
-#include "Widgets/Common/TerminusClickRelay.h"
+#include "Widgets/Common/ChoiceCardWidget.h"
 
 namespace
 {
@@ -160,18 +160,24 @@ void USpectateWidget::RebuildButtons(ADungeonArea* MyArea, const TArray<ADungeon
 	if (!ButtonBox) return;
 
 	ButtonBox->ClearChildren();
-	Relays.Reset();
 
 	auto AddButton = [this, Viewed](ADungeonArea* Area, bool bMine, const FString& Label)
 	{
-		UButton* Button = WidgetTree->ConstructWidget<UButton>();
-		const bool bViewing = bMine ? (Viewed == Area) : (Viewed == Area);
-		Button->SetBackgroundColor(bViewing ? FLinearColor(0.25f, 0.5f, 0.3f) : FLinearColor(0.2f, 0.2f, 0.24f));
-		Button->SetContent(TerminusUI::MakeText(WidgetTree, NAME_None, Label, 14, FLinearColor::White));
+		UChoiceCardWidget* Card = CreateWidget<UChoiceCardWidget>(this, ButtonClass ? ButtonClass : TSubclassOf<UChoiceCardWidget>(UChoiceCardWidget::StaticClass()));
+		if (!Card) return;
 
-		UTerminusClickRelay::Bind(Button, this, FSimpleDelegate::CreateWeakLambda(this, [this, Area = TWeakObjectPtr<ADungeonArea>(Area), bMine = bMine]() { HandleAreaClicked(Area.Get(), bMine); }), Relays);
+		FChoiceCardStyle CardStyle;
+		CardStyle.TitleSize = 14;
+		CardStyle.Padding = FMargin(8.f, 2.f);
+		CardStyle.NormalColor = FLinearColor(0.2f, 0.2f, 0.24f);
+		Card->ApplyDefaultStyle(CardStyle);
 
-		if (UHorizontalBoxSlot* S = Cast<UHorizontalBoxSlot>(ButtonBox->AddChild(Button)))
+		Card->SetChoiceId(bMine ? FName(TEXT("Mine")) : FName(TEXT("Other")));
+		Card->SetTexts(Label, FString());
+		Card->SetState(Viewed == Area ? EChoiceCardState::Selected : EChoiceCardState::Normal);
+		Card->OnChosen = FSimpleDelegate::CreateWeakLambda(this, [this, Area = TWeakObjectPtr<ADungeonArea>(Area), bMine]() { HandleAreaClicked(Area.Get(), bMine); });
+
+		if (UHorizontalBoxSlot* S = Cast<UHorizontalBoxSlot>(ButtonBox->AddChild(Card)))
 		{
 			S->SetPadding(FMargin(4.f, 0.f));
 		}

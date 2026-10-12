@@ -6,7 +6,7 @@
 #include "SpectateWidget.generated.h"
 
 class ADungeonArea;
-class UTerminusClickRelay;
+class UChoiceCardWidget;
 class UPanelWidget;
 class UTextBlock;
 class USpectateWidget;
@@ -38,13 +38,15 @@ protected:
 	// 구역 버튼이 들어갈 곳 (가로 상자 추천)
 	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UPanelWidget> ButtonBox;
 
+	// 구역 버튼 하나. 비우면 C++ 기본 모양. ChoiceId: Mine / Other, 지금 보는 구역 = Selected
+	UPROPERTY(EditAnywhere, Category = "Spectate")
+	TSubclassOf<UChoiceCardWidget> ButtonClass;
+
 private:
 	// 숨긴(Collapsed) 위젯은 NativeTick 이 안 불려서 타이머로 판단
 	FTimerHandle RefreshHandle;
 	FString ShownKey;
 
-	UPROPERTY()
-	TArray<TObjectPtr<UTerminusClickRelay>> Relays;
 
 	void BuildDefaultLayout();
 	void Refresh();

@@ -13,10 +13,11 @@ namespace TerminusUI::Layer
 	constexpr int32 Comms        = 11;   // 핑 / 퀵챗 (전투 HUD 바로 위)
 	constexpr int32 Pick         = 20;   // 시작 스킬 / 유물 고르기
 	constexpr int32 RoomPanel    = 22;   // 보상 / 휴식 / 이벤트 / 상점
-	constexpr int32 Rescue       = 23;   // 구출 투표 (방 패널 위)
-	constexpr int32 Overlay      = 24;   // 관전 바 / 이공간 / 층 투표 (패널 위, 채팅 아래 -> 패널이 떠 있어도 누를 수 있게)
-	constexpr int32 Chat         = 25;   // 채팅
-	constexpr int32 CommsMenu    = 26;   // 핑 메뉴 (채팅 위)
+	constexpr int32 RoomTopBar   = 23;   // 휴식 / 이벤트 / 상점 위에 띄우는 지도 상단바
+	constexpr int32 Rescue       = 24;   // 구출 투표 (방 패널 위)
+	constexpr int32 Overlay      = 25;   // 관전 바 / 이공간 / 층 투표 (패널 위, 채팅 아래 -> 패널이 떠 있어도 누를 수 있게)
+	constexpr int32 Chat         = 26;   // 채팅
+	constexpr int32 CommsMenu    = 27;   // 핑 메뉴 (채팅 위)
 	constexpr int32 FloorTitle   = 30;   // "n층" 타이틀
 	constexpr int32 MenuWindow   = 40;   // 메인 메뉴의 거점 / 창고 / 이어하기 창
 	constexpr int32 Settlement   = 45;   // 정산

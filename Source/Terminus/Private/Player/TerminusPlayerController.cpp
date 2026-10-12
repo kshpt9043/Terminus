@@ -15,6 +15,8 @@
 #include "Widgets/Combat/CombatHUDWidget.h"
 #include "Widgets/Skill/StartSkillPickWidget.h"
 #include "Widgets/Map/MapScreenWidget.h"
+#include "Widgets/Map/MapTopBarWidget.h"
+#include "Widgets/Map/RoomTopBarWidget.h"
 #include "Widgets/Common/ConfirmPopupWidget.h"
 #include "Widgets/Chat/ChatWidget.h"
 #include "Widgets/Relic/StartRelicPickWidget.h"
@@ -157,6 +159,7 @@ void ATerminusPlayerController::EndPlay(const EEndPlayReason::Type EndPlayReason
 	ClosePCWidget(StartSkillPick);
 
 	ClosePCWidget(MapScreen);
+	ClosePCWidget(RoomTopBar);
 
 	ClosePCWidget(ChatWidget);
 
@@ -291,7 +294,7 @@ void ATerminusPlayerController::CreateChatWidget()
 	ChatWidget = CreateWidget<UChatWidget>(this, Class);
 	if (ChatWidget)
 	{
-		ChatWidget->AddToViewport(TerminusUI::Layer::Chat);   // 지도 / 전투 HUD / 스킬 고르기 위, 팝업(50) 아래
+		ChatWidget->AddToViewport(TerminusUI::Layer::Chat);   // 지도 / 전투 HUD / 스킬 고르기 위, 팝업 아래
 	}
 }
 
@@ -402,7 +405,7 @@ void ATerminusPlayerController::CreatePartyCommsWidget()
 	CommsWidget = CreateWidget<UPartyCommsWidget>(this, Class);
 	if (CommsWidget)
 	{
-		CommsWidget->AddToViewport(TerminusUI::Layer::Comms);   // 전투 HUD(10) 바로 위. 보상 / 휴식 화면(22) 은 이걸 덮음
+		CommsWidget->AddToViewport(TerminusUI::Layer::Comms);   // 전투 HUD 바로 위. 보상 / 휴식 화면 은 이걸 덮음
 	}
 }
 
@@ -724,7 +727,7 @@ void ATerminusPlayerController::ViewDungeonArea(ADungeonArea* Area)
 	}
 
 	// 관전 바: 구역에 처음 들어갈 때 만들어 둠. 보일지는 스스로 판단 (내 싸움이 끝났고 다른 구역이 진행 중일 때)
-	if (Area) ShowPCWidget(this, SpectateWidget, SpectateClass, TerminusUI::Layer::Overlay);   // 상점 / 휴식 / 이벤트(22), 구출(23) 화면 위, 채팅(25) 아래 -> 패널이 떠 있어도 누를 수 있게
+	if (Area) ShowPCWidget(this, SpectateWidget, SpectateClass, TerminusUI::Layer::Overlay);   // 상점 / 휴식 / 이벤트, 구출 화면 위, 채팅 아래 -> 패널이 떠 있어도 누를 수 있게
 
 	OnViewAreaChanged.Broadcast(Area);
 }
@@ -757,7 +760,7 @@ void ATerminusPlayerController::Client_EnterRift_Implementation(const TArray<FSt
 		Loading->Hide();
 	}
 
-	ShowPCWidget(this, Rift, RiftClass, TerminusUI::Layer::Overlay);   // 지도 / 전투 HUD / 고르기 / 보상 위, 채팅(25) 아래 -> 기다리면서 채팅 가능
+	ShowPCWidget(this, Rift, RiftClass, TerminusUI::Layer::Overlay);   // 지도 / 전투 HUD / 고르기 / 보상 위, 채팅 아래 -> 기다리면서 채팅 가능
 
 	if (Rift)
 	{
@@ -777,7 +780,7 @@ void ATerminusPlayerController::Client_ShowFloorTitle_Implementation(const FText
 	if (UFloorTitleWidget* Widget = CreateWidget<UFloorTitleWidget>(this, Class))
 	{
 		Widget->Setup(Title, Subtitle, FText::FromString(TEXT("체력이 모두 회복되었습니다")));
-		Widget->AddToViewport(TerminusUI::Layer::FloorTitle);   // 지도 / 보상 / 이공간 위, 팝업(50) 아래
+		Widget->AddToViewport(TerminusUI::Layer::FloorTitle);   // 지도 / 보상 / 이공간 위, 팝업 아래
 	}
 }
 
@@ -809,7 +812,7 @@ void ATerminusPlayerController::UpdateFloorVote(const FFloorVoteState& State)
 		return;
 	}
 
-	ShowPCWidget(this, FloorVote, FloorVoteClass, TerminusUI::Layer::Overlay);   // 지도 / 보상 위, 채팅(25) 아래 -> 투표하면서 채팅 가능
+	ShowPCWidget(this, FloorVote, FloorVoteClass, TerminusUI::Layer::Overlay);   // 지도 / 보상 위, 채팅 아래 -> 투표하면서 채팅 가능
 
 	if (FloorVote)
 	{
@@ -900,7 +903,7 @@ void ATerminusPlayerController::Client_BeginSettlement_Implementation(const FTex
 
 void ATerminusPlayerController::Client_ShowRescue_Implementation(bool bChooser, const TArray<FString>& WipedNames, bool bCanIntervene, float HealthCost, float Seconds)
 {
-	ShowPCWidget(this, RescueWidget, RescueClass, TerminusUI::Layer::Rescue);   // 보상 / 휴식 화면 위, 채팅(25) 아래
+	ShowPCWidget(this, RescueWidget, RescueClass, TerminusUI::Layer::Rescue);   // 보상 / 휴식 화면 위, 채팅 아래
 
 	if (RescueWidget)
 	{
@@ -930,13 +933,37 @@ void ATerminusPlayerController::Client_ShowRest_Implementation(const TArray<APla
 	if (RestWidget)
 	{
 		RestWidget->Setup(Occupants, HealRatio, ExploreCurrency, ExploreRelicChance);
-		RestWidget->AddToViewport(TerminusUI::Layer::RoomPanel);   // 보상 화면과 같은 높이, 채팅(25) 아래
+		RestWidget->AddToViewport(TerminusUI::Layer::RoomPanel);   // 보상 화면과 같은 높이, 채팅 아래
 	}
+	UpdateRoomTopBar();
 }
 
 void ATerminusPlayerController::Client_CloseRest_Implementation()
 {
 	ClosePCWidget(RestWidget);
+	UpdateRoomTopBar();
+}
+
+void ATerminusPlayerController::UpdateRoomTopBar()
+{
+	const bool bWanted = RestWidget || EventWidget || ShopWidget;
+
+	if (bWanted && !RoomTopBar)
+	{
+		RoomTopBar = CreateWidget<URoomTopBarWidget>(this, URoomTopBarWidget::StaticClass());
+		if (RoomTopBar)
+		{
+			// 지도 화면에 놓인 상단바와 같은 클래스(WBP_MapTopBar)로 -> 모양이 같음
+			UMapTopBarWidget* MapTopBar = MapScreen ? MapScreen->GetMapTopBar() : nullptr;
+			RoomTopBar->Setup(MapTopBar ? MapTopBar->GetClass() : nullptr);
+			RoomTopBar->AddToViewport(TerminusUI::Layer::RoomTopBar);
+		}
+	}
+
+	if (RoomTopBar)
+	{
+		RoomTopBar->SetVisibility(bWanted ? ESlateVisibility::SelfHitTestInvisible : ESlateVisibility::Collapsed);
+	}
 }
 
 void ATerminusPlayerController::Client_RestResult_Implementation(const FText& Result)
@@ -967,7 +994,8 @@ void ATerminusPlayerController::Server_ChooseRestTarget_Implementation(APlayerSt
 
 void ATerminusPlayerController::Client_ShowShop_Implementation(const FShopState& State)
 {
-	ShowPCWidget(this, ShopWidget, ShopClass, TerminusUI::Layer::RoomPanel);   // 보상 / 휴식 / 이벤트 화면과 같은 높이, 채팅(25) 아래
+	ShowPCWidget(this, ShopWidget, ShopClass, TerminusUI::Layer::RoomPanel);   // 보상 / 휴식 / 이벤트 화면과 같은 높이, 채팅 아래
+	UpdateRoomTopBar();
 
 	if (ShopWidget)
 	{
@@ -978,6 +1006,7 @@ void ATerminusPlayerController::Client_ShowShop_Implementation(const FShopState&
 void ATerminusPlayerController::Client_CloseShop_Implementation()
 {
 	ClosePCWidget(ShopWidget);
+	UpdateRoomTopBar();
 }
 
 void ATerminusPlayerController::Server_ShopBuyRelic_Implementation(int32 Index)
@@ -1012,7 +1041,8 @@ void ATerminusPlayerController::Server_ShopLeave_Implementation()
 
 void ATerminusPlayerController::Client_ShowEvent_Implementation(const TArray<FEventOption>& Options)
 {
-	ShowPCWidget(this, EventWidget, EventClass, TerminusUI::Layer::RoomPanel);   // 보상 / 휴식터 화면과 같은 높이, 채팅(25) 아래
+	ShowPCWidget(this, EventWidget, EventClass, TerminusUI::Layer::RoomPanel);   // 보상 / 휴식터 화면과 같은 높이, 채팅 아래
+	UpdateRoomTopBar();
 
 	if (EventWidget)
 	{
@@ -1031,6 +1061,7 @@ void ATerminusPlayerController::Client_EventResult_Implementation(const FText& R
 void ATerminusPlayerController::Client_CloseEvent_Implementation()
 {
 	ClosePCWidget(EventWidget);
+	UpdateRoomTopBar();
 }
 
 void ATerminusPlayerController::Server_ChooseEvent_Implementation(int32 Index, int32 ReplaceSlot, FName RelicRow)
@@ -1056,7 +1087,7 @@ void ATerminusPlayerController::Client_ShowRoomReward_Implementation(const FRoom
 	if (MonsterReward)
 	{
 		MonsterReward->Setup(Offer);
-		MonsterReward->AddToViewport(TerminusUI::Layer::RoomPanel);   // 전투 HUD(10) / 스킬 고르기(20) 위, 채팅(25) 아래
+		MonsterReward->AddToViewport(TerminusUI::Layer::RoomPanel);   // 전투 HUD / 스킬 고르기 위, 채팅 아래
 	}
 }
 
@@ -1265,7 +1296,7 @@ void ATerminusPlayerController::OpenMapScreen()
 	MapScreen = CreateWidget<UMapScreenWidget>(this, MapScreenClass);
 	if (MapScreen)
 	{
-		MapScreen->AddToViewport(TerminusUI::Layer::Map);   // 맨 아래. 전투 HUD(10) / 고르기 화면(20) 이 위
+		MapScreen->AddToViewport(TerminusUI::Layer::Map);   // 맨 아래. 전투 HUD / 고르기 화면 이 위
 	}
 }
 

@@ -18,6 +18,7 @@
 #include "Widgets/Skill/SkillCardWidget.h"
 #include "Widgets/Common/TerminusUIBuilder.h"
 #include "Widgets/TerminusUIColors.h"
+#include "Widgets/Common/ItemCardWidget.h"
 
 // =====================================================================
 // 초기화 / 배치
@@ -129,12 +130,6 @@ void UMonsterRewardWidget::Setup(const FRoomRewardOffer& InOffer)
 	Refresh();
 }
 
-UItemSlotWidget* UMonsterRewardWidget::MakeSlot()
-{
-	const TSubclassOf<UItemSlotWidget> Class = SlotClass ? SlotClass : TSubclassOf<UItemSlotWidget>(UItemSlotWidget::StaticClass());
-	return CreateWidget<UItemSlotWidget>(this, Class);
-}
-
 void UMonsterRewardWidget::BuildSkillCards()
 {
 	if (!CardBox) return;
@@ -164,25 +159,18 @@ void UMonsterRewardWidget::BuildRelicCards()
 	for (const FName& Row : Offer.RelicOffers)
 	{
 		const FRelicRow* Relic = UTerminusDataSettings::FindRelicRow(Row);
-		UItemSlotWidget* RelicSlot = MakeSlot();
-		if (!Relic || !RelicSlot) continue;
+		UItemCardWidget* Card = Relic ? CreateWidget<UItemCardWidget>(this, RelicCardClass ? RelicCardClass : TSubclassOf<UItemCardWidget>(UItemCardWidget::StaticClass())) : nullptr;
+		if (!Card) continue;
 
-		RelicSlot->SetShowName(true);
-		RelicSlot->SetSlotSize(FVector2D(120.f, 120.f));
-		RelicSlot->SetRelic(Row);
-		RelicSlot->OnSlotClicked.BindUObject(this, &UMonsterRewardWidget::HandleRelicClicked);
-
-		// 칸 + 설명
-		UVerticalBox* Card = WidgetTree->ConstructWidget<UVerticalBox>();
-		TerminusUI::AddRow(Card, RelicSlot, 0.f);
-
-		USizeBox* DescSize = WidgetTree->ConstructWidget<USizeBox>();
-		DescSize->SetWidthOverride(220.f);
-		UTextBlock* Desc = TerminusUI::MakeText(WidgetTree, NAME_None, TEXT(""), 14, TerminusUI::Color::TextBright);
-		Desc->SetText(Relic->RelicDesc);
-		Desc->SetAutoWrapText(true);
-		DescSize->SetContent(Desc);
-		TerminusUI::AddRow(Card, DescSize, 8.f);
+		Card->SetSlotClass(SlotClass);
+		Card->SetCaptionStyle(220.f, 14, TerminusUI::Color::TextBright);
+		Card->SetItem(true, Row, FVector2D(120.f, 120.f));
+		Card->SetCaption(Relic->RelicDesc.ToString());
+		Card->SetAction(FString(), false);
+		if (UItemSlotWidget* RelicSlot = Card->GetItemSlot())
+		{
+			RelicSlot->OnSlotClicked.BindUObject(this, &UMonsterRewardWidget::HandleRelicClicked);
+		}
 
 		if (UHorizontalBoxSlot* HSlot = Cast<UHorizontalBoxSlot>(RelicBox->AddChild(Card)))
 		{

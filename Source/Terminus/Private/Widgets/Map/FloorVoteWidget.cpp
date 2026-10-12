@@ -14,12 +14,7 @@
 #include "Player/TerminusPlayerController.h"
 #include "Widgets/Common/TerminusUIBuilder.h"
 #include "Widgets/TerminusUIColors.h"
-#include "Widgets/Common/TerminusClickRelay.h"
-
-namespace
-{
-	const FLinearColor VoteRed(0.85f, 0.3f, 0.28f);
-}
+#include "Widgets/Common/ChoiceCardWidget.h"
 
 void UFloorVoteWidget::NativeOnInitialized()
 {
@@ -116,7 +111,6 @@ void UFloorVoteWidget::RebuildCards()
 	if (!CardBox) return;
 
 	CardBox->ClearChildren();
-	Relays.Reset();
 
 	const bool bVoting = Shown.Phase == EFloorVotePhase::Voting;
 	const bool bRevealed = Shown.Phase == EFloorVotePhase::Done;
@@ -129,33 +123,28 @@ void UFloorVoteWidget::RebuildCards()
 		const bool bBetrayTaken = Choice == EFloorChoice::Betray && Count > 0;
 		const bool bWinner = bRevealed && Shown.Result == Choice;
 
-		UButton* Card = WidgetTree->ConstructWidget<UButton>();
-		Card->SetBackgroundColor(bWinner ? TerminusUI::Color::Gold : (bMine ? FLinearColor(0.55f, 0.5f, 0.35f) : (Choice == EFloorChoice::Betray ? VoteRed : FLinearColor(0.35f, 0.35f, 0.35f))));
-		Card->SetIsEnabled(bVoting && MyChoice == EFloorChoice::None && !bBetrayTaken);
-
-		UTerminusClickRelay::Bind(Card, this, FSimpleDelegate::CreateUObject(this, &UFloorVoteWidget::HandleCardClicked, Choice), Relays);
-
-		USizeBox* Size = WidgetTree->ConstructWidget<USizeBox>();
-		Size->SetWidthOverride(CardSize.X);
-		Size->SetHeightOverride(CardSize.Y);
-		Card->SetContent(Size);
-
-		UVerticalBox* Inside = WidgetTree->ConstructWidget<UVerticalBox>();
-		Size->SetContent(Inside);
-
-		Inside->AddChildToVerticalBox(TerminusUI::MakeWrapText(WidgetTree, NAME_None, ChoiceName(Choice), 24, FLinearColor::White));
-
-		UTextBlock* Desc = TerminusUI::MakeWrapText(WidgetTree, NAME_None, ChoiceDescription(Choice), 14, TerminusUI::Color::TextBright);
-		if (UVerticalBoxSlot* S = Inside->AddChildToVerticalBox(Desc))
-		{
-			S->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
-			S->SetPadding(FMargin(0.f, 14.f, 0.f, 0.f));
-		}
-
 		// 표 수 (누가 골랐는지는 공개 뒤에)
 		FString CountLabel = Shown.TotalVoters > 1 ? FString::Printf(TEXT("%d명 선택"), Count) : FString();
 		if (bMine) CountLabel += TEXT("  (내 선택)");
-		Inside->AddChildToVerticalBox(TerminusUI::MakeWrapText(WidgetTree, NAME_None, CountLabel, 16, TerminusUI::Color::Gold));
+
+		UChoiceCardWidget* Card = CreateWidget<UChoiceCardWidget>(this, CardClass ? CardClass : TSubclassOf<UChoiceCardWidget>(UChoiceCardWidget::StaticClass()));
+		if (!Card) continue;
+
+		FChoiceCardStyle CardStyle;
+		CardStyle.Size = CardSize;
+		CardStyle.TitleSize = 24;
+		CardStyle.NormalColor = FLinearColor(0.35f, 0.35f, 0.35f);
+		Card->ApplyDefaultStyle(CardStyle);
+
+		const UEnum* ChoiceEnum = StaticEnum<EFloorChoice>();
+		Card->SetChoiceId(ChoiceEnum ? FName(*ChoiceEnum->GetNameStringByValue(static_cast<int64>(Choice))) : NAME_None);
+		Card->SetTexts(ChoiceName(Choice), ChoiceDescription(Choice), CountLabel);
+		Card->SetState(bWinner ? EChoiceCardState::Highlight
+			: bMine ? EChoiceCardState::Selected
+			: Choice == EFloorChoice::Betray ? EChoiceCardState::Danger
+			: EChoiceCardState::Normal);
+		Card->SetChoiceEnabled(bVoting && MyChoice == EFloorChoice::None && !bBetrayTaken);
+		Card->OnChosen = FSimpleDelegate::CreateUObject(this, &UFloorVoteWidget::HandleCardClicked, Choice);
 
 		// 공개: 카드 아래에 고른 사람
 		UVerticalBox* CardColumn = WidgetTree->ConstructWidget<UVerticalBox>();

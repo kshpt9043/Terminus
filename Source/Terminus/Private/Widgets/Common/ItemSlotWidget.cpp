@@ -14,6 +14,7 @@
 #include "Data/TerminusDataSettings.h"
 #include "Engine/Texture2D.h"
 #include "Widgets/Skill/SkillTooltipWidget.h"
+#include "Widgets/Relic/RelicTooltipWidget.h"
 #include "Widgets/Common/TerminusUIText.h"
 
 // =====================================================================
@@ -33,6 +34,9 @@ void UItemSlotWidget::NativeOnInitialized()
 	{
 		SlotButton->OnClicked.AddDynamic(this, &UItemSlotWidget::HandleClicked);
 	}
+
+	if (Background) BackgroundColor = Background->GetBrushColor();
+	ApplyIconOnly();
 
 	if (!bShownOnce)
 	{
@@ -55,8 +59,9 @@ void UItemSlotWidget::BuildDefaultLayout()
 	Frame->SetPadding(FMargin(2.f));
 	SlotButton->SetContent(Frame);
 
-	UBorder* Inner = WidgetTree->ConstructWidget<UBorder>();
-	Inner->SetBrushColor(FLinearColor(0.07f, 0.06f, 0.06f, 0.95f));
+	UBorder* Inner = WidgetTree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("Background"));
+	Background = Inner;
+	Inner->SetBrushColor(BackgroundColor);
 	Inner->SetPadding(FMargin(4.f));
 	Inner->SetHorizontalAlignment(HAlign_Fill);
 	Inner->SetVerticalAlignment(VAlign_Center);
@@ -105,10 +110,24 @@ void UItemSlotWidget::BuildDefaultLayout()
 
 void UItemSlotWidget::SetShowName(bool bShow)
 {
+	bShowNameWanted = bShow;
 	if (NameText)
 	{
-		NameText->SetVisibility(bShow ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Collapsed);
+		NameText->SetVisibility(bShow && !bIconOnly ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Collapsed);
 	}
+}
+
+void UItemSlotWidget::SetIconOnly(bool bInIconOnly)
+{
+	bIconOnly = bInIconOnly;
+	ApplyIconOnly();
+}
+
+void UItemSlotWidget::ApplyIconOnly()
+{
+	SetShowName(bShowNameWanted);
+	if (Background) Background->SetBrushColor(bIconOnly ? FLinearColor::Transparent : BackgroundColor);
+	ApplyFrameColor();
 }
 
 void UItemSlotWidget::SetSlotSize(FVector2D Size)
@@ -206,9 +225,17 @@ void UItemSlotWidget::SetRelic(FName RelicRow)
 	ItemColor = TerminusUI::RelicTierColor(Relic->RelicTier);
 	ShowIcon(Relic->Icon.LoadSynchronous(), Relic->RelicName);
 
-	SetToolTip(nullptr);
-	SetToolTipText(FText::FromString(FString::Printf(TEXT("%s  [%s]\n%s"),
-		*Relic->RelicName.ToString(), *TerminusUI::RelicTierLabel(Relic->RelicTier), *Relic->RelicDesc.ToString())));
+	// 유물 툴팁 (칸마다 하나 만들어 두고 내용만 바꿈)
+	if (!RelicTooltip)
+	{
+		const TSubclassOf<URelicTooltipWidget> Class = RelicTooltipClass ? RelicTooltipClass : TSubclassOf<URelicTooltipWidget>(URelicTooltipWidget::StaticClass());
+		RelicTooltip = CreateWidget<URelicTooltipWidget>(this, Class);
+	}
+	if (RelicTooltip)
+	{
+		RelicTooltip->SetRelic(Relic);
+		SetToolTip(RelicTooltip);
+	}
 
 	ApplyFrameColor();
 	ApplyButtonEnabled();
@@ -236,7 +263,8 @@ void UItemSlotWidget::ApplyFrameColor()
 {
 	if (Frame)
 	{
-		Frame->SetBrushColor(bSelectedState ? SelectedColor : ItemColor);
+		// 아이콘만 모드면 테두리는 고를 때(강조)만
+		Frame->SetBrushColor(bSelectedState ? SelectedColor : (bIconOnly ? FLinearColor::Transparent : ItemColor));
 	}
 }
 

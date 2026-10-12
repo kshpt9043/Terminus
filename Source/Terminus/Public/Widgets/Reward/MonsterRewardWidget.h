@@ -6,6 +6,7 @@
 #include "MonsterRewardWidget.generated.h"
 
 class UButton;
+class UItemCardWidget;
 class UPanelWidget;
 class UTextBlock;
 class USkillCardWidget;
@@ -64,6 +65,10 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Reward")
 	TSubclassOf<UItemSlotWidget> SlotClass;
 
+	// 유물 후보 카드 하나 (칸 + 설명). 비우면 C++ 기본 모양. 칸을 누르면 고름
+	UPROPERTY(EditAnywhere, Category = "Reward")
+	TSubclassOf<UItemCardWidget> RelicCardClass;
+
 	// 기본 레이아웃일 때 바꿀 칸 고르기 패널 (비우면 C++ 기본)
 	UPROPERTY(EditAnywhere, Category = "Reward")
 	TSubclassOf<UItemPickPanelWidget> PickPanelClass;
@@ -92,8 +97,6 @@ private:
 	void Refresh();                 // 섹션 / 바꾸기 패널 / 결과 표시
 	void ShowSkillReplace();
 	void ShowRelicReplace();
-
-	UItemSlotWidget* MakeSlot();
 
 	void HandleCardClicked(FName SkillRow);
 	void HandleRelicClicked(UItemSlotWidget* ClickedSlot);

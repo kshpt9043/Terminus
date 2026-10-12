@@ -6,7 +6,7 @@
 #include "ShopWidget.generated.h"
 
 class UButton;
-class UTerminusClickRelay;
+class UItemCardWidget;
 class UPanelWidget;
 class UTextBlock;
 class UItemSlotWidget;
@@ -70,6 +70,14 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Shop")
 	FVector2D SlotSize = FVector2D(72.f, 72.f);
 
+	// 진열 칸을 아이콘만 보이게 (이름 / 테두리 없이, 정보는 마우스를 올리면 툴팁) (사용자 결정 2026-10-12)
+	UPROPERTY(EditAnywhere, Category = "Shop")
+	bool bIconOnlySlots = true;
+
+	// 진열 칸 하나 (칸 + 설명 + 구매 / 강화 / 판매 버튼). 비우면 C++ 기본 모양. 칸 모양은 SlotClass
+	UPROPERTY(EditAnywhere, Category = "Shop")
+	TSubclassOf<UItemCardWidget> CardClass;
+
 	// 기본 레이아웃일 때 바꿀 칸 고르기 패널 (비우면 C++ 기본)
 	UPROPERTY(EditAnywhere, Category = "Shop")
 	TSubclassOf<UItemPickPanelWidget> PickPanelClass;
@@ -80,8 +88,6 @@ private:
 	FString ShownKey;
 	TWeakObjectPtr<ATerminusPlayerState> WatchedPS;                       // 마지막으로 그린 내 상태 (재화 / 유물 / 스킬 / 강화 단계)
 
-	UPROPERTY()
-	TArray<TObjectPtr<UTerminusClickRelay>> Relays;
 
 	void BuildDefaultLayout();
 	void Rebuild();

@@ -486,6 +486,13 @@ protected:
 	UPROPERTY()
 	TObjectPtr<UMapScreenWidget> MapScreen;
 
+	// 휴식 / 이벤트 / 상점 화면 위의 지도 상단바 (지도 화면은 방에 들어가면 숨겨지므로 따로)
+	UPROPERTY()
+	TObjectPtr<class URoomTopBarWidget> RoomTopBar;
+
+	// 휴식 / 이벤트 / 상점 중 하나라도 떠 있으면 상단바를 보이고, 다 닫히면 숨김
+	void UpdateRoomTopBar();
+
 private:
 	TWeakObjectPtr<ADungeonArea> ViewedArea;
 

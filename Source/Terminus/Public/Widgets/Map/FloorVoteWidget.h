@@ -6,7 +6,7 @@
 #include "FloorVoteWidget.generated.h"
 
 class UButton;
-class UTerminusClickRelay;
+class UChoiceCardWidget;
 class UPanelWidget;
 class UTextBlock;
 class UFloorVoteWidget;
@@ -50,12 +50,15 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Floor Vote")
 	FVector2D CardSize = FVector2D(240.f, 300.f);
 
+	// 행선지 카드 하나. 비우면 C++ 기본 모양
+	// ChoiceId: EFloorChoice 이름. State: 내 선택 = Selected, 결과 = Highlight, 배신 = Danger
+	UPROPERTY(EditAnywhere, Category = "Floor Vote")
+	TSubclassOf<UChoiceCardWidget> CardClass;
+
 private:
 	FFloorVoteState Shown;
 	EFloorChoice MyChoice = EFloorChoice::None;
 
-	UPROPERTY()
-	TArray<TObjectPtr<UTerminusClickRelay>> Relays;
 
 	void BuildDefaultLayout();
 	void RebuildCards();

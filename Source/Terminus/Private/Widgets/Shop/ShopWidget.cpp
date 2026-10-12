@@ -17,7 +17,7 @@
 #include "Widgets/Common/ItemSlotWidget.h"
 #include "Widgets/Common/TerminusUIBuilder.h"
 #include "Widgets/TerminusUIColors.h"
-#include "Widgets/Common/TerminusClickRelay.h"
+#include "Widgets/Common/ItemCardWidget.h"
 
 namespace
 {
@@ -179,34 +179,15 @@ void UShopWidget::AddCard(UPanelWidget* Box, bool bRelic, FName Row, const FStri
 {
 	if (!Box) return;
 
-	UVerticalBox* Card = WidgetTree->ConstructWidget<UVerticalBox>();
+	UItemCardWidget* Card = CreateWidget<UItemCardWidget>(this, CardClass ? CardClass : TSubclassOf<UItemCardWidget>(UItemCardWidget::StaticClass()));
+	if (!Card) return;
 
-	const TSubclassOf<UItemSlotWidget> Class = SlotClass ? SlotClass : TSubclassOf<UItemSlotWidget>(UItemSlotWidget::StaticClass());
-	if (UItemSlotWidget* ItemSlot = CreateWidget<UItemSlotWidget>(this, Class))
-	{
-		ItemSlot->SetSlotSize(SlotSize);
-		ItemSlot->SetShowName(true);
-		if (bRelic) ItemSlot->SetRelic(Row);
-		else        ItemSlot->SetSkill(Row);
-		if (UVerticalBoxSlot* S = Card->AddChildToVerticalBox(ItemSlot)) S->SetHorizontalAlignment(HAlign_Center);
-	}
-
-	if (!Caption.IsEmpty())
-	{
-		if (UVerticalBoxSlot* S = Card->AddChildToVerticalBox(TerminusUI::MakeText(WidgetTree, NAME_None, Caption, 13, TerminusUI::Color::TextMuted)))
-		{
-			S->SetHorizontalAlignment(HAlign_Center);
-		}
-	}
-
-	UButton* Button = TerminusUI::MakeButton(WidgetTree, NAME_None, ButtonLabel, 13, FLinearColor::White, bEnabled ? ShopBuyColor : TerminusUI::Color::ButtonIdle);
-	Button->SetIsEnabled(bEnabled);
-	UTerminusClickRelay::Bind(Button, this, FSimpleDelegate::CreateUObject(this, &UShopWidget::HandleAction, Action, Index, Row), Relays);
-	if (UVerticalBoxSlot* S = Card->AddChildToVerticalBox(Button))
-	{
-		S->SetHorizontalAlignment(HAlign_Center);
-		S->SetPadding(FMargin(0.f, 4.f, 0.f, 0.f));
-	}
+	Card->SetSlotClass(SlotClass);
+	Card->SetItem(bRelic, Row, SlotSize);
+	if (UItemSlotWidget* ItemSlot = Card->GetItemSlot()) ItemSlot->SetIconOnly(bIconOnlySlots);
+	Card->SetCaption(Caption);
+	Card->SetAction(ButtonLabel, bEnabled, bEnabled ? ShopBuyColor : TerminusUI::Color::ButtonIdle);
+	Card->OnAction = FSimpleDelegate::CreateUObject(this, &UShopWidget::HandleAction, Action, Index, Row);
 
 	UPanelSlot* PanelSlot = Box->AddChild(Card);
 	if (UHorizontalBoxSlot* HS = Cast<UHorizontalBoxSlot>(PanelSlot)) HS->SetPadding(FMargin(0.f, 0.f, 10.f, 0.f));
@@ -215,7 +196,6 @@ void UShopWidget::AddCard(UPanelWidget* Box, bool bRelic, FName Row, const FStri
 void UShopWidget::Rebuild()
 {
 	ShownKey = MakeStateKey();
-	Relays.Reset();
 
 	const APlayerController* PC = GetOwningPlayer();
 	const ATerminusPlayerState* PS = PC ? PC->GetPlayerState<ATerminusPlayerState>() : nullptr;
