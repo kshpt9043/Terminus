@@ -1188,6 +1188,14 @@ void ATerminusPlayerController::CheckStartSkillPick()
 
 	GetWorldTimerManager().ClearTimer(StartSkillCheckTimer);
 
+	// 주점 화면(캐릭터 선택)은 BeginPlay 에서 레벨을 가리지 않고 만들어짐 -> 던전이면 닫고 입력 모드도 되돌림
+	// (안 닫으면 지도 밑에 깔려 있다가 화면을 안 띄우는 방(퀘스트)에 들어가면 드러남)
+	if (TavernWidget)
+	{
+		ClosePCWidget(TavernWidget);
+		ApplyUIInputMode();
+	}
+
 	// 고르기가 서버에서 확정될 때마다(복제로 RunState 가 바뀌면) 다음 단계로
 	PS->OnRunStateChanged.AddUniqueDynamic(this, &ATerminusPlayerController::HandleLocalRunStateChanged);
 	ContinueStartFlow(PS->GetRunState());
