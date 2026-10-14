@@ -25,6 +25,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "Framework/Application/SlateApplication.h"
 #include "Widgets/Common/TerminusUIBuilder.h"
+#include "Widgets/TerminusUIColors.h"
 #include "Widgets/TerminusUISettings.h"
 
 namespace
@@ -408,6 +409,7 @@ void UCombatHUDWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime
 		CancelTargeting();
 	}
 
+	UpdateSkillDrag();
 	UpdateTags();
 	UpdatePanels();
 	UpdateSharedPlan();
@@ -433,8 +435,12 @@ void UCombatHUDWidget::UpdateTags()
 		}
 	}
 
-	for (FBattlerTag& Tag : Tags)
+	// 드래그 중이면 커서 아래 대상을 진하게
+	const int32 DragHoverTag = bDraggingSkill ? FindTargetTagUnderCursor() : INDEX_NONE;
+
+	for (int32 TagIndex = 0; TagIndex < Tags.Num(); ++TagIndex)
 	{
+		FBattlerTag& Tag = Tags[TagIndex];
 		ATerminusBattler* Battler = Tag.Battler.Get();
 		const UCombatStatsComponent* Stats = Battler ? Battler->GetCombatStats() : nullptr;
 		const bool bAlive = Stats && !Stats->IsDead() && !Battler->IsHidden();
@@ -504,6 +510,12 @@ void UCombatHUDWidget::UpdateTags()
 			if (bSelectable)
 			{
 				Place(Target, BodyCenterHeight);
+
+				const FLinearColor TargetColor(1.f, 0.85f, 0.3f, TagIndex == DragHoverTag ? 0.75f : 0.35f);
+				if (!Target->GetBackgroundColor().Equals(TargetColor))
+				{
+					Target->SetBackgroundColor(TargetColor);
+				}
 			}
 		}
 	}
@@ -569,7 +581,8 @@ void UCombatHUDWidget::UpdatePanels()
 
 	if (HintText)
 	{
-		TerminusUI::SetTextIfChanged(HintText, PendingSkillIndex != INDEX_NONE ? TEXT("대상을 선택하세요  (우클릭: 취소 · Shift+클릭: 쓰지 않고 예약만 공유)")
+		TerminusUI::SetTextIfChanged(HintText, bDraggingSkill ? TEXT("대상 위에서 놓으면 사용  (대상 밖에서 놓으면 취소 · Shift: 쓰지 않고 예약만 공유)")
+			: PendingSkillIndex != INDEX_NONE ? TEXT("대상을 선택하세요  (우클릭: 취소 · Shift+클릭: 쓰지 않고 예약만 공유)")
 			: DeclaredSkillIndex != INDEX_NONE ? TEXT("예약을 파티에 공유 중  (같은 스킬 Shift+클릭: 예약 취소)")
 			: TEXT(""));
 	}
@@ -680,10 +693,160 @@ void UCombatHUDWidget::OnSkillClicked(int32 SkillIndex)
 
 void UCombatHUDWidget::CancelTargeting()
 {
+	// 드래그 중이었으면 그것도 끝냄 (칸 버튼은 아직 눌려 있을 수 있음 -> 손을 뗄 때까지 같은 누름으로 다시 시작하지 않게)
+	if (bDraggingSkill)
+	{
+		bDraggingSkill = false;
+		bSkillPressConsumed = true;
+		if (UTextBlock* Ghost = DragGhost.Get())
+		{
+			Ghost->SetVisibility(ESlateVisibility::Collapsed);
+		}
+	}
+
 	if (PendingSkillIndex == INDEX_NONE) return;
 
 	PendingSkillIndex = INDEX_NONE;
 	UpdateVisibility();
+}
+
+// =====================================================================
+// 스킬 드래그: 칸을 누른 채 끌어서 대상 위에서 놓기
+// =====================================================================
+
+void UCombatHUDWidget::UpdateSkillDrag()
+{
+	if (!FSlateApplication::IsInitialized()) return;
+	const FVector2D CursorPos = FSlateApplication::Get().GetCursorPos();
+
+	if (bDraggingSkill)
+	{
+		// 놓았으면(칸 버튼이 더는 안 눌림) 그 자리 대상에게
+		const TObjectPtr<UItemSlotWidget>* Held = SkillSlots.FindByPredicate([this](const TObjectPtr<UItemSlotWidget>& S)
+		{
+			return S && S->GetSlotIndex() == PressedSkillIndex;
+		});
+		if (!Held || !*Held || !(*Held)->IsPressed())
+		{
+			FinishSkillDrag();
+			return;
+		}
+
+		// 커서를 따라다니는 스킬 이름
+		if (UTextBlock* Ghost = DragGhost.Get())
+		{
+			if (UCanvasPanelSlot* GhostSlot = Cast<UCanvasPanelSlot>(Ghost->Slot))
+			{
+				GhostSlot->SetPosition(UWidgetLayoutLibrary::GetMousePositionOnViewport(this) + FVector2D(18.f, 10.f));
+			}
+		}
+		return;
+	}
+
+	// 누르고 있는 칸 찾기 (비용 부족 / 내 턴 아님이면 칸 버튼이 꺼져 있어 안 눌림)
+	const UItemSlotWidget* Pressed = nullptr;
+	for (const UItemSlotWidget* SkillSlot : SkillSlots)
+	{
+		if (SkillSlot && SkillSlot->IsPressed())
+		{
+			Pressed = SkillSlot;
+			break;
+		}
+	}
+
+	if (!Pressed)
+	{
+		PressedSkillIndex = INDEX_NONE;
+		bSkillPressConsumed = false;
+		return;
+	}
+
+	// 새로 누르기 시작함 -> 시작 위치 기억
+	if (Pressed->GetSlotIndex() != PressedSkillIndex)
+	{
+		PressedSkillIndex = Pressed->GetSlotIndex();
+		PressStartPos = CursorPos;
+		bSkillPressConsumed = false;
+		return;
+	}
+
+	if (bSkillPressConsumed) return;
+
+	// 조금 움직인 건 클릭으로 둠. 드래그로 쓸 수 있는 건 대상을 고르는 스킬(적 1명 / 아군 1명)만
+	if (FVector2D::Distance(CursorPos, PressStartPos) < SkillDragStartDistance) return;
+
+	const ATerminusPlayerController* PC = GetOwningPlayer<ATerminusPlayerController>();
+	const ATerminusPlayerState* LocalPS = PC ? PC->GetPlayerState<ATerminusPlayerState>() : nullptr;
+	const FSkillRow* Skill = LocalPS ? LocalPS->GetCombatSkill(PressedSkillIndex) : nullptr;
+	if (!Skill || (Skill->TargetType != ETargetType::SingleEnemy && Skill->TargetType != ETargetType::SingleAlly)) return;
+
+	// 관전 중인 구역에선 못 씀 (클릭과 같은 규칙)
+	if (const ADungeonArea* Viewed = Area.Get(); !Viewed || !Viewed->GetOccupants().ContainsByPredicate(
+		[LocalPS](const TObjectPtr<ATerminusPlayerState>& P) { return P.Get() == LocalPS; }))
+	{
+		return;
+	}
+
+	// 대상 고르기 모드로 들어감 -> 대상 버튼이 보이고 동료 화면에도 계획이 보임
+	bDraggingSkill = true;
+	PendingSkillIndex = PressedSkillIndex;
+	UpdateVisibility();
+
+	if (!DragGhost.IsValid() && TagLayer)
+	{
+		UTextBlock* Ghost = MakeHUDText(WidgetTree, TEXT(""), 18, TerminusUI::Color::Gold);
+		TerminusUI::AddShadow(Ghost);
+		if (UCanvasPanelSlot* GhostSlot = TagLayer->AddChildToCanvas(Ghost))
+		{
+			GhostSlot->SetAutoSize(true);
+			GhostSlot->SetZOrder(100);
+		}
+		DragGhost = Ghost;
+	}
+	if (UTextBlock* Ghost = DragGhost.Get())
+	{
+		Ghost->SetText(Skill->DisplayName_KR);
+		Ghost->SetVisibility(ESlateVisibility::HitTestInvisible);
+	}
+}
+
+void UCombatHUDWidget::FinishSkillDrag()
+{
+	const int32 TagIndex = FindTargetTagUnderCursor();
+	const int32 SkillIndex = PendingSkillIndex;
+	const bool bShift = FSlateApplication::IsInitialized() && FSlateApplication::Get().GetModifierKeys().IsShiftDown();
+
+	PressedSkillIndex = INDEX_NONE;
+	CancelTargeting();   // 드래그 / 대상 고르기 끝 (대상 밖에서 놓았으면 여기서 그냥 취소)
+
+	ATerminusPlayerController* PC = GetOwningPlayer<ATerminusPlayerController>();
+	if (!PC || SkillIndex == INDEX_NONE || !Tags.IsValidIndex(TagIndex)) return;
+
+	// Shift: 쓰지 않고 이 대상으로 예약만 공유 (Shift + 클릭과 같음)
+	if (bShift)
+	{
+		DeclarePlan(SkillIndex, Tags[TagIndex].Battler.Get());
+		return;
+	}
+
+	PC->Server_UseSkill(SkillIndex, Tags[TagIndex].Index);
+	NotifySkillUsed();
+}
+
+int32 UCombatHUDWidget::FindTargetTagUnderCursor() const
+{
+	if (!FSlateApplication::IsInitialized()) return INDEX_NONE;
+	const FVector2D CursorPos = FSlateApplication::Get().GetCursorPos();
+
+	for (int32 i = 0; i < Tags.Num(); ++i)
+	{
+		const UButton* Target = Tags[i].TargetButton.Get();
+		if (Target && Target->IsVisible() && Target->GetCachedGeometry().IsUnderLocation(CursorPos))
+		{
+			return i;
+		}
+	}
+	return INDEX_NONE;
 }
 
 void UCombatHUDWidget::HandleEndTurnClicked()
@@ -771,6 +934,13 @@ void UCombatHUDWidget::NotifySkillUsed()
 
 ATerminusBattler* UCombatHUDWidget::GetHoveredTarget() const
 {
+	// 드래그 중엔 칸 버튼이 마우스를 잡고 있어 hover 가 안 바뀜 -> 화면 영역으로 판정
+	if (bDraggingSkill)
+	{
+		const int32 TagIndex = FindTargetTagUnderCursor();
+		return Tags.IsValidIndex(TagIndex) ? Tags[TagIndex].Battler.Get() : nullptr;
+	}
+
 	for (const FBattlerTag& Tag : Tags)
 	{
 		const UButton* Target = Tag.TargetButton.Get();

@@ -31,6 +31,8 @@ class UVerticalBox;
  *  - 칸 번호 0~2 = 기본 스킬, 3~ = 강화 스킬. 강화 칸 수는 캐릭터 EnhanceSlots 를 따름 (최대 3)
  *
  * 스킬 사용: 적 1명 / 아군 1명 스킬은 누르면 대상 고르기 모드 -> 대상 클릭. 우클릭이나 같은 스킬을 다시 누르면 취소
+ *  - 드래그: 스킬 칸을 누른 채 끌어서 대상 위에서 놓으면 바로 사용 (대상 밖에서 놓으면 취소, Shift 를 누른 채 놓으면 예약만)
+ *    칸 버튼이 마우스를 잡고 있어 대상 버튼의 hover 가 안 바뀜 -> 놓는 위치는 대상 버튼의 화면 영역으로 직접 판정
  *
  * 행동 계획 공유 (UPartyCommsWidget 이 표시): 대상 고르는 중이면 마우스가 올라간 대상이 동료 화면에 실시간으로 보임
  *  - Shift + 대상 클릭 (또는 자신 / 전체 스킬을 Shift + 클릭) = 쓰지 않고 '예약' 만 공유. 이번 사이클 동안 유지
@@ -98,6 +100,10 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Combat HUD")
 	float SkillSlotSpacing = 8.f;
 
+	// 스킬 칸을 누른 채 이만큼(화면 px) 움직이면 드래그로 봄. 그보다 덜 움직이고 놓으면 그냥 클릭
+	UPROPERTY(EditAnywhere, Category = "Combat HUD")
+	float SkillDragStartDistance = 10.f;
+
 private:
 	// 캐릭터 / 몬스터 하나를 따라다니는 표시 묶음
 	struct FBattlerTag
@@ -148,6 +154,23 @@ private:
 
 	void OnSkillClicked(int32 SkillIndex);
 	void CancelTargeting();
+
+	// ---- 스킬 드래그 (칸을 누른 채 끌어서 대상에 놓기)
+	int32 PressedSkillIndex = INDEX_NONE;   // 누르고 있는 칸 (아직 드래그 전일 수도 있음)
+	FVector2D PressStartPos = FVector2D::ZeroVector;   // 누르기 시작한 커서 위치 (데스크톱 좌표)
+	bool bDraggingSkill = false;
+
+	// 이번 누름은 이미 드래그로 끝났음 (취소 / 턴 넘어감). 손을 뗄 때까지 다시 드래그로 안 봄
+	bool bSkillPressConsumed = false;
+
+	// 커서를 따라다니는 스킬 이름 (TagLayer 에 처음 드래그할 때 만듦)
+	TWeakObjectPtr<UTextBlock> DragGhost;
+
+	void UpdateSkillDrag();
+	void FinishSkillDrag();
+
+	// 커서 아래에 있는(보이는) 대상 버튼의 Tags 인덱스. 없으면 INDEX_NONE
+	int32 FindTargetTagUnderCursor() const;
 
 	// ---- 행동 계획 공유
 	// Shift 로 예약한 계획 (INDEX_NONE = 없음). 예약한 사이클이 지나면 버림

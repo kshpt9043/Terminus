@@ -69,6 +69,9 @@ public:
 	EItemSlotKind GetKind() const { return Kind; }
 	FName GetItemRow() const { return ItemRow; }
 
+	// 칸 버튼을 누르고 있는 중인지 (전투 HUD 의 스킬 드래그용). 버튼이 없으면 false
+	bool IsPressed() const;
+
 	FOnItemSlotClicked OnSlotClicked;
 
 protected:

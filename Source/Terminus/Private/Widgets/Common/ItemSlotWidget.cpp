@@ -281,3 +281,8 @@ void UItemSlotWidget::HandleClicked()
 {
 	OnSlotClicked.ExecuteIfBound(this);
 }
+
+bool UItemSlotWidget::IsPressed() const
+{
+	return SlotButton && SlotButton->GetIsEnabled() && SlotButton->IsPressed();
+}
