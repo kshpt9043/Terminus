@@ -4,6 +4,7 @@
 #include "Blueprint/WidgetTree.h"
 #include "Components/Border.h"
 #include "Components/Button.h"
+#include "Components/EditableTextBox.h"
 #include "Components/Image.h"
 #include "Components/TextBlock.h"
 #include "Components/VerticalBox.h"
@@ -128,6 +129,17 @@ namespace TerminusUI
 					{
 						Text->SetColorAndOpacity(FSlateColor(Color::TextBody));
 					}
+				}
+			}
+			else if (UEditableTextBox* Input = Cast<UEditableTextBox>(Widget))
+			{
+				// 입력칸 글자도 테마 글꼴 (한글 입력)
+				FEditableTextBoxStyle Style = Input->WidgetStyle;
+				if (!IsThemeFont(Style.TextStyle.Font))
+				{
+					Style.TextStyle.Font = ToThemeFont(Style.TextStyle.Font);
+					Input->WidgetStyle = Style;
+					Input->SynchronizeProperties();
 				}
 			}
 			else if (UButton* Button = Cast<UButton>(Widget))

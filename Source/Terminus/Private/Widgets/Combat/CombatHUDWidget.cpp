@@ -11,7 +11,14 @@
 #include "Components/CanvasPanelSlot.h"
 #include "Components/HorizontalBox.h"
 #include "Components/HorizontalBoxSlot.h"
+#include "Components/Image.h"
+#include "Components/Overlay.h"
+#include "Components/OverlaySlot.h"
 #include "Components/ProgressBar.h"
+#include "Components/SizeBox.h"
+#include "Components/WrapBox.h"
+#include "Components/WrapBoxSlot.h"
+#include "Engine/Texture2D.h"
 #include "Components/TextBlock.h"
 #include "Components/VerticalBox.h"
 #include "Components/VerticalBoxSlot.h"
@@ -37,15 +44,15 @@ namespace
 	const FLinearColor& PlayerHealthColor = TerminusUI::Color::Ready;    // 시안: 아군은 초록
 	const FLinearColor& MonsterHealthColor = TerminusUI::Color::Alert;   // 시안: 적은 빨강
 
-	// 대상 선택 버튼: 반투명 금 판 + 금 테두리. 끌어다 올린 대상은 진하게 (버튼 틴트 알파로)
+	// 대상 선택 버튼: 시안의 대상 강조 (캐릭터 둘레 금 테두리 2px, 마우스 올리면 밝은 금 3px). 속은 비움
 	FButtonStyle MakeTargetButtonStyle()
 	{
 		FButtonStyle Style = TerminusUI::MakeFlatButtonStyle(TerminusUI::Color::Card);
-		Style.Normal = TerminusUI::MakeBoxBrush(TerminusUI::Hex(TEXT("C9A45C"), 0.6f), TerminusUI::Color::GoldBase);
-		Style.Hovered = TerminusUI::MakeBoxBrush(TerminusUI::Hex(TEXT("E6C47A"), 0.8f), TerminusUI::Color::GoldHover);
-		Style.Pressed = TerminusUI::MakeBoxBrush(TerminusUI::Hex(TEXT("A8894A"), 0.8f), TerminusUI::Color::GoldPressed);
-		Style.NormalPadding = FMargin(4.f);
-		Style.PressedPadding = FMargin(4.f, 5.f, 4.f, 3.f);
+		Style.Normal = TerminusUI::MakeBoxBrush(TerminusUI::Hex(TEXT("FFEDA0"), 0.06f), TerminusUI::Hex(TEXT("FFEDA0")), 0.f, 2.f);
+		Style.Hovered = TerminusUI::MakeBoxBrush(TerminusUI::Hex(TEXT("FFF6D0"), 0.14f), TerminusUI::Hex(TEXT("FFF6D0")), 0.f, 3.f);
+		Style.Pressed = TerminusUI::MakeBoxBrush(TerminusUI::Hex(TEXT("FFF6D0"), 0.2f), TerminusUI::Hex(TEXT("FFF6D0")), 0.f, 3.f);
+		Style.NormalPadding = FMargin(0.f);
+		Style.PressedPadding = FMargin(0.f);
 		return Style;
 	}
 
@@ -82,19 +89,89 @@ namespace
 		return Slot;
 	}
 
-	FString IntentLabel(const FMonsterIntent& Intent)
+	// 행동 예고: 아이콘 번호 (공격 / 방어 / 버프 / 디버프) + 숫자 (공격만, 연타는 "4x2")
+	int32 IntentIconIndex(const FMonsterIntent& Intent)
 	{
-		// TODO: 기획은 아이콘. 아이콘 에셋이 생기면 이미지로
 		switch (Intent.Kind)
 		{
-		case EMonsterIntentKind::Attack:
-			return Intent.HitCount > 1
-				? FString::Printf(TEXT("공격 %dx%d"), Intent.Amount, Intent.HitCount)
-				: FString::Printf(TEXT("공격 %d"), Intent.Amount);
-		case EMonsterIntentKind::Defend: return TEXT("방어");
-		case EMonsterIntentKind::Buff:   return TEXT("버프");
-		default:                          return TEXT("디버프");
+		case EMonsterIntentKind::Attack: return 0;
+		case EMonsterIntentKind::Defend: return 1;
+		case EMonsterIntentKind::Buff:   return 2;
+		default:                          return 3;
 		}
+	}
+
+	FString IntentNumber(const FMonsterIntent& Intent)
+	{
+		if (Intent.Kind != EMonsterIntentKind::Attack) return FString();
+		return Intent.HitCount > 1 ? FString::Printf(TEXT("%dx%d"), Intent.Amount, Intent.HitCount) : FString::FromInt(Intent.Amount);
+	}
+
+	// 상태이상 글자 칸 (전투 시안): 이로움 금 / 청, 해로움 적 / 보라
+	struct FStatusLook { const TCHAR* Letter; const TCHAR* Hex; };
+	FStatusLook GetStatusLook(EStatusEffect Type)
+	{
+		switch (Type)
+		{
+		case EStatusEffect::Counter:        return { TEXT("반"), TEXT("FFD978") };
+		case EStatusEffect::Mark:           return { TEXT("급"), TEXT("FFD978") };
+		case EStatusEffect::Evasion:        return { TEXT("회"), TEXT("7FB8E8") };
+		case EStatusEffect::Poison:         return { TEXT("중"), TEXT("B07CD8") };
+		case EStatusEffect::Brave:          return { TEXT("용"), TEXT("FFD978") };
+		case EStatusEffect::Protection:     return { TEXT("가"), TEXT("7FB8E8") };
+		case EStatusEffect::Ice:            return { TEXT("얼"), TEXT("B07CD8") };
+		case EStatusEffect::Lava:           return { TEXT("용"), TEXT("FF5A4A") };
+		case EStatusEffect::Metal:          return { TEXT("강"), TEXT("7FB8E8") };
+		case EStatusEffect::Acid:           return { TEXT("산"), TEXT("FF5A4A") };
+		case EStatusEffect::Fear:           return { TEXT("공"), TEXT("B07CD8") };
+		case EStatusEffect::Fusion:         return { TEXT("퓨"), TEXT("FFD978") };
+		case EStatusEffect::Vitality:       return { TEXT("활"), TEXT("FFD978") };
+		case EStatusEffect::Reflux:         return { TEXT("역"), TEXT("FF5A4A") };
+		case EStatusEffect::InternalInjury: return { TEXT("내"), TEXT("FF5A4A") };
+		case EStatusEffect::Immortality:    return { TEXT("불"), TEXT("7FB8E8") };
+		case EStatusEffect::Absorption:     return { TEXT("흡"), TEXT("FFD978") };
+		case EStatusEffect::Solid:          return { TEXT("견"), TEXT("7FB8E8") };
+		case EStatusEffect::Indomitable:    return { TEXT("불"), TEXT("FFD978") };
+		case EStatusEffect::IronWall:       return { TEXT("철"), TEXT("7FB8E8") };
+		default:                            return { TEXT("?"), TEXT("A89F8C") };
+		}
+	}
+
+	// 턴 띠 단계별 색 (글자 / 띠 바탕 / 띠 진하기 / 위아래 선)
+	struct FPhaseLook { const TCHAR* Text; const TCHAR* Band; float BandAlpha; const TCHAR* Line; };
+	enum EPhaseStyle : int32 { Phase_Mine, Phase_Waiting, Phase_Enemy, Phase_Defeat, Phase_Betrayer, Phase_Victory };
+	const FPhaseLook PhaseLooks[] =
+	{
+		{ TEXT("FFEDA0"), TEXT("403212"), 0.88f, TEXT("FFD978") },   // 내 턴
+		{ TEXT("A89F8C"), TEXT("1C1A22"), 0.72f, TEXT("5A5562") },   // 다른 플레이어를 기다리는 중
+		{ TEXT("FFC2B8"), TEXT("4A1012"), 0.88f, TEXT("FF4A3A") },   // 적의 턴
+		{ TEXT("8C8796"), TEXT("0E0D10"), 0.88f, TEXT("6A6470") },   // 패배
+		{ TEXT("FFD2CC"), TEXT("5A0A0E"), 0.92f, TEXT("FF3A3A") },   // 배신자의 턴
+		{ TEXT("FFD978"), TEXT("403212"), 0.88f, TEXT("FFD978") },   // 승리
+	};
+
+	UTexture2D* LoadCombatTexture(const TCHAR* Name)
+	{
+		const FString Path = FString::Printf(TEXT("/Game/UI/Textures/Combat/%s.%s"), Name, Name);
+		return LoadObject<UTexture2D>(nullptr, *Path);
+	}
+
+	// 굵은 숫자 + 검은 외곽선 (행동 예고)
+	void SetOutlinedFont(UTextBlock* Text, int32 Size)
+	{
+		FSlateFontInfo Font = TerminusUI::GetFont(Size, true);
+		Font.OutlineSettings.OutlineSize = 2;
+		Font.OutlineSettings.OutlineColor = FLinearColor::Black;
+		Text->SetFont(Font);
+	}
+
+	USizeBox* MakeSized(UWidgetTree* Tree, UWidget* Content, float Width, float Height)
+	{
+		USizeBox* Box = Tree->ConstructWidget<USizeBox>();
+		if (Width > 0.f) Box->SetWidthOverride(Width);
+		if (Height > 0.f) Box->SetHeightOverride(Height);
+		Box->SetContent(Content);
+		return Box;
 	}
 }
 
@@ -112,6 +189,8 @@ void UCombatHUDWidget::NativeOnInitialized()
 		BuildDefaultLayout();
 	}
 
+	LoadCombatTextures();
+
 	// 칸은 강화 칸 수를 알게 되면(내 배틀러 스텟) 다시 만듦. 우선 기본값으로
 	BuildSkillSlots(ATerminusPlayerState::NumEnhanceSkills);
 
@@ -121,7 +200,7 @@ void UCombatHUDWidget::NativeOnInitialized()
 		RelicBar = CreateWidget<URelicBarWidget>(this, UTerminusUISettings::Pick(RelicBarClass, &UTerminusUISettings::RelicBar));
 		if (RelicBar)
 		{
-			AddToCanvas(TagLayer, RelicBar, FAnchors(1.f, 1.f), FVector2D(1.f, 1.f), FVector2D(-24.f, -130.f));
+			AddToCanvas(TagLayer, RelicBar, FAnchors(1.f, 1.f), FVector2D(1.f, 1.f), FVector2D(-28.f, -176.f));
 		}
 	}
 
@@ -195,7 +274,7 @@ void UCombatHUDWidget::BuildDefaultLayout()
 	// 턴 종료 = 주 행동 육각 버튼
 	EndTurnButton = WidgetTree->ConstructWidget<UButton>();
 	TerminusUI::StyleHexButton(EndTurnButton, TerminusUI::EHexButton::Primary);
-	UTextBlock* EndTurnLabel = MakeHUDText(WidgetTree, TEXT("턴 종료"), 20, TerminusUI::Color::TextBody);
+	EndTurnLabel = MakeHUDText(WidgetTree, TEXT("턴 종료"), 20, TerminusUI::Color::TextBody);
 	TerminusUI::SetBold(EndTurnLabel);
 	TerminusUI::SetLetterSpacing(EndTurnLabel, 120);
 	EndTurnButton->SetContent(EndTurnLabel);
@@ -229,6 +308,7 @@ void UCombatHUDWidget::BuildSkillSlots(int32 EnhanceCount)
 	NumEnhanceSlots = EnhanceCount;
 
 	SkillSlots.Reset();
+	SkillDecos.Reset();
 	if (SkillBox) SkillBox->ClearChildren();
 	if (EnhanceSkillBox) EnhanceSkillBox->ClearChildren();
 
@@ -252,12 +332,64 @@ UItemSlotWidget* UCombatHUDWidget::AddSkillSlot(UPanelWidget* Box, int32 SlotInd
 
 	SkillSlot->SetSlotIndex(SlotIndex);
 	SkillSlot->OnSlotClicked.BindUObject(this, &UCombatHUDWidget::HandleSkillSlotClicked);
-	if (!SkillSlotClass)
+	SkillSlot->SetSlotSize(FVector2D(92.f, 84.f));   // 전투 시안 칸 92x84 (WBP 칸도 SlotSizeBox 가 있으면 맞춤)
+
+	// 칸을 겹침 판으로 감싸고 그 위에 시안 장식: 왼쪽 위 층 마름모 / 오른쪽 위 비용 원 / 오른쪽 강화 +N
+	UOverlay* Holder = WidgetTree->ConstructWidget<UOverlay>();
+	if (UOverlaySlot* S = Holder->AddChildToOverlay(SkillSlot))
 	{
-		SkillSlot->SetSlotSize(FVector2D(92.f, 84.f));   // C++ 기본 칸이면 전투용 크기
+		S->SetHorizontalAlignment(HAlign_Fill);
+		S->SetVerticalAlignment(VAlign_Fill);
 	}
 
-	if (UHorizontalBoxSlot* HSlot = Cast<UHorizontalBoxSlot>(Box->AddChild(SkillSlot)))
+	FSkillDeco& Deco = SkillDecos.AddDefaulted_GetRef();
+	Deco.Holder = Holder;
+
+	UHorizontalBox* Pips = WidgetTree->ConstructWidget<UHorizontalBox>();
+	Pips->SetVisibility(ESlateVisibility::HitTestInvisible);
+	if (UOverlaySlot* S = Holder->AddChildToOverlay(Pips))
+	{
+		S->SetHorizontalAlignment(HAlign_Left);
+		S->SetVerticalAlignment(VAlign_Top);
+		S->SetPadding(FMargin(8.f, 8.f, 0.f, 0.f));
+	}
+	Deco.TierPips = Pips;
+
+	UBorder* Cost = WidgetTree->ConstructWidget<UBorder>();
+	Cost->SetPadding(FMargin(0.f));
+	Cost->SetHorizontalAlignment(HAlign_Center);
+	Cost->SetVerticalAlignment(VAlign_Center);
+	Cost->SetVisibility(ESlateVisibility::HitTestInvisible);
+	UTextBlock* CostLabel = TerminusUI::MakeText(WidgetTree, NAME_None, TEXT(""), 13, FLinearColor::White);
+	TerminusUI::SetBold(CostLabel);
+	CostLabel->SetColorAndOpacity(FSlateColor(FLinearColor::White));
+	Cost->SetContent(CostLabel);
+	if (UOverlaySlot* S = Holder->AddChildToOverlay(MakeSized(WidgetTree, Cost, 24.f, 24.f)))
+	{
+		S->SetHorizontalAlignment(HAlign_Right);
+		S->SetVerticalAlignment(VAlign_Top);
+		S->SetPadding(FMargin(0.f, -8.f, -8.f, 0.f));
+	}
+	Deco.CostBadge = Cost;
+	Deco.CostText = CostLabel;
+
+	UBorder* Upgrade = WidgetTree->ConstructWidget<UBorder>();
+	Upgrade->SetBrush(TerminusUI::MakeBoxBrush(TerminusUI::Color::GoldBase, TerminusUI::Color::GoldBase, 0.f, 0.f));
+	Upgrade->SetPadding(FMargin(4.f, 0.f));
+	Upgrade->SetVisibility(ESlateVisibility::Collapsed);
+	UTextBlock* UpgradeLabel = TerminusUI::MakeText(WidgetTree, NAME_None, TEXT(""), 11, TerminusUI::Hex(TEXT("1A1410")));
+	TerminusUI::SetBold(UpgradeLabel);
+	Upgrade->SetContent(UpgradeLabel);
+	if (UOverlaySlot* S = Holder->AddChildToOverlay(Upgrade))
+	{
+		S->SetHorizontalAlignment(HAlign_Right);
+		S->SetVerticalAlignment(VAlign_Top);
+		S->SetPadding(FMargin(0.f, 44.f, 5.f, 0.f));
+	}
+	Deco.UpgradeBadge = Upgrade;
+	Deco.UpgradeText = UpgradeLabel;
+
+	if (UHorizontalBoxSlot* HSlot = Cast<UHorizontalBoxSlot>(Box->AddChild(Holder)))
 	{
 		HSlot->SetPadding(FMargin(bFirst ? 0.f : SkillSlotSpacing, 0.f, 0.f, 0.f));
 		HSlot->SetVerticalAlignment(VAlign_Center);
@@ -328,7 +460,8 @@ void UCombatHUDWidget::RebuildTags()
 	// 방 이름 / 스킬 / 에너지 / 턴 종료 같은 위젯까지 사라짐 (TagLayer 를 루트로 쓰는 경우)
 	for (const FBattlerTag& Tag : Tags)
 	{
-		if (UTextBlock* Intent = Tag.IntentText.Get())   Intent->RemoveFromParent();
+		if (UBorder* Intent = Tag.IntentBox.Get())         Intent->RemoveFromParent();
+		if (UBorder* Ready = Tag.ReadyBadge.Get())         Ready->RemoveFromParent();
 		if (UVerticalBox* Box = Tag.HealthBox.Get())       Box->RemoveFromParent();
 		if (UButton* Target = Tag.TargetButton.Get())      Target->RemoveFromParent();
 	}
@@ -348,45 +481,113 @@ void UCombatHUDWidget::RebuildTags()
 		Tag.bMonster = bMonster;
 		Tag.Index = Index;
 
-		// 머리 위 행동 예고 (몬스터만)
+		// 머리 위 행동 예고 (몬스터만): 어두운 판 + 픽셀 아이콘 + 굵은 숫자
 		if (bMonster)
 		{
-			UTextBlock* Intent = MakeHUDText(WidgetTree, TEXT(""), 20, TerminusUI::Color::GoldHover);
-			UCanvasPanelSlot* CanvasSlot = TagLayer->AddChildToCanvas(Intent);
+			UBorder* IntentBox = WidgetTree->ConstructWidget<UBorder>();
+			IntentBox->SetBrush(TerminusUI::MakeBoxBrush(TerminusUI::Hex(TEXT("0A090E"), 0.75f), TerminusUI::Hex(TEXT("E8DFCB"), 0.18f), 0.f, 1.f));
+			IntentBox->SetPadding(FMargin(9.f, 4.f));
+			IntentBox->SetVisibility(ESlateVisibility::HitTestInvisible);
+			UHorizontalBox* IntentRow = WidgetTree->ConstructWidget<UHorizontalBox>();
+			IntentBox->SetContent(IntentRow);
+
+			UImage* Icon = WidgetTree->ConstructWidget<UImage>();
+			Icon->SetDesiredSizeOverride(FVector2D(28.f, 28.f));
+			IntentRow->AddChildToHorizontalBox(Icon)->SetVerticalAlignment(VAlign_Center);
+
+			UTextBlock* Number = WidgetTree->ConstructWidget<UTextBlock>();
+			SetOutlinedFont(Number, 20);
+			if (UHorizontalBoxSlot* S = IntentRow->AddChildToHorizontalBox(Number))
+			{
+				S->SetVerticalAlignment(VAlign_Center);
+				S->SetPadding(FMargin(6.f, 0.f, 0.f, 0.f));
+			}
+
+			UCanvasPanelSlot* CanvasSlot = TagLayer->AddChildToCanvas(IntentBox);
 			CanvasSlot->SetAutoSize(true);
 			CanvasSlot->SetAlignment(FVector2D(0.5f, 1.f));
-			Tag.IntentText = Intent;
+			Tag.IntentBox = IntentBox;
+			Tag.IntentIcon = Icon;
+			Tag.IntentText = Number;
+		}
+		else
+		{
+			// 플레이어: 이번 턴을 끝내면 머리 위 "대기"
+			UBorder* Ready = WidgetTree->ConstructWidget<UBorder>();
+			Ready->SetBrush(TerminusUI::MakeBoxBrush(FLinearColor(0.008f, 0.021f, 0.008f, 0.85f), TerminusUI::Hex(TEXT("5FC45A")), 0.f, 1.f));
+			Ready->SetPadding(FMargin(8.f, 2.f));
+			UTextBlock* ReadyText = TerminusUI::MakeText(WidgetTree, NAME_None, TEXT("대기"), 12, TerminusUI::Hex(TEXT("BFF0B8")));
+			TerminusUI::SetBold(ReadyText);
+			Ready->SetContent(ReadyText);
+			Ready->SetVisibility(ESlateVisibility::Collapsed);
+			UCanvasPanelSlot* CanvasSlot = TagLayer->AddChildToCanvas(Ready);
+			CanvasSlot->SetAutoSize(true);
+			CanvasSlot->SetAlignment(FVector2D(0.5f, 1.f));
+			Tag.ReadyBadge = Ready;
 		}
 
-		// 발밑 체력바 + 숫자
+		// 발밑: 보호막 줄 4px / 체력 줄 7px / 숫자 / 상태이상 칸
 		UVerticalBox* Box = WidgetTree->ConstructWidget<UVerticalBox>();
-		UProgressBar* Bar = WidgetTree->ConstructWidget<UProgressBar>();
-		Bar->SetFillColorAndOpacity(bMonster ? MonsterHealthColor : PlayerHealthColor);
-		if (UVerticalBoxSlot* S = Box->AddChildToVerticalBox(Bar))
-		{
-			S->SetHorizontalAlignment(HAlign_Fill);
-		}
-		UTextBlock* HpText = MakeHUDText(WidgetTree, TEXT(""), 14);
-		HpText->SetJustification(ETextJustify::Center);
-		if (UVerticalBoxSlot* S = Box->AddChildToVerticalBox(HpText))
+		Box->SetVisibility(ESlateVisibility::HitTestInvisible);
+
+		UHorizontalBox* ShieldTrack = WidgetTree->ConstructWidget<UHorizontalBox>();
+		UImage* ShieldFill = WidgetTree->ConstructWidget<UImage>();
+		ShieldFill->SetColorAndOpacity(TerminusUI::Hex(TEXT("8FA4B8")));
+		ShieldFill->SetDesiredSizeOverride(FVector2D(0.f, 4.f));
+		ShieldTrack->AddChildToHorizontalBox(ShieldFill);
+		if (UVerticalBoxSlot* S = Box->AddChildToVerticalBox(MakeSized(WidgetTree, ShieldTrack, 90.f, 4.f)))
 		{
 			S->SetHorizontalAlignment(HAlign_Center);
 		}
+
+		UProgressBar* Bar = WidgetTree->ConstructWidget<UProgressBar>();
+		FProgressBarStyle BarStyle = Bar->GetWidgetStyle();
+		BarStyle.BackgroundImage = TerminusUI::MakeBoxBrush(TerminusUI::Hex(TEXT("120F16")), FLinearColor::Black, 0.f, 1.f);
+		BarStyle.FillImage = FSlateBrush();
+		Bar->SetWidgetStyle(BarStyle);
+		Bar->SetFillColorAndOpacity(TerminusUI::Hex(bMonster ? TEXT("E8323A") : TEXT("5FC45A")));
+		if (UVerticalBoxSlot* S = Box->AddChildToVerticalBox(MakeSized(WidgetTree, Bar, 90.f, 7.f)))
+		{
+			S->SetHorizontalAlignment(HAlign_Center);
+			S->SetPadding(FMargin(0.f, 1.f, 0.f, 0.f));
+		}
+
+		UHorizontalBox* NumberRow = WidgetTree->ConstructWidget<UHorizontalBox>();
+		UTextBlock* HpText = MakeHUDText(WidgetTree, TEXT(""), 13, TerminusUI::MapColor::Text);
+		TerminusUI::SetBold(HpText);
+		NumberRow->AddChildToHorizontalBox(HpText);
+		UTextBlock* ShieldText = MakeHUDText(WidgetTree, TEXT(""), 13, TerminusUI::Hex(TEXT("A9C0D6")));
+		TerminusUI::SetBold(ShieldText);
+		NumberRow->AddChildToHorizontalBox(ShieldText)->SetPadding(FMargin(6.f, 0.f, 0.f, 0.f));
+		if (UVerticalBoxSlot* S = Box->AddChildToVerticalBox(NumberRow))
+		{
+			S->SetHorizontalAlignment(HAlign_Center);
+			S->SetPadding(FMargin(0.f, 3.f, 0.f, 0.f));
+		}
+
+		UWrapBox* StatusWrap = WidgetTree->ConstructWidget<UWrapBox>();
+		StatusWrap->SetInnerSlotPadding(FVector2D(6.f, 4.f));
+		StatusWrap->SetHorizontalAlignment(HAlign_Center);
+		if (UVerticalBoxSlot* S = Box->AddChildToVerticalBox(MakeSized(WidgetTree, StatusWrap, 150.f, 0.f)))
+		{
+			S->SetHorizontalAlignment(HAlign_Center);
+			S->SetPadding(FMargin(0.f, 4.f, 0.f, 0.f));
+		}
+
 		UCanvasPanelSlot* BoxSlot = TagLayer->AddChildToCanvas(Box);
-		BoxSlot->SetAutoSize(false);
-		BoxSlot->SetSize(FVector2D(90.f, 34.f));
+		BoxSlot->SetAutoSize(true);
 		BoxSlot->SetAlignment(FVector2D(0.5f, 0.f));
 		Tag.HealthBox = Box;
+		Tag.ShieldFill = ShieldFill;
 		Tag.HealthBar = Bar;
 		Tag.HealthText = HpText;
+		Tag.ShieldText = ShieldText;
+		Tag.StatusWrap = StatusWrap;
 
 		// 대상 선택 버튼 (대상 고르는 중일 때만 보임)
 		UButton* Target = WidgetTree->ConstructWidget<UButton>();
 		Target->SetStyle(MakeTargetButtonStyle());
 		Target->SetBackgroundColor(TargetButtonTint(false));
-		UTextBlock* TargetLabel = MakeHUDText(WidgetTree, TEXT("선택"), TerminusUI::FontSize::Body, TerminusUI::Color::TextBody);
-		TerminusUI::SetBold(TargetLabel);
-		Target->SetContent(TargetLabel);
 		Target->OnClicked.AddDynamic(this, &UCombatHUDWidget::HandleTargetClicked);
 		UCanvasPanelSlot* TargetSlot = TagLayer->AddChildToCanvas(Target);
 		TargetSlot->SetAutoSize(false);
@@ -488,16 +689,41 @@ void UCombatHUDWidget::UpdateTags()
 			}
 		};
 
-		// 머리 위 행동 예고
-		if (UTextBlock* Intent = Tag.IntentText.Get())
+		// 머리 위 행동 예고 (아이콘 + 숫자)
+		if (UBorder* IntentBox = Tag.IntentBox.Get())
 		{
 			const FMonsterIntent* Found = Tag.bMonster ? Combat->FindIntent(Cast<ATerminusMonster>(Battler)) : nullptr;
 			const bool bVisible = bAlive && Found;
-			Intent->SetVisibility(bVisible ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Collapsed);
+			IntentBox->SetVisibility(bVisible ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Collapsed);
 			if (bVisible)
 			{
-				TerminusUI::SetTextIfChanged(Intent, IntentLabel(*Found));
-				Place(Intent, HeadHeight);
+				const int32 IconIndex = IntentIconIndex(*Found);
+				if (UImage* Icon = Tag.IntentIcon.Get(); Icon && IntentTextures.IsValidIndex(IconIndex) && Icon->GetBrush().GetResourceObject() != IntentTextures[IconIndex])
+				{
+					Icon->SetBrushFromTexture(IntentTextures[IconIndex]);
+					Icon->SetDesiredSizeOverride(FVector2D(28.f, 28.f));
+				}
+				if (UTextBlock* Number = Tag.IntentText.Get())
+				{
+					const FString Label = IntentNumber(*Found);
+					TerminusUI::SetTextIfChanged(Number, Label);
+					Number->SetVisibility(Label.IsEmpty() ? ESlateVisibility::Collapsed : ESlateVisibility::HitTestInvisible);
+					Number->SetColorAndOpacity(FSlateColor(TerminusUI::Hex(Found->Kind == EMonsterIntentKind::Attack ? TEXT("FFE3DE") : TEXT("F0E8D6"))));
+				}
+				Place(IntentBox, HeadHeight + 8.f);
+			}
+		}
+
+		// 플레이어가 이번 턴을 끝냈으면 머리 위 "대기"
+		if (UBorder* Ready = Tag.ReadyBadge.Get())
+		{
+			const TArray<TObjectPtr<ATerminusPlayerState>>& Occupants = CurrentArea->GetOccupants();
+			const ATerminusPlayerState* TagPS = Occupants.IsValidIndex(Tag.Index) ? Occupants[Tag.Index].Get() : nullptr;
+			const bool bDone = bAlive && TagPS && Combat->GetPhase() == ECombatPhase::PlayerTurn && Combat->HasEndedTurn(TagPS);
+			Ready->SetVisibility(bDone ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Collapsed);
+			if (bDone)
+			{
+				Place(Ready, HeadHeight + 8.f);
 			}
 		}
 
@@ -515,10 +741,19 @@ void UCombatHUDWidget::UpdateTags()
 				}
 				if (UTextBlock* HpText = Tag.HealthText.Get())
 				{
-					FString Label = FString::Printf(TEXT("%d/%d"), State.Health, MaxHealth);
-					if (State.Shield > 0) Label += FString::Printf(TEXT("  +%d"), State.Shield);
-					TerminusUI::SetTextIfChanged(HpText, Label);
+					TerminusUI::SetTextIfChanged(HpText, FString::Printf(TEXT("%d/%d"), State.Health, MaxHealth));
 				}
+				// 보호막: 체력 줄 위 4px 회청색 줄 (최대 체력 대비) + 숫자 옆 "+6"
+				if (UTextBlock* ShieldText = Tag.ShieldText.Get())
+				{
+					TerminusUI::SetTextIfChanged(ShieldText, State.Shield > 0 ? FString::Printf(TEXT("+%d"), State.Shield) : FString());
+				}
+				if (UImage* ShieldFill = Tag.ShieldFill.Get())
+				{
+					const float Width = State.Shield > 0 ? FMath::Clamp(90.f * State.Shield / MaxHealth, 2.f, 90.f) : 0.f;
+					ShieldFill->SetDesiredSizeOverride(FVector2D(Width, 4.f));
+				}
+				RefreshStatusIcons(Tag, State.Statuses);
 				Place(Box, -4.f);
 			}
 		}
@@ -603,8 +838,23 @@ void UCombatHUDWidget::UpdatePanels()
 		case ECombatPhase::Defeat:      Label = TEXT("패배"); break;
 		default: break;
 		}
-		if (bSpectating) Label = TEXT("관전 중  ·  ") + Label;
+		if (bSpectating) Label = TEXT("관전 중 · ") + Label;
 		TerminusUI::SetTextIfChanged(PhaseText, Label);
+
+		// 띠 색: 승리 / 내 턴 금, 기다림 회색, 적의 턴 붉음, 배신자 진홍, 패배 어두움
+		int32 Style = Phase_Mine;
+		switch (Phase)
+		{
+		case ECombatPhase::PlayerTurn:
+			Style = Label.Contains(TEXT("배신자")) || Label.Contains(TEXT("상대 편")) ? Phase_Betrayer
+				: (bMyTurn || bSpectating) ? Phase_Mine : Phase_Waiting;
+			break;
+		case ECombatPhase::MonsterTurn: Style = Phase_Enemy; break;
+		case ECombatPhase::Victory:     Style = Label.Contains(TEXT("패배")) ? Phase_Defeat : Phase_Victory; break;
+		case ECombatPhase::Defeat:      Style = Phase_Defeat; break;
+		default: break;
+		}
+		ApplyPhaseStyle(Style);
 	}
 
 	if (HintText)
@@ -613,6 +863,12 @@ void UCombatHUDWidget::UpdatePanels()
 			: PendingSkillIndex != INDEX_NONE ? TEXT("대상을 선택하세요  (우클릭: 취소 · Shift+클릭: 쓰지 않고 예약만 공유)")
 			: DeclaredSkillIndex != INDEX_NONE ? TEXT("예약을 파티에 공유 중  (같은 스킬 Shift+클릭: 예약 취소)")
 			: TEXT(""));
+
+		// 안내가 없으면 판째 숨김
+		if (HintPlate)
+		{
+			HintPlate->SetVisibility(HintText->GetText().IsEmpty() ? ESlateVisibility::Collapsed : ESlateVisibility::HitTestInvisible);
+		}
 	}
 
 	// ---- 왼쪽 아래: 에너지 + 스킬
@@ -621,14 +877,19 @@ void UCombatHUDWidget::UpdatePanels()
 		const FCombatState& State = MyStats->GetCombatState();
 		const FCharacterStats& Stats = MyStats->GetStats();
 
+		// 구슬 상자가 있으면 (시안) 숫자만, 없으면 "에너지 2/3"
 		if (EnergyText)
 		{
-			TerminusUI::SetTextIfChanged(EnergyText, FString::Printf(TEXT("에너지 %d/%d"), State.Energy, Stats.MaxEnergy));
+			TerminusUI::SetTextIfChanged(EnergyText, EnergyOrbs ? FString::Printf(TEXT("%d/%d"), State.Energy, Stats.MaxEnergy)
+				: FString::Printf(TEXT("에너지 %d/%d"), State.Energy, Stats.MaxEnergy));
 		}
 		if (SkillEnergyText)
 		{
-			TerminusUI::SetTextIfChanged(SkillEnergyText, FString::Printf(TEXT("스킬 에너지 %d/%d"), State.SkillEnergy, Stats.MaxSkillEnergy));
+			TerminusUI::SetTextIfChanged(SkillEnergyText, SkillEnergyOrbs ? FString::Printf(TEXT("%d/%d"), State.SkillEnergy, Stats.MaxSkillEnergy)
+				: FString::Printf(TEXT("스킬 에너지 %d/%d"), State.SkillEnergy, Stats.MaxSkillEnergy));
 		}
+		RefreshOrbs(EnergyOrbs, ShownEnergy, State.Energy, Stats.MaxEnergy, OrbEnergyTexture, OrbEnergyEmptyTexture);
+		RefreshOrbs(SkillEnergyOrbs, ShownSkillEnergy, State.SkillEnergy, Stats.MaxSkillEnergy, OrbSkillTexture, OrbSkillEmptyTexture);
 
 		// 강화 칸 수가 캐릭터 스텟과 다르면 다시 만듦
 		BuildSkillSlots(Stats.EnhanceSlots);
@@ -638,18 +899,67 @@ void UCombatHUDWidget::UpdatePanels()
 			if (!SkillSlot) continue;
 
 			const FSkillRow* Skill = LocalPS->GetCombatSkill(SkillSlot->GetSlotIndex());
+			const bool bAffordable = Skill && State.Energy >= MyStats->GetEffectiveEnergyCost(Skill->EnergyCost) && State.SkillEnergy >= Skill->SkillEnergyCost;   // 과욕이면 +1
 			SkillSlot->SetSkill(LocalPS->GetCombatSkillRow(SkillSlot->GetSlotIndex()));
-			SkillSlot->SetUsable(Skill && bMyTurn
-				&& State.Energy >= MyStats->GetEffectiveEnergyCost(Skill->EnergyCost) && State.SkillEnergy >= Skill->SkillEnergyCost);   // 과욕이면 +1
-			SkillSlot->SetSelected(PendingSkillIndex == SkillSlot->GetSlotIndex());   // 대상 고르는 중인 칸 강조
+			SkillSlot->SetUsable(Skill && bMyTurn && bAffordable);
+			const bool bTargeting = PendingSkillIndex == SkillSlot->GetSlotIndex();
+			SkillSlot->SetSelected(bTargeting);   // 대상 고르는 중인 칸 강조
+
+			// 시안 장식: 비용 원 / 강화 / 층 마름모, 칸 띄우기 (호버 4px / 대상 고르는 중 10px), 내 턴 아니면 흐림
+			const int32 DecoIndex = SkillSlots.IndexOfByKey(SkillSlot);
+			if (SkillDecos.IsValidIndex(DecoIndex))
+			{
+				FSkillDeco& Deco = SkillDecos[DecoIndex];
+				RefreshSkillDeco(Deco, Skill, SkillSlot->GetSlotIndex(), bAffordable);
+				if (UOverlay* Holder = Deco.Holder.Get())
+				{
+					const float Lift = bTargeting ? -10.f : (Skill && bMyTurn && SkillSlot->IsHovered()) ? -4.f : 0.f;
+					if (Holder->GetRenderTransform().Translation.Y != Lift)
+					{
+						Holder->SetRenderTranslation(FVector2D(0.f, Lift));
+					}
+					Holder->SetRenderOpacity(Skill && !bMyTurn ? 0.42f : 1.f);
+				}
+			}
 		}
 
 		// ---- 오른쪽 아래: 상태. 기획 시안 "체력 [최대/현재] 힘 방어 회피"
-		if (StatusText)
+		if (StatusRow)
 		{
-			FString Label = FString::Printf(TEXT("체력 [%d/%d]"), Stats.MaxHealth, State.Health);
+			// 시안: "체력 21/30  보호막 6  힘 5  방어 3  회피 1" 이름은 흐리게, 값은 굵게
+			TArray<TPair<FString, FString>> Pairs;
+			Pairs.Emplace(TEXT("체력"), FString::Printf(TEXT("%d/%d"), State.Health, Stats.MaxHealth));
+			if (State.Shield > 0) Pairs.Emplace(TEXT("보호막"), FString::FromInt(State.Shield));
+			Pairs.Emplace(TEXT("힘"), FString::FromInt(Stats.Attack));
+			Pairs.Emplace(TEXT("방어"), FString::FromInt(Stats.Defense));
+			Pairs.Emplace(TEXT("회피"), FString::FromInt(Stats.Evasion));
+
+			FString Key;
+			for (const TPair<FString, FString>& Pair : Pairs) Key += Pair.Key + Pair.Value + TEXT("|");
+			if (Key != ShownStatusLine)
+			{
+				ShownStatusLine = Key;
+				StatusRow->ClearChildren();
+				for (int32 i = 0; i < Pairs.Num(); ++i)
+				{
+					UTextBlock* Name = TerminusUI::MakeText(WidgetTree, NAME_None, Pairs[i].Key, 14, TerminusUI::MapColor::TextSub, ETextJustify::Left);
+					const bool bShield = Pairs[i].Key == TEXT("보호막");
+					UTextBlock* Value = TerminusUI::MakeText(WidgetTree, NAME_None, Pairs[i].Value, 14,
+						bShield ? TerminusUI::Hex(TEXT("A9C0D6")) : TerminusUI::MapColor::Text, ETextJustify::Left);
+					TerminusUI::SetBold(Value);
+					if (UHorizontalBoxSlot* S = Cast<UHorizontalBoxSlot>(StatusRow->AddChild(Name)))
+					{
+						S->SetPadding(FMargin(i == 0 ? 0.f : 14.f, 0.f, 4.f, 0.f));
+					}
+					StatusRow->AddChild(Value);
+				}
+			}
+		}
+		else if (StatusText)
+		{
+			FString Label = FString::Printf(TEXT("체력 %d/%d"), State.Health, Stats.MaxHealth);
 			if (State.Shield > 0) Label += FString::Printf(TEXT("  보호막 %d"), State.Shield);
-			Label += FString::Printf(TEXT("   힘 %d  방어 %d  회피 %d"), Stats.Attack, Stats.Defense, Stats.Evasion);
+			Label += FString::Printf(TEXT("  힘 %d  방어 %d  회피 %d"), Stats.Attack, Stats.Defense, Stats.Evasion);
 			TerminusUI::SetTextIfChanged(StatusText, Label);
 		}
 	}
@@ -657,6 +967,208 @@ void UCombatHUDWidget::UpdatePanels()
 	if (EndTurnButton)
 	{
 		EndTurnButton->SetIsEnabled(bMyTurn);
+	}
+
+	// 턴 종료 판: 내 턴이면 붉은 봉랍 + "턴 종료", 아니면 꺼진 봉랍 + "대기 중…"
+	if (EndTurnLabel)
+	{
+		TerminusUI::SetTextIfChanged(EndTurnLabel, bMyTurn ? TEXT("턴 종료") : TEXT("대기 중…"));
+		const bool bHover = bMyTurn && EndTurnButton && EndTurnButton->IsHovered();
+		EndTurnLabel->SetColorAndOpacity(FSlateColor(TerminusUI::Hex(!bMyTurn ? TEXT("6A6470") : bHover ? TEXT("FFF6D0") : TEXT("F0E8D6"))));
+	}
+	if (EndTurnSeal)
+	{
+		UTexture2D* Wanted = bMyTurn ? SealTexture : SealOffTexture;
+		if (Wanted && EndTurnSeal->GetBrush().GetResourceObject() != Wanted)
+		{
+			EndTurnSeal->SetBrushFromTexture(Wanted);
+			EndTurnSeal->SetDesiredSizeOverride(FVector2D(46.f, 46.f));
+		}
+	}
+}
+
+// =====================================================================
+// 시안 부품
+// =====================================================================
+
+void UCombatHUDWidget::LoadCombatTextures()
+{
+	OrbEnergyTexture = LoadCombatTexture(TEXT("T_Orb_Energy"));
+	OrbEnergyEmptyTexture = LoadCombatTexture(TEXT("T_Orb_EnergyEmpty"));
+	OrbSkillTexture = LoadCombatTexture(TEXT("T_Orb_Skill"));
+	OrbSkillEmptyTexture = LoadCombatTexture(TEXT("T_Orb_SkillEmpty"));
+	SealTexture = LoadCombatTexture(TEXT("T_EndTurn_Seal"));
+	SealOffTexture = LoadCombatTexture(TEXT("T_EndTurn_SealOff"));
+
+	IntentTextures.Reset();
+	for (const TCHAR* Name : { TEXT("T_Intent_Attack"), TEXT("T_Intent_Defense"), TEXT("T_Intent_Buff"), TEXT("T_Intent_Debuff") })
+	{
+		IntentTextures.Add(LoadCombatTexture(Name));
+	}
+}
+
+void UCombatHUDWidget::ApplyPhaseStyle(int32 PhaseStyle)
+{
+	if (PhaseStyle == ShownPhaseStyle || PhaseStyle < 0 || PhaseStyle >= UE_ARRAY_COUNT(PhaseLooks)) return;
+	ShownPhaseStyle = PhaseStyle;
+
+	const FPhaseLook& Look = PhaseLooks[PhaseStyle];
+	if (PhaseText)
+	{
+		PhaseText->SetColorAndOpacity(FSlateColor(TerminusUI::Hex(Look.Text)));
+	}
+	if (PhaseBandFill)
+	{
+		PhaseBandFill->SetColorAndOpacity(TerminusUI::Hex(Look.Band, Look.BandAlpha));
+	}
+	for (UImage* Line : { PhaseLineTop.Get(), PhaseLineBottom.Get() })
+	{
+		if (Line) Line->SetColorAndOpacity(TerminusUI::Hex(Look.Line));
+	}
+}
+
+void UCombatHUDWidget::RefreshOrbs(UPanelWidget* Box, FIntPoint& Shown, int32 Current, int32 Max, UTexture2D* Full, UTexture2D* Empty)
+{
+	if (!Box) return;
+	const FIntPoint Wanted(Current, Max);
+	if (Wanted == Shown) return;
+	Shown = Wanted;
+
+	// 구슬 18px (그림은 빛 여백까지 27px). 찬 것 / 빈 것
+	Box->ClearChildren();
+	for (int32 i = 0; i < Max; ++i)
+	{
+		UImage* Orb = WidgetTree->ConstructWidget<UImage>();
+		if (UTexture2D* Texture = i < Current ? Full : Empty)
+		{
+			Orb->SetBrushFromTexture(Texture);
+		}
+		Orb->SetDesiredSizeOverride(FVector2D(27.f, 27.f));
+		if (UWrapBoxSlot* S = Cast<UWrapBoxSlot>(Box->AddChild(Orb)))
+		{
+			S->SetPadding(FMargin(-4.5f));
+		}
+		else
+		{
+			Box->AddChild(Orb);
+		}
+	}
+}
+
+void UCombatHUDWidget::RefreshStatusIcons(FBattlerTag& Tag, const TArray<FStatusInstance>& Statuses)
+{
+	UWrapBox* Wrap = Tag.StatusWrap.Get();
+	if (!Wrap) return;
+
+	// 종류 + 수치가 그대로면 다시 안 그림
+	TArray<uint32> Key;
+	for (const FStatusInstance& Status : Statuses)
+	{
+		if (Status.Type == EStatusEffect::None) continue;
+		Key.Add((static_cast<uint32>(Status.Type) << 24) | (static_cast<uint32>(FMath::Clamp(Status.Value, 0, 0xFFF)) << 12) | static_cast<uint32>(FMath::Clamp(Status.Duration, 0, 0xFFF)));
+	}
+	if (Key == Tag.ShownStatuses) return;
+	Tag.ShownStatuses = Key;
+
+	Wrap->ClearChildren();
+	for (const FStatusInstance& Status : Statuses)
+	{
+		if (Status.Type == EStatusEffect::None) continue;
+		const FStatusLook Look = GetStatusLook(Status.Type);
+		const FLinearColor Color = TerminusUI::Hex(Look.Hex);
+
+		// [글자 칸 16px] 수치
+		UHorizontalBox* Item = WidgetTree->ConstructWidget<UHorizontalBox>();
+		UBorder* Cell = WidgetTree->ConstructWidget<UBorder>();
+		Cell->SetBrush(TerminusUI::MakeBoxBrush(TerminusUI::Hex(TEXT("16131C")), Color, 0.f, 1.f));
+		Cell->SetPadding(FMargin(0.f));
+		Cell->SetHorizontalAlignment(HAlign_Center);
+		Cell->SetVerticalAlignment(VAlign_Center);
+		UTextBlock* Letter = TerminusUI::MakeText(WidgetTree, NAME_None, Look.Letter, 8, Color);
+		TerminusUI::SetBold(Letter);
+		Cell->SetContent(Letter);
+		Item->AddChildToHorizontalBox(MakeSized(WidgetTree, Cell, 16.f, 16.f))->SetVerticalAlignment(VAlign_Center);
+
+		// 수치가 없는 상태(불사 / 불굴 등)는 남은 턴
+		const int32 Shown = Status.Value > 0 ? Status.Value : Status.Duration;
+		UTextBlock* Count = MakeHUDText(WidgetTree, Shown > 0 ? FString::FromInt(Shown) : FString(), 11, TerminusUI::MapColor::Text);
+		TerminusUI::SetBold(Count);
+		if (UHorizontalBoxSlot* S = Item->AddChildToHorizontalBox(Count))
+		{
+			S->SetVerticalAlignment(VAlign_Center);
+			S->SetPadding(FMargin(2.f, 0.f, 0.f, 0.f));
+		}
+		Wrap->AddChild(Item);
+	}
+}
+
+void UCombatHUDWidget::RefreshSkillDeco(FSkillDeco& Deco, const FSkillRow* Skill, int32 SlotIndex, bool bAffordable)
+{
+	UBorder* Cost = Deco.CostBadge.Get();
+	UTextBlock* CostText = Deco.CostText.Get();
+	UBorder* Upgrade = Deco.UpgradeBadge.Get();
+	UPanelWidget* Pips = Deco.TierPips.Get();
+
+	if (!Skill)
+	{
+		if (Cost) Cost->GetParent()->SetVisibility(ESlateVisibility::Collapsed);
+		if (Upgrade) Upgrade->SetVisibility(ESlateVisibility::Collapsed);
+		if (Pips) Pips->ClearChildren();
+		Deco.ShownSkill = NAME_None;
+		return;
+	}
+
+	// 비용 원: 스킬 에너지가 드는 스킬은 보라, 아니면 에너지 파랑. 모자라면 어두운 원 + 붉은 숫자
+	if (Cost && CostText)
+	{
+		const bool bSkillEnergy = Skill->SkillEnergyCost > 0;
+		const FLinearColor Fill = !bAffordable ? TerminusUI::Hex(TEXT("1A1820")) : TerminusUI::Hex(bSkillEnergy ? TEXT("7C45C8") : TEXT("2F6BD0"));
+		Cost->SetBrush(TerminusUI::MakeBoxBrush(Fill, TerminusUI::Hex(TEXT("0E0D12")), 12.f, 2.f));
+		TerminusUI::SetTextIfChanged(CostText, FString::FromInt(bSkillEnergy ? Skill->SkillEnergyCost : Skill->EnergyCost));
+		CostText->SetColorAndOpacity(FSlateColor(bAffordable ? FLinearColor::White : TerminusUI::Hex(TEXT("FF4A3A"))));
+		Cost->GetParent()->SetVisibility(ESlateVisibility::HitTestInvisible);
+	}
+
+	const FName Row = GetOwningPlayer() && GetOwningPlayer()->GetPlayerState<ATerminusPlayerState>()
+		? GetOwningPlayer()->GetPlayerState<ATerminusPlayerState>()->GetCombatSkillRow(SlotIndex) : NAME_None;
+	if (Row == Deco.ShownSkill) return;
+	Deco.ShownSkill = Row;
+
+	// 강화 +N: 기본 칸은 훈련소 단계, 강화 칸은 픽업 스킬 단계
+	if (Upgrade && Deco.UpgradeText.IsValid())
+	{
+		const ATerminusPlayerState* PS = GetOwningPlayer()->GetPlayerState<ATerminusPlayerState>();
+		int32 Level = 0;
+		if (SlotIndex < ATerminusPlayerState::NumBasicSkills)
+		{
+			const TArray<int32>& Levels = PS->GetRunState().BasicSkillLevels;
+			Level = Levels.IsValidIndex(SlotIndex) ? Levels[SlotIndex] : 0;
+		}
+		else
+		{
+			Level = PS->GetPickupSkillLevel(Row);
+		}
+		Deco.UpgradeText->SetText(FText::FromString(FString::Printf(TEXT("+%d"), Level)));
+		Upgrade->SetVisibility(Level > 0 ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Collapsed);
+	}
+
+	// 층 마름모: 표층 1 흐림 / 중층 2 금 / 심층 3 적
+	if (Pips)
+	{
+		Pips->ClearChildren();
+		const int32 Count = static_cast<int32>(Skill->SkillTier) + 1;
+		const FLinearColor PipColor = TerminusUI::Hex(Skill->SkillTier == ESkillTier::Deep ? TEXT("FF4A3A") : Skill->SkillTier == ESkillTier::Mid ? TEXT("FFD978") : TEXT("A89F8C"));
+		for (int32 i = 0; i < Count; ++i)
+		{
+			UImage* Pip = WidgetTree->ConstructWidget<UImage>();
+			Pip->SetColorAndOpacity(PipColor);
+			Pip->SetDesiredSizeOverride(FVector2D(6.f, 6.f));
+			Pip->SetRenderTransformAngle(45.f);
+			if (UHorizontalBoxSlot* S = Cast<UHorizontalBoxSlot>(Pips->AddChild(Pip)))
+			{
+				S->SetPadding(FMargin(i == 0 ? 0.f : 3.f, 0.f, 0.f, 0.f));
+			}
+		}
 	}
 }
 
