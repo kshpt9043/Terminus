@@ -54,7 +54,7 @@ void USpectateWidget::BuildDefaultLayout()
 	WidgetTree->RootWidget = Root;
 
 	UBorder* Bar = WidgetTree->ConstructWidget<UBorder>();
-	Bar->SetBrushColor(TerminusUI::Color::Dim);
+	Bar->SetBrush(TerminusUI::MakeBoxBrush(TerminusUI::Color::Board, TerminusUI::Color::Line));
 	Bar->SetPadding(FMargin(12.f, 6.f));
 	if (UVerticalBoxSlot* S = Root->AddChildToVerticalBox(Bar))
 	{
@@ -65,7 +65,8 @@ void USpectateWidget::BuildDefaultLayout()
 	UHorizontalBox* Row = WidgetTree->ConstructWidget<UHorizontalBox>();
 	Bar->SetContent(Row);
 
-	LabelText = TerminusUI::MakeText(WidgetTree, NAME_None, TEXT("관전"), 15, TerminusUI::Color::Gold);
+	LabelText = TerminusUI::MakeText(WidgetTree, NAME_None, TEXT("관전"), TerminusUI::FontSize::Body, TerminusUI::Color::Gold);
+	TerminusUI::SetBold(LabelText);
 	if (UHorizontalBoxSlot* S = Row->AddChildToHorizontalBox(LabelText))
 	{
 		S->SetVerticalAlignment(VAlign_Center);
@@ -170,7 +171,7 @@ void USpectateWidget::RebuildButtons(ADungeonArea* MyArea, const TArray<ADungeon
 		FChoiceCardStyle CardStyle;
 		CardStyle.TitleSize = 14;
 		CardStyle.Padding = FMargin(8.f, 2.f);
-		CardStyle.NormalColor = FLinearColor(0.2f, 0.2f, 0.24f);
+		CardStyle.TitleColor = TerminusUI::Color::TextBody;
 		Card->ApplyDefaultStyle(CardStyle);
 
 		Card->SetChoiceId(bMine ? FName(TEXT("Mine")) : FName(TEXT("Other")));

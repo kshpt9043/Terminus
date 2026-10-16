@@ -54,15 +54,15 @@ void UMonsterRewardWidget::NativeOnInitialized()
 
 void UMonsterRewardWidget::BuildDefaultLayout()
 {
-	UBorder* Dim = TerminusUI::MakeDimRoot(WidgetTree, TEXT("RewardDim"), TerminusUI::Color::DimStrong);
+	UBorder* Dim = TerminusUI::MakeDimRoot(WidgetTree, TEXT("RewardDim"), TerminusUI::Color::Dim);
 
 	UVerticalBox* Column = WidgetTree->ConstructWidget<UVerticalBox>();
 	Dim->SetContent(Column);
 
-	TitleText = TerminusUI::MakeText(WidgetTree, TEXT("TitleText"), TEXT(""), 30, TerminusUI::Color::Gold);
+	TitleText = TerminusUI::MakeTitle(WidgetTree, TEXT("TitleText"), TEXT(""));
 	TerminusUI::AddRow(Column, TitleText, 0.f);
 
-	CurrencyText = TerminusUI::MakeText(WidgetTree, TEXT("CurrencyText"), TEXT(""), 18, FLinearColor::White);
+	CurrencyText = TerminusUI::MakeText(WidgetTree, TEXT("CurrencyText"), TEXT(""), TerminusUI::FontSize::Subtitle, TerminusUI::Color::Gold);
 	TerminusUI::AddRow(Column, CurrencyText, 10.f);
 
 	// 스킬 / 유물 섹션을 나란히
@@ -72,8 +72,7 @@ void UMonsterRewardWidget::BuildDefaultLayout()
 	UVerticalBox* Skill = WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), TEXT("SkillSection"));
 	SkillSection = Skill;
 	if (UHorizontalBoxSlot* S = Sections->AddChildToHorizontalBox(Skill)) S->SetPadding(FMargin(20.f, 0.f));
-	UTextBlock* SkillTitle = TerminusUI::MakeText(WidgetTree, NAME_None, TEXT(""), 17, TerminusUI::Color::TextMuted);
-	SkillTitle->SetText(FText::FromString(TEXT("픽업 스킬")));
+	UTextBlock* SkillTitle = TerminusUI::MakeTitle(WidgetTree, NAME_None, TEXT("픽업 스킬"), TerminusUI::FontSize::Section);
 	TerminusUI::AddRow(Skill, SkillTitle, 0.f);
 	CardBox = WidgetTree->ConstructWidget<UHorizontalBox>(UHorizontalBox::StaticClass(), TEXT("CardBox"));
 	TerminusUI::AddRow(Skill, CardBox, 10.f);
@@ -81,8 +80,7 @@ void UMonsterRewardWidget::BuildDefaultLayout()
 	UVerticalBox* Relic = WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), TEXT("RelicSection"));
 	RelicSection = Relic;
 	if (UHorizontalBoxSlot* S = Sections->AddChildToHorizontalBox(Relic)) S->SetPadding(FMargin(20.f, 0.f));
-	UTextBlock* RelicTitle = TerminusUI::MakeText(WidgetTree, NAME_None, TEXT(""), 17, TerminusUI::Color::TextMuted);
-	RelicTitle->SetText(FText::FromString(TEXT("유물")));
+	UTextBlock* RelicTitle = TerminusUI::MakeTitle(WidgetTree, NAME_None, TEXT("유물"), TerminusUI::FontSize::Section);
 	TerminusUI::AddRow(Relic, RelicTitle, 0.f);
 	RelicBox = WidgetTree->ConstructWidget<UHorizontalBox>(UHorizontalBox::StaticClass(), TEXT("RelicBox"));
 	TerminusUI::AddRow(Relic, RelicBox, 10.f);
@@ -95,10 +93,10 @@ void UMonsterRewardWidget::BuildDefaultLayout()
 	RelicReplacePanel = WidgetTree->ConstructWidget<UItemPickPanelWidget>(PickClass, TEXT("RelicReplacePanel"));
 	TerminusUI::AddRow(Column, RelicReplacePanel, 24.f);
 
-	ResultText = TerminusUI::MakeText(WidgetTree, TEXT("ResultText"), TEXT(""), 18, FLinearColor::White);
+	ResultText = TerminusUI::MakeText(WidgetTree, TEXT("ResultText"), TEXT(""), TerminusUI::FontSize::Subtitle, TerminusUI::Color::TextBody);
 	TerminusUI::AddRow(Column, ResultText, 24.f);
 
-	NextButton = TerminusUI::MakeButton(WidgetTree, TEXT("NextButton"), TEXT("   다음으로   "), 17);
+	NextButton = TerminusUI::MakeHexButton(WidgetTree, TEXT("NextButton"), TEXT("다음으로"), TerminusUI::EHexButton::Primary);
 	TerminusUI::AddRow(Column, NextButton, 24.f);
 }
 

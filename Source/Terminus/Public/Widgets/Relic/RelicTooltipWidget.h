@@ -1,9 +1,10 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Blueprint/UserWidget.h"
+#include "Widgets/Common/TerminusUserWidget.h"
 #include "RelicTooltipWidget.generated.h"
 
+class UBorder;
 class UImage;
 class UTextBlock;
 struct FRelicRow;
@@ -16,7 +17,7 @@ struct FRelicRow;
  * 그 WBP 는 칸(ItemSlotWidget / 칸 WBP)의 RelicTooltipClass 에 지정
  */
 UCLASS()
-class TERMINUS_API URelicTooltipWidget : public UUserWidget
+class TERMINUS_API URelicTooltipWidget : public UTerminusUserWidget
 {
 	GENERATED_BODY()
 
@@ -35,12 +36,15 @@ protected:
 	// 설명 (DT 의 RelicDesc)
 	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UTextBlock> DescText;
 
+	// 위쪽 3px 등급 색 띠 (선택). 기본 모양은 바깥 판의 바탕색이 띠
+	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UBorder> TierBand;
+
 	// 유물 그림 (선택)
 	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UImage> IconImage;
 
-	// 기본 모양의 최대 폭 (설명이 길면 줄바꿈)
+	// 기본 모양의 폭 (설명이 길면 줄바꿈)
 	UPROPERTY(EditAnywhere, Category = "Relic Tooltip")
-	float DefaultWidth = 280.f;
+	float DefaultWidth = 320.f;
 
 private:
 	void BuildDefaultLayout();

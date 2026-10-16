@@ -1,7 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Blueprint/UserWidget.h"
+#include "Widgets/Common/TerminusUserWidget.h"
 #include "MainMenuWidget.generated.h"
 
 class UButton;
@@ -18,7 +18,7 @@ class USettlementWidget;
  * 세션 처리는 전부 SessionSubsystem 에 맡기고 여기서는 의도만 전달한다.
  */
 UCLASS()
-class TERMINUS_API UMainMenuWidget : public UUserWidget
+class TERMINUS_API UMainMenuWidget : public UTerminusUserWidget
 {
 	GENERATED_BODY()
 

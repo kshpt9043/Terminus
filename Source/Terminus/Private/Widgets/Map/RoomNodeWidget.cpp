@@ -6,20 +6,24 @@
 #include "Components/Border.h"
 #include "Components/Button.h"
 #include "Components/HorizontalBox.h"
+#include "Components/HorizontalBoxSlot.h"
 #include "Components/Image.h"
+#include "Components/SizeBox.h"
+#include "Widgets/Common/TerminusUIBuilder.h"
+#include "Widgets/TerminusUIColors.h"
 
 void URoomNodeWidget::SetupRoomNode(const FRoomNode& InRoomData, const TMap<ERoomType, UTexture2D*>& IconMap)
 {
 	RoomId = InRoomData.RoomId;
+	Row = InRoomData.Row;
+	bIsBoss = InRoomData.Type == ERoomType::BOSS;
 
 	// 1. 방 타입에 맞는 아이콘 설정
 	if (UTexture2D* const* FoundTexture = IconMap.Find(InRoomData.Type))
 	{
 		if (*FoundTexture)
 		{
-			//RoomIconImage->SetBrushFromTexture(*FoundTexture);
-			
-			// 참고: 버튼 자체의 브러시를 바꾸고 싶다면 아래처럼 변경 가능합니다.
+			// 버튼 브러시 자체를 아이콘으로 (호버 / 눌림은 WBP 에서 정한 틴트만 다름)
 			FButtonStyle Style = RoomButton->GetStyle();
 			Style.Normal.SetResourceObject(*FoundTexture);
 			Style.Hovered.SetResourceObject(*FoundTexture);
@@ -27,7 +31,18 @@ void URoomNodeWidget::SetupRoomNode(const FRoomNode& InRoomData, const TMap<ERoo
 			Style.Disabled.SetResourceObject(*FoundTexture);   // 혹시 비활성이 돼도 아이콘이 바뀌지 않게
 			RoomButton->SetStyle(Style);
 		}
-	}	
+	}
+
+	// 2. 보스는 아이콘 / 동그라미를 크게 (아이콘 상자 가운데 기준이라 선 위치는 그대로)
+	const float Size = bIsBoss ? BossIconSize : IconSize;
+	if (IconBox)
+	{
+		IconBox->SetWidthOverride(Size);
+		IconBox->SetHeightOverride(Size);
+	}
+	if (VisitedMark) VisitedMark->SetDesiredSizeOverride(FVector2D(Size, Size));
+	// 동그라미 그림은 상자의 81% 가 고리 -> 아이콘보다 사방 12px 크게 (시안: inset -12)
+	if (CurrentRing) CurrentRing->SetDesiredSizeOverride(FVector2D(Size * 1.7f, Size * 1.7f));
 }
 
 void URoomNodeWidget::SetRoomSelectable(bool bSelectable)
@@ -38,11 +53,30 @@ void URoomNodeWidget::SetRoomSelectable(bool bSelectable)
 	if (AppliedSelectable.IsSet() && AppliedSelectable.GetValue() == bSelectable) return;
 	AppliedSelectable = bSelectable;
 
-	// 못 가는 방도 아이콘은 그대로 선명하게. 마우스만 통과시켜서 호버 효과 / 클릭이 안 생기게 함
+	// 마우스만 통과시켜서 호버 효과 / 클릭이 안 생기게 함
 	// (SetIsEnabled(false) 를 쓰면 Slate 가 비활성 효과로 회색 처리해 버림)
 	RoomButton->SetIsEnabled(true);
 	RoomButton->SetVisibility(bSelectable ? ESlateVisibility::Visible : ESlateVisibility::HitTestInvisible);
-	SetRenderOpacity(1.0f);
+}
+
+void URoomNodeWidget::SetVisualState(ERoomNodeState NewState)
+{
+	if (AppliedState.IsSet() && AppliedState.GetValue() == NewState) return;
+	AppliedState = NewState;
+
+	auto Show = [](UWidget* Widget, bool bShow)
+	{
+		if (Widget) Widget->SetVisibility(bShow ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Hidden);
+	};
+
+	Show(GlowImage, NewState == ERoomNodeState::Available);
+	Show(VisitedMark, NewState == ERoomNodeState::Visited);
+	Show(CurrentRing, NewState == ERoomNodeState::Current);
+
+	if (RoomButton)
+	{
+		RoomButton->SetRenderOpacity(NewState == ERoomNodeState::Unreachable ? UnreachableOpacity : IconOpacity);
+	}
 }
 
 void URoomNodeWidget::RefreshSelectionState(const TArray<ATerminusPlayerState*>& AllPlayerStates,
@@ -80,17 +114,26 @@ void URoomNodeWidget::RefreshSelectionState(const TArray<ATerminusPlayerState*>&
 
 	for (int32 i = 0; i < Selectors.Num(); ++i)
 	{
-		// 선택한 플레이어의 스팀 아바타 초상화 추가
-		UImage* ProfileImg = NewObject<UImage>(this);
-		if (ProfileImg)
+		// 동료 칩: 2px 파티 판 테두리 + 초상화 자리
+		// TODO: Steam API 로 가져온 아바타 텍스처를 Chip 에 (Chip->SetBrushFromTexture)
+		UBorder* Frame = NewObject<UBorder>(this);
+		UImage* Chip = NewObject<UImage>(this);
+		if (!Frame || !Chip) continue;
+
+		Frame->SetBrush(TerminusUI::MakeBoxBrush(TerminusUI::MapColor::PartyPlate, TerminusUI::MapColor::PartyPlate, 0.f, 0.f));
+		Frame->SetPadding(FMargin(2.f));
+		Chip->SetColorAndOpacity(TerminusUI::MapColor::ChipFill);
+		Chip->SetDesiredSizeOverride(FVector2D(ChipSize - 4.f, ChipSize - 4.f));
+		Frame->SetContent(Chip);
+
+		if (UHorizontalBoxSlot* ChipSlot = ProfileContainer->AddChildToHorizontalBox(Frame))
 		{
-			// TODO: Steam API를 통해 가져온 Avatar Texture 적용 (ProfileImg->SetBrushFromTexture)
-			ProfileImg->SetDesiredSizeOverride(FVector2D(28.0f, 28.0f));
-			ProfileContainer->AddChildToHorizontalBox(ProfileImg);
+			ChipSlot->SetPadding(FMargin(i == 0 ? 0.f : 4.f, 0.f, 0.f, 0.f));
+			ChipSlot->SetVerticalAlignment(VAlign_Center);
 		}
 	}
 
-	// 내가 선택한 방이면 빨간 테두리 활성화
+	// 내가 선택한 방이면 붉은 잉크 동그라미
 	SelectionBorder->SetVisibility(bIsSelectedByMe ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Hidden);
 }
 
@@ -101,7 +144,7 @@ void URoomNodeWidget::NativeConstruct()
 	// 버튼 클릭 이벤트 바인딩
 	if (RoomButton)
 	{
-		RoomButton->OnClicked.AddDynamic(this, &URoomNodeWidget::OnButtonClicked);
+		RoomButton->OnClicked.AddUniqueDynamic(this, &URoomNodeWidget::OnButtonClicked);
 	}
 }
 

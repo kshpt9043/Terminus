@@ -1,7 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Blueprint/UserWidget.h"
+#include "Widgets/Common/TerminusUserWidget.h"
 #include "SkillCardWidget.generated.h"
 
 class UButton;
@@ -16,7 +16,7 @@ DECLARE_DELEGATE_OneParam(FOnSkillCardClicked, FName /*SkillRow*/);
  * 하나도 없으면(C++ 클래스 그대로) C++ 이 기본 모양을 만든다
  */
 UCLASS()
-class TERMINUS_API USkillCardWidget : public UUserWidget
+class TERMINUS_API USkillCardWidget : public UTerminusUserWidget
 {
 	GENERATED_BODY()
 

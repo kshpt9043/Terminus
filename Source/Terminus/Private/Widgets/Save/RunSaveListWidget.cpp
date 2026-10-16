@@ -51,16 +51,14 @@ void URunSaveListWidget::NativeDestruct()
 void URunSaveListWidget::BuildDefaultLayout()
 {
 	// 화면 전체 어둡게 + 가운데 창
-	UBorder* Dim = TerminusUI::MakeDimRoot(WidgetTree, TEXT("SaveListDim"), FLinearColor(0.f, 0.f, 0.f, 0.7f));
+	UBorder* Dim = TerminusUI::MakeDimRoot(WidgetTree, TEXT("SaveListDim"), TerminusUI::Color::Dim);
 
 	USizeBox* WindowSize = WidgetTree->ConstructWidget<USizeBox>();
 	WindowSize->SetWidthOverride(760.f);
 	WindowSize->SetHeightOverride(600.f);
 	Dim->SetContent(WindowSize);
 
-	UBorder* Window = WidgetTree->ConstructWidget<UBorder>();
-	Window->SetBrushColor(FLinearColor(0.11f, 0.1f, 0.09f, 1.f));
-	Window->SetPadding(FMargin(20.f));
+	UBorder* Window = TerminusUI::MakePanel(WidgetTree, NAME_None, TerminusUI::Color::Board, FMargin(20.f));
 	WindowSize->SetContent(Window);
 
 	UVerticalBox* Column = WidgetTree->ConstructWidget<UVerticalBox>();
@@ -70,22 +68,21 @@ void URunSaveListWidget::BuildDefaultLayout()
 	UHorizontalBox* Top = WidgetTree->ConstructWidget<UHorizontalBox>();
 	if (UVerticalBoxSlot* S = Column->AddChildToVerticalBox(Top)) S->SetPadding(FMargin(0.f, 0.f, 0.f, 14.f));
 
-	UTextBlock* Title = TerminusUI::MakeText(WidgetTree, TEXT("TitleText"), TEXT("이어하기"), 22, FLinearColor::White, ETextJustify::Left);
+	UTextBlock* Title = TerminusUI::MakeText(WidgetTree, TEXT("TitleText"), TEXT("이어하기"), TerminusUI::FontSize::Section, TerminusUI::Color::Gold, ETextJustify::Left);
+	TerminusUI::SetBold(Title);
 	if (UHorizontalBoxSlot* S = Top->AddChildToHorizontalBox(Title))
 	{
 		S->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
 		S->SetVerticalAlignment(VAlign_Center);
 	}
 
-	CloseButton = WidgetTree->ConstructWidget<UButton>(UButton::StaticClass(), TEXT("CloseButton"));
-	UTextBlock* CloseLabel = TerminusUI::MakeText(WidgetTree, NAME_None, TEXT("  닫기  "), 15, FLinearColor::Black, ETextJustify::Left);
-	CloseButton->SetContent(CloseLabel);
+	CloseButton = TerminusUI::MakeButton(WidgetTree, TEXT("CloseButton"), TEXT("닫기"), TerminusUI::FontSize::Body);
 	if (UHorizontalBoxSlot* S = Top->AddChildToHorizontalBox(CloseButton)) S->SetVerticalAlignment(VAlign_Center);
 
-	StatusText = TerminusUI::MakeText(WidgetTree, TEXT("StatusText"), FString(), 14, TerminusUI::Color::Warning, ETextJustify::Left);
+	StatusText = TerminusUI::MakeText(WidgetTree, TEXT("StatusText"), FString(), TerminusUI::FontSize::Aux, TerminusUI::Color::Warning, ETextJustify::Left);
 	if (UVerticalBoxSlot* S = Column->AddChildToVerticalBox(StatusText)) S->SetPadding(FMargin(0.f, 0.f, 0.f, 8.f));
 
-	EmptyText = TerminusUI::MakeText(WidgetTree, TEXT("EmptyText"), TEXT("저장된 진행이 없습니다. 던전에서 방을 끝내면 자동으로 저장됩니다."), 15, TerminusUI::Color::TextDim, ETextJustify::Left);
+	EmptyText = TerminusUI::MakeText(WidgetTree, TEXT("EmptyText"), TEXT("저장된 진행이 없습니다. 던전에서 방을 끝내면 자동으로 저장됩니다."), TerminusUI::FontSize::Body, TerminusUI::Color::TextDim, ETextJustify::Left);
 	EmptyText->SetAutoWrapText(true);
 	Column->AddChildToVerticalBox(EmptyText);
 

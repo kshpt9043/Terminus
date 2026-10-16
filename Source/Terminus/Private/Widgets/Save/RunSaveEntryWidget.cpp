@@ -26,9 +26,7 @@ void URunSaveEntryWidget::NativeOnInitialized()
 
 void URunSaveEntryWidget::BuildDefaultLayout()
 {
-	UBorder* Row = WidgetTree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("EntryRow"));
-	Row->SetBrushColor(FLinearColor(0.16f, 0.15f, 0.13f, 1.f));
-	Row->SetPadding(FMargin(14.f, 10.f));
+	UBorder* Row = TerminusUI::MakePanel(WidgetTree, TEXT("EntryRow"), TerminusUI::Color::Card, FMargin(14.f, 10.f));
 	WidgetTree->RootWidget = Row;
 
 	UHorizontalBox* Line = WidgetTree->ConstructWidget<UHorizontalBox>();
@@ -42,28 +40,29 @@ void URunSaveEntryWidget::BuildDefaultLayout()
 		S->SetVerticalAlignment(VAlign_Center);
 	}
 
-	TitleText = TerminusUI::MakeText(WidgetTree, TEXT("TitleText"), TEXT(""), 18, TerminusUI::Color::Gold, ETextJustify::Left);
+	TitleText = TerminusUI::MakeText(WidgetTree, TEXT("TitleText"), TEXT(""), TerminusUI::FontSize::Subtitle, TerminusUI::Color::Gold, ETextJustify::Left);
+	TerminusUI::SetBold(TitleText);
 	Info->AddChildToVerticalBox(TitleText);
 
-	InfoText = TerminusUI::MakeText(WidgetTree, TEXT("InfoText"), TEXT(""), 14, TerminusUI::Color::TextSoft, ETextJustify::Left);
+	InfoText = TerminusUI::MakeText(WidgetTree, TEXT("InfoText"), TEXT(""), TerminusUI::FontSize::Aux, TerminusUI::Color::TextSub, ETextJustify::Left);
 	if (UVerticalBoxSlot* S = Info->AddChildToVerticalBox(InfoText)) S->SetPadding(FMargin(0.f, 4.f, 0.f, 0.f));
 
-	PlayersText = TerminusUI::MakeText(WidgetTree, TEXT("PlayersText"), TEXT(""), 14, FLinearColor::White, ETextJustify::Left);
+	PlayersText = TerminusUI::MakeText(WidgetTree, TEXT("PlayersText"), TEXT(""), TerminusUI::FontSize::Aux, TerminusUI::Color::TextBody, ETextJustify::Left);
 	if (UVerticalBoxSlot* S = Info->AddChildToVerticalBox(PlayersText)) S->SetPadding(FMargin(0.f, 4.f, 0.f, 0.f));
 
-	DateText = TerminusUI::MakeText(WidgetTree, TEXT("DateText"), TEXT(""), 12, FLinearColor(0.6f, 0.6f, 0.6f), ETextJustify::Left);
+	DateText = TerminusUI::MakeText(WidgetTree, TEXT("DateText"), TEXT(""), TerminusUI::FontSize::Aux, TerminusUI::Color::TextFaint, ETextJustify::Left);
 	if (UVerticalBoxSlot* S = Info->AddChildToVerticalBox(DateText)) S->SetPadding(FMargin(0.f, 4.f, 0.f, 0.f));
 
 	// 오른쪽: 버튼
-	LoadButton = TerminusUI::MakeButton(WidgetTree, TEXT("LoadButton"), TEXT("  불러오기  "), 15);
+	// 불러오기 = 보조 행동 육각 버튼, 삭제 = 평평한 버튼 + 경고색 글자
+	LoadButton = TerminusUI::MakeHexButton(WidgetTree, TEXT("LoadButton"), TEXT("불러오기"), TerminusUI::EHexButton::Secondary, TerminusUI::FontSize::Body);
 	if (UHorizontalBoxSlot* S = Line->AddChildToHorizontalBox(LoadButton))
 	{
 		S->SetVerticalAlignment(VAlign_Center);
 		S->SetPadding(FMargin(12.f, 0.f, 6.f, 0.f));
 	}
 
-	DeleteButton = TerminusUI::MakeButton(WidgetTree, TEXT("DeleteButton"), TEXT("  삭제  "), 15);
-	DeleteButton->SetBackgroundColor(FLinearColor(0.75f, 0.4f, 0.35f));
+	DeleteButton = TerminusUI::MakeButton(WidgetTree, TEXT("DeleteButton"), TEXT("삭제"), TerminusUI::FontSize::Body, TerminusUI::Color::Alert);
 	if (UHorizontalBoxSlot* S = Line->AddChildToHorizontalBox(DeleteButton))
 	{
 		S->SetVerticalAlignment(VAlign_Center);

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Blueprint/UserWidget.h"
+#include "Widgets/Common/TerminusUserWidget.h"
 #include "Engine/TimerHandle.h"
 #include "RelicBarWidget.generated.h"
 
@@ -20,7 +20,7 @@ struct FRunState;
  * 그 WBP 는 전투 HUD / 지도 화면의 RelicBarClass 에 지정
  */
 UCLASS()
-class TERMINUS_API URelicBarWidget : public UUserWidget
+class TERMINUS_API URelicBarWidget : public UTerminusUserWidget
 {
 	GENERATED_BODY()
 
@@ -31,6 +31,12 @@ protected:
 
 	// 유물 칸이 들어갈 상자. 있던 자식은 지우고 채움
 	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UPanelWidget> RelicBox;
+
+	// "유물 6" (선택)
+	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<class UTextBlock> CountText;
+
+	// 유물 칸을 감싼 판 (선택). 유물이 없으면 숨김
+	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<class UWidget> RelicTray;
 
 	// 칸 크기 / 간격
 	UPROPERTY(EditAnywhere, Category = "Relic Bar")

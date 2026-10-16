@@ -34,10 +34,11 @@ FLinearColor PartyComms::GetPingColor(EPingKind Kind)
 {
 	switch (Kind)
 	{
-	case EPingKind::Focus:     return FLinearColor(1.f, 0.35f, 0.25f);
-	case EPingKind::Danger:    return FLinearColor(1.f, 0.8f, 0.2f);
-	case EPingKind::NeedGuard: return FLinearColor(0.4f, 0.75f, 1.f);
-	case EPingKind::NeedHeal:  return FLinearColor(0.4f, 1.f, 0.5f);
+	// 채팅 / 전투 시안 핑 색 (sRGB)
+	case EPingKind::Focus:     return FLinearColor(FColor::FromHex(TEXT("FF5A4A")));
+	case EPingKind::Danger:    return FLinearColor(FColor::FromHex(TEXT("FFD84A")));
+	case EPingKind::NeedGuard: return FLinearColor(FColor::FromHex(TEXT("4ED1C8")));
+	case EPingKind::NeedHeal:  return FLinearColor(FColor::FromHex(TEXT("6FD86A")));
 	default:                   return FLinearColor::White;
 	}
 }

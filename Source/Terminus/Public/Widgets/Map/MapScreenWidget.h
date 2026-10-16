@@ -1,7 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Blueprint/UserWidget.h"
+#include "Widgets/Common/TerminusUserWidget.h"
 #include "MapScreenWidget.generated.h"
 
 class ADungeonArea;
@@ -18,9 +18,10 @@ class URelicBarWidget;
  * WBP 에 아래 이름으로 둘 것
  *  - MapCanvas : WBP_MapCanvasWidget (필수)
  *  - MapTopBar : WBP_MapTopBar 또는 MapTopBarWidget (선택). 위쪽에 바 높이만큼
+ *  - HintText / HintSubText : 왼쪽 아래 안내 (선택). "다음 방을 고르세요" / "2 / 3명 선택 · 마우스 휠로 지도 이동"
  */
 UCLASS()
-class TERMINUS_API UMapScreenWidget : public UUserWidget
+class TERMINUS_API UMapScreenWidget : public UTerminusUserWidget
 {
 	GENERATED_BODY()
 
@@ -32,12 +33,17 @@ protected:
 	virtual void NativeOnInitialized() override;
 	virtual void NativeConstruct() override;
 	virtual void NativeDestruct() override;
+	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
 
 	UPROPERTY(meta = (BindWidget)) TObjectPtr<UMapCanvasWidget> MapCanvas;
 	UPROPERTY(meta = (BindWidget)) TObjectPtr<UMapTopBarWidget> MapTopBar;
 
 	// 보유 유물 줄. 전투 HUD 와 같은 자리(오른쪽 아래). WBP 에 없으면 루트가 캔버스일 때 C++ 이 만듦
 	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<URelicBarWidget> RelicBar;
+
+	// 왼쪽 아래 안내
+	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<class UTextBlock> HintText;
+	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<class UTextBlock> HintSubText;
 
 	// RelicBar 를 안 뒀을 때 만들 유물 줄 (비우면 프로젝트 설정(Terminus UI) -> C++ 기본)
 	UPROPERTY(EditAnywhere, Category = "Map Screen")
@@ -49,4 +55,9 @@ private:
 
 	UFUNCTION()
 	void HandleViewAreaChanged(ADungeonArea* NewArea);
+
+	// 안내 문구 (매 틱, 바뀌었을 때만 다시 넣음)
+	void RefreshHint();
+
+	TWeakObjectPtr<class AMapManager> CachedMapManager;
 };

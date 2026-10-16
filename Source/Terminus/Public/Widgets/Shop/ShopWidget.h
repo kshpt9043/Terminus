@@ -1,7 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Blueprint/UserWidget.h"
+#include "Widgets/Common/TerminusUserWidget.h"
 #include "Data/RewardTypes.h"
 #include "ShopWidget.generated.h"
 
@@ -36,7 +36,7 @@ enum class EShopAction : uint8
  * WBP 로 꾸미려면 이 클래스를 부모로 WBP 를 만들어 BP_DungeonPC 의 ShopClass 에 지정 (아래 이름 전부 선택 사항)
  */
 UCLASS()
-class TERMINUS_API UShopWidget : public UUserWidget
+class TERMINUS_API UShopWidget : public UTerminusUserWidget
 {
 	GENERATED_BODY()
 
@@ -92,7 +92,7 @@ private:
 	void BuildDefaultLayout();
 	void Rebuild();
 	FString MakeStateKey() const;
-	void AddCard(UPanelWidget* Box, bool bRelic, FName Row, const FString& Caption, const FString& ButtonLabel, bool bEnabled, EShopAction Action, int32 Index);
+	void AddCard(UPanelWidget* Box, bool bRelic, FName Row, const FString& Caption, const FString& ButtonLabel, bool bEnabled, EShopAction Action, int32 Index, bool bUnaffordable = false);
 	void ShowReplace();
 
 	void HandleReplacePicked(UItemSlotWidget* ClickedSlot);

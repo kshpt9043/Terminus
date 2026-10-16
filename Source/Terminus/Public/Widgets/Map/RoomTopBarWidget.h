@@ -1,7 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Blueprint/UserWidget.h"
+#include "Widgets/Common/TerminusUserWidget.h"
 #include "RoomTopBarWidget.generated.h"
 
 class UMapTopBarWidget;
@@ -15,7 +15,7 @@ class UVerticalBox;
  * PC 가 방 화면을 열고 닫을 때 보이고 숨김. 따로 WBP 를 만들 필요 없음 (모양은 상단바 WBP 를 따름)
  */
 UCLASS()
-class TERMINUS_API URoomTopBarWidget : public UUserWidget
+class TERMINUS_API URoomTopBarWidget : public UTerminusUserWidget
 {
 	GENERATED_BODY()
 

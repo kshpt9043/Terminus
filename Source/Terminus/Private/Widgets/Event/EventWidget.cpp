@@ -26,8 +26,6 @@ namespace
 	{
 		return Type == EEventOptionType::ClassSkill || Type == EEventOptionType::OtherClassSkill || Type == EEventOptionType::EventSkill;
 	}
-
-	const FLinearColor EventPurple(0.8f, 0.65f, 1.f);
 }
 
 void UEventWidget::NativeOnInitialized()
@@ -51,12 +49,14 @@ void UEventWidget::NativeOnInitialized()
 
 void UEventWidget::BuildDefaultLayout()
 {
-	UBorder* Dim = TerminusUI::MakeDimRoot(WidgetTree, TEXT("EventDim"), FLinearColor(0.02f, 0.f, 0.04f, 0.7f));
+	UBorder* Dim = TerminusUI::MakeDimRoot(WidgetTree, TEXT("EventDim"), TerminusUI::Color::Dim);
 
 	UVerticalBox* Column = WidgetTree->ConstructWidget<UVerticalBox>();
 	Dim->SetContent(Column);
 
-	TitleText = TerminusUI::MakeWrapText(WidgetTree, TEXT("TitleText"), TEXT("이벤트"), 32, EventPurple);
+	TitleText = TerminusUI::MakeWrapText(WidgetTree, TEXT("TitleText"), TEXT("이벤트"), TerminusUI::FontSize::ScreenTitle, TerminusUI::Color::Gold);
+	TerminusUI::SetBold(TitleText);
+	TerminusUI::SetLetterSpacing(TitleText, 80);
 	TerminusUI::AddRow(Column, TitleText, 0.f);
 
 	// 카드가 접혀도(결과만 보일 때) 글이 좁게 줄바꿈되지 않게 최소 폭을 줌
@@ -110,8 +110,8 @@ void UEventWidget::RebuildCards()
 
 		FChoiceCardStyle CardStyle;
 		CardStyle.Size = CardSize;
-		CardStyle.TitleSize = 21;
-		CardStyle.NormalColor = FLinearColor(0.32f, 0.28f, 0.38f);
+		CardStyle.TitleSize = 20;
+		CardStyle.Padding = FMargin(20.f);
 		Card->ApplyDefaultStyle(CardStyle);
 
 		Card->SetChoiceId(TypeEnum ? FName(*TypeEnum->GetNameStringByValue(static_cast<int64>(Option.Type))) : NAME_None);

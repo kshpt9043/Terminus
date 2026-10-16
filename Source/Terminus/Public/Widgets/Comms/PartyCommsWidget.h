@@ -1,7 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Blueprint/UserWidget.h"
+#include "Widgets/Common/TerminusUserWidget.h"
 #include "InputCoreTypes.h"
 #include "Comms/PartyCommsTypes.h"
 #include "PartyCommsWidget.generated.h"
@@ -35,7 +35,7 @@ struct FPointerEvent;
  * 글을 쓰는 중(입력칸 포커스)이거나, 팝업이 떠 있거나, 로딩 화면이면 가로채지 않음
  */
 UCLASS()
-class TERMINUS_API UPartyCommsWidget : public UUserWidget
+class TERMINUS_API UPartyCommsWidget : public UTerminusUserWidget
 {
 	GENERATED_BODY()
 

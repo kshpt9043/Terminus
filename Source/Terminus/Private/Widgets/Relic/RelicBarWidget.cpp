@@ -4,6 +4,8 @@
 #include "Blueprint/WidgetTree.h"
 #include "Components/HorizontalBox.h"
 #include "Components/HorizontalBoxSlot.h"
+#include "Components/TextBlock.h"
+#include "Widgets/Common/TerminusUIBuilder.h"
 #include "Player/TerminusPlayerState.h"
 #include "Engine/World.h"
 #include "TimerManager.h"
@@ -91,6 +93,12 @@ void URelicBarWidget::Rebuild(const TArray<FName>& Relics)
 {
 	bShownOnce = true;
 	ShownRelics = Relics;
+
+	TerminusUI::SetTextIfChanged(CountText, FString::Printf(TEXT("유물 %d"), Relics.Num()));
+	if (RelicTray)
+	{
+		RelicTray->SetVisibility(Relics.Num() > 0 ? ESlateVisibility::SelfHitTestInvisible : ESlateVisibility::Collapsed);
+	}
 
 	if (!RelicBox) return;
 	RelicBox->ClearChildren();

@@ -1,7 +1,8 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Blueprint/UserWidget.h"
+#include "Widgets/Common/TerminusUserWidget.h"
+#include "Widgets/TerminusUIColors.h"
 #include "ItemSlotWidget.generated.h"
 
 class UBorder;
@@ -28,7 +29,8 @@ enum class EItemSlotKind : uint8
  * 스킬 / 유물 칸 공용 위젯. 전투 HUD 스킬 칸, 창고 격자, 보유 유물 줄이 모두 이걸 씀
  *
  *  - 아이콘 (없으면 이름 앞 두 글자) + 이름 (SetShowName 으로 숨길 수 있음)
- *  - 테두리 색: 유물은 등급, 스킬은 공격 / 방어 / 특수. 선택(SetSelected)이면 강조 색
+ *  - 판 #262A32 + 1px #3A3F4A 테두리, 위쪽 4px 띠 색: 유물은 등급, 스킬은 공격 / 방어 / 특수
+ *    호버면 #A8894A 테두리 + #2E333D 바탕, 선택(SetSelected)이면 강조 색 2px 테두리
  *  - 마우스를 올리면 툴팁 (스킬 = 스킬 툴팁 위젯, 유물 = 유물 툴팁 위젯). 둘 다 WBP 로 바꿀 수 있음
  *  - 아이콘만 모드(SetIconOnly / bIconOnly): 이름 / 테두리 / 배경을 숨기고 아이콘만. 정보는 툴팁으로 (상점)
  *  - SetUsable(false) 면 버튼이 꺼짐 (전투에서 비용 부족 등). 빈 칸은 항상 꺼짐
@@ -39,7 +41,7 @@ enum class EItemSlotKind : uint8
  * WBP 로 꾸미려면 이 클래스를 부모로 WBP 를 만들고 아래 이름으로 위젯을 둘 것 (전부 선택 사항)
  */
 UCLASS()
-class TERMINUS_API UItemSlotWidget : public UUserWidget
+class TERMINUS_API UItemSlotWidget : public UTerminusUserWidget
 {
 	GENERATED_BODY()
 
@@ -69,17 +71,22 @@ public:
 	EItemSlotKind GetKind() const { return Kind; }
 	FName GetItemRow() const { return ItemRow; }
 
+	// 칸 버튼을 누르고 있는 중인지 (전투 HUD 의 스킬 드래그용). 버튼이 없으면 false
+	bool IsPressed() const;
+
 	FOnItemSlotClicked OnSlotClicked;
 
 protected:
 	virtual void NativeOnInitialized() override;
+	virtual void NativeOnMouseEnter(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
+	virtual void NativeOnMouseLeave(const FPointerEvent& InMouseEvent) override;
 
 	// 칸 크기를 정하는 상자 (보통 루트)
 	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<USizeBox> SlotSizeBox;
 
 	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UButton> SlotButton;
 
-	// 등급 / 종류 색 테두리
+	// 테두리 + 위쪽 등급 / 종류 색 띠
 	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UBorder> Frame;
 
 	// 아이콘 뒤 어두운 판 (아이콘만 모드면 투명)
@@ -108,10 +115,10 @@ protected:
 	FVector2D DefaultSlotSize = FVector2D(84.f, 104.f);
 
 	UPROPERTY(EditAnywhere, Category = "Item Slot")
-	FLinearColor EmptyColor = FLinearColor(0.15f, 0.14f, 0.13f, 0.6f);
+	FLinearColor EmptyColor = TerminusUI::Color::Inset;
 
 	UPROPERTY(EditAnywhere, Category = "Item Slot")
-	FLinearColor SelectedColor = FLinearColor(1.f, 0.85f, 0.35f);
+	FLinearColor SelectedColor = TerminusUI::Color::GoldBase;
 
 private:
 	EItemSlotKind Kind = EItemSlotKind::Empty;
@@ -122,6 +129,7 @@ private:
 	bool bShownOnce = false;
 	bool bSelectedState = false;
 	bool bUsableState = true;
+	bool bHoveredState = false;
 
 	UPROPERTY()
 	TObjectPtr<USkillTooltipWidget> SkillTooltip;
@@ -130,7 +138,7 @@ private:
 	TObjectPtr<URelicTooltipWidget> RelicTooltip;
 
 	bool bShowNameWanted = true;            // SetShowName 으로 받은 값 (아이콘만 모드가 꺼지면 되돌림)
-	FLinearColor BackgroundColor = FLinearColor(0.07f, 0.06f, 0.06f, 0.95f);
+	FLinearColor BackgroundColor = TerminusUI::Color::Card;
 	void ApplyIconOnly();
 
 	void BuildDefaultLayout();

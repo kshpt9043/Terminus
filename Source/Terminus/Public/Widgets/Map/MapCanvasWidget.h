@@ -3,7 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Blueprint/UserWidget.h"
+#include "Widgets/Common/TerminusUserWidget.h"
 #include "Widgets/Map/MapEdgeLayer.h"
 #include "MapCanvasWidget.generated.h"
 
@@ -23,7 +23,7 @@ class UTexture2D;
  *  - 화면 위치를 조회하지 않음 -> 창 크기가 바뀌어도 선이 밀리거나 깨지지 않음. 크기 대응은 UMG DPI 배율이 함
  */
 UCLASS()
-class TERMINUS_API UMapCanvasWidget : public UUserWidget
+class TERMINUS_API UMapCanvasWidget : public UTerminusUserWidget
 {
 	GENERATED_BODY()
 	
@@ -46,11 +46,11 @@ public:
 
 	// 열 사이 간격(px). 아이콘이 실제로 보이는 크기(RoomIconVisibleSize)보다 넉넉히 커야 옆 방과 안 붙음
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map Settings", meta = (ClampMin = "50.0"))
-	float ColumnSpacing = 230.0f;
+	float ColumnSpacing = 150.0f;
 
 	// 줄(레벨) 사이 간격(px). 아이콘 보이는 크기 + 점선이 보일 틈. 좁으면 위아래 방이 붙어서 줄 구분이 안 됨
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map Settings", meta = (ClampMin = "50.0"))
-	float RowSpacing = 250.0f;
+	float RowSpacing = 130.0f;
 
 	// 줄 안에서 방을 가운데로 고르게 펼치는 정도. 0 = 열 위치 그대로, 1 = 줄마다 가운데 기준 같은 간격
 	// 열 위치 그대로면 방 2개짜리 줄이 한쪽(0,1열)에 쏠려 지도가 기울어 보이고 가로로 긴 선이 생김
@@ -60,24 +60,23 @@ public:
 
 	// 지도 가장자리 여백 (좌우, 위아래). 모자라면 아이콘이 안 잘리게 자동으로 늘림
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map Settings")
-	FVector2D MapPadding = FVector2D(190.0f, 170.0f);
+	FVector2D MapPadding = FVector2D(165.0f, 110.0f);
 
 	// 방 위치 흔들림. 간격 대비 비율 (X, Y). 자연스러워 보이게
 	// 아이콘끼리 겹치지 않는 만큼으로 자동 제한됨 (RoomIconVisibleSize 기준)
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map Settings", meta = (ClampMin = "0.0", ClampMax = "0.45"))
 	FVector2D PositionJitter = FVector2D(0.18f, 0.15f);
 
-	// 방 아이콘 그림이 실제로 보이는 크기(px). 아이콘 상자(200)에서 투명 여백을 뺀 크기
-	// 지금 아이콘들은 그림이 상자의 55~65% -> 약 130. 흔들림 제한에 씀
+	// 방 아이콘 그림이 실제로 보이는 크기(px). 지도 시안 아이콘은 64 (보스 96). 흔들림 제한에 씀
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map Settings", meta = (ClampMin = "0.0"))
-	float RoomIconVisibleSize = 130.0f;
+	float RoomIconVisibleSize = 64.0f;
 
 	// 방 위젯 왼쪽 위에서 아이콘 중심까지의 거리(px). 이 점이 방 좌표에 놓이고 선도 여기서 나감
-	// 비율(가운데 정렬)로 안 하는 이유: 방 위젯은 [아이콘 200x200][선택한 사람 초상화] 가로 배치라
+	// 비율(가운데 정렬)로 안 하는 이유: 방 위젯은 [아이콘 상자 150x150][동료 칩] 가로 배치라
 	// 누가 방을 고르면 위젯 폭이 늘어남 -> 가운데 기준이면 아이콘이 옆으로 밀려 선과 어긋남
 	// WBP_RoomNodeWidget 의 아이콘 SizeBox 크기를 바꾸면 여기도 그 절반으로 맞출 것
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map Settings")
-	FVector2D RoomIconCenter = FVector2D(100.0f, 100.0f);
+	FVector2D RoomIconCenter = FVector2D(75.0f, 75.0f);
 
 	// 연결선(점선) 모양
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map Settings|Edge")
@@ -163,6 +162,9 @@ private:
 
 	// 내 현재 위치 기준으로 이 방을 누를 수 있는가
 	bool IsRoomSelectable(const FRoomNode& Node, const ATerminusPlayerState* LocalPS) const;
+
+	// 이 방에서 앞으로 갈 수 있는 방들 (INDEX_NONE = 출발 전 -> 전부). 여기 없는 앞쪽 방은 "못 감"
+	TSet<int32> CollectReachableRooms(int32 FromRoomId) const;
 
 	// 새로 받은 지도가 지금 그려진 지도와 같은가 (같은 지도가 다시 복제돼 와도 재생성하지 않기 위해)
 	static bool IsSameMap(const TArray<FRoomNode>& A, const TArray<FRoomNode>& B);

@@ -26,7 +26,9 @@ namespace
 	UPanelWidget* AddShopSection(UWidgetTree* Tree, UPanelWidget* Parent, const FString& Title, const FName& BoxName, bool bWrap)
 	{
 		UVerticalBox* Section = Tree->ConstructWidget<UVerticalBox>();
-		Section->AddChildToVerticalBox(TerminusUI::MakeText(Tree, NAME_None, Title, 16, TerminusUI::Color::Gold, ETextJustify::Left));
+		UTextBlock* TitleLine = TerminusUI::MakeText(Tree, NAME_None, Title, TerminusUI::FontSize::Subtitle, TerminusUI::Color::Gold, ETextJustify::Left);
+		TerminusUI::SetBold(TitleLine);
+		Section->AddChildToVerticalBox(TitleLine);
 
 		UPanelWidget* Box = nullptr;
 		if (bWrap)
@@ -53,7 +55,8 @@ namespace
 		return Box;
 	}
 
-	const FLinearColor ShopBuyColor(0.2f, 0.42f, 0.28f);
+	// 재화 바탕색 = 카드가 구매(재화) 육각 버튼으로 그림
+	const FLinearColor& ShopBuyColor = TerminusUI::Color::CurrencyFill;
 }
 
 void UShopWidget::NativeOnInitialized()
@@ -81,9 +84,7 @@ void UShopWidget::BuildDefaultLayout()
 {
 	UBorder* Dim = TerminusUI::MakeDimRoot(WidgetTree, TEXT("ShopDim"), TerminusUI::Color::Dim);
 
-	UBorder* Panel = WidgetTree->ConstructWidget<UBorder>();
-	Panel->SetBrushColor(TerminusUI::Color::Panel);
-	Panel->SetPadding(FMargin(28.f, 22.f));
+	UBorder* Panel = TerminusUI::MakePanel(WidgetTree, NAME_None, TerminusUI::Color::Board, FMargin(28.f, 22.f));
 	Dim->SetContent(Panel);
 
 	UVerticalBox* Root = WidgetTree->ConstructWidget<UVerticalBox>();
@@ -92,12 +93,14 @@ void UShopWidget::BuildDefaultLayout()
 	// 제목 + 던전 재화
 	UHorizontalBox* Header = WidgetTree->ConstructWidget<UHorizontalBox>();
 	Root->AddChildToVerticalBox(Header);
-	TitleText = TerminusUI::MakeText(WidgetTree, TEXT("TitleText"), TEXT("상점"), 28, TerminusUI::Color::Gold, ETextJustify::Left);
+	TitleText = TerminusUI::MakeTitle(WidgetTree, TEXT("TitleText"), TEXT("상점"));
+	TitleText->SetJustification(ETextJustify::Left);
 	if (UHorizontalBoxSlot* S = Header->AddChildToHorizontalBox(TitleText)) S->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
-	CurrencyText = TerminusUI::MakeText(WidgetTree, TEXT("CurrencyText"), TEXT(""), 18, FLinearColor::White, ETextJustify::Right);
+	CurrencyText = TerminusUI::MakeText(WidgetTree, TEXT("CurrencyText"), TEXT(""), TerminusUI::FontSize::Subtitle, TerminusUI::Color::Gold, ETextJustify::Right);
+	TerminusUI::SetBold(CurrencyText);
 	if (UHorizontalBoxSlot* S = Header->AddChildToHorizontalBox(CurrencyText)) S->SetVerticalAlignment(VAlign_Center);
 
-	MessageText = TerminusUI::MakeText(WidgetTree, TEXT("MessageText"), TEXT(""), 14, FLinearColor(0.85f, 0.95f, 0.85f), ETextJustify::Left);
+	MessageText = TerminusUI::MakeText(WidgetTree, TEXT("MessageText"), TEXT(""), TerminusUI::FontSize::Body, TerminusUI::Color::TextSub, ETextJustify::Left);
 	if (UVerticalBoxSlot* S = Root->AddChildToVerticalBox(MessageText)) S->SetPadding(FMargin(0.f, 6.f, 0.f, 10.f));
 
 	// 구매 줄
@@ -120,7 +123,7 @@ void UShopWidget::BuildDefaultLayout()
 	ReplacePanel = WidgetTree->ConstructWidget<UItemPickPanelWidget>(PickClass, TEXT("ReplacePanel"));
 	TerminusUI::AddRow(Root, ReplacePanel, 16.f);
 
-	LeaveButton = TerminusUI::MakeButton(WidgetTree, TEXT("LeaveButton"), TEXT("  나가기  "), 13, FLinearColor::White, FLinearColor(0.45f, 0.2f, 0.2f));
+	LeaveButton = TerminusUI::MakeButton(WidgetTree, TEXT("LeaveButton"), TEXT("나가기"), TerminusUI::FontSize::Body);
 	if (UVerticalBoxSlot* S = Root->AddChildToVerticalBox(LeaveButton))
 	{
 		S->SetHorizontalAlignment(HAlign_Right);
@@ -176,7 +179,7 @@ FString UShopWidget::MakeStateKey() const
 	return Key;
 }
 
-void UShopWidget::AddCard(UPanelWidget* Box, bool bRelic, FName Row, const FString& Caption, const FString& ButtonLabel, bool bEnabled, EShopAction Action, int32 Index)
+void UShopWidget::AddCard(UPanelWidget* Box, bool bRelic, FName Row, const FString& Caption, const FString& ButtonLabel, bool bEnabled, EShopAction Action, int32 Index, bool bUnaffordable)
 {
 	if (!Box) return;
 
@@ -188,6 +191,7 @@ void UShopWidget::AddCard(UPanelWidget* Box, bool bRelic, FName Row, const FStri
 	if (UItemSlotWidget* ItemSlot = Card->GetItemSlot()) ItemSlot->SetIconOnly(bIconOnlySlots);
 	Card->SetCaption(Caption);
 	Card->SetAction(ButtonLabel, bEnabled, bEnabled ? ShopBuyColor : TerminusUI::Color::ButtonIdle);
+	if (bUnaffordable) Card->SetActionLabelColor(TerminusUI::Color::Alert);   // 재화 부족 = 비용 경고색
 	Card->OnAction = FSimpleDelegate::CreateUObject(this, &UShopWidget::HandleAction, Action, Index, Row);
 
 	UPanelSlot* PanelSlot = Box->AddChild(Card);
@@ -216,7 +220,7 @@ void UShopWidget::Rebuild()
 			const int32 Price = State.RelicPrices.IsValidIndex(i) ? State.RelicPrices[i] : 0;
 			AddCard(RelicBuyBox, true, State.RelicOffers[i], FString(),
 				bBought ? FString(TEXT(" 구매함 ")) : FString::Printf(TEXT(" 구매 %d "), Price),
-				!bBought && Currency >= Price, EShopAction::BuyRelic, i);
+				!bBought && Currency >= Price, EShopAction::BuyRelic, i, !bBought && Currency < Price);
 		}
 		if (State.RelicOffers.Num() == 0)
 		{
@@ -234,7 +238,7 @@ void UShopWidget::Rebuild()
 			const int32 Price = State.SkillPrices.IsValidIndex(i) ? State.SkillPrices[i] : 0;
 			AddCard(SkillBuyBox, false, State.SkillOffers[i], FString(),
 				bBought ? FString(TEXT(" 구매함 ")) : FString::Printf(TEXT(" 구매 %d "), Price),
-				!bBought && Currency >= Price, EShopAction::BuySkill, i);
+				!bBought && Currency >= Price, EShopAction::BuySkill, i, !bBought && Currency < Price);
 		}
 		if (State.SkillOffers.Num() == 0)
 		{
@@ -253,7 +257,7 @@ void UShopWidget::Rebuild()
 			const int32 Cost = State.UpgradeCostPerLevel * (Level + 1);
 			AddCard(UpgradeBox, false, Skill, FString::Printf(TEXT("+%d"), Level),
 				bMax ? FString(TEXT(" 최대 ")) : FString::Printf(TEXT(" 강화 %d "), Cost),
-				!bMax && Currency >= Cost, EShopAction::Upgrade, INDEX_NONE);
+				!bMax && Currency >= Cost, EShopAction::Upgrade, INDEX_NONE, !bMax && Currency < Cost);
 		}
 		if (Run.EnhanceSkills.Num() == 0)
 		{

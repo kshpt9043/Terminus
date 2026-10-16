@@ -1,7 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Blueprint/UserWidget.h"
+#include "Widgets/Common/TerminusUserWidget.h"
 #include "Data/CharacterTypes.h"
 #include "StartRelicPickWidget.generated.h"
 
@@ -24,7 +24,7 @@ class UItemSlotWidget;
  * WBP 로 꾸미려면 이 클래스를 부모로 WBP 를 만들고 아래 이름으로 위젯을 둘 것 (전부 선택 사항). 루트는 화면 전체
  */
 UCLASS()
-class TERMINUS_API UStartRelicPickWidget : public UUserWidget
+class TERMINUS_API UStartRelicPickWidget : public UTerminusUserWidget
 {
 	GENERATED_BODY()
 

@@ -32,7 +32,7 @@ void UFloorVoteWidget::NativeOnInitialized()
 
 void UFloorVoteWidget::BuildDefaultLayout()
 {
-	UBorder* Dim = TerminusUI::MakeDimRoot(WidgetTree, TEXT("FloorVoteDim"), FLinearColor(0.f, 0.f, 0.f, 0.8f));
+	UBorder* Dim = TerminusUI::MakeDimRoot(WidgetTree, TEXT("FloorVoteDim"), TerminusUI::Color::DimStrong);
 
 	UVerticalBox* Column = WidgetTree->ConstructWidget<UVerticalBox>();
 	Dim->SetContent(Column);
@@ -133,8 +133,7 @@ void UFloorVoteWidget::RebuildCards()
 
 		FChoiceCardStyle CardStyle;
 		CardStyle.Size = CardSize;
-		CardStyle.TitleSize = 24;
-		CardStyle.NormalColor = FLinearColor(0.35f, 0.35f, 0.35f);
+		CardStyle.TitleSize = 22;
 		Card->ApplyDefaultStyle(CardStyle);
 
 		const UEnum* ChoiceEnum = StaticEnum<EFloorChoice>();

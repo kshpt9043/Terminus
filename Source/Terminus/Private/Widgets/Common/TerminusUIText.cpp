@@ -3,6 +3,7 @@
 #include "Data/RelicTypes.h"
 #include "Data/SkillTypes.h"
 #include "Map/MapManager.h"
+#include "Widgets/TerminusUIColors.h"
 
 namespace TerminusUI
 {
@@ -76,11 +77,12 @@ namespace TerminusUI
 	{
 		switch (Tier)
 		{
-		case ERelicTier::Basic:   return FLinearColor(0.55f, 0.55f, 0.55f);
-		case ERelicTier::Upgrade: return FLinearColor(1.f, 0.8f, 0.3f);
-		case ERelicTier::Mid:     return FLinearColor(0.35f, 0.6f, 1.f);
-		case ERelicTier::Deep:    return FLinearColor(0.95f, 0.3f, 0.3f);
-		default:                  return FLinearColor(0.85f, 0.85f, 0.85f);
+		// 스타일 가이드 층 등급: 표층 흐림 / 중층 금 / 심층 경고
+		case ERelicTier::Basic:   return Color::Line;
+		case ERelicTier::Upgrade: return Color::GoldHover;
+		case ERelicTier::Mid:     return Color::GoldBase;
+		case ERelicTier::Deep:    return Color::Alert;
+		default:                  return Color::TextFaint;
 		}
 	}
 
@@ -88,9 +90,10 @@ namespace TerminusUI
 	{
 		switch (Type)
 		{
-		case ESkillType::Attack:  return FLinearColor(0.9f, 0.35f, 0.3f);
-		case ESkillType::Defense: return FLinearColor(0.35f, 0.6f, 0.95f);
-		default:                  return FLinearColor(0.7f, 0.45f, 0.95f);
+		// 팔레트 안에서: 공격 경고색 / 방어 보조 행동 청록 / 특수 금
+		case ESkillType::Attack:  return Color::Alert;
+		case ESkillType::Defense: return Hex(TEXT("4A929A"));
+		default:                  return Color::GoldBase;
 		}
 	}
 }

@@ -5,12 +5,13 @@
 
 #include "Components/Button.h"
 #include "Components/TextBlock.h"
+#include "Widgets/TerminusUIColors.h"
 
 namespace
 {
 	// 1d 팔레트. 선택되면 금색, 아니면 보조 글자색
-	const FLinearColor LabelOn  = FLinearColor(FColor::FromHex(TEXT("E6C47A")));
-	const FLinearColor LabelOff = FLinearColor(FColor::FromHex(TEXT("A79F8E")));
+	const FLinearColor& LabelOn  = TerminusUI::Color::GoldHover;
+	const FLinearColor& LabelOff = TerminusUI::Color::TextAux;
 }
 
 void UClassButton::NativeOnInitialized()

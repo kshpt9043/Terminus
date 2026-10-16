@@ -41,7 +41,9 @@ void UItemCardWidget::BuildDefaultLayout()
 	TerminusUI::AddRow(Column, CaptionSizeBox, 4.f);
 
 	ActionButton = WidgetTree->ConstructWidget<UButton>(UButton::StaticClass(), TEXT("ActionButton"));
-	ActionText = TerminusUI::MakeText(WidgetTree, TEXT("ActionText"), TEXT(""), 13, FLinearColor::White);
+	TerminusUI::StyleFlatButton(ActionButton);
+	ActionText = TerminusUI::MakeText(WidgetTree, TEXT("ActionText"), TEXT(""), TerminusUI::FontSize::Aux, TerminusUI::Color::TextBody);
+	TerminusUI::SetBold(ActionText);
 	ActionButton->SetContent(ActionText);
 	TerminusUI::AddRow(Column, ActionButton, 4.f);
 }
@@ -85,9 +87,20 @@ void UItemCardWidget::SetAction(const FString& Label, bool bEnabled, const FLine
 	{
 		ActionButton->SetVisibility(Label.IsEmpty() ? ESlateVisibility::Collapsed : ESlateVisibility::Visible);
 		ActionButton->SetIsEnabled(bEnabled);
-		if (bDefaultLayout) ActionButton->SetBackgroundColor(DefaultTint);
+		if (bDefaultLayout)
+		{
+			// 재화 바탕색이면 구매 육각 버튼, 아니면 그 색 바탕의 평평한 버튼 (흰색 = 테마 기본)
+			if (DefaultTint.Equals(TerminusUI::Color::CurrencyFill, 0.001f)) TerminusUI::StyleHexButton(ActionButton, TerminusUI::EHexButton::Currency);
+			else                                                              TerminusUI::StyleFlatButton(ActionButton, DefaultTint);
+			if (ActionText) ActionText->SetColorAndOpacity(FSlateColor(bEnabled ? TerminusUI::Color::TextBody : TerminusUI::Color::TextFaint));
+		}
 	}
 	OnCardUpdated();
+}
+
+void UItemCardWidget::SetActionLabelColor(const FLinearColor& Color)
+{
+	if (bDefaultLayout && ActionText) ActionText->SetColorAndOpacity(FSlateColor(Color));
 }
 
 void UItemCardWidget::SetCaptionStyle(float Width, int32 FontSize, const FLinearColor& Color)

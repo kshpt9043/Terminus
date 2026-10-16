@@ -39,7 +39,7 @@ namespace
 		}
 	}
 
-	const FLinearColor BaseDim(0.65f, 0.65f, 0.65f);
+	const FLinearColor& BaseDim = TerminusUI::Color::TextAux;
 }
 
 // =====================================================================
@@ -100,16 +100,13 @@ void UBaseWidget::BuildDefaultLayout()
 		S->SetVerticalAlignment(VAlign_Top);
 	}
 
-	GoldText = TerminusUI::MakeText(WidgetTree, TEXT("GoldText"), TEXT(""), 14, TerminusUI::Color::Gold, ETextJustify::Left);
+	GoldText = TerminusUI::MakeText(WidgetTree, TEXT("GoldText"), TEXT(""), TerminusUI::FontSize::Body, TerminusUI::Color::Gold, ETextJustify::Left);
 	Corner->AddChildToVerticalBox(GoldText);
 
 	auto AddCornerButton = [&](const FName& Name, const FString& Label) -> UButton*
 	{
-		UButton* Button = WidgetTree->ConstructWidget<UButton>(UButton::StaticClass(), Name);
-		Button->SetBackgroundColor(FLinearColor(0.18f, 0.18f, 0.18f));
-		UTextBlock* Text = TerminusUI::MakeText(WidgetTree, NAME_None, Label, 16, FLinearColor::White, ETextJustify::Left);
-		Text->SetJustification(ETextJustify::Center);
-		Button->SetContent(Text);
+		// 돌아가기 / 메인화면 = 작은 평평한 버튼
+		UButton* Button = TerminusUI::MakeButton(WidgetTree, Name, Label, TerminusUI::FontSize::Body);
 
 		USizeBox* Size = WidgetTree->ConstructWidget<USizeBox>();
 		Size->SetWidthOverride(170.f);
@@ -129,10 +126,10 @@ void UBaseWidget::BuildDefaultLayout()
 		S->SetVerticalAlignment(VAlign_Fill);
 	}
 
-	TitleText = TerminusUI::MakeText(WidgetTree, TEXT("TitleText"), TEXT("거점"), 30, FLinearColor::White, ETextJustify::Left);
+	TitleText = TerminusUI::MakeTitle(WidgetTree, TEXT("TitleText"), TEXT("거점"));
 	if (UVerticalBoxSlot* S = Column->AddChildToVerticalBox(TitleText)) S->SetHorizontalAlignment(HAlign_Center);
 
-	MessageText = TerminusUI::MakeText(WidgetTree, TEXT("MessageText"), TEXT(""), 14, BaseDim, ETextJustify::Left);
+	MessageText = TerminusUI::MakeText(WidgetTree, TEXT("MessageText"), TEXT(""), TerminusUI::FontSize::Aux, BaseDim, ETextJustify::Left);
 	if (UVerticalBoxSlot* S = Column->AddChildToVerticalBox(MessageText))
 	{
 		S->SetHorizontalAlignment(HAlign_Center);
@@ -344,9 +341,7 @@ void UBaseWidget::BuildStatHallView()
 	const FClassUpgrades Upgrades = Profile ? Profile->GetClassUpgrades(SelectedClass) : FClassUpgrades();
 	const int32 Gold = Profile ? Profile->GetGold() : 0;
 
-	UBorder* Panel = WidgetTree->ConstructWidget<UBorder>();
-	Panel->SetBrushColor(FLinearColor(0.3f, 0.3f, 0.3f, 1.f));
-	Panel->SetPadding(FMargin(28.f, 20.f));
+	UBorder* Panel = TerminusUI::MakePanel(WidgetTree, NAME_None, TerminusUI::Color::Board, FMargin(28.f, 20.f));
 	ContentBox->AddChild(Panel);
 
 	UVerticalBox* Rows = WidgetTree->ConstructWidget<UVerticalBox>();
@@ -365,10 +360,10 @@ void UBaseWidget::BuildStatHallView()
 		UHorizontalBox* Line = WidgetTree->ConstructWidget<UHorizontalBox>();
 		if (UVerticalBoxSlot* S = Rows->AddChildToVerticalBox(Line)) S->SetPadding(FMargin(0.f, 5.f));
 
-		AddBaseCell(Line, MakeBaseCell(WidgetTree, GetStatUpgradeName(Stat).ToString(), 140.f, 17, FLinearColor::White));
-		AddBaseCell(Line, MakeBaseCell(WidgetTree, FString::Printf(TEXT("[%d/%d]"), Level, Rule->MaxLevel), 90.f, 17, FLinearColor::White));
-		AddBaseCell(Line, MakeBaseCell(WidgetTree, FString::Printf(TEXT("+%d"), Level * Rule->AmountPerLevel), 70.f, 15, BaseDim));
-		AddBaseCell(Line, MakeBaseCell(WidgetTree, bMax ? FString(TEXT("최대")) : FString::Printf(TEXT("%d 골드"), Cost), 140.f, 17,
+		AddBaseCell(Line, MakeBaseCell(WidgetTree, GetStatUpgradeName(Stat).ToString(), 140.f, TerminusUI::FontSize::Subtitle, TerminusUI::Color::TextBody));
+		AddBaseCell(Line, MakeBaseCell(WidgetTree, FString::Printf(TEXT("[%d/%d]"), Level, Rule->MaxLevel), 90.f, TerminusUI::FontSize::Subtitle, TerminusUI::Color::TextBody));
+		AddBaseCell(Line, MakeBaseCell(WidgetTree, FString::Printf(TEXT("+%d"), Level * Rule->AmountPerLevel), 70.f, TerminusUI::FontSize::Aux, BaseDim));
+		AddBaseCell(Line, MakeBaseCell(WidgetTree, bMax ? FString(TEXT("최대")) : FString::Printf(TEXT("%d 골드"), Cost), 140.f, TerminusUI::FontSize::Subtitle,
 			bMax ? BaseDim : (Gold >= Cost ? TerminusUI::Color::Gold : TerminusUI::Color::Warning)));
 
 		UButton* Plus = MakeRelayButton(TEXT(" + "), EBaseView::StatHall, i, 16);
@@ -400,9 +395,7 @@ void UBaseWidget::BuildSkillHallView()
 		if (UHorizontalBoxSlot* S = Cast<UHorizontalBoxSlot>(ContentBox->AddChild(Card))) S->SetPadding(FMargin(14.f, 0.f));
 
 		// 카드 몸통: 이름 / 설명 / 비용 + 강화 버튼
-		UBorder* Body = WidgetTree->ConstructWidget<UBorder>();
-		Body->SetBrushColor(FLinearColor(0.35f, 0.35f, 0.35f, 1.f));
-		Body->SetPadding(FMargin(14.f));
+		UBorder* Body = TerminusUI::MakePanel(WidgetTree, NAME_None, TerminusUI::Color::Card, FMargin(14.f));
 		USizeBox* Size = WidgetTree->ConstructWidget<USizeBox>();
 		Size->SetWidthOverride(CardSize.X);
 		Size->SetHeightOverride(CardSize.Y * 0.8f);
@@ -413,13 +406,14 @@ void UBaseWidget::BuildSkillHallView()
 		Body->SetContent(Inside);
 
 		const FString Name = Skill ? Skill->DisplayName_KR.ToString() : FString::Printf(TEXT("기본 스킬 %d"), i + 1);
-		UTextBlock* NameText = TerminusUI::MakeText(WidgetTree, NAME_None, Name, 20, FLinearColor::White, ETextJustify::Left);
+		UTextBlock* NameText = TerminusUI::MakeText(WidgetTree, NAME_None, Name, 20, TerminusUI::Color::Gold, ETextJustify::Left);
+		TerminusUI::SetBold(NameText);
 		if (UVerticalBoxSlot* S = Inside->AddChildToVerticalBox(NameText)) S->SetHorizontalAlignment(HAlign_Center);
 
 		const FString Effect = !Skill ? FString()
 			: Skill->BaseValue != 0 ? FString::Printf(TEXT("수치 %d → %d"), Skill->BaseValue + Level, Skill->BaseValue + Level + (bMax ? 0 : 1))
 			: FString::Printf(TEXT("상태 수치 %d → %d"), Skill->StatusValue + Level, Skill->StatusValue + Level + (bMax ? 0 : 1));
-		UTextBlock* Desc = TerminusUI::MakeText(WidgetTree, NAME_None, (Skill ? Skill->Description_KR.ToString().Replace(TEXT("\\n"), TEXT("\n")) : FString()) + TEXT("\n\n") + (bMax ? FString::Printf(TEXT("수치 +%d (최대)"), Level) : Effect), 13, FLinearColor(0.92f, 0.92f, 0.92f), ETextJustify::Left);
+		UTextBlock* Desc = TerminusUI::MakeText(WidgetTree, NAME_None, (Skill ? Skill->Description_KR.ToString().Replace(TEXT("\\n"), TEXT("\n")) : FString()) + TEXT("\n\n") + (bMax ? FString::Printf(TEXT("수치 +%d (최대)"), Level) : Effect), 14, TerminusUI::Color::TextBody, ETextJustify::Left);
 		Desc->SetAutoWrapText(true);
 		if (UVerticalBoxSlot* S = Inside->AddChildToVerticalBox(Desc))
 		{
@@ -429,7 +423,7 @@ void UBaseWidget::BuildSkillHallView()
 
 		UHorizontalBox* Buy = WidgetTree->ConstructWidget<UHorizontalBox>();
 		Inside->AddChildToVerticalBox(Buy);
-		UTextBlock* CostText = TerminusUI::MakeText(WidgetTree, NAME_None, bMax ? FString(TEXT("최대")) : FString::Printf(TEXT("%d 골드"), Cost), 16, bMax ? BaseDim : (Gold >= Cost ? TerminusUI::Color::Gold : TerminusUI::Color::Warning), ETextJustify::Left);
+		UTextBlock* CostText = TerminusUI::MakeText(WidgetTree, NAME_None, bMax ? FString(TEXT("최대")) : FString::Printf(TEXT("%d 골드"), Cost), TerminusUI::FontSize::Body, bMax ? BaseDim : (Gold >= Cost ? TerminusUI::Color::Gold : TerminusUI::Color::Warning), ETextJustify::Left);
 		if (UHorizontalBoxSlot* S = Buy->AddChildToHorizontalBox(CostText))
 		{
 			S->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
@@ -448,8 +442,10 @@ void UBaseWidget::BuildSkillHallView()
 		}
 		for (int32 p = 0; p < Settings->SkillMaxLevel; ++p)
 		{
+			// 채운 단계 = 금, 빈 단계 = 안쪽색 + 테두리
 			UBorder* Pip = WidgetTree->ConstructWidget<UBorder>();
-			Pip->SetBrushColor(p < Level ? TerminusUI::Color::Gold : FLinearColor(0.85f, 0.85f, 0.85f, 1.f));
+			Pip->SetBrush(p < Level ? TerminusUI::MakeBoxBrush(TerminusUI::Color::GoldBase, TerminusUI::Color::GoldPressed, 2.f)
+				: TerminusUI::MakeBoxBrush(TerminusUI::Color::Inset, TerminusUI::Color::Line, 2.f));
 			USizeBox* PipSize = WidgetTree->ConstructWidget<USizeBox>();
 			PipSize->SetWidthOverride(26.f);
 			PipSize->SetHeightOverride(26.f);
@@ -466,7 +462,8 @@ void UBaseWidget::BuildSkillHallView()
 UButton* UBaseWidget::MakeRelayButton(const FString& Label, EBaseView InView, int32 Index, int32 FontSize)
 {
 	UButton* Button = WidgetTree->ConstructWidget<UButton>();
-	UTextBlock* Text = TerminusUI::MakeText(WidgetTree, NAME_None, Label, FontSize, FLinearColor::Black, ETextJustify::Left);
+	TerminusUI::StyleFlatButton(Button);
+	UTextBlock* Text = TerminusUI::MakeText(WidgetTree, NAME_None, Label, FontSize, TerminusUI::Color::TextBody, ETextJustify::Left);
 	Text->SetJustification(ETextJustify::Center);
 	Button->SetContent(Text);
 
@@ -477,7 +474,6 @@ UButton* UBaseWidget::MakeRelayButton(const FString& Label, EBaseView InView, in
 UButton* UBaseWidget::AddCard(const FString& Label, EBaseView InView, int32 Index, bool bEnabled)
 {
 	UButton* Button = MakeRelayButton(FString(), InView, Index, 1);
-	Button->SetBackgroundColor(FLinearColor(0.35f, 0.35f, 0.35f));
 	Button->SetIsEnabled(bEnabled);
 
 	// 시안: 회색 상자, 아래쪽에 이름
@@ -487,7 +483,7 @@ UButton* UBaseWidget::AddCard(const FString& Label, EBaseView InView, int32 Inde
 	UOverlay* Inner = WidgetTree->ConstructWidget<UOverlay>();
 	Size->SetContent(Inner);
 
-	UTextBlock* Text = TerminusUI::MakeText(WidgetTree, NAME_None, Label, 24, bEnabled ? FLinearColor::White : BaseDim, ETextJustify::Left);
+	UTextBlock* Text = TerminusUI::MakeText(WidgetTree, NAME_None, Label, TerminusUI::FontSize::Section, bEnabled ? TerminusUI::Color::TextBody : TerminusUI::Color::TextFaint, ETextJustify::Left);
 	Text->SetJustification(ETextJustify::Center);
 	if (UOverlaySlot* S = Inner->AddChildToOverlay(Text))
 	{

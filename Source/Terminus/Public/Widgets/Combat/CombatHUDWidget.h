@@ -1,13 +1,18 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Blueprint/UserWidget.h"
+#include "Widgets/Common/TerminusUserWidget.h"
 #include "CombatHUDWidget.generated.h"
 
 class ADungeonArea;
 class ATerminusBattler;
+class UBorder;
 class UButton;
 class UCanvasPanel;
+class UImage;
+class UOverlay;
+class UTexture2D;
+class UWrapBox;
 class UPanelWidget;
 class UItemSlotWidget;
 class URelicBarWidget;
@@ -31,13 +36,21 @@ class UVerticalBox;
  *  - 칸 번호 0~2 = 기본 스킬, 3~ = 강화 스킬. 강화 칸 수는 캐릭터 EnhanceSlots 를 따름 (최대 3)
  *
  * 스킬 사용: 적 1명 / 아군 1명 스킬은 누르면 대상 고르기 모드 -> 대상 클릭. 우클릭이나 같은 스킬을 다시 누르면 취소
+ *  - 드래그: 스킬 칸을 누른 채 끌어서 대상 위에서 놓으면 바로 사용 (대상 밖에서 놓으면 취소, Shift 를 누른 채 놓으면 예약만)
+ *    칸 버튼이 마우스를 잡고 있어 대상 버튼의 hover 가 안 바뀜 -> 놓는 위치는 대상 버튼의 화면 영역으로 직접 판정
+ *
+ * 전투 시안 (Terminus Combat):
+ *  - 위 가운데 턴 띠 (760x64, 양끝이 흐려지는 띠 + 위아래 금선). 내 턴 / 적의 턴 / 배신자의 턴 / 승리 / 패배마다 색이 다름
+ *  - 왼쪽 아래 판: 에너지 / 스킬 에너지 구슬 + 칸 92x84 (오른쪽 위 비용 원, 왼쪽 위 층 마름모, 강화 +N)
+ *  - 오른쪽 아래: 턴 종료 판 (봉랍 + 글자, 내 턴 아니면 "대기 중…") + 스탯 줄
+ *  - 캐릭터 발밑: 보호막 줄 4px + 체력 줄 7px + 숫자 + 상태이상 글자 칸 16px, 머리 위: 행동 예고 (아이콘 + 숫자) / 턴 끝낸 동료 "✓ 대기"
  *
  * 행동 계획 공유 (UPartyCommsWidget 이 표시): 대상 고르는 중이면 마우스가 올라간 대상이 동료 화면에 실시간으로 보임
  *  - Shift + 대상 클릭 (또는 자신 / 전체 스킬을 Shift + 클릭) = 쓰지 않고 '예약' 만 공유. 이번 사이클 동안 유지
  *  - 예약은 스킬을 쓰거나, 턴 종료하거나, 같은 스킬을 Shift + 클릭하면 사라짐
  */
 UCLASS()
-class TERMINUS_API UCombatHUDWidget : public UUserWidget
+class TERMINUS_API UCombatHUDWidget : public UTerminusUserWidget
 {
 	GENERATED_BODY()
 
@@ -79,6 +92,27 @@ protected:
 	UPROPERTY(meta = (BindWidget)) TObjectPtr<UButton> EndTurnButton;
 	UPROPERTY(meta = (BindWidget)) TObjectPtr<UTextBlock> StatusText;
 
+	// ---- 시안 부품 (전부 선택. 없으면 글자만)
+
+	// 턴 띠: 바탕 / 위아래 선 (흰 그림을 단계마다 틴트)
+	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UImage> PhaseBandFill;
+	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UImage> PhaseLineTop;
+	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UImage> PhaseLineBottom;
+
+	// 에너지 / 스킬 에너지 구슬이 들어갈 상자 (있던 자식은 지우고 채움)
+	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UPanelWidget> EnergyOrbs;
+	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UPanelWidget> SkillEnergyOrbs;
+
+	// 턴 종료 판의 봉랍 / 글자 ("턴 종료" / "대기 중…")
+	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UImage> EndTurnSeal;
+	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UTextBlock> EndTurnLabel;
+
+	// "체력 21/30  보호막 6  힘 5 ..." 이름은 흐리게, 값은 진하게. 있으면 StatusText 대신
+	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UPanelWidget> StatusRow;
+
+	// 안내 글자 판 (안내가 없으면 숨김)
+	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UWidget> HintPlate;
+
 	// 캐릭터 머리 위 / 몸 중심 높이 (월드 단위, 발 기준). 캐릭터 스프라이트가 64 라 기본값이 그에 맞춤
 	UPROPERTY(EditAnywhere, Category = "Combat HUD")
 	float HeadHeight = 72.f;
@@ -98,6 +132,10 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Combat HUD")
 	float SkillSlotSpacing = 8.f;
 
+	// 스킬 칸을 누른 채 이만큼(화면 px) 움직이면 드래그로 봄. 그보다 덜 움직이고 놓으면 그냥 클릭
+	UPROPERTY(EditAnywhere, Category = "Combat HUD")
+	float SkillDragStartDistance = 10.f;
+
 private:
 	// 캐릭터 / 몬스터 하나를 따라다니는 표시 묶음
 	struct FBattlerTag
@@ -106,12 +144,55 @@ private:
 		bool bMonster = false;
 		int32 Index = INDEX_NONE;   // 몬스터면 전투의 Monsters 인덱스, 플레이어면 구역 Occupants 인덱스
 
-		TWeakObjectPtr<UTextBlock> IntentText;      // 몬스터 머리 위
-		TWeakObjectPtr<UVerticalBox> HealthBox;     // 발밑 (체력바 + 숫자)
+		TWeakObjectPtr<UBorder> IntentBox;          // 몬스터 머리 위 (아이콘 + 숫자)
+		TWeakObjectPtr<UImage> IntentIcon;
+		TWeakObjectPtr<UTextBlock> IntentText;
+		TWeakObjectPtr<UBorder> ReadyBadge;         // 플레이어 머리 위 "✓ 대기" (이번 턴을 끝냄)
+		TWeakObjectPtr<UVerticalBox> HealthBox;     // 발밑 (보호막 줄 + 체력바 + 숫자 + 상태이상)
+		TWeakObjectPtr<UImage> ShieldFill;
 		TWeakObjectPtr<UProgressBar> HealthBar;
 		TWeakObjectPtr<UTextBlock> HealthText;
+		TWeakObjectPtr<UTextBlock> ShieldText;
+		TWeakObjectPtr<UWrapBox> StatusWrap;
 		TWeakObjectPtr<UButton> TargetButton;
+
+		// 상태이상 칸을 다시 그릴지 판단 (종류 / 수치)
+		TArray<uint32> ShownStatuses;
 	};
+
+	// 스킬 칸 장식 (칸을 감싼 겹침 판 위에 비용 원 / 강화 / 층 마름모)
+	struct FSkillDeco
+	{
+		TWeakObjectPtr<UOverlay> Holder;
+		TWeakObjectPtr<UBorder> CostBadge;
+		TWeakObjectPtr<UTextBlock> CostText;
+		TWeakObjectPtr<UBorder> UpgradeBadge;
+		TWeakObjectPtr<UTextBlock> UpgradeText;
+		TWeakObjectPtr<UPanelWidget> TierPips;
+		FName ShownSkill;
+	};
+	TArray<FSkillDeco> SkillDecos;
+
+	// 구슬 / 행동 예고 / 봉랍 그림 (GC 가 지우지 않게 들고 있음)
+	UPROPERTY() TObjectPtr<UTexture2D> OrbEnergyTexture;
+	UPROPERTY() TObjectPtr<UTexture2D> OrbEnergyEmptyTexture;
+	UPROPERTY() TObjectPtr<UTexture2D> OrbSkillTexture;
+	UPROPERTY() TObjectPtr<UTexture2D> OrbSkillEmptyTexture;
+	UPROPERTY() TObjectPtr<UTexture2D> SealTexture;
+	UPROPERTY() TObjectPtr<UTexture2D> SealOffTexture;
+	UPROPERTY() TArray<TObjectPtr<UTexture2D>> IntentTextures;   // 공격 / 방어 / 버프 / 디버프
+
+	// 지금 그려진 구슬 (현재 / 최대). 바뀌었을 때만 다시 그림
+	FIntPoint ShownEnergy = FIntPoint(-1, -1);
+	FIntPoint ShownSkillEnergy = FIntPoint(-1, -1);
+	FString ShownStatusLine;
+
+	void LoadCombatTextures();
+	void RefreshOrbs(UPanelWidget* Box, FIntPoint& Shown, int32 Current, int32 Max, UTexture2D* Full, UTexture2D* Empty);
+	void RefreshStatusIcons(FBattlerTag& Tag, const TArray<struct FStatusInstance>& Statuses);
+	void RefreshSkillDeco(FSkillDeco& Deco, const struct FSkillRow* Skill, int32 SlotIndex, bool bAffordable);
+	void ApplyPhaseStyle(int32 PhaseStyle);
+	int32 ShownPhaseStyle = INDEX_NONE;
 
 	TWeakObjectPtr<ADungeonArea> Area;
 
@@ -148,6 +229,23 @@ private:
 
 	void OnSkillClicked(int32 SkillIndex);
 	void CancelTargeting();
+
+	// ---- 스킬 드래그 (칸을 누른 채 끌어서 대상에 놓기)
+	int32 PressedSkillIndex = INDEX_NONE;   // 누르고 있는 칸 (아직 드래그 전일 수도 있음)
+	FVector2D PressStartPos = FVector2D::ZeroVector;   // 누르기 시작한 커서 위치 (데스크톱 좌표)
+	bool bDraggingSkill = false;
+
+	// 이번 누름은 이미 드래그로 끝났음 (취소 / 턴 넘어감). 손을 뗄 때까지 다시 드래그로 안 봄
+	bool bSkillPressConsumed = false;
+
+	// 커서를 따라다니는 스킬 이름 (TagLayer 에 처음 드래그할 때 만듦)
+	TWeakObjectPtr<UTextBlock> DragGhost;
+
+	void UpdateSkillDrag();
+	void FinishSkillDrag();
+
+	// 커서 아래에 있는(보이는) 대상 버튼의 Tags 인덱스. 없으면 INDEX_NONE
+	int32 FindTargetTagUnderCursor() const;
 
 	// ---- 행동 계획 공유
 	// Shift 로 예약한 계획 (INDEX_NONE = 없음). 예약한 사이클이 지나면 버림

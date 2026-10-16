@@ -16,8 +16,12 @@ namespace
 	// 제목 + 설명 두 줄짜리 선택지 버튼. 설명 글자는 OutDesc 로
 	UButton* MakeRescueOption(UWidgetTree* Tree, const FName& Name, const FString& Title, UTextBlock*& OutDesc)
 	{
+		// 카드처럼 생긴 평평한 버튼 (여백은 안쪽 줄에서)
 		UButton* Button = Tree->ConstructWidget<UButton>(UButton::StaticClass(), Name);
-		Button->SetBackgroundColor(FLinearColor(0.28f, 0.12f, 0.12f, 0.95f));
+		FButtonStyle Style = TerminusUI::MakeFlatButtonStyle(TerminusUI::Color::Card);
+		Style.NormalPadding = FMargin(4.f, 2.f);
+		Style.PressedPadding = FMargin(4.f, 3.f, 4.f, 1.f);
+		Button->SetStyle(Style);
 
 		USizeBox* Size = Tree->ConstructWidget<USizeBox>();
 		Size->SetWidthOverride(520.f);
@@ -26,7 +30,9 @@ namespace
 
 		UVerticalBox* Inside = Tree->ConstructWidget<UVerticalBox>();
 		Size->SetContent(Inside);
-		if (UVerticalBoxSlot* S = Inside->AddChildToVerticalBox(TerminusUI::MakeWrapText(Tree, NAME_None, Title, 18, TerminusUI::Color::Gold, ETextJustify::Left)))
+		UTextBlock* TitleLine = TerminusUI::MakeWrapText(Tree, NAME_None, Title, TerminusUI::FontSize::Subtitle, TerminusUI::Color::Gold, ETextJustify::Left);
+		TerminusUI::SetBold(TitleLine);
+		if (UVerticalBoxSlot* S = Inside->AddChildToVerticalBox(TitleLine))
 		{
 			S->SetPadding(FMargin(14.f, 6.f, 14.f, 0.f));
 		}
@@ -56,23 +62,22 @@ void URescueWidget::NativeOnInitialized()
 
 void URescueWidget::BuildDefaultLayout()
 {
-	UBorder* Dim = TerminusUI::MakeDimRoot(WidgetTree, TEXT("RescueDim"), FLinearColor(0.08f, 0.f, 0.f, 0.6f));
+	UBorder* Dim = TerminusUI::MakeDimRoot(WidgetTree, TEXT("RescueDim"), TerminusUI::Color::Dim);
 
-	UBorder* Panel = WidgetTree->ConstructWidget<UBorder>();
-	Panel->SetBrushColor(FLinearColor(0.05f, 0.04f, 0.05f, 0.96f));
-	Panel->SetPadding(FMargin(30.f, 24.f));
+	UBorder* Panel = TerminusUI::MakePanel(WidgetTree, NAME_None, TerminusUI::Color::Board, FMargin(30.f, 24.f));
 	Dim->SetContent(Panel);
 
 	UVerticalBox* Column = WidgetTree->ConstructWidget<UVerticalBox>();
 	Panel->SetContent(Column);
 
-	TitleText = TerminusUI::MakeWrapText(WidgetTree, TEXT("TitleText"), TEXT("동료 전멸"), 28, TerminusUI::Color::Warning);
+	TitleText = TerminusUI::MakeWrapText(WidgetTree, TEXT("TitleText"), TEXT("동료 전멸"), TerminusUI::FontSize::Section, TerminusUI::Color::Warning);
+	TerminusUI::SetBold(TitleText);
 	Column->AddChildToVerticalBox(TitleText);
 
-	MessageText = TerminusUI::MakeWrapText(WidgetTree, TEXT("MessageText"), TEXT(""), 16, FLinearColor(0.92f, 0.9f, 0.88f));
+	MessageText = TerminusUI::MakeWrapText(WidgetTree, TEXT("MessageText"), TEXT(""), TerminusUI::FontSize::Body, TerminusUI::Color::TextBody);
 	if (UVerticalBoxSlot* S = Column->AddChildToVerticalBox(MessageText)) S->SetPadding(FMargin(0.f, 10.f, 0.f, 0.f));
 
-	TimerText = TerminusUI::MakeWrapText(WidgetTree, TEXT("TimerText"), TEXT(""), 15, TerminusUI::Color::TextMuted);
+	TimerText = TerminusUI::MakeWrapText(WidgetTree, TEXT("TimerText"), TEXT(""), TerminusUI::FontSize::Body, TerminusUI::Color::TextMuted);
 	if (UVerticalBoxSlot* S = Column->AddChildToVerticalBox(TimerText)) S->SetPadding(FMargin(0.f, 6.f, 0.f, 0.f));
 
 	UVerticalBox* Options = WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), TEXT("OptionBox"));

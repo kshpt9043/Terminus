@@ -23,8 +23,8 @@
 
 namespace
 {
-	const FLinearColor TextGold     = TerminusUI::Hex(TEXT("E6C47A"));
-	const FLinearColor TextDim      = TerminusUI::Hex(TEXT("8D8778"));   // 게임 종료 기본색
+	const FLinearColor& TextGold     = TerminusUI::Color::GoldHover;   // 호버
+	const FLinearColor& TextDim      = TerminusUI::Color::TextFaint;   // 게임 종료 기본색
 }
 
 void UMainMenuWidget::NativeOnInitialized()

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Blueprint/UserWidget.h"
+#include "Widgets/Common/TerminusUserWidget.h"
 #include "PartyProfileCardWidget.generated.h"
 
 class ATerminusPlayerState;
@@ -17,7 +17,7 @@ class UTextBlock;
  * 하나도 없으면(C++ 클래스 그대로) C++ 이 기본 모양을 만든다
  */
 UCLASS()
-class TERMINUS_API UPartyProfileCardWidget : public UUserWidget
+class TERMINUS_API UPartyProfileCardWidget : public UTerminusUserWidget
 {
 	GENERATED_BODY()
 
@@ -43,12 +43,16 @@ protected:
 	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UTextBlock> HealthText;
 	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UProgressBar> HealthBar;
 
-	// 카드 바탕색 (내 카드 / 다른 사람)
-	UPROPERTY(EditAnywhere, Category = "Profile Card")
-	FLinearColor LocalCardColor = FLinearColor(0.35f, 0.27f, 0.12f, 0.9f);
+	// 상태 점 (준비 초록 / 전투 중 푸른 / 쓰러짐 회색)
+	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UImage> StatusDot;
 
+	// 내 카드 테두리색 (다른 사람 카드는 WBP 에서 정한 테두리 그대로)
 	UPROPERTY(EditAnywhere, Category = "Profile Card")
-	FLinearColor OtherCardColor = FLinearColor(0.08f, 0.08f, 0.1f, 0.85f);
+	FLinearColor LocalOutlineColor = FLinearColor(0.584f, 0.371f, 0.107f, 1.f);   // #C9A45C
+
+	// 쓰러졌을 때 카드 불투명도 / 색 (흑백 + 흐림)
+	UPROPERTY(EditAnywhere, Category = "Profile Card")
+	float DownOpacity = 0.55f;
 
 private:
 	TWeakObjectPtr<ATerminusPlayerState> Player;
@@ -58,6 +62,12 @@ private:
 	uint8 ShownClass = 0xFF;
 	int32 ShownHealth = INDEX_NONE;
 	int32 ShownMaxHealth = INDEX_NONE;
+
+	enum class EStatus : uint8 { Ready, InCombat, Down, Unknown };
+	EStatus ShownStatus = EStatus::Unknown;
+
+	// 상태 점 / 쓰러짐 흐림 (매 틱, 바뀌었을 때만)
+	void RefreshStatus(bool bDown);
 
 	void BuildDefaultLayout();
 

@@ -93,11 +93,9 @@ void USettlementWidget::NativeOnInitialized()
 
 void USettlementWidget::BuildDefaultLayout()
 {
-	UBorder* Dim = TerminusUI::MakeDimRoot(WidgetTree, TEXT("SettlementDim"), TerminusUI::Color::DimStrong);
+	UBorder* Dim = TerminusUI::MakeDimRoot(WidgetTree, TEXT("SettlementDim"), TerminusUI::Color::Dim);
 
-	UBorder* Panel = WidgetTree->ConstructWidget<UBorder>();
-	Panel->SetBrushColor(TerminusUI::Color::Panel);
-	Panel->SetPadding(FMargin(30.f, 24.f));
+	UBorder* Panel = TerminusUI::MakePanel(WidgetTree, NAME_None, TerminusUI::Color::Board, FMargin(30.f, 24.f));
 	Dim->SetContent(Panel);
 
 	USizeBox* Width = WidgetTree->ConstructWidget<USizeBox>();
@@ -107,9 +105,11 @@ void USettlementWidget::BuildDefaultLayout()
 	UVerticalBox* Root = WidgetTree->ConstructWidget<UVerticalBox>();
 	Width->SetContent(Root);
 
-	TitleText = TerminusUI::MakeWrapText(WidgetTree, TEXT("TitleText"), TEXT("정산"), 30, TerminusUI::Color::Gold);
+	TitleText = TerminusUI::MakeWrapText(WidgetTree, TEXT("TitleText"), TEXT("정산"), TerminusUI::FontSize::ScreenTitle, TerminusUI::Color::Gold);
+	TerminusUI::SetBold(TitleText);
+	TerminusUI::SetLetterSpacing(TitleText, 80);
 	TerminusUI::AddRow(Root, TitleText, 0.f, HAlign_Fill);
-	SubtitleText = TerminusUI::MakeWrapText(WidgetTree, TEXT("SubtitleText"), TEXT(""), 15, TerminusUI::Color::TextMuted);
+	SubtitleText = TerminusUI::MakeWrapText(WidgetTree, TEXT("SubtitleText"), TEXT(""), TerminusUI::FontSize::Subtitle, TerminusUI::Color::TextSub);
 	TerminusUI::AddRow(Root, SubtitleText, 6.f, HAlign_Fill);
 
 	// ---- 정산 목록
@@ -117,9 +117,10 @@ void USettlementWidget::BuildDefaultLayout()
 	MainPanel = Main;
 	TerminusUI::AddRow(Root, Main, 18.f, HAlign_Fill);
 
-	RelicHeaderText = TerminusUI::MakeWrapText(WidgetTree, TEXT("RelicHeaderText"), TEXT("1. 보관할 유물"), 19, FLinearColor::White, ETextJustify::Left);
+	RelicHeaderText = TerminusUI::MakeWrapText(WidgetTree, TEXT("RelicHeaderText"), TEXT("1. 보관할 유물"), TerminusUI::FontSize::Section, TerminusUI::Color::Gold, ETextJustify::Left);
+	TerminusUI::SetBold(RelicHeaderText);
 	TerminusUI::AddRow(Main, RelicHeaderText, 0.f, HAlign_Fill);
-	RelicHelpText = TerminusUI::MakeWrapText(WidgetTree, TEXT("RelicHelpText"), TEXT("던전에서 얻은 유물 중 하나를 골라 창고에 보관합니다. 나머지 유물은 사라집니다."), 13, TerminusUI::Color::TextDim, ETextJustify::Left);
+	RelicHelpText = TerminusUI::MakeWrapText(WidgetTree, TEXT("RelicHelpText"), TEXT("던전에서 얻은 유물 중 하나를 골라 창고에 보관합니다. 나머지 유물은 사라집니다."), TerminusUI::FontSize::Aux, TerminusUI::Color::TextAux, ETextJustify::Left);
 	TerminusUI::AddRow(Main, RelicHelpText, 4.f, HAlign_Fill);
 
 	USizeBox* ListHeight = WidgetTree->ConstructWidget<USizeBox>();
@@ -132,18 +133,22 @@ void USettlementWidget::BuildDefaultLayout()
 	Scroll->AddChild(Wrap);
 	TerminusUI::AddRow(Main, ListHeight, 10.f, HAlign_Fill);
 
-	RelicGuideText = TerminusUI::MakeWrapText(WidgetTree, TEXT("RelicGuideText"), TEXT(""), 15, TerminusUI::Color::Gold, ETextJustify::Left);
+	RelicGuideText = TerminusUI::MakeWrapText(WidgetTree, TEXT("RelicGuideText"), TEXT(""), TerminusUI::FontSize::Body, TerminusUI::Color::GoldHover, ETextJustify::Left);
 	TerminusUI::AddRow(Main, RelicGuideText, 8.f, HAlign_Fill);
 
-	TerminusUI::AddRow(Main, TerminusUI::MakeWrapText(WidgetTree, NAME_None, TEXT("2. 완료된 퀘스트"), 19, FLinearColor::White, ETextJustify::Left), 18.f, HAlign_Fill);
-	QuestText = TerminusUI::MakeWrapText(WidgetTree, TEXT("QuestText"), TEXT(""), 14, TerminusUI::Color::TextSoft, ETextJustify::Left);
+	UTextBlock* QuestHeader = TerminusUI::MakeWrapText(WidgetTree, NAME_None, TEXT("2. 완료된 퀘스트"), TerminusUI::FontSize::Section, TerminusUI::Color::Gold, ETextJustify::Left);
+	TerminusUI::SetBold(QuestHeader);
+	TerminusUI::AddRow(Main, QuestHeader, 18.f, HAlign_Fill);
+	QuestText = TerminusUI::MakeWrapText(WidgetTree, TEXT("QuestText"), TEXT(""), TerminusUI::FontSize::Body, TerminusUI::Color::TextBody, ETextJustify::Left);
 	TerminusUI::AddRow(Main, QuestText, 4.f, HAlign_Fill);
 
-	TerminusUI::AddRow(Main, TerminusUI::MakeWrapText(WidgetTree, NAME_None, TEXT("3. 가져가는 스킬"), 19, FLinearColor::White, ETextJustify::Left), 18.f, HAlign_Fill);
-	SkillText = TerminusUI::MakeWrapText(WidgetTree, TEXT("SkillText"), TEXT(""), 14, TerminusUI::Color::TextSoft, ETextJustify::Left);
+	UTextBlock* SkillHeader = TerminusUI::MakeWrapText(WidgetTree, NAME_None, TEXT("3. 가져가는 스킬"), TerminusUI::FontSize::Section, TerminusUI::Color::Gold, ETextJustify::Left);
+	TerminusUI::SetBold(SkillHeader);
+	TerminusUI::AddRow(Main, SkillHeader, 18.f, HAlign_Fill);
+	SkillText = TerminusUI::MakeWrapText(WidgetTree, TEXT("SkillText"), TEXT(""), TerminusUI::FontSize::Body, TerminusUI::Color::TextBody, ETextJustify::Left);
 	TerminusUI::AddRow(Main, SkillText, 4.f, HAlign_Fill);
 
-	ConfirmButton = TerminusUI::MakeButton(WidgetTree, TEXT("ConfirmButton"), TEXT("  정산 완료  "), 15, FLinearColor::White, TerminusUI::Color::ButtonConfirm);
+	ConfirmButton = TerminusUI::MakeHexButton(WidgetTree, TEXT("ConfirmButton"), TEXT("정산 완료"), TerminusUI::EHexButton::Primary);
 	TerminusUI::AddRow(Main, ConfirmButton, 22.f, HAlign_Right);
 
 	// ---- 최종 골드
@@ -151,10 +156,12 @@ void USettlementWidget::BuildDefaultLayout()
 	SummaryPanel = Summary;
 	TerminusUI::AddRow(Root, Summary, 18.f, HAlign_Fill);
 
-	TerminusUI::AddRow(Summary, TerminusUI::MakeWrapText(WidgetTree, NAME_None, TEXT("최종 골드"), 19, FLinearColor::White), 0.f, HAlign_Fill);
-	SummaryText = TerminusUI::MakeWrapText(WidgetTree, TEXT("SummaryText"), TEXT(""), 17, FLinearColor(0.92f, 0.92f, 0.92f));
+	UTextBlock* SummaryHeader = TerminusUI::MakeWrapText(WidgetTree, NAME_None, TEXT("최종 골드"), TerminusUI::FontSize::Section, TerminusUI::Color::Gold);
+	TerminusUI::SetBold(SummaryHeader);
+	TerminusUI::AddRow(Summary, SummaryHeader, 0.f, HAlign_Fill);
+	SummaryText = TerminusUI::MakeWrapText(WidgetTree, TEXT("SummaryText"), TEXT(""), TerminusUI::FontSize::Subtitle, TerminusUI::Color::TextBody);
 	TerminusUI::AddRow(Summary, SummaryText, 10.f, HAlign_Fill);
-	CloseButton = TerminusUI::MakeButton(WidgetTree, TEXT("CloseButton"), TEXT("  확인  "), 15, FLinearColor::White, TerminusUI::Color::ButtonConfirm);
+	CloseButton = TerminusUI::MakeHexButton(WidgetTree, TEXT("CloseButton"), TEXT("확인"), TerminusUI::EHexButton::Primary);
 	TerminusUI::AddRow(Summary, CloseButton, 18.f, HAlign_Center);
 }
 

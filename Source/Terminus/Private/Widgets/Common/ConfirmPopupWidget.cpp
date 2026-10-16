@@ -39,15 +39,14 @@ void UConfirmPopupWidget::BuildDefaultLayout()
 	Size->SetMaxDesiredWidth(560.f);
 	Dim->SetContent(Size);
 
-	UBorder* Box = WidgetTree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("PopupBox"));
-	Box->SetBrushColor(FLinearColor(0.1f, 0.09f, 0.08f, 1.f));
-	Box->SetPadding(FMargin(32.f, 24.f));
+	UBorder* Box = TerminusUI::MakePanel(WidgetTree, TEXT("PopupBox"), TerminusUI::Color::Board, FMargin(32.f, 24.f));
 	Size->SetContent(Box);
 
 	UVerticalBox* Column = WidgetTree->ConstructWidget<UVerticalBox>();
 	Box->SetContent(Column);
 
-	TitleText = TerminusUI::MakeWrapText(WidgetTree, TEXT("TitleText"), TEXT(""), 22, FLinearColor::White);
+	TitleText = TerminusUI::MakeWrapText(WidgetTree, TEXT("TitleText"), TEXT(""), TerminusUI::FontSize::Section, TerminusUI::Color::Gold);
+	TerminusUI::SetBold(TitleText);
 	MessageText = TerminusUI::MakeWrapText(WidgetTree, TEXT("MessageText"), TEXT(""), 16, TerminusUI::Color::TextSoft);
 	if (UVerticalBoxSlot* S = Column->AddChildToVerticalBox(TitleText)) S->SetHorizontalAlignment(HAlign_Fill);
 	if (UVerticalBoxSlot* S = Column->AddChildToVerticalBox(MessageText))
@@ -63,18 +62,22 @@ void UConfirmPopupWidget::BuildDefaultLayout()
 		S->SetPadding(FMargin(0.f, 24.f, 0.f, 0.f));
 	}
 
-	auto MakeButton = [&](const FName& ButtonName, const FName& LabelName, TObjectPtr<UButton>& OutButton, TObjectPtr<UTextBlock>& OutLabel)
+	// 확인 = 주 행동 육각 버튼, 취소 = 평평한 버튼
+	auto MakeButton = [&](const FName& ButtonName, const FName& LabelName, TObjectPtr<UButton>& OutButton, TObjectPtr<UTextBlock>& OutLabel, bool bPrimary)
 	{
 		OutButton = WidgetTree->ConstructWidget<UButton>(UButton::StaticClass(), ButtonName);
-		OutLabel = TerminusUI::MakeWrapText(WidgetTree, LabelName, TEXT(""), 16, FLinearColor::Black);
+		if (bPrimary) TerminusUI::StyleHexButton(OutButton, TerminusUI::EHexButton::Primary);
+		else          TerminusUI::StyleFlatButton(OutButton);
+		OutLabel = TerminusUI::MakeWrapText(WidgetTree, LabelName, TEXT(""), TerminusUI::FontSize::Body, TerminusUI::Color::TextBody);
+		TerminusUI::SetBold(OutLabel);
 		OutButton->SetContent(OutLabel);
 		if (UHorizontalBoxSlot* S = Buttons->AddChildToHorizontalBox(OutButton))
 		{
 			S->SetPadding(FMargin(6.f, 0.f));
 		}
 	};
-	MakeButton(TEXT("ConfirmButton"), TEXT("ConfirmLabel"), ConfirmButton, ConfirmLabel);
-	MakeButton(TEXT("CancelButton"), TEXT("CancelLabel"), CancelButton, CancelLabel);
+	MakeButton(TEXT("ConfirmButton"), TEXT("ConfirmLabel"), ConfirmButton, ConfirmLabel, true);
+	MakeButton(TEXT("CancelButton"), TEXT("CancelLabel"), CancelButton, CancelLabel, false);
 }
 
 void UConfirmPopupWidget::Setup(const FText& InTitle, const FText& InMessage, const FText& InConfirmLabel, const FText& InCancelLabel)
