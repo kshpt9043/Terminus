@@ -1,7 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Blueprint/UserWidget.h"
+#include "Widgets/Common/TerminusUserWidget.h"
 #include "MapTopBarWidget.generated.h"
 
 class ATerminusPlayerState;
@@ -21,7 +21,7 @@ class UTextBlock;
  * 이 위젯 자체가 바 하나. 지도 화면에서 위쪽에 바 높이만큼 배치. 프로필 카드 모양은 ProfileCardClass 로
  */
 UCLASS()
-class TERMINUS_API UMapTopBarWidget : public UUserWidget
+class TERMINUS_API UMapTopBarWidget : public UTerminusUserWidget
 {
 	GENERATED_BODY()
 
@@ -30,8 +30,11 @@ protected:
 	virtual void NativeConstruct() override;
 	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
 
-	// "1층 · 표층 · 슬라임 왕국"
+	// "2층". FloorSubText 가 없으면 "2층 · 표층 · 슬라임 왕국" 한 줄
 	UPROPERTY(meta = (BindWidget)) TObjectPtr<UTextBlock> FloorText;
+
+	// "표층 · 슬라임 왕국"
+	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UTextBlock> FloorSubText;
 
 	// "다음 방 3 / 12"
 	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UTextBlock> RoomText;
@@ -39,7 +42,7 @@ protected:
 	// 프로필 카드가 들어갈 칸 (가로 상자 추천). 있던 자식은 지우고 채움
 	UPROPERTY(meta = (BindWidget)) TObjectPtr<UPanelWidget> PartyBox;
 
-	// "재화 120"
+	// "1,200" (옆에 동전 그림). 재화 그림이 없는 기본 모양은 "재화 1,200"
 	UPROPERTY(meta = (BindWidget)) TObjectPtr<UTextBlock> CurrencyText;
 
 	UPROPERTY(meta = (BindWidget)) TObjectPtr<UButton> ExitButton;

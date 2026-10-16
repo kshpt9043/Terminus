@@ -25,29 +25,41 @@ void URelicTooltipWidget::NativeOnInitialized()
 
 void URelicTooltipWidget::BuildDefaultLayout()
 {
-	// 스킬 툴팁과 같은 모양
+	// 스킬 툴팁과 같은 모양 (스타일 가이드 06: 폭 320, 판 #1B1E25 + 1px #3A3F4A, 위쪽 3px 등급 띠)
 	USizeBox* Size = WidgetTree->ConstructWidget<USizeBox>();
-	Size->SetMaxDesiredWidth(DefaultWidth);
+	Size->SetWidthOverride(DefaultWidth);
 	WidgetTree->RootWidget = Size;
 
 	UBorder* Box = WidgetTree->ConstructWidget<UBorder>();
-	Box->SetBrushColor(FLinearColor(0.06f, 0.05f, 0.05f, 0.95f));
-	Box->SetPadding(FMargin(12.f, 10.f));
+	Box->SetBrush(TerminusUI::MakeBoxBrush(TerminusUI::Color::Board, TerminusUI::Color::Line));
+	Box->SetPadding(FMargin(1.f));
 	Size->SetContent(Box);
 
-	UVerticalBox* Column = WidgetTree->ConstructWidget<UVerticalBox>();
-	Box->SetContent(Column);
+	UVerticalBox* Outer = WidgetTree->ConstructWidget<UVerticalBox>();
+	Box->SetContent(Outer);
 
-	NameText = TerminusUI::MakeWrapText(WidgetTree, TEXT("NameText"), TEXT(""), 17, FLinearColor::White, ETextJustify::Left);
-	TierText = TerminusUI::MakeWrapText(WidgetTree, TEXT("TierText"), TEXT(""), 12, TerminusUI::Color::TextMuted, ETextJustify::Left);
-	DescText = TerminusUI::MakeWrapText(WidgetTree, TEXT("DescText"), TEXT(""), 14, FLinearColor(1.f, 0.95f, 0.85f), ETextJustify::Left);
+	USizeBox* BandSize = WidgetTree->ConstructWidget<USizeBox>();
+	BandSize->SetHeightOverride(3.f);
+	TierBand = WidgetTree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("TierBand"));
+	TierBand->SetBrushColor(TerminusUI::Color::Line);
+	BandSize->SetContent(TierBand);
+	Outer->AddChildToVerticalBox(BandSize);
+
+	UVerticalBox* Column = WidgetTree->ConstructWidget<UVerticalBox>();
+	if (UVerticalBoxSlot* S = Outer->AddChildToVerticalBox(Column)) S->SetPadding(FMargin(15.f, 13.f, 15.f, 15.f));
+
+	NameText = TerminusUI::MakeWrapText(WidgetTree, TEXT("NameText"), TEXT(""), TerminusUI::FontSize::Subtitle, TerminusUI::Color::Gold, ETextJustify::Left);
+	TerminusUI::SetBold(NameText);
+	TierText = TerminusUI::MakeWrapText(WidgetTree, TEXT("TierText"), TEXT(""), TerminusUI::FontSize::Aux, TerminusUI::Color::TextAux, ETextJustify::Left);
+	DescText = TerminusUI::MakeWrapText(WidgetTree, TEXT("DescText"), TEXT(""), 15, TerminusUI::Color::TextBody, ETextJustify::Left);
 
 	Column->AddChildToVerticalBox(NameText);
-	Column->AddChildToVerticalBox(TierText);
-	if (UVerticalBoxSlot* S = Column->AddChildToVerticalBox(DescText))
+	if (UVerticalBoxSlot* S = Column->AddChildToVerticalBox(TierText)) S->SetPadding(FMargin(0.f, 2.f, 0.f, 0.f));
+	if (UVerticalBoxSlot* S = Column->AddChildToVerticalBox(TerminusUI::MakeGoldDivider(WidgetTree)))
 	{
-		S->SetPadding(FMargin(0.f, 8.f, 0.f, 0.f));
+		S->SetPadding(FMargin(0.f, 10.f));
 	}
+	Column->AddChildToVerticalBox(DescText);
 }
 
 void URelicTooltipWidget::SetRelic(const FRelicRow* InRelic)
@@ -56,12 +68,18 @@ void URelicTooltipWidget::SetRelic(const FRelicRow* InRelic)
 
 	if (NameText)
 	{
+		// 이름은 금색, 등급은 띠 / 마름모 색으로
 		NameText->SetText(InRelic->RelicName);
-		NameText->SetColorAndOpacity(FSlateColor(TerminusUI::RelicTierColor(InRelic->RelicTier)));
+		NameText->SetColorAndOpacity(FSlateColor(TerminusUI::Color::Gold));
 	}
 	if (TierText)
 	{
-		TierText->SetText(FText::FromString(TerminusUI::RelicTierLabel(InRelic->RelicTier) + TEXT(" 유물")));
+		TierText->SetText(FText::FromString(TEXT("◆ ") + TerminusUI::RelicTierLabel(InRelic->RelicTier) + TEXT(" 유물")));
+		TierText->SetColorAndOpacity(FSlateColor(TerminusUI::RelicTierColor(InRelic->RelicTier)));
+	}
+	if (TierBand)
+	{
+		TierBand->SetBrushColor(TerminusUI::RelicTierColor(InRelic->RelicTier));
 	}
 	if (DescText)
 	{

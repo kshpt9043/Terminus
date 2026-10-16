@@ -1,7 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Blueprint/UserWidget.h"
+#include "Widgets/Common/TerminusUserWidget.h"
 #include "Data/RewardTypes.h"
 #include "EventWidget.generated.h"
 
@@ -23,7 +23,7 @@ class UEventWidget;
  * WBP 로 꾸미려면 이 클래스를 부모로 WBP 를 만들어 BP_DungeonPC 의 EventClass 에 지정 (아래 이름 전부 선택 사항)
  */
 UCLASS()
-class TERMINUS_API UEventWidget : public UUserWidget
+class TERMINUS_API UEventWidget : public UTerminusUserWidget
 {
 	GENERATED_BODY()
 
@@ -51,7 +51,7 @@ protected:
 	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UItemPickPanelWidget> PickPanel;
 
 	UPROPERTY(EditAnywhere, Category = "Event")
-	FVector2D CardSize = FVector2D(250.f, 300.f);
+	FVector2D CardSize = FVector2D(260.f, 340.f);
 
 	// 후보 카드 하나. 비우면 프로젝트 설정(Terminus UI) -> C++ 기본 모양. 스킬 후보면 ItemSlot 에 그 스킬이 보임
 	// ChoiceId: EEventOptionType 이름 (Currency / ClassSkill / RelicSwapChosen ...)

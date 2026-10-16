@@ -1,7 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Blueprint/UserWidget.h"
+#include "Widgets/Common/TerminusUserWidget.h"
 #include "Brushes/SlateRoundedBoxBrush.h"
 #include "MapEdgeLayer.generated.h"
 
@@ -25,29 +25,40 @@ struct FMapEdgeStyle
 	FSlateBrush DotBrush;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Edge")
-	FVector2D DotSize = FVector2D(6.f, 6.f);
+	FVector2D DotSize = FVector2D(20.f, 20.f);
 
 	// 점 사이 간격 (지도 좌표 기준)
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Edge", meta = (ClampMin = "2.0"))
-	float DotSpacing = 14.f;
+	float DotSpacing = 19.f;
 
 	// 선 양 끝을 비우는 길이. 방 아이콘이 실제로 보이는 반지름쯤 -> 점이 아이콘 밑으로 파고들지 않음
-	// (지금 방 아이콘 상자는 200x200. 그림 가장자리에 투명 여백이 있으면 그만큼 줄일 것)
+	// (지도 시안 아이콘은 64 -> 반지름 32 + 여유)
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Edge")
-	float EndPadding = 70.f;
+	float EndPadding = 42.f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Edge")
-	FLinearColor DefaultColor = FLinearColor(0.45f, 0.42f, 0.38f, 0.55f);
+	FLinearColor DefaultColor = FLinearColor(0.451f, 0.417f, 0.381f, 0.6f);   // #B3ADA6 60% 흐린 먹
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Edge")
-	FLinearColor AvailableColor = FLinearColor(1.f, 0.85f, 0.35f, 1.f);
+	FLinearColor AvailableColor = FLinearColor(1.f, 0.846f, 0.351f, 1.f);     // #FFEDA0 등불 먹
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Edge")
-	FLinearColor TakenColor = FLinearColor(0.12f, 0.1f, 0.08f, 1.f);
+	FLinearColor TakenColor = FLinearColor(0.027f, 0.024f, 0.020f, 1.f);      // #2E2B27 마른 먹
 
 	// 갈 수 있는 길 / 지나온 길의 점 크기 배율
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Edge", meta = (ClampMin = "0.1"))
-	float EmphasisDotScale = 1.3f;
+	float EmphasisDotScale = 1.15f;
+
+	// 갈 수 있는 길(등불 먹) 뒤에 번지는 빛. 비워 두면 /Game/UI/Textures/Map/T_Map_SoftDot
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Edge|Glow")
+	FSlateBrush GlowBrush;
+
+	// 빛 크기 (점 크기 배율) / 진하기. 진하기 0 = 빛 없음
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Edge|Glow", meta = (ClampMin = "1.0"))
+	float GlowScale = 2.6f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Edge|Glow", meta = (ClampMin = "0.0", ClampMax = "1.0"))
+	float GlowOpacity = 0.35f;
 };
 
 // 그릴 선 하나. 좌표는 지도 좌표 (이 레이어 기준 로컬)
@@ -66,7 +77,7 @@ struct FMapEdgeDraw
  * 창 크기가 바뀌어도 한 프레임 밀리거나 깨지지 않고, 스크롤 / 잘라내기 / 배율이 방 아이콘과 똑같이 적용됨
  */
 UCLASS()
-class TERMINUS_API UMapEdgeLayer : public UUserWidget
+class TERMINUS_API UMapEdgeLayer : public UTerminusUserWidget
 {
 	GENERATED_BODY()
 
@@ -81,6 +92,8 @@ protected:
 		FSlateWindowElementList& OutDrawElements, int32 LayerId, const FWidgetStyle& InWidgetStyle, bool bParentEnabled) const override;
 
 private:
+	// UPROPERTY: 브러시가 들고 있는 텍스처(점 / 빛)를 GC 가 지우지 않게
+	UPROPERTY()
 	FMapEdgeStyle Style;
 
 	// 점 이미지가 없을 때 쓰는 둥근 점

@@ -1,8 +1,9 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Blueprint/UserWidget.h"
+#include "Widgets/Common/TerminusUserWidget.h"
 #include "Framework/Text/TextLayout.h"
+#include "Widgets/TerminusUIColors.h"
 #include "ChoiceCardWidget.generated.h"
 
 class UButton;
@@ -26,11 +27,11 @@ struct FChoiceCardStyle
 	FVector2D Size = FVector2D::ZeroVector;   // 0 이면 내용에 맞춤
 	bool bFixedHeight = true;                 // false 면 Size.Y 는 최소 높이
 	int32 TitleSize = 20;
-	FLinearColor TitleColor = FLinearColor::White;
+	FLinearColor TitleColor = TerminusUI::Color::GoldBase;
 	int32 DescSize = 14;
 	ETextJustify::Type Justify = ETextJustify::Center;
 	FMargin Padding = FMargin(10.f, 8.f);
-	FLinearColor NormalColor = FLinearColor(0.3f, 0.3f, 0.34f);
+	FLinearColor NormalColor = TerminusUI::Color::Card;
 };
 
 /**
@@ -45,7 +46,7 @@ struct FChoiceCardStyle
  * ChoiceId(어떤 선택지인지)와 State 는 블루프린트에서 읽을 수 있고, 바뀔 때마다 OnCardUpdated 가 불림 (아이콘 / 색 꾸미기용)
  */
 UCLASS()
-class TERMINUS_API UChoiceCardWidget : public UUserWidget
+class TERMINUS_API UChoiceCardWidget : public UTerminusUserWidget
 {
 	GENERATED_BODY()
 

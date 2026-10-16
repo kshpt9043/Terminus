@@ -1,5 +1,6 @@
 #include "Widgets/Map/MapEdgeLayer.h"
 
+#include "Engine/Texture2D.h"
 #include "Rendering/DrawElements.h"
 
 void UMapEdgeLayer::SetEdgeStyle(const FMapEdgeStyle& InStyle)
@@ -8,6 +9,16 @@ void UMapEdgeLayer::SetEdgeStyle(const FMapEdgeStyle& InStyle)
 
 	// 둥근 점은 크기의 절반으로 모서리를 깎아야 원이 됨
 	RoundDotBrush = FSlateRoundedBoxBrush(FLinearColor::White, FVector2f(Style.DotSize));
+
+	// 등불 빛 기본 그림
+	if (!Style.GlowBrush.GetResourceObject())
+	{
+		if (UTexture2D* SoftDot = LoadObject<UTexture2D>(nullptr, TEXT("/Game/UI/Textures/Map/T_Map_SoftDot.T_Map_SoftDot")))
+		{
+			Style.GlowBrush.SetResourceObject(SoftDot);
+			Style.GlowBrush.DrawAs = ESlateBrushDrawType::Image;
+		}
+	}
 
 	Invalidate(EInvalidateWidgetReason::Paint);
 }
@@ -58,13 +69,34 @@ int32 UMapEdgeLayer::NativePaint(const FPaintArgs& Args, const FGeometry& Allott
 		const float Step = Count > 1 ? Usable / (Count - 1) : 0.f;
 		const FVector2D Start = Edge.From + Dir * (Count > 1 ? Style.EndPadding : Length * 0.5f);
 
+		// 갈 수 있는 길: 점 뒤에 등불 빛을 먼저 깔고 (점은 한 층 위)
+		const bool bGlow = Edge.State == EMapEdgeState::Available && Style.GlowOpacity > 0.f && Style.GlowBrush.GetResourceObject();
+		if (bGlow)
+		{
+			const FVector2D GlowSize = DotSize * Style.GlowScale;
+			FLinearColor GlowColor = Color;
+			GlowColor.A *= Style.GlowOpacity;
+
+			for (int32 k = 0; k < Count; ++k)
+			{
+				const FVector2D Center = Start + Dir * (Step * k);
+				FSlateDrawElement::MakeBox(
+					OutDrawElements,
+					MaxLayer,
+					AllottedGeometry.ToPaintGeometry(GlowSize, FSlateLayoutTransform(Center - GlowSize * 0.5f)),
+					&Style.GlowBrush,
+					ESlateDrawEffect::None,
+					GlowColor * InheritedTint);
+			}
+		}
+
 		for (int32 k = 0; k < Count; ++k)
 		{
 			const FVector2D Center = Start + Dir * (Step * k);
 
 			FSlateDrawElement::MakeRotatedBox(
 				OutDrawElements,
-				MaxLayer,
+				bGlow ? MaxLayer + 1 : MaxLayer,
 				AllottedGeometry.ToPaintGeometry(DotSize, FSlateLayoutTransform(Center - DotSize * 0.5f)),
 				Brush,
 				ESlateDrawEffect::None,
@@ -75,5 +107,5 @@ int32 UMapEdgeLayer::NativePaint(const FPaintArgs& Args, const FGeometry& Allott
 		}
 	}
 
-	return MaxLayer;
+	return MaxLayer + 1;
 }

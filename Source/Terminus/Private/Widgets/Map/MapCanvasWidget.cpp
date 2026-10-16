@@ -188,9 +188,54 @@ bool UMapCanvasWidget::IsRoomSelectable(const FRoomNode& Node, const ATerminusPl
     return CurrentRoom && CurrentRoom->ConnectedRoomIds.Contains(Node.RoomId);
 }
 
+TSet<int32> UMapCanvasWidget::CollectReachableRooms(int32 FromRoomId) const
+{
+    TSet<int32> Reachable;
+
+    // 아직 출발 전이면 지도 전체가 갈 수 있는 곳
+    if (FromRoomId == INDEX_NONE)
+    {
+        for (const FRoomNode& Node : CachedMapData) Reachable.Add(Node.RoomId);
+        return Reachable;
+    }
+
+    TMap<int32, const FRoomNode*> ById;
+    for (const FRoomNode& Node : CachedMapData) ById.Add(Node.RoomId, &Node);
+
+    // 연결은 다음 줄로만 이어지므로 앞으로 훑기만 하면 됨
+    TArray<int32> Queue = { FromRoomId };
+    while (Queue.Num() > 0)
+    {
+        const int32 Id = Queue.Pop(EAllowShrinking::No);
+        if (const FRoomNode* const* Node = ById.Find(Id))
+        {
+            for (const int32 Next : (*Node)->ConnectedRoomIds)
+            {
+                if (!Reachable.Contains(Next))
+                {
+                    Reachable.Add(Next);
+                    Queue.Add(Next);
+                }
+            }
+        }
+    }
+    return Reachable;
+}
+
 void UMapCanvasWidget::RefreshRoomStates()
 {
     ATerminusPlayerState* LocalPS = GetOwningPlayer() ? GetOwningPlayer()->GetPlayerState<ATerminusPlayerState>() : nullptr;
+
+    // 지도 시안 상태: 지나옴(X) / 현재 위치(먹 동그라미) / 갈 수 있음(빛) / 못 감(흐림) / 기본
+    TSet<int32> Visited;
+    int32 CurrentRoomId = INDEX_NONE;
+    if (LocalPS)
+    {
+        const FRunState& Run = LocalPS->GetRunState();
+        Visited.Append(Run.VisitedRoomIds);
+        if (Run.CurrentMapLevel > 0) CurrentRoomId = Run.CurrentRoomId;
+    }
+    const TSet<int32> Reachable = CollectReachableRooms(CurrentRoomId);
 
     // 위젯은 그대로 두고 상태만 넘김. 각 방 위젯이 자기 상태가 바뀌었을 때만 다시 그림
     for (const FRoomNode& Node : CachedMapData)
@@ -199,7 +244,15 @@ void UMapCanvasWidget::RefreshRoomStates()
         {
             if (*RoomWidget)
             {
-                (*RoomWidget)->SetRoomSelectable(IsRoomSelectable(Node, LocalPS));
+                const bool bSelectable = IsRoomSelectable(Node, LocalPS);
+                (*RoomWidget)->SetRoomSelectable(bSelectable);
+
+                ERoomNodeState State = ERoomNodeState::Default;
+                if (Node.RoomId == CurrentRoomId)        State = ERoomNodeState::Current;
+                else if (Visited.Contains(Node.RoomId))  State = ERoomNodeState::Visited;
+                else if (bSelectable)                    State = ERoomNodeState::Available;
+                else if (!Reachable.Contains(Node.RoomId)) State = ERoomNodeState::Unreachable;
+                (*RoomWidget)->SetVisualState(State);
             }
         }
     }

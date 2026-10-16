@@ -1,7 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Blueprint/UserWidget.h"
+#include "Widgets/Common/TerminusUserWidget.h"
 #include "RestWidget.generated.h"
 
 class APlayerState;
@@ -35,7 +35,7 @@ enum class ERestOption : uint8
  * 선택지 버튼은 OptionBox 안에 C++ 이 채움. 그림은 ArtImage (또는 기본 모양에서 ArtTexture)
  */
 UCLASS()
-class TERMINUS_API URestWidget : public UUserWidget
+class TERMINUS_API URestWidget : public UTerminusUserWidget
 {
 	GENERATED_BODY()
 

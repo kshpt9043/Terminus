@@ -41,7 +41,7 @@ void UStartRelicPickWidget::NativeOnInitialized()
 
 void UStartRelicPickWidget::BuildDefaultLayout()
 {
-	UBorder* Dim = TerminusUI::MakeDimRoot(WidgetTree, TEXT("RelicPickDim"), FLinearColor(0.02f, 0.02f, 0.03f, 0.92f));
+	UBorder* Dim = TerminusUI::MakeDimRoot(WidgetTree, TEXT("RelicPickDim"), TerminusUI::Hex(TEXT("111317"), 0.92f));
 
 	USizeBox* WindowSize = WidgetTree->ConstructWidget<USizeBox>();
 	WindowSize->SetWidthOverride(640.f);
@@ -51,7 +51,8 @@ void UStartRelicPickWidget::BuildDefaultLayout()
 	UVerticalBox* Column = WidgetTree->ConstructWidget<UVerticalBox>();
 	WindowSize->SetContent(Column);
 
-	TitleText = TerminusUI::MakeText(WidgetTree, TEXT("TitleText"), TEXT(""), 24, FLinearColor::White, ETextJustify::Left);
+	TitleText = TerminusUI::MakeText(WidgetTree, TEXT("TitleText"), TEXT(""), TerminusUI::FontSize::Section, TerminusUI::Color::Gold, ETextJustify::Left);
+	TerminusUI::SetBold(TitleText);
 	if (UVerticalBoxSlot* S = Column->AddChildToVerticalBox(TitleText))
 	{
 		S->SetHorizontalAlignment(HAlign_Center);
@@ -81,10 +82,8 @@ void UStartRelicPickWidget::BuildDefaultLayout()
 	ItemGrid->SetSlotPadding(FMargin(4.f));
 	Scroll->AddChild(ItemGrid);
 
-	StartButton = WidgetTree->ConstructWidget<UButton>(UButton::StaticClass(), TEXT("StartButton"));
-	UTextBlock* StartLabel = TerminusUI::MakeText(WidgetTree, NAME_None, TEXT(""), 18, FLinearColor::Black, ETextJustify::Left);
-	StartLabel->SetText(FText::FromString(TEXT("    시작    ")));
-	StartButton->SetContent(StartLabel);
+	// 시작 = 주 행동 육각 버튼
+	StartButton = TerminusUI::MakeHexButton(WidgetTree, TEXT("StartButton"), TEXT("시작"), TerminusUI::EHexButton::Primary);
 	if (UVerticalBoxSlot* S = Column->AddChildToVerticalBox(StartButton))
 	{
 		S->SetHorizontalAlignment(HAlign_Center);
@@ -105,7 +104,7 @@ void UStartRelicPickWidget::SetCandidates(const TArray<FName>& StoredRelics, ECh
 		ModeText->SetText(FText::FromString(bHardMode
 			? TEXT("하드 모드: 죽으면 들고 간 유물이 창고에서 사라집니다")
 			: TEXT("들고 간 유물은 창고에 그대로 남습니다")));
-		ModeText->SetColorAndOpacity(FSlateColor(bHardMode ? FLinearColor(1.f, 0.4f, 0.35f) : TerminusUI::Color::TextMuted));
+		ModeText->SetColorAndOpacity(FSlateColor(bHardMode ? TerminusUI::Color::Alert : TerminusUI::Color::TextMuted));
 	}
 
 	if (TitleText)

@@ -1,7 +1,8 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Blueprint/UserWidget.h"
+#include "Widgets/Common/TerminusUserWidget.h"
+#include "Widgets/TerminusUIColors.h"
 #include "StorageWidget.generated.h"
 
 class UButton;
@@ -28,7 +29,7 @@ enum class EStorageTab : uint8
  * HubPanel 이 없으면 예전처럼 탭 방식 (RelicTabButton / SkillTabButton 이 탭)
  */
 UCLASS()
-class TERMINUS_API UStorageWidget : public UUserWidget
+class TERMINUS_API UStorageWidget : public UTerminusUserWidget
 {
 	GENERATED_BODY()
 
@@ -86,12 +87,12 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Storage")
 	int32 MinSlots = 24;
 
-	// 탭 방식일 때 탭 버튼 색 (선택 / 아님)
+	// 탭 방식일 때 탭 버튼 색. 선택 = 테두리색(금), 아님 = 바탕색
 	UPROPERTY(EditAnywhere, Category = "Storage")
-	FLinearColor ActiveTabColor = FLinearColor(1.f, 0.85f, 0.35f);
+	FLinearColor ActiveTabColor = TerminusUI::Color::GoldBase;
 
 	UPROPERTY(EditAnywhere, Category = "Storage")
-	FLinearColor InactiveTabColor = FLinearColor(0.45f, 0.45f, 0.45f);
+	FLinearColor InactiveTabColor = TerminusUI::Color::Card;
 
 private:
 	EStorageTab CurrentTab = EStorageTab::Relic;

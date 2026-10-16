@@ -1,7 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Blueprint/UserWidget.h"
+#include "Widgets/Common/TerminusUserWidget.h"
 #include "ItemCardWidget.generated.h"
 
 class UButton;
@@ -22,7 +22,7 @@ class UItemSlotWidget;
  * 블루프린트에서 ItemRow / bRelic 을 읽을 수 있고, 바뀔 때마다 OnCardUpdated 가 불림
  */
 UCLASS()
-class TERMINUS_API UItemCardWidget : public UUserWidget
+class TERMINUS_API UItemCardWidget : public UTerminusUserWidget
 {
 	GENERATED_BODY()
 
@@ -32,7 +32,10 @@ public:
 
 	void SetItem(bool bInRelic, FName Row, FVector2D SlotSize = FVector2D::ZeroVector, bool bShowName = true);
 	void SetCaption(const FString& Caption);
-	void SetAction(const FString& Label, bool bEnabled, const FLinearColor& DefaultTint = FLinearColor(0.24f, 0.24f, 0.28f));
+	void SetAction(const FString& Label, bool bEnabled, const FLinearColor& DefaultTint = FLinearColor::White);
+
+	// 기본 모양에서 버튼 글자색만 바꾸기 (상점: 재화 부족이면 경고색). SetAction 뒤에 부를 것
+	void SetActionLabelColor(const FLinearColor& Color);
 
 	// 기본 모양에서 설명 줄 폭 / 글자 크기
 	void SetCaptionStyle(float Width, int32 FontSize, const FLinearColor& Color);

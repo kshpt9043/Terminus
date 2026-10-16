@@ -26,6 +26,7 @@
 #include "Widgets/Common/EscapeStackSubsystem.h"
 #include "Widgets/SWindow.h"
 #include "Widgets/Common/TerminusUIBuilder.h"
+#include "Widgets/TerminusUIColors.h"
 #include "Widgets/TerminusUISettings.h"
 
 // Slate 가 키 / 클릭을 위젯에 나눠주기 전에 먼저 보는 곳. 판단은 위젯이 함
@@ -57,9 +58,9 @@ private:
 
 namespace
 {
-	const FLinearColor CommsPlanColor(0.75f, 0.9f, 1.f);
-	const FLinearColor CommsEstimateColor(1.f, 0.85f, 0.5f);
-	const FLinearColor CommsLethalColor(1.f, 0.35f, 0.3f);
+	const FLinearColor& CommsPlanColor = TerminusUI::Color::TextSub;
+	const FLinearColor& CommsEstimateColor = TerminusUI::Color::GoldHover;
+	const FLinearColor& CommsLethalColor = TerminusUI::Color::Alert;
 
 	UTextBlock* MakeCommsText(UWidgetTree* Tree, int32 Size, const FLinearColor& Color)
 	{
@@ -115,7 +116,7 @@ void UPartyCommsWidget::BuildLayout()
 	Root->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
 
 	// 재촉 / 알림 (위 가운데)
-	ToastText = MakeCommsText(WidgetTree, FontSize + 7, FLinearColor(1.f, 0.85f, 0.4f));
+	ToastText = MakeCommsText(WidgetTree, FontSize + 7, TerminusUI::Color::GoldHover);
 	if (UCanvasPanelSlot* ToastSlot = Root->AddChildToCanvas(ToastText))
 	{
 		ToastSlot->SetAnchors(FAnchors(0.5f, 0.f));
@@ -126,9 +127,11 @@ void UPartyCommsWidget::BuildLayout()
 	ToastText->SetVisibility(ESlateVisibility::Collapsed);
 
 	// 재촉 버튼 (오른쪽 아래)
+	// 보조 행동 육각 버튼
 	NudgeButton = WidgetTree->ConstructWidget<UButton>();
-	NudgeButton->SetBackgroundColor(FLinearColor(0.85f, 0.55f, 0.2f, 1.f));
-	NudgeLabel = MakeCommsText(WidgetTree, FontSize + 3, FLinearColor::White);
+	TerminusUI::StyleHexButton(NudgeButton, TerminusUI::EHexButton::Secondary);
+	NudgeLabel = MakeCommsText(WidgetTree, FontSize + 2, TerminusUI::Color::TextBody);
+	TerminusUI::SetBold(NudgeLabel);
 	NudgeButton->SetContent(NudgeLabel);
 	NudgeButton->SetToolTipText(NSLOCTEXT("PartyComms", "NudgeTip", "아직 턴을 끝내지 않은 동료에게 알림을 보냅니다"));
 	NudgeButton->OnClicked.AddDynamic(this, &UPartyCommsWidget::HandleNudgeClicked);
@@ -579,16 +582,16 @@ void UPartyCommsWidget::RebuildTags(const TArray<ATerminusBattler*>& Battlers)
 		UVerticalBox* Box = WidgetTree->ConstructWidget<UVerticalBox>();
 		Box->SetVisibility(ESlateVisibility::HitTestInvisible);
 
-		// 말풍선 (밝은 바탕 + 어두운 글자)
+		// 말풍선 (판 + 테두리, 본문 글자)
 		UBorder* Bubble = WidgetTree->ConstructWidget<UBorder>();
-		Bubble->SetBrushColor(FLinearColor(0.95f, 0.93f, 0.88f, 0.95f));
+		Bubble->SetBrush(TerminusUI::MakeBoxBrush(TerminusUI::Hex(TEXT("1B1E25"), 0.95f), TerminusUI::Color::Line));
 		Bubble->SetPadding(FMargin(10.f, 4.f));
-		UTextBlock* BubbleText = MakeCommsText(WidgetTree, FontSize + 1, FLinearColor(0.08f, 0.07f, 0.06f));
+		UTextBlock* BubbleText = MakeCommsText(WidgetTree, FontSize + 1, TerminusUI::Color::TextBody);
 		BubbleText->SetShadowOffset(FVector2D::ZeroVector);
 		Bubble->SetContent(BubbleText);
 		Bubble->SetVisibility(ESlateVisibility::Collapsed);
 
-		UTextBlock* PingText = MakeCommsText(WidgetTree, FontSize + 1, FLinearColor::White);
+		UTextBlock* PingText = MakeCommsText(WidgetTree, FontSize + 1, TerminusUI::Color::TextBody);
 		UTextBlock* PlanText = MakeCommsText(WidgetTree, FontSize - 1, CommsPlanColor);
 		UTextBlock* EstimateText = MakeCommsText(WidgetTree, FontSize, CommsEstimateColor);
 
@@ -654,7 +657,7 @@ void UPartyCommsWidget::UpdateTags(ADungeonArea* Area, UDungeonCombatComponent* 
 
 		// ---- 핑 (싸우는 중, 살아 있는 대상)
 		FString PingLabel;
-		FLinearColor PingColor = FLinearColor::White;
+		FLinearColor PingColor = TerminusUI::Color::TextBody;
 		if (bFighting && bAlive)
 		{
 			for (const FActivePing& Active : Pings)

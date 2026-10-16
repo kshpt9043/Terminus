@@ -1,9 +1,10 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Blueprint/UserWidget.h"
+#include "Widgets/Common/TerminusUserWidget.h"
 #include "SkillTooltipWidget.generated.h"
 
+class UBorder;
 class UTextBlock;
 struct FSkillRow;
 
@@ -14,7 +15,7 @@ struct FSkillRow;
  * 하나도 없으면(C++ 클래스 그대로) C++ 이 기본 모양을 만든다
  */
 UCLASS()
-class TERMINUS_API USkillTooltipWidget : public UUserWidget
+class TERMINUS_API USkillTooltipWidget : public UTerminusUserWidget
 {
 	GENERATED_BODY()
 
@@ -33,12 +34,15 @@ protected:
 	// "에너지 1" / "스킬 에너지 1"
 	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UTextBlock> CostText;
 
+	// 위쪽 3px 종류 색 띠 (선택). 기본 모양은 바깥 판의 바탕색이 띠
+	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UBorder> TierBand;
+
 	// 설명 (DT 의 Description_KR)
 	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UTextBlock> DescText;
 
-	// 기본 모양의 최대 폭 (설명이 길면 줄바꿈)
+	// 기본 모양의 폭 (설명이 길면 줄바꿈)
 	UPROPERTY(EditAnywhere, Category = "Skill Tooltip")
-	float DefaultWidth = 280.f;
+	float DefaultWidth = 320.f;
 
 private:
 	void BuildDefaultLayout();

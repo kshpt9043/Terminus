@@ -1,7 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Blueprint/UserWidget.h"
+#include "Widgets/Common/TerminusUserWidget.h"
 #include "Online/SessionSubsystem.h"
 #include "RoomListWidget.generated.h"
 
@@ -17,7 +17,7 @@ class URoomEntryWidget;
  * 세션 처리는 SessionSubsystem 에 맡기고 여기서는 입력과 목록만 다룬다.
  */
 UCLASS()
-class TERMINUS_API URoomListWidget : public UUserWidget
+class TERMINUS_API URoomListWidget : public UTerminusUserWidget
 {
 	GENERATED_BODY()
 

@@ -3,7 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Blueprint/UserWidget.h"
+#include "Widgets/Common/TerminusUserWidget.h"
 #include "PlayerSlot.generated.h"
 
 class UTextBlock;
@@ -13,7 +13,7 @@ class APlayerState;
  * 로비 슬롯 하나. 받은 PlayerState 를 그리기만 하고 아무 판단도 하지 않는다.
  */
 UCLASS()
-class TERMINUS_API UPlayerSlot : public UUserWidget
+class TERMINUS_API UPlayerSlot : public UTerminusUserWidget
 {
 	GENERATED_BODY()
 

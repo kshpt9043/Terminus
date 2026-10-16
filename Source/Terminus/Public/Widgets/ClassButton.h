@@ -3,7 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Blueprint/UserWidget.h"
+#include "Widgets/Common/TerminusUserWidget.h"
 #include "Data/CharacterTypes.h"
 #include "ClassButton.generated.h"
 
@@ -16,7 +16,7 @@ DECLARE_DELEGATE_OneParam(FOnClassButtonClicked, ECharacterClass);
  * 
  */
 UCLASS()
-class TERMINUS_API UClassButton : public UUserWidget
+class TERMINUS_API UClassButton : public UTerminusUserWidget
 {
 	GENERATED_BODY()
 	

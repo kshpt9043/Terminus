@@ -1,8 +1,9 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Blueprint/UserWidget.h"
+#include "Widgets/Common/TerminusUserWidget.h"
 #include "Types/SlateEnums.h"
+#include "Widgets/TerminusUIColors.h"
 #include "ChatWidget.generated.h"
 
 class UEditableTextBox;
@@ -22,7 +23,7 @@ struct FChatMessage;
  * 크기는 ChatSize 로 정함 (화면에 붙일 때 이 크기로 놓임)
  */
 UCLASS()
-class TERMINUS_API UChatWidget : public UUserWidget
+class TERMINUS_API UChatWidget : public UTerminusUserWidget
 {
 	GENERATED_BODY()
 
@@ -64,20 +65,20 @@ protected:
 	int32 FontSize = 13;
 
 	UPROPERTY(EditAnywhere, Category = "Chat")
-	FLinearColor MyMessageColor = FLinearColor(1.f, 0.85f, 0.45f);
+	FLinearColor MyMessageColor = TerminusUI::Color::GoldHover;
 
 	UPROPERTY(EditAnywhere, Category = "Chat")
-	FLinearColor OtherMessageColor = FLinearColor::White;
+	FLinearColor OtherMessageColor = TerminusUI::Color::TextBody;
 
 	UPROPERTY(EditAnywhere, Category = "Chat")
-	FLinearColor SystemMessageColor = FLinearColor(0.6f, 0.85f, 1.f);
+	FLinearColor SystemMessageColor = TerminusUI::Color::TextAux;
 
 	// 바탕 색 (평소 / 입력 중)
 	UPROPERTY(EditAnywhere, Category = "Chat")
-	FLinearColor IdleBackgroundColor = FLinearColor(0.f, 0.f, 0.f, 0.3f);
+	FLinearColor IdleBackgroundColor = TerminusUI::Hex(TEXT("111317"), 0.3f);
 
 	UPROPERTY(EditAnywhere, Category = "Chat")
-	FLinearColor ActiveBackgroundColor = FLinearColor(0.f, 0.f, 0.f, 0.7f);
+	FLinearColor ActiveBackgroundColor = TerminusUI::Hex(TEXT("1B1E25"), 0.85f);
 
 	// 한 번에 보낼 수 있는 글자 수
 	UPROPERTY(EditAnywhere, Category = "Chat")

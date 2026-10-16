@@ -52,12 +52,12 @@ void UChatWidget::BuildDefaultLayout()
 
 	// 제목줄 (여기를 잡고 끔)
 	UBorder* Header = WidgetTree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("DragHandle"));
-	Header->SetBrushColor(FLinearColor(0.f, 0.f, 0.f, 0.45f));
+	Header->SetBrushColor(TerminusUI::Hex(TEXT("111317"), 0.6f));
 	Header->SetPadding(FMargin(8.f, 3.f));
 	UTextBlock* Title = WidgetTree->ConstructWidget<UTextBlock>();
 	Title->SetText(FText::FromString(TEXT("채팅  (Enter)")));
 	FSlateFontInfo TitleFont = Title->GetFont();
-	TitleFont.Size = 11;
+	TitleFont.Size = 13;
 	Title->SetFont(TitleFont);
 	Title->SetColorAndOpacity(FSlateColor(TerminusUI::Color::TextMuted));
 	Header->SetContent(Title);

@@ -15,7 +15,9 @@
 #include "Engine/Texture2D.h"
 #include "Widgets/Skill/SkillTooltipWidget.h"
 #include "Widgets/Relic/RelicTooltipWidget.h"
+#include "Widgets/Common/TerminusUIBuilder.h"
 #include "Widgets/Common/TerminusUIText.h"
+#include "Widgets/TerminusUIColors.h"
 #include "Widgets/TerminusUISettings.h"
 
 // =====================================================================
@@ -36,7 +38,11 @@ void UItemSlotWidget::NativeOnInitialized()
 		SlotButton->OnClicked.AddDynamic(this, &UItemSlotWidget::HandleClicked);
 	}
 
-	if (Background) BackgroundColor = Background->GetBrushColor();
+	// WBP 판 색을 따름. 단 예전 C++ 기본색 그대로 복사된 WBP 면 새 팔레트(#262A32) 사용
+	if (Background && !Background->GetBrushColor().Equals(FLinearColor(0.07f, 0.06f, 0.06f, 0.95f), 0.005f))
+	{
+		BackgroundColor = Background->GetBrushColor();
+	}
 	ApplyIconOnly();
 
 	if (!bShownOnce)
@@ -57,7 +63,7 @@ void UItemSlotWidget::BuildDefaultLayout()
 	SlotSizeBox->SetContent(SlotButton);
 
 	Frame = WidgetTree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("Frame"));
-	Frame->SetPadding(FMargin(2.f));
+	Frame->SetPadding(FMargin(1.f, 5.f, 1.f, 1.f));
 	SlotButton->SetContent(Frame);
 
 	UBorder* Inner = WidgetTree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("Background"));
@@ -127,7 +133,6 @@ void UItemSlotWidget::SetIconOnly(bool bInIconOnly)
 void UItemSlotWidget::ApplyIconOnly()
 {
 	SetShowName(bShowNameWanted);
-	if (Background) Background->SetBrushColor(bIconOnly ? FLinearColor::Transparent : BackgroundColor);
 	ApplyFrameColor();
 }
 
@@ -260,12 +265,42 @@ void UItemSlotWidget::SetUsable(bool bUsable)
 	ApplyButtonEnabled();
 }
 
+void UItemSlotWidget::NativeOnMouseEnter(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)
+{
+	Super::NativeOnMouseEnter(InGeometry, InMouseEvent);
+	bHoveredState = true;
+	ApplyFrameColor();
+}
+
+void UItemSlotWidget::NativeOnMouseLeave(const FPointerEvent& InMouseEvent)
+{
+	Super::NativeOnMouseLeave(InMouseEvent);
+	bHoveredState = false;
+	ApplyFrameColor();
+}
+
 void UItemSlotWidget::ApplyFrameColor()
 {
+	using namespace TerminusUI;
+
+	const bool bEmpty = Kind == EItemSlotKind::Empty;
+	const bool bHover = bHoveredState && !bEmpty && SlotButton && SlotButton->GetIsEnabled();
+
 	if (Frame)
 	{
-		// 아이콘만 모드면 테두리는 고를 때(강조)만
-		Frame->SetBrushColor(bSelectedState ? SelectedColor : (bIconOnly ? FLinearColor::Transparent : ItemColor));
+		// 테두리 판의 바탕색이 위쪽 띠 (안쪽 판이 나머지를 덮음). 아이콘만 모드면 띠 없이 고를 때(강조) 테두리만
+		const FLinearColor Band = bIconOnly ? FLinearColor::Transparent : (bEmpty ? EmptyColor : ItemColor);
+		const FLinearColor Outline = bSelectedState ? SelectedColor
+			: bIconOnly ? FLinearColor::Transparent
+			: bHover ? Color::GoldPressed : Color::Line;
+		const float Width = bSelectedState ? 2.f : 1.f;
+		Frame->SetBrush(MakeBoxBrush(Band, Outline, 4.f, Width));
+		Frame->SetPadding(FMargin(Width, 4.f + Width, Width, Width));
+	}
+
+	if (Background)
+	{
+		Background->SetBrushColor(bIconOnly ? FLinearColor::Transparent : bEmpty ? EmptyColor : bHover ? Color::Disabled : BackgroundColor);
 	}
 }
 

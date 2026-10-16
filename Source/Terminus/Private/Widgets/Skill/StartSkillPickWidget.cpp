@@ -30,18 +30,18 @@ void UStartSkillPickWidget::NativeOnInitialized()
 void UStartSkillPickWidget::BuildDefaultLayout()
 {
 	// 화면 전체를 어둡게 덮는 바탕 + 가운데 제목 / 안내 / 카드 줄
-	UBorder* Root = TerminusUI::MakeDimRoot(WidgetTree, TEXT("PickRoot"), FLinearColor(0.02f, 0.02f, 0.03f, 0.92f));
+	UBorder* Root = TerminusUI::MakeDimRoot(WidgetTree, TEXT("PickRoot"), TerminusUI::Hex(TEXT("111317"), 0.92f));
 
 	UVerticalBox* Column = WidgetTree->ConstructWidget<UVerticalBox>();
 	Root->SetContent(Column);
 
-	TitleText = TerminusUI::MakeText(WidgetTree, TEXT("TitleText"), TEXT(""), 30, FLinearColor::White);
+	TitleText = TerminusUI::MakeTitle(WidgetTree, TEXT("TitleText"), TEXT(""));
 	if (UVerticalBoxSlot* S = Column->AddChildToVerticalBox(TitleText))
 	{
 		S->SetHorizontalAlignment(HAlign_Center);
 	}
 
-	MessageText = TerminusUI::MakeText(WidgetTree, TEXT("MessageText"), TEXT(""), 18, TerminusUI::Color::TextMuted);
+	MessageText = TerminusUI::MakeText(WidgetTree, TEXT("MessageText"), TEXT(""), TerminusUI::FontSize::Subtitle, TerminusUI::Color::TextSub);
 	if (UVerticalBoxSlot* S = Column->AddChildToVerticalBox(MessageText))
 	{
 		S->SetHorizontalAlignment(HAlign_Center);

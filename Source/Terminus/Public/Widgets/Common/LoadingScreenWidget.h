@@ -1,7 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Blueprint/UserWidget.h"
+#include "Widgets/Common/TerminusUserWidget.h"
 #include "LoadingScreenWidget.generated.h"
 
 class UTextBlock;
@@ -25,7 +25,7 @@ enum class ELoadingScreenStyle : uint8
  * 무비 플레이어 쪽은 다른 스레드에서 그려지므로 WBP 안에서 게임 로직(타이머 / 월드 접근)은 쓰지 말 것 (애니메이션은 괜찮음)
  */
 UCLASS()
-class TERMINUS_API ULoadingScreenWidget : public UUserWidget
+class TERMINUS_API ULoadingScreenWidget : public UTerminusUserWidget
 {
 	GENERATED_BODY()
 

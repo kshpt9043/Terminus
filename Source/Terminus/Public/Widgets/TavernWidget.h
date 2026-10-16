@@ -3,7 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Blueprint/UserWidget.h"
+#include "Widgets/Common/TerminusUserWidget.h"
 #include "Data/CharacterTypes.h"
 #include "Styling/SlateTypes.h"
 #include "TavernWidget.generated.h"
@@ -20,7 +20,7 @@ class UCheckBox;
  * 주점(멀티 로비) 화면. 슬롯 4개와 캐릭터 정보 패널을 들고 있다.
  */
 UCLASS()
-class TERMINUS_API UTavernWidget : public UUserWidget
+class TERMINUS_API UTavernWidget : public UTerminusUserWidget
 {
 	GENERATED_BODY()
 

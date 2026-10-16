@@ -30,12 +30,12 @@ void ULoadingScreenWidget::NativeOnInitialized()
 
 void ULoadingScreenWidget::BuildDefaultLayout()
 {
-	UBorder* Background = TerminusUI::MakeDimRoot(WidgetTree, TEXT("LoadingBackground"), FLinearColor(0.03f, 0.028f, 0.025f, 1.f));
+	UBorder* Background = TerminusUI::MakeDimRoot(WidgetTree, TEXT("LoadingBackground"), TerminusUI::Color::Inset);
 
 	UVerticalBox* Column = WidgetTree->ConstructWidget<UVerticalBox>();
 	Background->SetContent(Column);
 
-	TitleText = TerminusUI::MakeText(WidgetTree, TEXT("TitleText"), TEXT("불러오는 중"), 28, TerminusUI::Color::Gold);
+	TitleText = TerminusUI::MakeTitle(WidgetTree, TEXT("TitleText"), TEXT("불러오는 중"), TerminusUI::FontSize::Section);
 	if (UVerticalBoxSlot* S = Column->AddChildToVerticalBox(TitleText)) S->SetHorizontalAlignment(HAlign_Center);
 
 	UCircularThrobber* Throbber = WidgetTree->ConstructWidget<UCircularThrobber>(UCircularThrobber::StaticClass(), TEXT("Throbber"));

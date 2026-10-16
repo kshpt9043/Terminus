@@ -3,7 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Blueprint/UserWidget.h"
+#include "Widgets/Common/TerminusUserWidget.h"
 #include "Online/SessionSubsystem.h"
 #include "RoomEntryWidget.generated.h"
 
@@ -16,7 +16,7 @@ DECLARE_DELEGATE_OneParam(FOnRoomEntryClicked, const FTerminusSessionInfo&);
  * 
  */
 UCLASS()
-class TERMINUS_API URoomEntryWidget : public UUserWidget
+class TERMINUS_API URoomEntryWidget : public UTerminusUserWidget
 {
 	GENERATED_BODY()
 	

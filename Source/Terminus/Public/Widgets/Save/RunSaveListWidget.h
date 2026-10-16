@@ -1,7 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Blueprint/UserWidget.h"
+#include "Widgets/Common/TerminusUserWidget.h"
 #include "RunSaveListWidget.generated.h"
 
 class UButton;
@@ -21,7 +21,7 @@ class UConfirmPopupWidget;
  * 루트는 화면 전체 (뒤를 어둡게 덮는 패널) 로 둘 것
  */
 UCLASS()
-class TERMINUS_API URunSaveListWidget : public UUserWidget
+class TERMINUS_API URunSaveListWidget : public UTerminusUserWidget
 {
 	GENERATED_BODY()
 

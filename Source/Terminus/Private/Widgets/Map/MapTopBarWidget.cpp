@@ -5,6 +5,8 @@
 #include "Components/Button.h"
 #include "Components/HorizontalBox.h"
 #include "Components/HorizontalBoxSlot.h"
+#include "Components/Image.h"
+#include "Engine/Texture2D.h"
 #include "Components/TextBlock.h"
 #include "Components/VerticalBox.h"
 #include "Components/VerticalBoxSlot.h"
@@ -21,12 +23,6 @@
 #include "Widgets/TerminusUIColors.h"
 #include "Widgets/TerminusUISettings.h"
 
-namespace
-{
-	const FLinearColor BarColor(0.03f, 0.03f, 0.04f, 0.85f);
-	const FLinearColor CurrencyColor(1.f, 0.82f, 0.3f);
-
-}
 
 // =====================================================================
 // 초기화 / 배치
@@ -48,8 +44,8 @@ void UMapTopBarWidget::BuildDefaultLayout()
 {
 	// 이 위젯 자체가 가로 바 하나. 크기는 지도 화면(WBP_MapScreen)에서 놓은 칸을 따름
 	UBorder* Bar = WidgetTree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("Bar"));
-	Bar->SetBrushColor(BarColor);
-	Bar->SetPadding(FMargin(20.f, 8.f));
+	Bar->SetBrushColor(TerminusUI::MapColor::TopBar);
+	Bar->SetPadding(FMargin(28.f, 8.f));
 	Bar->SetVerticalAlignment(VAlign_Center);
 	WidgetTree->RootWidget = Bar;
 
@@ -58,8 +54,9 @@ void UMapTopBarWidget::BuildDefaultLayout()
 
 	// 왼쪽: 층 / 진행
 	UVerticalBox* FloorBox = WidgetTree->ConstructWidget<UVerticalBox>();
-	FloorText = TerminusUI::MakeText(WidgetTree, NAME_None, TEXT(""), 20, FLinearColor::White, ETextJustify::Left);
-	RoomText = TerminusUI::MakeText(WidgetTree, NAME_None, TEXT(""), 14, TerminusUI::Color::TextMuted, ETextJustify::Left);
+	FloorText = TerminusUI::MakeText(WidgetTree, NAME_None, TEXT(""), 24, TerminusUI::MapColor::Text, ETextJustify::Left);
+	TerminusUI::SetBold(FloorText);
+	RoomText = TerminusUI::MakeText(WidgetTree, NAME_None, TEXT(""), 14, TerminusUI::MapColor::TextSub, ETextJustify::Left);
 	FloorBox->AddChildToVerticalBox(FloorText);
 	FloorBox->AddChildToVerticalBox(RoomText);
 	if (UHorizontalBoxSlot* S = Row->AddChildToHorizontalBox(FloorBox))
@@ -77,12 +74,25 @@ void UMapTopBarWidget::BuildDefaultLayout()
 		S->SetVerticalAlignment(VAlign_Center);
 	}
 
-	// 오른쪽: 재화 / 나가기
-	CurrencyText = TerminusUI::MakeText(WidgetTree, NAME_None, TEXT(""), 20, CurrencyColor, ETextJustify::Left);
+	// 오른쪽: 동전 / 재화 / 나가기
+	UImage* Coin = WidgetTree->ConstructWidget<UImage>();
+	if (UTexture2D* CoinTexture = LoadObject<UTexture2D>(nullptr, TEXT("/Game/UI/Textures/Map/T_Map_Coin.T_Map_Coin")))
+	{
+		Coin->SetBrushFromTexture(CoinTexture);
+	}
+	Coin->SetDesiredSizeOverride(FVector2D(18.f, 18.f));
+	if (UHorizontalBoxSlot* S = Row->AddChildToHorizontalBox(Coin))
+	{
+		S->SetVerticalAlignment(VAlign_Center);
+		S->SetPadding(FMargin(24.f, 0.f, 10.f, 0.f));
+	}
+
+	CurrencyText = TerminusUI::MakeText(WidgetTree, NAME_None, TEXT(""), 20, TerminusUI::Color::GoldHover, ETextJustify::Left);
+	TerminusUI::SetBold(CurrencyText);
 	if (UHorizontalBoxSlot* S = Row->AddChildToHorizontalBox(CurrencyText))
 	{
 		S->SetVerticalAlignment(VAlign_Center);
-		S->SetPadding(FMargin(24.f, 0.f, 20.f, 0.f));
+		S->SetPadding(FMargin(0.f, 0.f, 20.f, 0.f));
 	}
 
 	ExitButton = TerminusUI::MakeButton(WidgetTree, NAME_None, TEXT("나가기"), 16);
@@ -174,12 +184,23 @@ void UMapTopBarWidget::RefreshTexts()
 	if (FloorText)
 	{
 		const int32 Floor = MapMgr ? MapMgr->CurrentFloor : 1;
-		FString Label = FString::Printf(TEXT("%d층 · %s"), Floor, *AMapManager::GetTierName(Floor).ToString());
+		FString Sub = AMapManager::GetTierName(Floor).ToString();
 		if (MapMgr && MapMgr->FloorTheme && !MapMgr->FloorTheme->DisplayName.IsEmpty())
 		{
-			Label += FString::Printf(TEXT(" · %s"), *MapMgr->FloorTheme->DisplayName.ToString());
+			Sub += FString::Printf(TEXT(" · %s"), *MapMgr->FloorTheme->DisplayName.ToString());
 		}
-		TerminusUI::SetTextIfChanged(FloorText, Label);
+
+		// 시안: 굵은 "2층" 옆에 흐린 "표층 · 슬라임 왕국"
+		const FString FloorLabel = FString::Printf(TEXT("%d층"), Floor);
+		if (FloorSubText)
+		{
+			TerminusUI::SetTextIfChanged(FloorText, FloorLabel);
+			TerminusUI::SetTextIfChanged(FloorSubText, Sub);
+		}
+		else
+		{
+			TerminusUI::SetTextIfChanged(FloorText, FloorLabel + TEXT(" · ") + Sub);
+		}
 	}
 
 	if (RoomText)
@@ -192,7 +213,8 @@ void UMapTopBarWidget::RefreshTexts()
 
 	if (CurrencyText)
 	{
-		TerminusUI::SetTextIfChanged(CurrencyText, FString::Printf(TEXT("재화 %d"), LocalPS ? LocalPS->GetRunState().Currency : 0));
+		// 숫자만 (옆에 동전 그림)
+		TerminusUI::SetTextIfChanged(CurrencyText, FText::AsNumber(LocalPS ? LocalPS->GetRunState().Currency : 0));
 	}
 }
 

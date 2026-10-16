@@ -38,6 +38,7 @@ void UChoiceCardWidget::BuildDefaultLayout()
 	CardSizeBox->SetContent(Inside);
 
 	TitleText = TerminusUI::MakeWrapText(WidgetTree, TEXT("TitleText"), TEXT(""), Style.TitleSize, Style.TitleColor);
+	TerminusUI::SetBold(TitleText);
 	Inside->AddChildToVerticalBox(TitleText);
 
 	ItemSlot = WidgetTree->ConstructWidget<UItemSlotWidget>(UItemSlotWidget::StaticClass(), TEXT("ItemSlot"));
@@ -49,7 +50,7 @@ void UChoiceCardWidget::BuildDefaultLayout()
 		S->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
 	}
 
-	FooterText = TerminusUI::MakeWrapText(WidgetTree, TEXT("FooterText"), TEXT(""), 15, TerminusUI::Color::Gold);
+	FooterText = TerminusUI::MakeWrapText(WidgetTree, TEXT("FooterText"), TEXT(""), TerminusUI::FontSize::Aux, TerminusUI::Color::TextFaint);
 	TerminusUI::AddRow(Inside, FooterText, 6.f, HAlign_Fill);
 
 	ApplyDefaultStyle(Style);
@@ -154,15 +155,35 @@ void UChoiceCardWidget::ApplyStateColor()
 {
 	if (!bDefaultLayout || !ChoiceButton) return;
 
-	FLinearColor Color = Style.NormalColor;
+	using namespace TerminusUI;
+
+	// 스타일 가이드 06: 카드 #262A32 + 1px #3A3F4A. 상태는 테두리 / 글자색으로
+	FLinearColor Fill = Style.NormalColor;
+	FLinearColor Outline = Color::Line;
+	FLinearColor TitleColor = Style.TitleColor;
+	FLinearColor FooterColor = Color::TextFaint;
+	float Width = 1.f;
 	switch (State)
 	{
-	case EChoiceCardState::Selected:  Color = FLinearColor(0.55f, 0.5f, 0.35f); break;
-	case EChoiceCardState::Highlight: Color = TerminusUI::Color::Gold; break;
-	case EChoiceCardState::Danger:    Color = FLinearColor(0.85f, 0.3f, 0.28f); break;
+	case EChoiceCardState::Selected:  Outline = Color::GoldBase; TitleColor = Color::GoldHover; FooterColor = Color::Ready; Width = 2.f; break;
+	case EChoiceCardState::Highlight: Outline = Color::GoldHover; Fill = Color::Disabled; TitleColor = Color::GoldHover; Width = 2.f; break;
+	case EChoiceCardState::Danger:    Outline = Color::Alert; Width = 2.f; break;
 	default: break;
 	}
-	ChoiceButton->SetBackgroundColor(Color);
+
+	// 여백은 CardSizeBox 쪽에서 -> 버튼 여백은 엔진 기본 그대로
+	const FButtonStyle& EngineDefault = GetDefault<UButton>()->GetStyle();
+	FButtonStyle ButtonStyle = MakeFlatButtonStyle(Fill);
+	ButtonStyle.Normal = MakeBoxBrush(Fill, Outline, 6.f, Width);
+	ButtonStyle.Hovered = MakeBoxBrush(Color::Disabled, State == EChoiceCardState::Normal ? Color::GoldPressed : Outline, 6.f, Width);
+	ButtonStyle.Pressed = MakeBoxBrush(Color::Section, Color::GoldPressed, 6.f, Width);
+	ButtonStyle.NormalPadding = EngineDefault.NormalPadding;
+	ButtonStyle.PressedPadding = EngineDefault.PressedPadding;
+	ChoiceButton->SetStyle(ButtonStyle);
+	ChoiceButton->SetBackgroundColor(FLinearColor::White);
+
+	if (TitleText) TitleText->SetColorAndOpacity(FSlateColor(TitleColor));
+	if (FooterText) FooterText->SetColorAndOpacity(FSlateColor(FooterColor));
 }
 
 void UChoiceCardWidget::HandleClicked()

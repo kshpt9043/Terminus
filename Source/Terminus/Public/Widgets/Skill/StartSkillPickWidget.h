@@ -1,7 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Blueprint/UserWidget.h"
+#include "Widgets/Common/TerminusUserWidget.h"
 #include "StartSkillPickWidget.generated.h"
 
 class UPanelWidget;
@@ -19,7 +19,7 @@ class USkillCardWidget;
  * 카드 모양은 CardClass 에 USkillCardWidget 을 부모로 한 WBP 를 지정
  */
 UCLASS()
-class TERMINUS_API UStartSkillPickWidget : public UUserWidget
+class TERMINUS_API UStartSkillPickWidget : public UTerminusUserWidget
 {
 	GENERATED_BODY()
 

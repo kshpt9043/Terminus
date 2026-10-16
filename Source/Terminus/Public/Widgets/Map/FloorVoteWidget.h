@@ -1,7 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Blueprint/UserWidget.h"
+#include "Widgets/Common/TerminusUserWidget.h"
 #include "Map/MapManager.h"
 #include "FloorVoteWidget.generated.h"
 
@@ -22,7 +22,7 @@ class UFloorVoteWidget;
  * 카드는 CardBox 안에 C++ 이 채움
  */
 UCLASS()
-class TERMINUS_API UFloorVoteWidget : public UUserWidget
+class TERMINUS_API UFloorVoteWidget : public UTerminusUserWidget
 {
 	GENERATED_BODY()
 

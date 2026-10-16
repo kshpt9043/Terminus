@@ -30,11 +30,29 @@
 
 namespace
 {
-	const FLinearColor PanelColor(0.f, 0.f, 0.f, 0.55f);
-	const FLinearColor EnergyColor(0.25f, 0.6f, 1.f);
-	const FLinearColor SkillEnergyColor(0.65f, 0.4f, 1.f);
-	const FLinearColor PlayerHealthColor(0.3f, 0.85f, 0.35f);   // 시안: 아군은 초록
-	const FLinearColor MonsterHealthColor(0.9f, 0.25f, 0.2f);   // 시안: 적은 빨강
+	// 팔레트 (스타일 가이드). 월드 위라 판은 살짝 비침
+	const FLinearColor HUDPanelColor = TerminusUI::Hex(TEXT("1B1E25"), 0.85f);
+	const FLinearColor& EnergyColor = TerminusUI::Color::GoldHover;
+	const FLinearColor& SkillEnergyColor = TerminusUI::Color::TextSub;
+	const FLinearColor& PlayerHealthColor = TerminusUI::Color::Ready;    // 시안: 아군은 초록
+	const FLinearColor& MonsterHealthColor = TerminusUI::Color::Alert;   // 시안: 적은 빨강
+
+	// 대상 선택 버튼: 반투명 금 판 + 금 테두리. 끌어다 올린 대상은 진하게 (버튼 틴트 알파로)
+	FButtonStyle MakeTargetButtonStyle()
+	{
+		FButtonStyle Style = TerminusUI::MakeFlatButtonStyle(TerminusUI::Color::Card);
+		Style.Normal = TerminusUI::MakeBoxBrush(TerminusUI::Hex(TEXT("C9A45C"), 0.6f), TerminusUI::Color::GoldBase);
+		Style.Hovered = TerminusUI::MakeBoxBrush(TerminusUI::Hex(TEXT("E6C47A"), 0.8f), TerminusUI::Color::GoldHover);
+		Style.Pressed = TerminusUI::MakeBoxBrush(TerminusUI::Hex(TEXT("A8894A"), 0.8f), TerminusUI::Color::GoldPressed);
+		Style.NormalPadding = FMargin(4.f);
+		Style.PressedPadding = FMargin(4.f, 5.f, 4.f, 3.f);
+		return Style;
+	}
+
+	FLinearColor TargetButtonTint(bool bDragHover)
+	{
+		return FLinearColor(1.f, 1.f, 1.f, bDragHover ? 1.f : 0.55f);
+	}
 
 	// 배경 없이 월드 위에 뜨는 글자라 그림자
 	UTextBlock* MakeHUDText(UWidgetTree* Tree, const FString& Initial, int32 Size, const FLinearColor& Color = FLinearColor::White)
@@ -47,7 +65,7 @@ namespace
 	UBorder* MakePanel(UWidgetTree* Tree, UWidget* Content, const FMargin& Padding = FMargin(12.f, 8.f))
 	{
 		UBorder* Border = Tree->ConstructWidget<UBorder>();
-		Border->SetBrushColor(PanelColor);
+		Border->SetBrush(TerminusUI::MakeBoxBrush(HUDPanelColor, TerminusUI::Color::Line));
 		Border->SetPadding(Padding);
 		Border->SetContent(Content);
 		return Border;
@@ -127,20 +145,22 @@ void UCombatHUDWidget::BuildDefaultLayout()
 	}
 
 	// ---- 위: 방 / 턴 안내
-	RoomText = MakeHUDText(WidgetTree, TEXT(""), 20);
+	RoomText = MakeHUDText(WidgetTree, TEXT(""), TerminusUI::FontSize::Subtitle, TerminusUI::Color::TextSub);
 	AddToCanvas(Root, MakePanel(WidgetTree, RoomText), FAnchors(0.f, 0.f), FVector2D(0.f, 0.f), FVector2D(24.f, 20.f));
 
-	PhaseText = MakeHUDText(WidgetTree, TEXT(""), 26);
+	PhaseText = MakeHUDText(WidgetTree, TEXT(""), TerminusUI::FontSize::Section, TerminusUI::Color::Gold);
+	TerminusUI::SetBold(PhaseText);
 	AddToCanvas(Root, MakePanel(WidgetTree, PhaseText, FMargin(20.f, 8.f)), FAnchors(0.5f, 0.f), FVector2D(0.5f, 0.f), FVector2D(0.f, 20.f));
 
-	HintText = MakeHUDText(WidgetTree, TEXT(""), 20, FLinearColor(1.f, 0.9f, 0.4f));
+	HintText = MakeHUDText(WidgetTree, TEXT(""), 20, TerminusUI::Color::GoldHover);
 	AddToCanvas(Root, HintText, FAnchors(0.5f, 1.f), FVector2D(0.5f, 1.f), FVector2D(0.f, -200.f));
 
 	// ---- 왼쪽 아래: 에너지 + 기본 스킬 3개 / 스킬 에너지
 	UVerticalBox* LeftBox = WidgetTree->ConstructWidget<UVerticalBox>();
 
 	UHorizontalBox* SkillRow = WidgetTree->ConstructWidget<UHorizontalBox>();
-	EnergyText = MakeHUDText(WidgetTree, TEXT("에너지 0/0"), 22, EnergyColor);
+	EnergyText = MakeHUDText(WidgetTree, TEXT("에너지 0/0"), TerminusUI::FontSize::Section, EnergyColor);
+	TerminusUI::SetBold(EnergyText);
 	if (UHorizontalBoxSlot* S = SkillRow->AddChildToHorizontalBox(EnergyText))
 	{
 		S->SetVerticalAlignment(VAlign_Center);
@@ -153,7 +173,7 @@ void UCombatHUDWidget::BuildDefaultLayout()
 	LeftBox->AddChildToVerticalBox(SkillRow);
 
 	UHorizontalBox* EnhanceRow = WidgetTree->ConstructWidget<UHorizontalBox>();
-	SkillEnergyText = MakeHUDText(WidgetTree, TEXT("스킬 에너지 0/0"), 18, SkillEnergyColor);
+	SkillEnergyText = MakeHUDText(WidgetTree, TEXT("스킬 에너지 0/0"), TerminusUI::FontSize::Subtitle, SkillEnergyColor);
 	if (UHorizontalBoxSlot* S = EnhanceRow->AddChildToHorizontalBox(SkillEnergyText))
 	{
 		S->SetVerticalAlignment(VAlign_Center);
@@ -172,14 +192,19 @@ void UCombatHUDWidget::BuildDefaultLayout()
 	// ---- 오른쪽 아래: 턴 종료 + 상태
 	UVerticalBox* RightBox = WidgetTree->ConstructWidget<UVerticalBox>();
 
+	// 턴 종료 = 주 행동 육각 버튼
 	EndTurnButton = WidgetTree->ConstructWidget<UButton>();
-	EndTurnButton->SetContent(MakeHUDText(WidgetTree, TEXT("턴 종료"), 22));
+	TerminusUI::StyleHexButton(EndTurnButton, TerminusUI::EHexButton::Primary);
+	UTextBlock* EndTurnLabel = MakeHUDText(WidgetTree, TEXT("턴 종료"), 20, TerminusUI::Color::TextBody);
+	TerminusUI::SetBold(EndTurnLabel);
+	TerminusUI::SetLetterSpacing(EndTurnLabel, 120);
+	EndTurnButton->SetContent(EndTurnLabel);
 	if (UVerticalBoxSlot* S = RightBox->AddChildToVerticalBox(EndTurnButton))
 	{
 		S->SetHorizontalAlignment(HAlign_Right);
 	}
 
-	StatusText = MakeHUDText(WidgetTree, TEXT(""), 18);
+	StatusText = MakeHUDText(WidgetTree, TEXT(""), TerminusUI::FontSize::Body, TerminusUI::Color::TextBody);
 	if (UVerticalBoxSlot* S = RightBox->AddChildToVerticalBox(StatusText))
 	{
 		S->SetPadding(FMargin(0.f, 8.f, 0.f, 0.f));
@@ -326,7 +351,7 @@ void UCombatHUDWidget::RebuildTags()
 		// 머리 위 행동 예고 (몬스터만)
 		if (bMonster)
 		{
-			UTextBlock* Intent = MakeHUDText(WidgetTree, TEXT(""), 20, FLinearColor(1.f, 0.85f, 0.4f));
+			UTextBlock* Intent = MakeHUDText(WidgetTree, TEXT(""), 20, TerminusUI::Color::GoldHover);
 			UCanvasPanelSlot* CanvasSlot = TagLayer->AddChildToCanvas(Intent);
 			CanvasSlot->SetAutoSize(true);
 			CanvasSlot->SetAlignment(FVector2D(0.5f, 1.f));
@@ -357,8 +382,11 @@ void UCombatHUDWidget::RebuildTags()
 
 		// 대상 선택 버튼 (대상 고르는 중일 때만 보임)
 		UButton* Target = WidgetTree->ConstructWidget<UButton>();
-		Target->SetBackgroundColor(FLinearColor(1.f, 0.85f, 0.3f, 0.35f));
-		Target->SetContent(MakeHUDText(WidgetTree, TEXT("선택"), 16));
+		Target->SetStyle(MakeTargetButtonStyle());
+		Target->SetBackgroundColor(TargetButtonTint(false));
+		UTextBlock* TargetLabel = MakeHUDText(WidgetTree, TEXT("선택"), TerminusUI::FontSize::Body, TerminusUI::Color::TextBody);
+		TerminusUI::SetBold(TargetLabel);
+		Target->SetContent(TargetLabel);
 		Target->OnClicked.AddDynamic(this, &UCombatHUDWidget::HandleTargetClicked);
 		UCanvasPanelSlot* TargetSlot = TagLayer->AddChildToCanvas(Target);
 		TargetSlot->SetAutoSize(false);
@@ -511,7 +539,7 @@ void UCombatHUDWidget::UpdateTags()
 			{
 				Place(Target, BodyCenterHeight);
 
-				const FLinearColor TargetColor(1.f, 0.85f, 0.3f, TagIndex == DragHoverTag ? 0.75f : 0.35f);
+				const FLinearColor TargetColor = TargetButtonTint(TagIndex == DragHoverTag);
 				if (!Target->GetBackgroundColor().Equals(TargetColor))
 				{
 					Target->SetBackgroundColor(TargetColor);
@@ -794,7 +822,7 @@ void UCombatHUDWidget::UpdateSkillDrag()
 
 	if (!DragGhost.IsValid() && TagLayer)
 	{
-		UTextBlock* Ghost = MakeHUDText(WidgetTree, TEXT(""), 18, TerminusUI::Color::Gold);
+		UTextBlock* Ghost = MakeHUDText(WidgetTree, TEXT(""), TerminusUI::FontSize::Subtitle, TerminusUI::Color::Gold);
 		TerminusUI::AddShadow(Ghost);
 		if (UCanvasPanelSlot* GhostSlot = TagLayer->AddChildToCanvas(Ghost))
 		{

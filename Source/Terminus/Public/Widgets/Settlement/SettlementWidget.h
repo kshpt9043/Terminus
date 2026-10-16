@@ -1,7 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Blueprint/UserWidget.h"
+#include "Widgets/Common/TerminusUserWidget.h"
 #include "Game/TerminusProfileSubsystem.h"
 #include "SettlementWidget.generated.h"
 
@@ -23,7 +23,7 @@ class UItemSlotWidget;
  * WBP 로 꾸미려면 이 클래스를 부모로 WBP 를 만들어 WBP_MainMenu 의 SettlementWidgetClass 에 지정 (아래 이름 전부 선택 사항)
  */
 UCLASS()
-class TERMINUS_API USettlementWidget : public UUserWidget
+class TERMINUS_API USettlementWidget : public UTerminusUserWidget
 {
 	GENERATED_BODY()
 

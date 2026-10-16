@@ -1,7 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Blueprint/UserWidget.h"
+#include "Widgets/Common/TerminusUserWidget.h"
 #include "CombatHUDWidget.generated.h"
 
 class ADungeonArea;
@@ -39,7 +39,7 @@ class UVerticalBox;
  *  - 예약은 스킬을 쓰거나, 턴 종료하거나, 같은 스킬을 Shift + 클릭하면 사라짐
  */
 UCLASS()
-class TERMINUS_API UCombatHUDWidget : public UUserWidget
+class TERMINUS_API UCombatHUDWidget : public UTerminusUserWidget
 {
 	GENERATED_BODY()
 

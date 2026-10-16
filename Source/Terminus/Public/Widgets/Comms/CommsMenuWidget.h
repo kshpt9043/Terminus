@@ -1,7 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Blueprint/UserWidget.h"
+#include "Widgets/Common/TerminusUserWidget.h"
 #include "CommsMenuWidget.generated.h"
 
 class UBorder;
@@ -22,7 +22,7 @@ DECLARE_DELEGATE_OneParam(FOnCommsMenuPicked, int32 /*OptionIndex*/);
  * C++ 만으로 모양을 만듦 -> WBP 필요 없음
  */
 UCLASS()
-class TERMINUS_API UCommsMenuWidget : public UUserWidget
+class TERMINUS_API UCommsMenuWidget : public UTerminusUserWidget
 {
 	GENERATED_BODY()
 

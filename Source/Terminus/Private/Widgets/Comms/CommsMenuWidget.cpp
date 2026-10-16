@@ -12,6 +12,7 @@
 #include "Components/VerticalBoxSlot.h"
 #include "Widgets/Common/EscapeStackSubsystem.h"
 #include "Widgets/Common/TerminusUIBuilder.h"
+#include "Widgets/TerminusUIColors.h"
 #include "Widgets/TerminusUILayers.h"
 
 void UCommsMenuWidget::NativeOnInitialized()
@@ -26,11 +27,12 @@ void UCommsMenuWidget::BuildLayout()
 	WidgetTree->RootWidget = Root;
 
 	Panel = WidgetTree->ConstructWidget<UBorder>();
-	Panel->SetBrushColor(FLinearColor(0.06f, 0.05f, 0.05f, 0.92f));
+	Panel->SetBrush(TerminusUI::MakeBoxBrush(TerminusUI::Color::Board, TerminusUI::Color::Line));
 	Panel->SetPadding(FMargin(10.f, 8.f));
 
 	UVerticalBox* Box = WidgetTree->ConstructWidget<UVerticalBox>();
-	TitleText = TerminusUI::MakeText(WidgetTree, NAME_None, FText::GetEmpty(), FontSize - 2, FLinearColor(1.f, 0.85f, 0.45f), ETextJustify::Left);
+	TitleText = TerminusUI::MakeText(WidgetTree, NAME_None, FText::GetEmpty(), FontSize - 3, TerminusUI::Color::Gold, ETextJustify::Left);
+	TerminusUI::SetBold(TitleText);
 	if (UVerticalBoxSlot* S = Box->AddChildToVerticalBox(TitleText))
 	{
 		S->SetPadding(FMargin(2.f, 0.f, 2.f, 6.f));
@@ -63,12 +65,16 @@ void UCommsMenuWidget::Open(const FText& Title, const TArray<FText>& Options, co
 	Buttons.Reset();
 	for (int32 i = 0; i < Options.Num(); ++i)
 	{
+		// 작은 평평한 버튼 (여백만 줄임)
 		UButton* Button = WidgetTree->ConstructWidget<UButton>();
-		Button->SetBackgroundColor(FLinearColor(0.25f, 0.22f, 0.2f, 1.f));
+		FButtonStyle ButtonStyle = TerminusUI::MakeFlatButtonStyle(TerminusUI::Color::Card);
+		ButtonStyle.NormalPadding = FMargin(10.f, 5.f);
+		ButtonStyle.PressedPadding = FMargin(10.f, 6.f, 10.f, 4.f);
+		Button->SetStyle(ButtonStyle);
 
 		USizeBox* Size = WidgetTree->ConstructWidget<USizeBox>();
 		Size->SetMinDesiredWidth(ButtonWidth);
-		Size->SetContent(TerminusUI::MakeText(WidgetTree, NAME_None, FText::Format(INVTEXT("{0}. {1}"), FText::AsNumber(i + 1), Options[i]), FontSize, FLinearColor::White, ETextJustify::Left));
+		Size->SetContent(TerminusUI::MakeText(WidgetTree, NAME_None, FText::Format(INVTEXT("{0}. {1}"), FText::AsNumber(i + 1), Options[i]), FontSize, TerminusUI::Color::TextBody, ETextJustify::Left));
 		Button->SetContent(Size);
 		Button->OnClicked.AddDynamic(this, &UCommsMenuWidget::HandleButtonClicked);
 

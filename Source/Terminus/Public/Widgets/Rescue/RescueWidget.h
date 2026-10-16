@@ -1,7 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Blueprint/UserWidget.h"
+#include "Widgets/Common/TerminusUserWidget.h"
 #include "RescueWidget.generated.h"
 
 class UButton;
@@ -18,7 +18,7 @@ class UTextBlock;
  * WBP 로 꾸미려면 이 클래스를 부모로 WBP 를 만들어 BP_DungeonPC 의 RescueClass 에 지정 (아래 이름 전부 선택 사항)
  */
 UCLASS()
-class TERMINUS_API URescueWidget : public UUserWidget
+class TERMINUS_API URescueWidget : public UTerminusUserWidget
 {
 	GENERATED_BODY()
 

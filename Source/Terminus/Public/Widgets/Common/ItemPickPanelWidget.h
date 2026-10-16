@@ -1,7 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Blueprint/UserWidget.h"
+#include "Widgets/Common/TerminusUserWidget.h"
 #include "ItemPickPanelWidget.generated.h"
 
 class UButton;
@@ -24,7 +24,7 @@ DECLARE_DELEGATE(FOnItemPickCancelled);
  * 쓰는 쪽 화면은 PickPanelClass 에 그 WBP 를 넣으면 됨
  */
 UCLASS()
-class TERMINUS_API UItemPickPanelWidget : public UUserWidget
+class TERMINUS_API UItemPickPanelWidget : public UTerminusUserWidget
 {
 	GENERATED_BODY()
 

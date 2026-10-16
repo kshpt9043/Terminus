@@ -34,7 +34,7 @@ namespace
 		return true;
 	}
 
-	const FLinearColor RestOptionColor(0.12f, 0.26f, 0.28f, 0.95f);
+	const FLinearColor& RestOptionColor = TerminusUI::Color::Card;
 }
 
 void URestWidget::NativeOnInitialized()
@@ -57,12 +57,10 @@ void URestWidget::NativeOnInitialized()
 
 void URestWidget::BuildDefaultLayout()
 {
-	UBorder* Dim = TerminusUI::MakeDimRoot(WidgetTree, TEXT("RestDim"), FLinearColor(0.f, 0.f, 0.f, 0.55f));
+	UBorder* Dim = TerminusUI::MakeDimRoot(WidgetTree, TEXT("RestDim"), TerminusUI::Color::Dim);
 
 	// 판: 왼쪽 그림 | 오른쪽 글 + 선택지
-	UBorder* Panel = WidgetTree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("RestPanel"));
-	Panel->SetBrushColor(FLinearColor(0.04f, 0.05f, 0.07f, 0.96f));
-	Panel->SetPadding(FMargin(30.f));
+	UBorder* Panel = TerminusUI::MakePanel(WidgetTree, TEXT("RestPanel"), TerminusUI::Color::Board, FMargin(30.f));
 	Dim->SetContent(Panel);
 
 	UHorizontalBox* Row = WidgetTree->ConstructWidget<UHorizontalBox>();
@@ -73,7 +71,7 @@ void URestWidget::BuildDefaultLayout()
 	ArtBox->SetWidthOverride(ArtSize.X);
 	ArtBox->SetHeightOverride(ArtSize.Y);
 	UBorder* ArtFrame = WidgetTree->ConstructWidget<UBorder>();
-	ArtFrame->SetBrushColor(FLinearColor(0.08f, 0.12f, 0.1f, 1.f));
+	ArtFrame->SetBrush(TerminusUI::MakeBoxBrush(TerminusUI::Color::Inset, TerminusUI::Color::Line, 4.f));
 	ArtFrame->SetPadding(FMargin(0.f));
 	ArtBox->SetContent(ArtFrame);
 	ArtImage = WidgetTree->ConstructWidget<UImage>(UImage::StaticClass(), TEXT("ArtImage"));
@@ -93,10 +91,12 @@ void URestWidget::BuildDefaultLayout()
 	UVerticalBox* Column = WidgetTree->ConstructWidget<UVerticalBox>();
 	RightBox->SetContent(Column);
 
-	TitleText = TerminusUI::MakeWrapText(WidgetTree, NAME_None, TEXT("휴식터"), 30, TerminusUI::Color::Gold);
+	TitleText = TerminusUI::MakeWrapText(WidgetTree, NAME_None, TEXT("휴식터"), TerminusUI::FontSize::ScreenTitle, TerminusUI::Color::Gold);
+	TerminusUI::SetBold(TitleText);
+	TerminusUI::SetLetterSpacing(TitleText, 80);
 	Column->AddChildToVerticalBox(TitleText);
 
-	MessageText = TerminusUI::MakeWrapText(WidgetTree, NAME_None, TEXT(""), 16, FLinearColor(0.92f, 0.9f, 0.86f));
+	MessageText = TerminusUI::MakeWrapText(WidgetTree, NAME_None, TEXT(""), TerminusUI::FontSize::Body, TerminusUI::Color::TextBody);
 	if (UVerticalBoxSlot* S = Column->AddChildToVerticalBox(MessageText))
 	{
 		S->SetPadding(FMargin(0.f, 12.f, 0.f, 36.f));

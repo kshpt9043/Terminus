@@ -30,7 +30,7 @@ namespace
 	UButton* MakeStorageCard(UWidgetTree* Tree, const FName& Name, const FString& Label)
 	{
 		UButton* Button = Tree->ConstructWidget<UButton>(UButton::StaticClass(), Name);
-		Button->SetBackgroundColor(FLinearColor(0.35f, 0.35f, 0.35f));
+		TerminusUI::StyleFlatButton(Button, TerminusUI::Color::Card);
 
 		USizeBox* Size = Tree->ConstructWidget<USizeBox>();
 		Size->SetWidthOverride(220.f);
@@ -40,7 +40,8 @@ namespace
 		UOverlay* Inner = Tree->ConstructWidget<UOverlay>();
 		Size->SetContent(Inner);
 
-		UTextBlock* Text = TerminusUI::MakeWrapText(Tree, NAME_None, Label, 24, FLinearColor::White, ETextJustify::Left);
+		UTextBlock* Text = TerminusUI::MakeWrapText(Tree, NAME_None, Label, TerminusUI::FontSize::Section, TerminusUI::Color::Gold, ETextJustify::Left);
+		TerminusUI::SetBold(Text);
 		Text->SetJustification(ETextJustify::Center);
 		if (UOverlaySlot* S = Inner->AddChildToOverlay(Text))
 		{
@@ -115,13 +116,13 @@ void UStorageWidget::BuildDefaultLayout()
 		S->SetVerticalAlignment(VAlign_Top);
 	}
 
-	GoldText = TerminusUI::MakeWrapText(WidgetTree, TEXT("GoldText"), TEXT(""), 14, TerminusUI::Color::Gold, ETextJustify::Left);
+	GoldText = TerminusUI::MakeWrapText(WidgetTree, TEXT("GoldText"), TEXT(""), TerminusUI::FontSize::Body, TerminusUI::Color::Gold, ETextJustify::Left);
 	GoldText->SetAutoWrapText(false);
 	if (UVerticalBoxSlot* S = Corner->AddChildToVerticalBox(GoldText)) S->SetHorizontalAlignment(HAlign_Left);
 
 	auto AddCornerButton = [&](const FName& Name, const FString& Label) -> UButton*
 	{
-		UButton* Button = TerminusUI::MakeButton(WidgetTree, Name, Label, 16, FLinearColor::White, FLinearColor(0.18f, 0.18f, 0.18f));
+		UButton* Button = TerminusUI::MakeButton(WidgetTree, Name, Label, TerminusUI::FontSize::Body);
 		USizeBox* Size = WidgetTree->ConstructWidget<USizeBox>();
 		Size->SetWidthOverride(170.f);
 		Size->SetHeightOverride(46.f);
@@ -142,8 +143,7 @@ void UStorageWidget::BuildDefaultLayout()
 		S->SetVerticalAlignment(VAlign_Fill);
 	}
 
-	UTextBlock* HubTitle = TerminusUI::MakeWrapText(WidgetTree, NAME_None, TEXT("창고"), 30, FLinearColor::White, ETextJustify::Left);
-	HubTitle->SetAutoWrapText(false);
+	UTextBlock* HubTitle = TerminusUI::MakeTitle(WidgetTree, NAME_None, TEXT("창고"));
 	if (UVerticalBoxSlot* S = Hub->AddChildToVerticalBox(HubTitle)) S->SetHorizontalAlignment(HAlign_Center);
 
 	UHorizontalBox* Cards = WidgetTree->ConstructWidget<UHorizontalBox>();
@@ -167,11 +167,10 @@ void UStorageWidget::BuildDefaultLayout()
 		S->SetVerticalAlignment(VAlign_Fill);
 	}
 
-	ListTitleText = TerminusUI::MakeWrapText(WidgetTree, TEXT("ListTitleText"), TEXT(""), 30, FLinearColor::White, ETextJustify::Left);
-	ListTitleText->SetAutoWrapText(false);
+	ListTitleText = TerminusUI::MakeTitle(WidgetTree, TEXT("ListTitleText"), TEXT(""));
 	if (UVerticalBoxSlot* S = List->AddChildToVerticalBox(ListTitleText)) S->SetHorizontalAlignment(HAlign_Center);
 
-	CountText = TerminusUI::MakeWrapText(WidgetTree, TEXT("CountText"), TEXT(""), 14, TerminusUI::Color::TextMuted, ETextJustify::Left);
+	CountText = TerminusUI::MakeWrapText(WidgetTree, TEXT("CountText"), TEXT(""), TerminusUI::FontSize::Aux, TerminusUI::Color::TextMuted, ETextJustify::Left);
 	CountText->SetAutoWrapText(false);
 	if (UVerticalBoxSlot* S = List->AddChildToVerticalBox(CountText))
 	{
@@ -187,9 +186,7 @@ void UStorageWidget::BuildDefaultLayout()
 		S->SetPadding(FMargin(0.f, 0.f, 0.f, 24.f));
 	}
 
-	UBorder* GridBox = WidgetTree->ConstructWidget<UBorder>();
-	GridBox->SetBrushColor(FLinearColor(0.3f, 0.3f, 0.3f, 1.f));
-	GridBox->SetPadding(FMargin(16.f));
+	UBorder* GridBox = TerminusUI::MakePanel(WidgetTree, NAME_None, TerminusUI::Color::Section, FMargin(16.f));
 	Body->AddChildToHorizontalBox(GridBox);
 
 	UScrollBox* Scroll = WidgetTree->ConstructWidget<UScrollBox>();
@@ -205,16 +202,15 @@ void UStorageWidget::BuildDefaultLayout()
 	{
 		S->SetPadding(FMargin(16.f, 0.f, 0.f, 0.f));
 	}
-	UBorder* DetailBox = WidgetTree->ConstructWidget<UBorder>();
-	DetailBox->SetBrushColor(FLinearColor(0.06f, 0.05f, 0.05f, 1.f));
-	DetailBox->SetPadding(FMargin(14.f));
+	UBorder* DetailBox = TerminusUI::MakePanel(WidgetTree, NAME_None, TerminusUI::Color::Board, FMargin(16.f));
 	DetailSize->SetContent(DetailBox);
 
 	UVerticalBox* Detail = WidgetTree->ConstructWidget<UVerticalBox>();
 	DetailBox->SetContent(Detail);
-	DetailName = TerminusUI::MakeWrapText(WidgetTree, TEXT("DetailName"), TEXT(""), 18, FLinearColor::White, ETextJustify::Left);
-	DetailInfo = TerminusUI::MakeWrapText(WidgetTree, TEXT("DetailInfo"), TEXT(""), 12, TerminusUI::Color::TextMuted, ETextJustify::Left);
-	DetailDesc = TerminusUI::MakeWrapText(WidgetTree, TEXT("DetailDesc"), TEXT(""), 14, FLinearColor(1.f, 0.95f, 0.85f), ETextJustify::Left);
+	DetailName = TerminusUI::MakeWrapText(WidgetTree, TEXT("DetailName"), TEXT(""), TerminusUI::FontSize::Subtitle, TerminusUI::Color::Gold, ETextJustify::Left);
+	TerminusUI::SetBold(DetailName);
+	DetailInfo = TerminusUI::MakeWrapText(WidgetTree, TEXT("DetailInfo"), TEXT(""), TerminusUI::FontSize::Aux, TerminusUI::Color::TextMuted, ETextJustify::Left);
+	DetailDesc = TerminusUI::MakeWrapText(WidgetTree, TEXT("DetailDesc"), TEXT(""), 15, TerminusUI::Color::TextBody, ETextJustify::Left);
 	Detail->AddChildToVerticalBox(DetailName);
 	if (UVerticalBoxSlot* S = Detail->AddChildToVerticalBox(DetailInfo)) S->SetPadding(FMargin(0.f, 4.f, 0.f, 0.f));
 	if (UVerticalBoxSlot* S = Detail->AddChildToVerticalBox(DetailDesc)) S->SetPadding(FMargin(0.f, 12.f, 0.f, 0.f));
@@ -284,9 +280,17 @@ void UStorageWidget::ShowList(EStorageTab Tab)
 	}
 	else
 	{
-		// 예전 탭 방식: 고른 탭에 색
-		if (RelicTabButton) RelicTabButton->SetBackgroundColor(Tab == EStorageTab::Relic ? ActiveTabColor : InactiveTabColor);
-		if (SkillTabButton) SkillTabButton->SetBackgroundColor(Tab == EStorageTab::Skill ? ActiveTabColor : InactiveTabColor);
+		// 예전 탭 방식: 고른 탭은 금 테두리 + 밝은 판, 아니면 평평한 판
+		auto StyleTab = [this](UButton* Button, bool bActive)
+		{
+			if (!Button) return;
+			FButtonStyle Style = TerminusUI::MakeFlatButtonStyle(bActive ? TerminusUI::Color::Disabled : InactiveTabColor);
+			if (bActive) Style.Normal = TerminusUI::MakeBoxBrush(TerminusUI::Color::Disabled, ActiveTabColor);
+			Button->SetStyle(Style);
+			Button->SetBackgroundColor(FLinearColor::White);
+		};
+		StyleTab(RelicTabButton, Tab == EStorageTab::Relic);
+		StyleTab(SkillTabButton, Tab == EStorageTab::Skill);
 	}
 
 	if (ListPanel)     ListPanel->SetVisibility(ESlateVisibility::SelfHitTestInvisible);

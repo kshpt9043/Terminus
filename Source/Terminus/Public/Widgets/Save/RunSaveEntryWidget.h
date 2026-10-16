@@ -1,7 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Blueprint/UserWidget.h"
+#include "Widgets/Common/TerminusUserWidget.h"
 #include "Game/TerminusSaveSubsystem.h"
 #include "RunSaveEntryWidget.generated.h"
 
@@ -16,7 +16,7 @@ DECLARE_DELEGATE_OneParam(FOnRunSaveEntryAction, const FString& /*SlotName*/);
  * WBP 로 꾸미려면 이 클래스를 부모로 WBP 를 만들고 아래 이름으로 위젯을 둘 것 (전부 선택 사항)
  */
 UCLASS()
-class TERMINUS_API URunSaveEntryWidget : public UUserWidget
+class TERMINUS_API URunSaveEntryWidget : public UTerminusUserWidget
 {
 	GENERATED_BODY()
 

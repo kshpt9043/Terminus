@@ -31,15 +31,16 @@ void UPartyProfileCardWidget::BuildDefaultLayout()
 {
 	// [초상화] [이름 / 직업 / 체력바]
 	CardBorder = WidgetTree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("CardBorder"));
-	CardBorder->SetPadding(FMargin(6.f));
+	CardBorder->SetBrush(TerminusUI::MakeBoxBrush(TerminusUI::MapColor::PartyPlate, TerminusUI::MapColor::PartyEdge, 0.f));
+	CardBorder->SetPadding(FMargin(6.f, 6.f, 10.f, 6.f));
 	WidgetTree->RootWidget = CardBorder;
 
 	UHorizontalBox* Row = WidgetTree->ConstructWidget<UHorizontalBox>();
 	CardBorder->SetContent(Row);
 
 	USizeBox* PortraitSize = WidgetTree->ConstructWidget<USizeBox>();
-	PortraitSize->SetWidthOverride(52.f);
-	PortraitSize->SetHeightOverride(52.f);
+	PortraitSize->SetWidthOverride(40.f);
+	PortraitSize->SetHeightOverride(40.f);
 	Portrait = WidgetTree->ConstructWidget<UImage>(UImage::StaticClass(), TEXT("Portrait"));
 	PortraitSize->SetContent(Portrait);
 	if (UHorizontalBoxSlot* S = Row->AddChildToHorizontalBox(PortraitSize))
@@ -49,7 +50,7 @@ void UPartyProfileCardWidget::BuildDefaultLayout()
 	}
 
 	USizeBox* InfoSize = WidgetTree->ConstructWidget<USizeBox>();
-	InfoSize->SetWidthOverride(130.f);
+	InfoSize->SetWidthOverride(156.f);
 	UVerticalBox* Info = WidgetTree->ConstructWidget<UVerticalBox>();
 	InfoSize->SetContent(Info);
 	if (UHorizontalBoxSlot* S = Row->AddChildToHorizontalBox(InfoSize))
@@ -57,20 +58,45 @@ void UPartyProfileCardWidget::BuildDefaultLayout()
 		S->SetVerticalAlignment(VAlign_Center);
 	}
 
-	NameText = TerminusUI::MakeText(WidgetTree, NAME_None, TEXT(""), 15, FLinearColor::White, ETextJustify::Left);
-	ClassText = TerminusUI::MakeText(WidgetTree, NAME_None, TEXT(""), 12, TerminusUI::Color::TextMuted, ETextJustify::Left);
-	Info->AddChildToVerticalBox(NameText);
-	Info->AddChildToVerticalBox(ClassText);
+	// [이름 직업 ....... 상태 점]
+	UHorizontalBox* NameRow = WidgetTree->ConstructWidget<UHorizontalBox>();
+	Info->AddChildToVerticalBox(NameRow);
 
+	NameText = TerminusUI::MakeText(WidgetTree, NAME_None, TEXT(""), 14, TerminusUI::MapColor::Text, ETextJustify::Left);
+	TerminusUI::SetBold(NameText);
+	ClassText = TerminusUI::MakeText(WidgetTree, NAME_None, TEXT(""), 12, TerminusUI::MapColor::TextSub, ETextJustify::Left);
+	NameRow->AddChildToHorizontalBox(NameText)->SetVerticalAlignment(VAlign_Center);
+	if (UHorizontalBoxSlot* S = NameRow->AddChildToHorizontalBox(ClassText))
+	{
+		S->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+		S->SetVerticalAlignment(VAlign_Center);
+		S->SetPadding(FMargin(6.f, 1.f, 0.f, 0.f));
+	}
+
+	StatusDot = WidgetTree->ConstructWidget<UImage>(UImage::StaticClass(), TEXT("StatusDot"));
+	FSlateBrush DotBrush = TerminusUI::MakeBoxBrush(FLinearColor::White, FLinearColor::White, 4.f, 0.f);
+	DotBrush.ImageSize = FVector2D(8.f, 8.f);
+	StatusDot->SetBrush(DotBrush);
+	if (UHorizontalBoxSlot* S = NameRow->AddChildToHorizontalBox(StatusDot))
+	{
+		S->SetVerticalAlignment(VAlign_Center);
+		S->SetPadding(FMargin(6.f, 0.f, 0.f, 0.f));
+	}
+
+	// 체력 줄 6px
+	USizeBox* BarSize = WidgetTree->ConstructWidget<USizeBox>();
+	BarSize->SetHeightOverride(6.f);
 	HealthBar = WidgetTree->ConstructWidget<UProgressBar>(UProgressBar::StaticClass(), TEXT("HealthBar"));
-	HealthBar->SetFillColorAndOpacity(FLinearColor(0.3f, 0.85f, 0.35f));
-	if (UVerticalBoxSlot* S = Info->AddChildToVerticalBox(HealthBar))
+	FProgressBarStyle BarStyle = HealthBar->GetWidgetStyle();
+	BarStyle.BackgroundImage = TerminusUI::MakeBoxBrush(TerminusUI::MapColor::HealthBack, TerminusUI::MapColor::HealthBack, 0.f, 0.f);
+	BarStyle.FillImage = FSlateBrush();
+	HealthBar->SetWidgetStyle(BarStyle);
+	HealthBar->SetFillColorAndOpacity(TerminusUI::MapColor::Health);
+	BarSize->SetContent(HealthBar);
+	if (UVerticalBoxSlot* S = Info->AddChildToVerticalBox(BarSize))
 	{
 		S->SetPadding(FMargin(0.f, 4.f, 0.f, 0.f));
 	}
-
-	HealthText = TerminusUI::MakeText(WidgetTree, NAME_None, TEXT(""), 12, FLinearColor::White, ETextJustify::Left);
-	Info->AddChildToVerticalBox(HealthText);
 }
 
 void UPartyProfileCardWidget::SetPlayer(ATerminusPlayerState* InPlayer)
@@ -128,9 +154,15 @@ void UPartyProfileCardWidget::RefreshStatic()
 
 	if (CardBorder)
 	{
+		// 내 카드는 금 테두리
 		const APlayerController* LocalPC = GetOwningPlayer();
-		const bool bLocal = LocalPC && LocalPC->PlayerState == PS;
-		CardBorder->SetBrushColor(bLocal ? LocalCardColor : OtherCardColor);
+		if (LocalPC && LocalPC->PlayerState == PS)
+		{
+			FSlateBrush Brush = CardBorder->Background;
+			Brush.OutlineSettings.Color = FSlateColor(LocalOutlineColor);
+			Brush.OutlineSettings.Width = FMath::Max(1.f, Brush.OutlineSettings.Width);
+			CardBorder->SetBrush(Brush);
+		}
 	}
 }
 
@@ -156,6 +188,8 @@ void UPartyProfileCardWidget::RefreshHealth()
 		}
 	}
 
+	RefreshStatus(MaxHealth > 0 && Health <= 0);
+
 	// 매 틱 불리므로 바뀌었을 때만 넣음
 	if (Health == ShownHealth && MaxHealth == ShownMaxHealth) return;
 	ShownHealth = Health;
@@ -172,4 +206,26 @@ void UPartyProfileCardWidget::RefreshHealth()
 	{
 		HealthBar->SetPercent(MaxHealth > 0 ? static_cast<float>(Health) / MaxHealth : 0.f);
 	}
+}
+
+void UPartyProfileCardWidget::RefreshStatus(bool bDown)
+{
+	const ATerminusPlayerState* PS = Player.Get();
+	if (!PS) return;
+
+	// 쓰러짐 > 전투 중(던전 구역 안) > 준비
+	const EStatus Status = bDown ? EStatus::Down : PS->GetCurrentArea() ? EStatus::InCombat : EStatus::Ready;
+	if (Status == ShownStatus) return;
+	ShownStatus = Status;
+
+	if (StatusDot)
+	{
+		const FLinearColor DotColor = Status == EStatus::Down ? TerminusUI::MapColor::TextSub
+			: Status == EStatus::InCombat ? TerminusUI::MapColor::BlueTorch : TerminusUI::MapColor::GreenMana;
+		StatusDot->SetColorAndOpacity(DotColor);
+	}
+
+	// 쓰러짐: 흑백 + 흐림 (UMG 엔 흑백 효과가 없어 회색 틴트로)
+	SetRenderOpacity(Status == EStatus::Down ? DownOpacity : 1.f);
+	SetColorAndOpacity(Status == EStatus::Down ? FLinearColor(0.55f, 0.55f, 0.55f, 1.f) : FLinearColor::White);
 }
