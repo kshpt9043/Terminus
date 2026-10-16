@@ -36,7 +36,6 @@ class USpectateWidget;
 class UStartRelicPickWidget;
 class UStartSkillPickWidget;
 class UStorageWidget;
-class UTavernWidget;
 
 /**
  * 위젯 클래스를 한 곳에 모은 곳 (사용자 결정 2026-10-12)
@@ -71,7 +70,6 @@ public:
 
 	// ---------------------------------------------------------------- 메뉴 / 주점
 	UPROPERTY(Config, EditAnywhere, Category = "Menu") TSoftClassPtr<UMainMenuWidget> MainMenu;
-	UPROPERTY(Config, EditAnywhere, Category = "Menu") TSoftClassPtr<UTavernWidget> Tavern;
 	UPROPERTY(Config, EditAnywhere, Category = "Menu") TSoftClassPtr<UBaseWidget> Base;
 	UPROPERTY(Config, EditAnywhere, Category = "Menu") TSoftClassPtr<UStorageWidget> Storage;
 	UPROPERTY(Config, EditAnywhere, Category = "Menu") TSoftClassPtr<URunSaveListWidget> SaveList;

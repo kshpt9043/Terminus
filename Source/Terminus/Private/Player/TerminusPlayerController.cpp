@@ -106,16 +106,13 @@ void ATerminusPlayerController::BeginPlay()
 	// 핑 / 퀵챗 / 계획 공유 / 재촉 (멀티일 때만)
 	CreatePartyCommsWidget();
 	
-	// BP 에 지정한 값 -> 프로젝트 설정(Terminus UI) 순서. 주점 화면은 C++ 기본 모양이 없어 둘 다 비면 못 띄움
-	const TSubclassOf<UTavernWidget> TavernClass = TavernWidgetClass ? TavernWidgetClass : TSubclassOf<UTavernWidget>(UTerminusUISettings::Get()->Tavern.LoadSynchronous());
-	if (!TavernClass)
+	// 주점 화면은 주점 PC(BP_TerminusPC)에 지정한 것만 씀. 던전 PC 도 이 코드를 타므로 프로젝트 설정 값으로 채우면 지도에 주점이 뜸
+	if (!TavernWidgetClass)
 	{
-		UE_LOG(LogTemp, Warning,
-			TEXT("PC: 주점 화면 클래스가 비어 있음. 프로젝트 설정 > Terminus UI > Tavern 에 WBP_TavernWidget 을 지정할 것"));
 		return;
 	}
 
-	TavernWidget = CreateWidget<UTavernWidget>(this, TavernClass);
+	TavernWidget = CreateWidget<UTavernWidget>(this, TavernWidgetClass);
 	if (!TavernWidget)
 	{
 		return;
