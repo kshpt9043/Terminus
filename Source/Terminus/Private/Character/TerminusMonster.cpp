@@ -28,3 +28,13 @@ void ATerminusMonster::InitAsMonster(FName RowName)
 	// 스텟은 서버만 정함(InitFrom 안에 가드). 클라는 복제로 받음. 플레이어랑 같은 길
 	CombatStats->InitFrom(Row->ToStats());
 }
+
+void ATerminusMonster::PlayAttackAnim()
+{
+	if (AttackFlipbooks.Num() == 0)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[ActionAnim] %s: AttackFlipbooks 가 비어 있음"), *GetName());
+		return;
+	}
+	MulticastPlayActionFlipbook(AttackFlipbooks[FMath::RandRange(0, AttackFlipbooks.Num() - 1)]);
+}

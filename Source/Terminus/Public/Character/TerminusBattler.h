@@ -9,6 +9,7 @@
 
 // 플립북이랑 ZD 애님 관련 전방선언
 
+class UPaperFlipbook;
 class UPaperFlipbookComponent;
 class UPaperZDAnimationComponent;
 class UCombatStatsComponent;
@@ -99,6 +100,11 @@ public:
 	
 	UFUNCTION(BlueprintPure, Category = "Terminus|Visual")
 	bool IsFacingRight() const { return bFacingRight; }
+
+	// 공격 같은 한 번짜리 플립북을 모든 화면에서 재생하고 끝나면 원래 플립북으로 돌아감.
+	// ABP 가 붙은 배틀러는 PaperZD 가 매 프레임 플립북을 덮어써서 안 먹음 (지금은 ABP 없는 몬스터용)
+	UFUNCTION(NetMulticast, Unreliable)
+	void MulticastPlayActionFlipbook(UPaperFlipbook* Flipbook);
 	
 	// 밖에서 이 배틀러의 전투 컴포넌트를 꺼낼 때. 턴 진행 쪽이 대상 고를 때 쓸 것
 	UFUNCTION(BlueprintPure, Category = "Terminus|Component")
@@ -107,4 +113,11 @@ public:
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Terminus|Visual")
 	bool bFacingRight = true;
+
+	// 한 번짜리 플립북이 끝나면 돌아갈 평소 플립북 (idle)
+	UPROPERTY(Transient)
+	TObjectPtr<UPaperFlipbook> RestFlipbook;
+
+	UFUNCTION()
+	void OnActionFlipbookFinished();
 };

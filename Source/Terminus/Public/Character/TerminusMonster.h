@@ -19,6 +19,9 @@ class TERMINUS_API ATerminusMonster : public ATerminusBattler
 public:
 	ATerminusMonster();
 
+	// 공격 스킬을 쓸 때 서버가 부름. AttackFlipbooks 중 하나를 골라 모든 화면에서 재생
+	void PlayAttackAnim();
+
 protected:
 	virtual void BeginPlay() override;
 
@@ -27,4 +30,9 @@ protected:
 	FName MonsterRow = TEXT("mon_slime");
 
 	void InitAsMonster(FName RowName);
+
+	// 공격 연출 후보. 오른쪽을 보는 그림 기준 (몬스터는 좌우 반전돼서 왼쪽으로 나감). 비어 있으면 연출 없음
+	// 임시: 몬스터 종류별 외형이 DT 로 빠지기 전까지 BP 에서 직접 지정
+	UPROPERTY(EditDefaultsOnly, Category = "Terminus|Visual")
+	TArray<TObjectPtr<UPaperFlipbook>> AttackFlipbooks;
 };

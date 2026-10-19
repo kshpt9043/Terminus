@@ -3,6 +3,7 @@
 
 #include "Character/TerminusBattler.h"
 
+#include "PaperFlipbook.h"
 #include "PaperFlipbookComponent.h"
 #include "PaperZDAnimationComponent.h"
 #include "Combat/CombatStatsComponent.h"
@@ -279,6 +280,34 @@ void ATerminusBattler::InitAsClass(ECharacterClass InClass, const FCharacterStat
 			Animation->SetAnimInstanceClass(ABPClass);
 		}
 	}
+}
+
+void ATerminusBattler::MulticastPlayActionFlipbook_Implementation(UPaperFlipbook* Flipbook)
+{
+	if (!Flipbook || !Sprite || Animation->GetAnimInstance())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[ActionAnim] %s 재생 안 함: Flipbook=%s AnimInstance=%s"), *GetName(),
+			*GetNameSafe(Flipbook), *GetNameSafe(Animation->GetAnimInstance()));
+		return;
+	}
+	UE_LOG(LogTemp, Log, TEXT("[ActionAnim] %s -> %s (지금 %s)"), *GetName(), *Flipbook->GetName(), *GetNameSafe(Sprite->GetFlipbook()));
+
+	// 연달아 오면 처음 것만 평소 플립북으로 기억 (공격 도중 또 오면 공격 플립북을 기억하면 안 됨)
+	if (!RestFlipbook) RestFlipbook = Sprite->GetFlipbook();
+
+	Sprite->OnFinishedPlaying.AddUniqueDynamic(this, &ATerminusBattler::OnActionFlipbookFinished);
+	Sprite->SetFlipbook(Flipbook);
+	Sprite->SetLooping(false);
+	Sprite->PlayFromStart();
+}
+
+void ATerminusBattler::OnActionFlipbookFinished()
+{
+	Sprite->OnFinishedPlaying.RemoveDynamic(this, &ATerminusBattler::OnActionFlipbookFinished);
+	if (RestFlipbook) Sprite->SetFlipbook(RestFlipbook);
+	RestFlipbook = nullptr;
+	Sprite->SetLooping(true);
+	Sprite->PlayFromStart();
 }
 
 void ATerminusBattler::SetFacingRight(bool bRight)

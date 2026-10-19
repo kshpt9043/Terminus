@@ -927,6 +927,8 @@ void UDungeonCombatComponent::RunNextMonsterAction()
 			const TArray<UCombatStatsComponent*> Targets =
 				ResolveTargets(Skill->TargetType, Stats, GetAlivePlayerStats(), GetAliveMonsterStats());
 
+			if (Intent->Kind == EMonsterIntentKind::Attack) Monster->PlayAttackAnim();
+
 			FSkillExecutor::Execute(*Skill, Stats, Targets);
 			UE_LOG(LogDungeonCombat, Log, TEXT("[Combat]   몬스터 %d -> %s"), NextMonsterIndex - 1, *Skill->DisplayName_KR.ToString());
 		}
