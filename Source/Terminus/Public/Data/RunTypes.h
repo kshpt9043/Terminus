@@ -17,6 +17,16 @@ struct FTempStatBuff
 	UPROPERTY(BlueprintReadOnly) FString Source;           // 어디서 받았는지 (표시용)
 };
 
+// 일시적 이벤트 유물 (유물 RemainBattle > 0). 전투가 끝날 때마다 1 줄고 0 이 되면 유물이 사라짐
+USTRUCT(BlueprintType)
+struct FTempRelicEntry
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadOnly) FName Relic;
+	UPROPERTY(BlueprintReadOnly) int32 BattlesLeft = 0;
+};
+
 // 픽업 스킬 강화 단계 (상점 / 유물 RandomUpgrade). 스킬 행 이름으로 찾음
 USTRUCT(BlueprintType)
 struct FSkillLevelEntry
@@ -128,9 +138,13 @@ struct FRunState
 	UPROPERTY(BlueprintReadOnly)
 	TArray<FName> SeenRelics;
 
-	// 일시 스탯 버프 (이벤트 방). 남은 전투 수가 0 이 되면 사라짐
+	// 일시 스탯 버프 (예전 이벤트 방. 10-24 엑셀부터는 일시적 유물을 씀). 남은 전투 수가 0 이 되면 사라짐
 	UPROPERTY(BlueprintReadOnly)
 	TArray<FTempStatBuff> TempBuffs;
+
+	// 일시적 이벤트 유물의 남은 전투 수 (Relics 에 같이 들어 있음)
+	UPROPERTY(BlueprintReadOnly)
+	TArray<FTempRelicEntry> TempRelics;
 
 	// 세이브에서 이어할 때의 체력. 던전에서 배틀러가 처음 빙의될 때 적용하고 -1 로 비움 (-1 = 최대 체력으로 시작)
 	UPROPERTY(BlueprintReadOnly)

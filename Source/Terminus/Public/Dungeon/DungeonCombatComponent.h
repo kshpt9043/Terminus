@@ -86,6 +86,9 @@ public:
 	// -------------------------------------------------------------
 
 	// 몬스터를 스폰하고 첫 사이클 시작. 전투 방(몬스터 / 가디언 / 보스)일 때 구역이 부름
+	// 다음 StartCombat 한 번만 몬스터 체력에 곱함 (이벤트 '쉬는 가디언' 70%). StartCombat 이 1 로 되돌림
+	void SetNextSpawnHealthScale(float Scale) { NextSpawnHealthScale = FMath::Max(0.01f, Scale); }
+
 	void StartCombat(const FRoomNode& Room, const TArray<ATerminusPlayerState*>& InPlayers, const UDungeonThemeData* Theme);
 
 	// 전투 정리 (몬스터 제거, 타이머 정지). 구역을 비울 때
@@ -244,6 +247,8 @@ public:
 	float RewardDelay = 1.f;
 
 private:
+	float NextSpawnHealthScale = 1.f;
+
 	// ---- 복제되는 진행 상태
 
 	UPROPERTY(Replicated)

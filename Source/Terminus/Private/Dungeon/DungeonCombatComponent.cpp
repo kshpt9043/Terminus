@@ -157,6 +157,7 @@ void UDungeonCombatComponent::StartCombat(const FRoomNode& Room, const TArray<AT
 	CurrentRoomId = Room.RoomId;
 	PendingRewards.Reset();
 	SpawnMonsters(Room, Theme);
+	NextSpawnHealthScale = 1.f;
 	BuildRelicHolders();
 
 	// 이벤트 방에서 받은 일시 버프: 이번 전투 동안 용기(공격) / 용암(방어 감소)
@@ -584,6 +585,7 @@ void UDungeonCombatComponent::SpawnMonsters(const FRoomNode& Room, const UDungeo
 		// 체력 랜덤은 보스 포함 (사용자 결정 10-08), 공방 랜덤은 보스 제외
 		float HealthScale = 1.f + PartyBonus;
 		HealthScale *= 1.f + FMath::FRandRange(MonsterHealthRandom.X, MonsterHealthRandom.Y);
+		HealthScale *= NextSpawnHealthScale;   // 이벤트 '쉬는 가디언' 등
 		if (!bBoss)
 		{
 			Stats.Attack += FMath::RandRange(0, MonsterStatRandomMax);

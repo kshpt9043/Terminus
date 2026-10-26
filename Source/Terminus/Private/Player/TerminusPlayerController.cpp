@@ -1039,14 +1039,14 @@ void ATerminusPlayerController::Server_ShopLeave_Implementation()
 	if (ADungeonArea* Area = PS ? PS->GetCurrentArea() : nullptr) Area->HandleShopLeave(PS);
 }
 
-void ATerminusPlayerController::Client_ShowEvent_Implementation(const TArray<FEventOption>& Options)
+void ATerminusPlayerController::Client_ShowEvent_Implementation(const FText& Title, const FText& Situation, const TArray<FEventOption>& Options)
 {
 	ShowPCWidget(this, EventWidget, UTerminusUISettings::Pick(EventClass, &UTerminusUISettings::Event), TerminusUI::Layer::RoomPanel);   // 보상 / 휴식터 화면과 같은 높이, 채팅 아래
 	UpdateRoomTopBar();
 
 	if (EventWidget)
 	{
-		EventWidget->Setup(Options);
+		EventWidget->Setup(Title, Situation, Options);
 	}
 }
 
@@ -1392,6 +1392,45 @@ void ATerminusPlayerController::DebugShowStartSkillPick()
 	ClosePCWidget(StartSkillPick);
 	Server_DebugResetStartSkill();
 	OpenStartSkillPick();
+}
+
+void ATerminusPlayerController::DebugForceEvent(FName EventRow)
+{
+	Server_DebugForceEvent(EventRow);
+}
+
+void ATerminusPlayerController::Server_DebugForceEvent_Implementation(FName EventRow)
+{
+	if (!EventRow.IsNone() && !UTerminusDataSettings::FindEventRow(EventRow))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Debug] DT_Event 에 '%s' 없음"), *EventRow.ToString());
+		return;
+	}
+	ADungeonArea::DebugForcedEvent = EventRow;
+	UE_LOG(LogTemp, Log, TEXT("[Debug] 다음 이벤트: %s"), EventRow.IsNone() ? TEXT("무작위") : *EventRow.ToString());
+}
+
+void ATerminusPlayerController::DebugRoomsToEvent()
+{
+	Server_DebugRoomsToEvent();
+}
+
+void ATerminusPlayerController::Server_DebugRoomsToEvent_Implementation()
+{
+	AMapManager* MapMgr = Cast<AMapManager>(UGameplayStatics::GetActorOfClass(this, AMapManager::StaticClass()));
+	if (!MapMgr) return;
+
+	int32 Changed = 0;
+	for (FRoomNode& Node : MapMgr->Rooms)
+	{
+		if (Node.Type == ERoomType::MONSTER || Node.Type == ERoomType::BREAK || Node.Type == ERoomType::STORE || Node.Type == ERoomType::GUARDIAN)
+		{
+			Node.Type = ERoomType::EVENT;
+			++Changed;
+		}
+	}
+	MapMgr->OnMapGenerated.Broadcast(MapMgr->Rooms);   // 리슨 서버 호스트 화면도 (클라는 복제로 OnRep_Rooms)
+	UE_LOG(LogTemp, Log, TEXT("[Debug] 방 %d개를 이벤트 방으로"), Changed);
 }
 
 void ATerminusPlayerController::DebugGainRelic(FName RelicRow)

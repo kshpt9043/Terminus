@@ -107,6 +107,9 @@ public:
 	// 강화 스킬 장착 (서버만). 빈 칸이 있으면 거기에, 꽉 찼으면 ReplaceIndex 칸을 바꿈. 못 넣으면 false
 	bool EquipEnhanceSkill(FName SkillRow, int32 ReplaceIndex = INDEX_NONE);
 
+	// 장착한 강화 스킬 하나를 뺌 (이벤트 대가 '스킬 소실'). 칸은 앞으로 당겨짐
+	bool UnequipEnhanceSkill(FName SkillRow);
+
 	// -------------------------------------------------------------
 	// [유물] 서버만 바꿈. 목록은 RunState.Relics (모두에게 복제)
 	// -------------------------------------------------------------
@@ -128,7 +131,11 @@ public:
 
 	// [이벤트] 일시 버프 (다음 전투 몇 번). 전투가 시작될 때 상태로 걸리고, 끝날 때마다 ConsumeTempBuffBattle 로 1 씩 줄어듦
 	void AddTempBuff(const FTempStatBuff& Buff);
+	// 전투 한 번이 끝남: 일시 버프 / 일시적 이벤트 유물의 남은 전투 수를 1 씩 (0 이면 사라짐)
 	void ConsumeTempBuffBattle();
+
+	// 일시적 이벤트 유물의 남은 전투 수. 일시적 유물이 아니면 -1
+	int32 GetTempRelicBattlesLeft(FName RelicRow) const;
 
 	const TArray<FName>& GetRelics() const { return RunState.Relics; }
 

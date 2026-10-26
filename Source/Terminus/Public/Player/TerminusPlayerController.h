@@ -273,9 +273,10 @@ public:
 	UFUNCTION(Server, Reliable)
 	void Server_ShopLeave();
 
-	// 이벤트 방: 후보 고르기 화면 (이미 떠 있으면 처음으로) / 고른 결과 / 닫기 / 고른 후보 알리기
+	// 이벤트 방: 선택지 화면 (이미 떠 있으면 처음으로) / 고른 결과 / 닫기 / 고른 선택지 알리기
+	// Title = 이벤트 이름, Situation = 상황 설명 (DT_Event)
 	UFUNCTION(Client, Reliable)
-	void Client_ShowEvent(const TArray<FEventOption>& Options);
+	void Client_ShowEvent(const FText& Title, const FText& Situation, const TArray<FEventOption>& Options);
 
 	UFUNCTION(Client, Reliable)
 	void Client_EventResult(const FText& Result);
@@ -374,6 +375,21 @@ public:
 
 	UFUNCTION(Exec)
 	void DebugListRelics();
+
+	// 이벤트 방 테스트
+	//   DebugForceEvent evt_alchemist_cauldron -> 다음 이벤트 방은 그 이벤트 (None 이면 다시 무작위)
+	//   DebugRoomsToEvent                       -> 이 층 지도에서 일반 방(몬스터 / 휴식 / 상점 / 가디언)을 전부 이벤트 방으로
+	UFUNCTION(Exec)
+	void DebugForceEvent(FName EventRow);
+
+	UFUNCTION(Server, Reliable)
+	void Server_DebugForceEvent(FName EventRow);
+
+	UFUNCTION(Exec)
+	void DebugRoomsToEvent();
+
+	UFUNCTION(Server, Reliable)
+	void Server_DebugRoomsToEvent();
 
 protected:
 	// 전투 HUD 클래스. 비워 두면 프로젝트 설정(Terminus UI) -> C++ 기본 배치(UCombatHUDWidget)를 씀. WBP 를 만들면 BP_DungeonPC 에서 지정

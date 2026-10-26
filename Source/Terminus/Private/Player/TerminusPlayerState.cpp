@@ -124,6 +124,7 @@ void ATerminusPlayerState::BeginRun()
 	RunState.Currency = 0;
 	RunState.SavedHealth = -1;
 	RunState.TempBuffs.Reset();
+	RunState.TempRelics.Reset();
 	RunState.SeenRelics.Reset();
 	RunState.StartRelics.Reset();
 	RunState.BossRelic = NAME_None;
@@ -301,6 +302,15 @@ bool ATerminusPlayerState::EquipEnhanceSkill(FName SkillRow, int32 ReplaceIndex)
 	return true;
 }
 
+bool ATerminusPlayerState::UnequipEnhanceSkill(FName SkillRow)
+{
+	if (!HasAuthority() || RunState.EnhanceSkills.RemoveSingle(SkillRow) == 0) return false;
+
+	UE_LOG(LogTemp, Log, TEXT("[Skill] %s: 강화 스킬 %s 잃음"), *GetPlayerName(), *SkillRow.ToString());
+	OnRep_RunState();
+	return true;
+}
+
 FName ATerminusPlayerState::GetCombatSkillRow(int32 SlotIndex) const
 {
 	if (SlotIndex >= 0 && SlotIndex < NumBasicSkills)
@@ -386,6 +396,15 @@ bool ATerminusPlayerState::GainRelic(FName RelicRow)
 	RunState.SeenRelics.AddUnique(RelicRow);
 	UE_LOG(LogTemp, Log, TEXT("[Relic] %s 획득: %s"), *GetPlayerName(), *Relic->RelicName.ToString());
 
+	// 일시적 이벤트 유물: 전투 RemainBattle 번이 끝나면 사라짐
+	if (Relic->RemainBattle > 0)
+	{
+		RunState.TempRelics.RemoveAll([RelicRow](const FTempRelicEntry& E) { return E.Relic == RelicRow; });
+		FTempRelicEntry& Entry = RunState.TempRelics.AddDefaulted_GetRef();
+		Entry.Relic = RelicRow;
+		Entry.BattlesLeft = Relic->RemainBattle;
+	}
+
 	// 얻는 순간 효과 (팔아도 유지되는 것들)
 	if (Relic->TriggerTiming == ERelicTrigger::OnGainRelic)
 	{
@@ -422,6 +441,8 @@ bool ATerminusPlayerState::RemoveRelic(FName RelicRow)
 {
 	if (!HasAuthority() || RunState.Relics.Remove(RelicRow) == 0) return false;
 
+	RunState.TempRelics.RemoveAll([RelicRow](const FTempRelicEntry& E) { return E.Relic == RelicRow; });
+
 	OnRep_RunState();
 	return true;
 }
@@ -438,6 +459,8 @@ bool ATerminusPlayerState::SwapRelic(FName OldRelic, FName NewRelic)
 		OnRep_RunState();
 		return false;
 	}
+
+	RunState.TempRelics.RemoveAll([OldRelic](const FTempRelicEntry& E) { return E.Relic == OldRelic; });
 
 	// GainRelic 은 맨 뒤에 붙이니 원래 자리로
 	RunState.Relics.Remove(NewRelic);
@@ -502,14 +525,31 @@ void ATerminusPlayerState::AddTempBuff(const FTempStatBuff& Buff)
 
 void ATerminusPlayerState::ConsumeTempBuffBattle()
 {
-	if (!HasAuthority() || RunState.TempBuffs.Num() == 0) return;
+	if (!HasAuthority() || (RunState.TempBuffs.Num() == 0 && RunState.TempRelics.Num() == 0)) return;
 
 	for (FTempStatBuff& Buff : RunState.TempBuffs)
 	{
 		--Buff.BattlesLeft;
 	}
 	RunState.TempBuffs.RemoveAll([](const FTempStatBuff& Buff) { return Buff.BattlesLeft <= 0; });
+
+	// 일시적 이벤트 유물도 전투 한 번에 1 씩. 다 되면 유물째 사라짐
+	for (int32 i = RunState.TempRelics.Num() - 1; i >= 0; --i)
+	{
+		FTempRelicEntry& Entry = RunState.TempRelics[i];
+		if (--Entry.BattlesLeft > 0) continue;
+
+		UE_LOG(LogTemp, Log, TEXT("[Relic] %s: 일시적 유물 %s 소멸"), *GetPlayerName(), *UTerminusDataSettings::GetRelicName(Entry.Relic));
+		RunState.Relics.Remove(Entry.Relic);
+		RunState.TempRelics.RemoveAt(i);
+	}
 	OnRep_RunState();
+}
+
+int32 ATerminusPlayerState::GetTempRelicBattlesLeft(FName RelicRow) const
+{
+	const FTempRelicEntry* Entry = RunState.TempRelics.FindByPredicate([RelicRow](const FTempRelicEntry& E) { return E.Relic == RelicRow; });
+	return Entry ? Entry->BattlesLeft : -1;
 }
 
 void ATerminusPlayerState::ApplyRelicMetaEffect(const FRelicRow& Relic)

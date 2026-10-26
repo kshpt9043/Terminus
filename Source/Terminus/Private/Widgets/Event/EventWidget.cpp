@@ -20,14 +20,6 @@
 #include "Widgets/Common/ChoiceCardWidget.h"
 #include "Widgets/TerminusUISettings.h"
 
-namespace
-{
-	bool IsEventSkillOption(EEventOptionType Type)
-	{
-		return Type == EEventOptionType::ClassSkill || Type == EEventOptionType::OtherClassSkill || Type == EEventOptionType::EventSkill;
-	}
-}
-
 void UEventWidget::NativeOnInitialized()
 {
 	Super::NativeOnInitialized();
@@ -59,6 +51,13 @@ void UEventWidget::BuildDefaultLayout()
 	TerminusUI::SetLetterSpacing(TitleText, 80);
 	TerminusUI::AddRow(Column, TitleText, 0.f);
 
+	// 상황 설명은 길어서 폭을 정해 둠
+	SituationText = TerminusUI::MakeWrapText(WidgetTree, TEXT("SituationText"), TEXT(""), 15, TerminusUI::Color::TextBright);
+	USizeBox* SituationWidth = WidgetTree->ConstructWidget<USizeBox>();
+	SituationWidth->SetWidthOverride(760.f);
+	SituationWidth->SetContent(SituationText);
+	TerminusUI::AddRow(Column, SituationWidth, 12.f);
+
 	// 카드가 접혀도(결과만 보일 때) 글이 좁게 줄바꿈되지 않게 최소 폭을 줌
 	MessageText = TerminusUI::MakeWrapText(WidgetTree, TEXT("MessageText"), TEXT(""), 16, TerminusUI::Color::TextBright);
 	USizeBox* MessageWidth = WidgetTree->ConstructWidget<USizeBox>();
@@ -74,21 +73,38 @@ void UEventWidget::BuildDefaultLayout()
 	TerminusUI::AddRow(Column, PickPanel, 24.f);
 }
 
-void UEventWidget::Setup(const TArray<FEventOption>& InOptions)
+void UEventWidget::Setup(const FText& InTitle, const FText& InSituation, const TArray<FEventOption>& InOptions)
 {
 	Options = InOptions;
+	Situation = InSituation;
 	PendingIndex = INDEX_NONE;
 	bChosen = false;
 
-	if (MessageText)
+	if (TitleText) TitleText->SetText(InTitle.IsEmpty() ? FText::FromString(TEXT("이벤트")) : InTitle);
+	if (SituationText)
 	{
-		MessageText->SetText(FText::FromString(Options.Num() > 0
-			? TEXT("하나를 고르세요.")
-			: TEXT("아무 일도 일어나지 않았습니다.")));
+		SituationText->SetText(InSituation);
+		SituationText->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
 	}
+
+	const bool bAny = Options.ContainsByPredicate([](const FEventOption& O) { return O.bAvailable; });
+	SetMessage(bAny ? TEXT("하나를 고르세요.") : TEXT("아무 일도 일어나지 않았습니다."));
 	if (PickPanel) PickPanel->Hide();
 
 	RebuildCards();
+}
+
+void UEventWidget::SetMessage(const FString& Message)
+{
+	if (!MessageText) return;
+
+	// WBP 에 SituationText 가 없으면 상황 설명을 안내 위에 같이
+	if (!SituationText && !Situation.IsEmpty())
+	{
+		MessageText->SetText(FText::FromString(Situation.ToString() + TEXT("\n\n") + Message));
+		return;
+	}
+	MessageText->SetText(FText::FromString(Message));
 }
 
 void UEventWidget::RebuildCards()
@@ -99,7 +115,7 @@ void UEventWidget::RebuildCards()
 	CardBox->SetVisibility(PendingIndex == INDEX_NONE ? ESlateVisibility::SelfHitTestInvisible : ESlateVisibility::Collapsed);
 
 	const TSubclassOf<UChoiceCardWidget> Class = UTerminusUISettings::Pick(CardClass, &UTerminusUISettings::ChoiceCard);
-	const UEnum* TypeEnum = StaticEnum<EEventOptionType>();
+	const UEnum* TypeEnum = StaticEnum<EEventOutcomeType>();
 
 	for (int32 i = 0; i < Options.Num(); ++i)
 	{
@@ -114,10 +130,14 @@ void UEventWidget::RebuildCards()
 		CardStyle.Padding = FMargin(20.f);
 		Card->ApplyDefaultStyle(CardStyle);
 
-		Card->SetChoiceId(TypeEnum ? FName(*TypeEnum->GetNameStringByValue(static_cast<int64>(Option.Type))) : NAME_None);
-		Card->SetTexts(Option.Title.ToString(), Option.Description.ToString());
-		Card->SetItem(false, IsEventSkillOption(Option.Type) ? Option.SkillRow : NAME_None);
-		Card->SetChoiceEnabled(!bChosen);
+		Card->SetChoiceId(TypeEnum ? FName(*TypeEnum->GetNameStringByValue(static_cast<int64>(Option.Outcome))) : NAME_None);
+		// 못 고르는 이유는 설명 아래에 (WBP 카드엔 아래 줄이 없을 수 있어서 설명에 붙임)
+		Card->SetTexts(Option.Title.ToString(), Option.bAvailable
+			? Option.Description.ToString()
+			: FString::Printf(TEXT("%s\n\n(%s)"), *Option.Description.ToString(), *Option.UnavailableReason.ToString()));
+		if (Option.GivesSkill()) Card->SetItem(false, Option.SkillRow);
+		else Card->SetItem(true, Option.Outcome == EEventOutcomeType::SwapRelicSameTierRandom || Option.Outcome == EEventOutcomeType::SwapRelicHigherTierRandom ? NAME_None : Option.RelicRow);
+		Card->SetChoiceEnabled(!bChosen && Option.bAvailable);
 		Card->OnChosen = FSimpleDelegate::CreateUObject(this, &UEventWidget::HandleCardClicked, i);
 
 		if (UHorizontalBoxSlot* S = Cast<UHorizontalBoxSlot>(CardBox->AddChild(Card)))
@@ -129,18 +149,19 @@ void UEventWidget::RebuildCards()
 
 void UEventWidget::HandleCardClicked(int32 Index)
 {
-	if (bChosen || !Options.IsValidIndex(Index)) return;
+	if (bChosen || !Options.IsValidIndex(Index) || !Options[Index].bAvailable) return;
 
 	const FEventOption& Option = Options[Index];
 	const APlayerController* PC = GetOwningPlayer();
 	const ATerminusPlayerState* PS = PC ? PC->GetPlayerState<ATerminusPlayerState>() : nullptr;
 
-	// 스킬인데 강화 칸이 꽉 찼으면 바꿀 칸부터 / 확정 유물 변경이면 바꿀 유물부터
-	const bool bNeedSkillSlot = IsEventSkillOption(Option.Type) && PS && PS->GetRunState().EnhanceSkills.Num() >= PS->GetEnhanceSlotCount();
-	if (bNeedSkillSlot || Option.Type == EEventOptionType::RelicSwapChosen)
+	// 스킬인데 강화 칸이 꽉 찼으면 바꿀 칸부터 / 유물인데 유물 칸이 꽉 찼으면 버릴 유물부터
+	const bool bNeedSkillSlot = Option.GivesSkill() && PS && PS->GetRunState().EnhanceSkills.Num() >= PS->GetEnhanceSlotCount();
+	const bool bNeedRelicSlot = Option.GivesRelic() && PS && PS->GetRelics().Num() >= PS->GetRelicCapacity();
+	if (bNeedSkillSlot || bNeedRelicSlot)
 	{
 		PendingIndex = Index;
-		ShowPick(Option);
+		ShowPick(Option, bNeedSkillSlot);
 		RebuildCards();
 		return;
 	}
@@ -148,15 +169,16 @@ void UEventWidget::HandleCardClicked(int32 Index)
 	Send(Index, INDEX_NONE, NAME_None);
 }
 
-void UEventWidget::ShowPick(const FEventOption& Option)
+void UEventWidget::ShowPick(const FEventOption& Option, bool bSkillSlot)
 {
 	if (!PickPanel) return;
 
-	if (Option.Type == EEventOptionType::RelicSwapChosen)
+	if (!bSkillSlot)
 	{
-		// 기본 / 업그레이드 유물은 바꿀 수 없음
+		// 기본 / 업그레이드 유물은 버릴 수 없음
 		PickPanel->OnPicked.BindUObject(this, &UEventWidget::HandleRelicPicked);
-		PickPanel->ShowRelics(FText::FromString(TEXT("바꿀 유물을 고르세요. 같은 계층의 다른 유물로 바뀝니다.")),
+		PickPanel->ShowRelics(FText::FromString(FString::Printf(TEXT("유물 칸이 가득 찼습니다. [%s] 대신 버릴 유물을 고르세요."),
+				*UTerminusDataSettings::GetRelicName(Option.RelicRow))),
 			[](const FRelicRow& Relic) { return Relic.RelicTier != ERelicTier::Basic && Relic.RelicTier != ERelicTier::Upgrade; });
 		return;
 	}
@@ -189,7 +211,7 @@ void UEventWidget::Send(int32 Index, int32 ReplaceSlot, FName RelicRow)
 	bChosen = true;
 	PendingIndex = INDEX_NONE;
 	if (PickPanel) PickPanel->Hide();
-	if (MessageText) MessageText->SetText(FText::FromString(TEXT("...")));
+	SetMessage(TEXT("..."));
 	RebuildCards();
 
 	if (ATerminusPlayerController* PC = GetOwningPlayer<ATerminusPlayerController>())
@@ -201,5 +223,6 @@ void UEventWidget::Send(int32 Index, int32 ReplaceSlot, FName RelicRow)
 void UEventWidget::ShowResult(const FText& Result)
 {
 	if (CardBox) CardBox->SetVisibility(ESlateVisibility::Collapsed);
+	if (SituationText) SituationText->SetVisibility(ESlateVisibility::Collapsed);   // 결과 글만 보이게
 	if (MessageText) MessageText->SetText(Result);
 }

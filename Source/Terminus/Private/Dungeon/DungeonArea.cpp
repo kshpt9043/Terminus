@@ -14,9 +14,13 @@
 #include "Data/SkillTypes.h"
 #include "Data/TerminusDataSettings.h"
 #include "Game/TerminusProfileSubsystem.h"
+#include "Game/TerminusRunSubsystem.h"
+#include "Internationalization/Regex.h"
 #include "Kismet/GameplayStatics.h"
 #include "TimerManager.h"
 #include "Net/UnrealNetwork.h"
+
+FName ADungeonArea::DebugForcedEvent;
 
 ADungeonArea::ADungeonArea()
 {
@@ -150,6 +154,7 @@ void ADungeonArea::BeginRoom(const FRoomNode& InRoom, const TArray<ATerminusPlay
 	if (!HasAuthority()) return;
 
 	Room = InRoom;
+	CurrentTheme = Theme;
 	bInUse = true;
 	bCleared = false;
 	bWiped = false;
@@ -200,7 +205,7 @@ void ADungeonArea::BeginRoom(const FRoomNode& InRoom, const TArray<ATerminusPlay
 	// 방 타입별 콘텐츠
 	//  - 몬스터 / 가디언 / 보스: 전투 (끝나면 전투 쪽이 MarkCleared)
 	//  - 휴식터: 회복 대상 고르기 (전원이 고르면 MarkCleared)
-	//  - 이벤트: 각자 후보 3개 중 하나 고르기 (전원이 고르면 MarkCleared)
+	//  - 이벤트: DT_Event 하나, 각자 선택지 중 하나 고르기 (전원이 고르면 MarkCleared, 쉬는 가디언이면 전투)
 	//  - 상점: 각자 사고팔기, 전원이 나가면 MarkCleared
 	//  - TODO 퀘스트: 해당 UI. 지금은 DebugClearArea 로 넘김
 	if (Room.Type == ERoomType::BREAK)
@@ -353,8 +358,11 @@ void ADungeonArea::FinishRest()
 
 // =====================================================================
 // 이벤트
-// 기획 '이벤트 방 밸런싱'의 보상 중 3개를 뽑아 각자 하나를 고름 (사용자 결정 2026-10-06)
-// 쉬는 가디언 전투는 일단 뺌. 테마 유물은 유물 데이터에 테마 칸이 없어 아직 없음
+// 10-24 기획 엑셀: 방 하나에 이벤트 하나(DT_Event), 선택지 3개(DT_EventChoice) 중 하나를 고름
+//  - 공용 이벤트 + 지금 테마 이벤트 중 가중치(AppearanceWeight)로 하나. 한 런 한 번 이벤트는 다시 안 나옴
+//  - 멀티: 같은 이벤트를 보고 각자 고름 (받을 스킬 / 유물은 사람마다 따로 미리 정함). 전원이 고르면 끝
+//  - 대가는 툴팁 대괄호 안 문구를 따름 (CostType / CostValue 칸과 문구가 다른 행이 있어서). 문구가 없으면 칸 값
+//  - '쉬는 가디언' 을 누가 고르면 전원이 고른 뒤 그 방 전원이 약해진 가디언과 싸움
 // =====================================================================
 
 namespace
@@ -377,43 +385,249 @@ namespace
 		return Array[FMath::RandRange(0, Array.Num() - 1)];
 	}
 
+	// 1~2층 표층, 3~4층 중층, 5층부터 심층
+	ESkillTier EventSkillTierOf(int32 Floor)
+	{
+		return Floor >= 5 ? ESkillTier::Deep : (Floor >= 3 ? ESkillTier::Mid : ESkillTier::Surface);
+	}
+
+	ESkillTier EventNextSkillTier(ESkillTier Tier)
+	{
+		return Tier == ESkillTier::Surface ? ESkillTier::Mid : ESkillTier::Deep;
+	}
+
+	ERelicTier EventRelicTierOf(ESkillTier Tier)
+	{
+		return Tier == ESkillTier::Deep ? ERelicTier::Deep : (Tier == ESkillTier::Mid ? ERelicTier::Mid : ERelicTier::Surface);
+	}
+
+	ERelicTier EventNextRelicTier(ERelicTier Tier)
+	{
+		return Tier == ERelicTier::Surface ? ERelicTier::Mid : ERelicTier::Deep;
+	}
+
+	int32 EventCurrentFloor(const UObject* WorldContext)
+	{
+		const AMapManager* MapMgr = Cast<AMapManager>(UGameplayStatics::GetActorOfClass(WorldContext, AMapManager::StaticClass()));
+		return MapMgr ? MapMgr->CurrentFloor : 1;
+	}
+
 	bool IsEventSwappableTier(ERelicTier Tier)
 	{
 		return Tier != ERelicTier::Basic && Tier != ERelicTier::Upgrade;
 	}
 
-	// OldRelic 을 바꿀 수 있는 유물: 같은 계층, 공용이거나 내 직업, 이번 런에 안 나왔던 것
-	TArray<FName> EventSwapPool(const ATerminusPlayerState* PS, FName OldRelic)
+	// 이벤트가 줄 수 있는 유물인가: 공용 / 내 직업 / 이벤트 / 퀘스트 유물, 안 가진 것, 이번 런에 안 나온 것
+	bool IsEventGivableRelic(const ATerminusPlayerState* PS, FName Row, const FRelicRow& Relic)
+	{
+		if (!IsEventSwappableTier(Relic.RelicTier) || Relic.OwnerClass == ESkillOwner::Monster) return false;
+		const bool bGivenOnly = Relic.OwnerClass == ESkillOwner::Event || Relic.OwnerClass == ESkillOwner::Quest;
+		if (!bGivenOnly && !ATerminusPlayerState::CanClassHoldRelic(PS->GetCharacterClass(), Relic)) return false;
+		return !PS->GetRelics().Contains(Row) && !PS->HasSeenRelic(Row);
+	}
+
+	// 무작위 유물 후보 (Tier 계층의 보상용 유물: 공용 / 내 직업. 이벤트 / 퀘스트 전용은 뺌)
+	TArray<FName> EventRelicPool(const ATerminusPlayerState* PS, ERelicTier Tier)
 	{
 		TArray<FName> Pool;
-		const FRelicRow* Old = UTerminusDataSettings::FindRelicRow(OldRelic);
 		const UDataTable* Table = UTerminusDataSettings::Get()->RelicTable.LoadSynchronous();
-		if (!PS || !Old || !Table || !IsEventSwappableTier(Old->RelicTier)) return Pool;
+		if (!PS || !Table) return Pool;
 
 		for (const FName& Row : Table->GetRowNames())
 		{
 			const FRelicRow* Relic = UTerminusDataSettings::FindRelicRow(Row);
-			if (!Relic || Relic->RelicTier != Old->RelicTier) continue;
-			if (!ATerminusPlayerState::CanClassHoldRelic(PS->GetCharacterClass(), *Relic)) continue;
-			if (PS->GetRelics().Contains(Row) || PS->HasSeenRelic(Row)) continue;
-			Pool.Add(Row);
+			if (!Relic || Relic->RelicTier != Tier) continue;
+			if (Relic->OwnerClass == ESkillOwner::Event || Relic->OwnerClass == ESkillOwner::Quest) continue;
+			if (IsEventGivableRelic(PS, Row, *Relic)) Pool.Add(Row);
 		}
 		return Pool;
 	}
 
-	// 바꿀 수 있는 내 유물 (기본 / 업그레이드 유물 제외, 바꿀 후보가 있는 것만)
-	TArray<FName> EventSwappableRelics(const ATerminusPlayerState* PS)
+	// 테마 / 퀘스트 유물 후보. 유물 데이터에 테마 칸이 없어서 '지금 계층의 퀘스트 유물' 로 봄
+	// 정령계 'KingCore' 풀은 이름에 "코어" 가 있는 것(정령왕 코어), 'Lesser' 는 나머지
+	TArray<FName> EventThemeRelicPool(const ATerminusPlayerState* PS, ERelicTier Tier, const FString& PoolName)
+	{
+		TArray<FName> Pool;
+		const UDataTable* Table = UTerminusDataSettings::Get()->RelicTable.LoadSynchronous();
+		if (!PS || !Table) return Pool;
+
+		const bool bKingCore = PoolName.Contains(TEXT("KingCore"));
+		const bool bLesser = PoolName.Contains(TEXT("Lesser"));
+		for (const FName& Row : Table->GetRowNames())
+		{
+			const FRelicRow* Relic = UTerminusDataSettings::FindRelicRow(Row);
+			if (!Relic || Relic->RelicTier != Tier || Relic->OwnerClass != ESkillOwner::Quest) continue;
+			const bool bCore = Relic->RelicName.ToString().Contains(TEXT("코어"));
+			if ((bKingCore && !bCore) || (bLesser && bCore)) continue;
+			if (IsEventGivableRelic(PS, Row, *Relic)) Pool.Add(Row);
+		}
+		return Pool;
+	}
+
+	// OldRelic 을 바꿀 수 있는 유물: Tier 계층, 공용이거나 내 직업, 이번 런에 안 나왔던 것
+	TArray<FName> EventSwapPool(const ATerminusPlayerState* PS, FName OldRelic, bool bHigherTier)
+	{
+		const FRelicRow* Old = UTerminusDataSettings::FindRelicRow(OldRelic);
+		if (!PS || !Old || !IsEventSwappableTier(Old->RelicTier)) return TArray<FName>();
+		if (Old->OwnerClass == ESkillOwner::Event || Old->OwnerClass == ESkillOwner::Quest) return TArray<FName>();   // 이벤트 / 퀘스트 유물은 계층이 없는 셈이라 안 바꿈
+		return EventRelicPool(PS, bHigherTier ? EventNextRelicTier(Old->RelicTier) : Old->RelicTier);
+	}
+
+	// 바꿀 수 있는 내 유물 (기본 / 업그레이드 / 이벤트 유물 제외, 바꿀 후보가 있는 것만)
+	TArray<FName> EventSwappableRelics(const ATerminusPlayerState* PS, bool bHigherTier)
 	{
 		TArray<FName> Result;
 		if (!PS) return Result;
 
 		for (const FName& Owned : PS->GetRelics())
 		{
-			if (EventSwapPool(PS, Owned).Num() > 0) Result.Add(Owned);
+			if (EventSwapPool(PS, Owned, bHigherTier).Num() > 0) Result.Add(Owned);
 		}
 		return Result;
 	}
 
+	// 대가로 잃을 수 있는 내 유물 (기본 / 업그레이드 유물은 안 잃음)
+	TArray<FName> EventLosableRelics(const ATerminusPlayerState* PS)
+	{
+		TArray<FName> Result;
+		for (const FName& Owned : PS->GetRelics())
+		{
+			const FRelicRow* Relic = UTerminusDataSettings::FindRelicRow(Owned);
+			if (Relic && IsEventSwappableTier(Relic->RelicTier)) Result.Add(Owned);
+		}
+		return Result;
+	}
+
+	// 장착한 픽업 스킬 (강화 칸)
+	TArray<FName> EventEquippedSkills(const ATerminusPlayerState* PS, bool bAttackOnly, bool bUpgradableOnly)
+	{
+		TArray<FName> Result;
+		for (const FName& Row : PS->GetRunState().EnhanceSkills)
+		{
+			const FSkillRow* Skill = UTerminusDataSettings::FindSkillRow(Row);
+			if (!Skill) continue;
+			if (bAttackOnly && Skill->SkillType != ESkillType::Attack) continue;
+			if (bUpgradableOnly && PS->GetPickupSkillLevel(Row) >= ATerminusPlayerState::MaxPickupSkillLevel) continue;
+			Result.AddUnique(Row);
+		}
+		return Result;
+	}
+
+	// 스킬 풀 (OutcomeTargetPool 이름으로 조건을 정함)
+	//  Pool_Skill_OwnClass_* / OtherClass_* / Shared_Common_* / Event_All / Event_Offensive / Event_HighTier_*
+	//  CurrentTier = 지금 계층, NextTier = 한 계층 위. 이미 장착한 스킬은 뺌
+	TArray<FName> EventSkillPool(const ATerminusPlayerState* PS, const FString& PoolName, ESkillTier CurrentTier)
+	{
+		TArray<FName> Pool;
+		const UDataTable* Table = UTerminusDataSettings::Get()->SkillTable.LoadSynchronous();
+		if (!PS || !Table) return Pool;
+
+		const ESkillOwner MyOwner = EventSkillOwnerOf(PS->GetCharacterClass());
+		const TArray<FName>& Equipped = PS->GetRunState().EnhanceSkills;
+		const bool bEvent = PoolName.Contains(TEXT("_Event_"));
+		const bool bNextTier = PoolName.Contains(TEXT("NextTier"));
+		const ESkillTier WantTier = bNextTier ? EventNextSkillTier(CurrentTier) : CurrentTier;
+
+		TArray<FName> EventAll, OtherTier;
+		for (const FName& Row : Table->GetRowNames())
+		{
+			const FSkillRow* Skill = UTerminusDataSettings::FindSkillRow(Row);
+			if (!Skill || !UTerminusProfileSubsystem::IsOwnableSkill(Row) || Equipped.Contains(Row)) continue;
+
+			if (bEvent)
+			{
+				if (Skill->SkillCategory != ESkillCategory::Event) continue;
+				if (PoolName.Contains(TEXT("Offensive")) && Skill->SkillType != ESkillType::Attack) continue;
+				EventAll.Add(Row);
+				continue;
+			}
+
+			if (Skill->SkillEnergyCost <= 0) continue;   // 픽업 스킬 = 스킬 에너지를 쓰는 스킬
+			if (PoolName.Contains(TEXT("OwnClass")))
+			{
+				if (Skill->SkillCategory != ESkillCategory::Personal || Skill->OwnerClass != MyOwner) continue;
+			}
+			else if (PoolName.Contains(TEXT("OtherClass")))
+			{
+				if (Skill->SkillCategory != ESkillCategory::Personal || Skill->OwnerClass == MyOwner || Skill->OwnerClass == ESkillOwner::Shared) continue;
+			}
+			else if (PoolName.Contains(TEXT("Common")))
+			{
+				if (Skill->SkillCategory != ESkillCategory::Common || !UTerminusProfileSubsystem::IsEquippableSkill(Row, PS->GetCharacterClass())) continue;
+			}
+			else
+			{
+				continue;
+			}
+			(Skill->SkillTier == WantTier ? Pool : OtherTier).Add(Row);
+		}
+
+		// 그 계층에 맞는 게 없으면 다른 계층에서라도 (공용 픽업 스킬은 10-24 데이터에 중층 1개뿐)
+		if (!bEvent && Pool.Num() == 0)
+		{
+			Pool = OtherTier;
+		}
+
+		if (bEvent)
+		{
+			// HighTier: 이벤트 스킬 중 가장 높은 계층 것만
+			if (PoolName.Contains(TEXT("HighTier")) && EventAll.Num() > 0)
+			{
+				ESkillTier Highest = ESkillTier::Surface;
+				for (const FName& Row : EventAll) Highest = FMath::Max(Highest, UTerminusDataSettings::FindSkillRow(Row)->SkillTier);
+				EventAll.RemoveAll([Highest](const FName& Row) { return UTerminusDataSettings::FindSkillRow(Row)->SkillTier != Highest; });
+			}
+			return EventAll;
+		}
+		return Pool;
+	}
+
+	// 툴팁 대괄호 안에서 "체력 4 감소", "던전 재화 30 소모", "스킬 1개", "유물 1개" 같은 수치를 읽음
+	int32 EventFindNumber(const FString& Text, const FString& Pattern)
+	{
+		FRegexMatcher Matcher(FRegexPattern(Pattern), Text);
+		return Matcher.FindNext() ? FCString::Atoi(*Matcher.GetCaptureGroup(1)) : 0;
+	}
+
+	void EventParseCost(const FEventChoiceRow& Choice, FEventOption& Out)
+	{
+		const FString Tooltip = Choice.ChoiceTooltip_KR.ToString();
+		FString Bracket;
+		int32 Open = INDEX_NONE, Close = INDEX_NONE;
+		if (Tooltip.FindChar(TEXT('['), Open) && Tooltip.FindChar(TEXT(']'), Close) && Close > Open)
+		{
+			Bracket = Tooltip.Mid(Open + 1, Close - Open - 1);
+		}
+
+		Out.CostMaxHealth = EventFindNumber(Bracket, TEXT("최대 체력 (\\d+)"));
+		Out.CostHealth = EventFindNumber(Bracket.Replace(TEXT("최대 체력"), TEXT("")), TEXT("체력 (\\d+) 감소"));
+		Out.CostCurrency = EventFindNumber(Bracket, TEXT("재화 (\\d+) 소모"));
+		Out.CostSkills = EventFindNumber(Bracket, TEXT("스킬 (\\d+)개"));
+		Out.CostRelics = EventFindNumber(Bracket, TEXT("유물 (\\d+)개"));
+
+		const bool bParsed = Out.CostMaxHealth + Out.CostHealth + Out.CostCurrency + Out.CostSkills + Out.CostRelics > 0;
+		if (!bParsed)
+		{
+			switch (Choice.CostType)
+			{
+			case EEventCostType::LoseHP:               Out.CostHealth = Choice.CostValue; break;
+			case EEventCostType::LoseMaxHP:            Out.CostMaxHealth = Choice.CostValue; break;
+			case EEventCostType::SpendCurrency:        Out.CostCurrency = Choice.CostValue; break;
+			case EEventCostType::LoseRandomSkill:      Out.CostSkills = FMath::Max(1, Choice.CostValue); break;
+			case EEventCostType::LoseRandomRelic:
+			case EEventCostType::LoseRandomRelicAndHP: Out.CostRelics = 1; break;
+			default: break;
+			}
+		}
+
+		// 3전투 디버프 유물 (Enum_Reference: RLC_Event_Temp_006)
+		if (Choice.CostType == EEventCostType::GainDebuffRelic)
+		{
+			Out.CostRelic = TEXT("RLC_Event_Temp_006");
+		}
+	}
+
+	FText EventReason(const TCHAR* Text) { return FText::FromString(Text); }
 }
 
 void ADungeonArea::BeginEvent()
@@ -421,219 +635,373 @@ void ADungeonArea::BeginEvent()
 	bInEvent = true;
 	EventOffers.Reset();
 	EventChosen.Reset();
+	EventGuardianHealth = 0.f;
+	CurrentEvent = PickEventRow();
+
+	const FEventRow* Event = CurrentEvent.IsNone() ? nullptr : UTerminusDataSettings::FindEventRow(CurrentEvent);
+	if (Event)
+	{
+		if (UTerminusRunSubsystem* Run = GetGameInstance() ? GetGameInstance()->GetSubsystem<UTerminusRunSubsystem>() : nullptr)
+		{
+			Run->AddSeenEvent(CurrentEvent);
+		}
+		UE_LOG(LogTemp, Log, TEXT("[Area %d] 이벤트: %s (%s)"), AreaIndex, *Event->EventName_KR.ToString(), *CurrentEvent.ToString());
+	}
+
+	const FText Title = Event ? Event->EventName_KR : FText::FromString(TEXT("이벤트"));
+	const FText Situation = Event ? Event->SituationDesc_KR : EventFallbackText;
 
 	for (ATerminusPlayerState* PS : Occupants)
 	{
 		if (!PS) continue;
 
-		const TArray<FEventOption> Options = MakeEventOptions(PS);
+		TArray<FEventOption> Options;
+		if (Event)
+		{
+			TArray<FName> Seen;
+			for (const FName& ChoiceRow : { Event->Choice1_ID, Event->Choice2_ID, Event->Choice3_ID })
+			{
+				if (ChoiceRow.IsNone() || !UTerminusDataSettings::FindEventChoiceRow(ChoiceRow)) continue;
+				const FEventOption Option = MakeEventOption(PS, ChoiceRow);
+				if (!Option.RelicRow.IsNone()) Seen.Add(Option.RelicRow);
+				Options.Add(Option);
+			}
+			PS->MarkRelicsSeen(Seen);   // 카드에 보인 유물은 이번 런에 다시 안 나옴 (사용자 결정 10-06)
+		}
 		EventOffers.Add(PS, Options);
 
-		// 받을 게 없으면 고른 걸로 (화면엔 '아무 일도 일어나지 않았습니다')
-		if (Options.Num() == 0) EventChosen.Add(PS);
+		// 고를 수 있는 게 없으면 고른 걸로 (화면엔 '아무 일도 일어나지 않았습니다')
+		if (!Options.ContainsByPredicate([](const FEventOption& O) { return O.bAvailable; }))
+		{
+			EventChosen.Add(PS);
+		}
 
 		if (ATerminusPlayerController* PC = Cast<ATerminusPlayerController>(PS->GetOwner()))
 		{
-			PC->Client_ShowEvent(Options);
+			PC->Client_ShowEvent(Title, Situation, Options);
 		}
 	}
 
 	CheckEventDone();
 }
 
-TArray<FEventOption> ADungeonArea::MakeEventOptions(const ATerminusPlayerState* PS) const
+FName ADungeonArea::PickEventRow() const
 {
-	TArray<FEventOption> Candidates;
-	if (!PS) return Candidates;
-
-	const AMapManager* MapMgr = Cast<AMapManager>(UGameplayStatics::GetActorOfClass(this, AMapManager::StaticClass()));
-	const int32 Floor = MapMgr ? MapMgr->CurrentFloor : 1;
-	const ESkillTier MaxTier = Floor >= 5 ? ESkillTier::Deep : (Floor >= 3 ? ESkillTier::Mid : ESkillTier::Surface);
-	const ESkillOwner MyOwner = EventSkillOwnerOf(PS->GetCharacterClass());
-	const TArray<FName> Equipped = PS->GetRunState().EnhanceSkills;
-
-	// ---- 스킬 풀: 내 직업 / 공용 픽업, 다른 직업 픽업, 이벤트 (기본 / 몬스터 스킬, 지금 계층보다 높은 것, 이미 장착한 것 제외)
-	TArray<FName> ClassPool, OtherPool, EventPool;
-	if (const UDataTable* Table = UTerminusDataSettings::Get()->SkillTable.LoadSynchronous())
+	if (!DebugForcedEvent.IsNone() && UTerminusDataSettings::FindEventRow(DebugForcedEvent))
 	{
-		for (const FName& Row : Table->GetRowNames())
-		{
-			const FSkillRow* Skill = UTerminusDataSettings::FindSkillRow(Row);
-			if (!Skill || !UTerminusProfileSubsystem::IsOwnableSkill(Row)) continue;
-			if (Skill->SkillTier > MaxTier || Equipped.Contains(Row)) continue;
-
-			if (Skill->SkillCategory == ESkillCategory::Event)
-			{
-				EventPool.Add(Row);
-			}
-			else if (Skill->SkillEnergyCost > 0)   // 픽업 스킬 = 스킬 에너지를 쓰는 스킬
-			{
-				if (Skill->SkillCategory == ESkillCategory::Personal && Skill->OwnerClass != MyOwner && Skill->OwnerClass != ESkillOwner::Shared)
-				{
-					OtherPool.Add(Row);
-				}
-				else if (UTerminusProfileSubsystem::IsEquippableSkill(Row, PS->GetCharacterClass()))
-				{
-					ClassPool.Add(Row);
-				}
-			}
-		}
+		return DebugForcedEvent;
 	}
 
-	auto AddSkill = [&Candidates](EEventOptionType Type, const TArray<FName>& Pool, const FString& Guide)
+	const UDataTable* Table = UTerminusDataSettings::Get()->EventTable.LoadSynchronous();
+	if (!Table) return NAME_None;
+
+	const ESkillTier Tier = EventSkillTierOf(EventCurrentFloor(this));
+	const EEventAppearTier WantTier = Tier == ESkillTier::Deep ? EEventAppearTier::Deep : (Tier == ESkillTier::Mid ? EEventAppearTier::Mid : EEventAppearTier::Surface);
+	const FString ThemeName = CurrentTheme.IsValid() ? CurrentTheme->DisplayName.ToString() : FString();
+
+	const UTerminusRunSubsystem* Run = GetGameInstance() ? GetGameInstance()->GetSubsystem<UTerminusRunSubsystem>() : nullptr;
+
+	TArray<TPair<FName, int32>> Candidates;
+	int32 Total = 0;
+	for (const FName& Row : Table->GetRowNames())
 	{
-		if (Pool.Num() == 0) return;
+		const FEventRow* Event = UTerminusDataSettings::FindEventRow(Row);
+		if (!Event || Event->AppearanceWeight <= 0) continue;
 
-		const FName Row = EventPickRandom(Pool);
-		const FSkillRow* Skill = UTerminusDataSettings::FindSkillRow(Row);
+		// 공용 이벤트 또는 지금 테마 이벤트, 계층은 Any 이거나 지금 계층
+		const bool bCommon = Event->EventScope.IsEmpty() || Event->EventScope == TEXT("공용");
+		if (!bCommon && Event->EventScope != ThemeName) continue;
+		if (Event->AppearTier != EEventAppearTier::Any && Event->AppearTier != WantTier) continue;
+		if (Event->bOneTimePerRun && Run && Run->GetSeenEvents().Contains(Row)) continue;
 
-		FEventOption Option;
-		Option.Type = Type;
-		Option.SkillRow = Row;
-		Option.Title = Skill->DisplayName_KR;
-		Option.Description = FText::FromString(FString::Printf(TEXT("%s\n(스킬 에너지 %d)"), *Guide, Skill->SkillEnergyCost));
-		Candidates.Add(Option);
+		Candidates.Emplace(Row, Event->AppearanceWeight);
+		Total += Event->AppearanceWeight;
+	}
+	if (Total <= 0) return NAME_None;
+
+	int32 Roll = FMath::RandRange(1, Total);
+	for (const TPair<FName, int32>& C : Candidates)
+	{
+		Roll -= C.Value;
+		if (Roll <= 0) return C.Key;
+	}
+	return Candidates.Last().Key;
+}
+
+FEventOption ADungeonArea::MakeEventOption(const ATerminusPlayerState* PS, FName ChoiceRow) const
+{
+	FEventOption Option;
+	const FEventChoiceRow* Choice = UTerminusDataSettings::FindEventChoiceRow(ChoiceRow);
+	if (!PS || !Choice)
+	{
+		Option.bAvailable = false;
+		return Option;
+	}
+
+	Option.ChoiceRow = ChoiceRow;
+	Option.Outcome = Choice->OutcomeType;
+	Option.Title = Choice->ChoiceTitle_KR;
+	Option.Description = Choice->ChoiceTooltip_KR;
+	EventParseCost(*Choice, Option);
+
+	const ESkillTier Tier = EventSkillTierOf(EventCurrentFloor(this));
+	const FString Pool = Choice->OutcomeTargetPool.ToString();
+	const int32 Min = FMath::Min(Choice->OutcomeValueMin, Choice->OutcomeValueMax);
+	const int32 Max = FMath::Max(Choice->OutcomeValueMin, Choice->OutcomeValueMax);
+
+	auto Unavailable = [&Option](const TCHAR* Reason)
+	{
+		Option.bAvailable = false;
+		Option.UnavailableReason = EventReason(Reason);
 	};
 
-	AddSkill(EEventOptionType::ClassSkill, ClassPool, TEXT("스킬을 배웁니다."));
-	if (OtherPool.Num() > 0)
+	// ---- 결과 미리 정하기
+	switch (Choice->OutcomeType)
 	{
-		const FSkillRow* Sample = nullptr;   // 설명에 직업 이름을 넣으려고 미리 고름
-		const FName Row = EventPickRandom(OtherPool);
-		Sample = UTerminusDataSettings::FindSkillRow(Row);
-		AddSkill(EEventOptionType::OtherClassSkill, TArray<FName>{ Row },
-			FString::Printf(TEXT("다른 직업(%s)의 스킬을 배웁니다."), *UEnum::GetDisplayValueAsText(Sample->OwnerClass).ToString()));
-	}
-	AddSkill(EEventOptionType::EventSkill, EventPool, TEXT("이벤트 스킬을 배웁니다."));
-
-	// ---- 던전 재화
+	case EEventOutcomeType::GiveOwnClassSkill:
+	case EEventOutcomeType::GiveCommonSkill:
+	case EEventOutcomeType::GiveOtherClassSkill:
+	case EEventOutcomeType::GiveEventSkill:
+	case EEventOutcomeType::GiveHigherTierSkill:
 	{
-		FEventOption Option;
-		Option.Type = EEventOptionType::Currency;
-		Option.Amount = FMath::RandRange(FMath::Min(EventCurrency.X, EventCurrency.Y), FMath::Max(EventCurrency.X, EventCurrency.Y));
-		Option.Title = FText::FromString(FString::Printf(TEXT("던전 재화 +%d"), Option.Amount));
-		Option.Description = FText::FromString(TEXT("던전 재화를 얻습니다."));
-		Candidates.Add(Option);
+		const TArray<FName> Skills = EventSkillPool(PS, Pool, Tier);
+		if (Skills.Num() > 0) Option.SkillRow = EventPickRandom(Skills);
+		else Unavailable(TEXT("받을 수 있는 스킬이 없습니다."));
+		break;
 	}
 
-	// ---- 이번 런 동안 스텟 (셋 중 하나)
+	case EEventOutcomeType::UpgradeRandomSkill:
+		Option.Amount = FMath::Max(1, Min);
+		if (EventEquippedSkills(PS, Pool.Contains(TEXT("Attack")), true).Num() == 0) Unavailable(TEXT("강화할 스킬이 없습니다."));
+		break;
+
+	case EEventOutcomeType::GiveTempStatRelic:
+	case EEventOutcomeType::GivePermStatRelic:
+		Option.RelicRow = Choice->OutcomeTargetPool;
+		if (!UTerminusDataSettings::FindRelicRow(Option.RelicRow)) Unavailable(TEXT("유물 데이터가 없습니다."));
+		else if (PS->GetRelics().Contains(Option.RelicRow)) Unavailable(TEXT("이미 가진 유물입니다."));
+		break;
+
+	case EEventOutcomeType::GiveThemeQuestRelic:
+	case EEventOutcomeType::GiveHigherTierRelic:
 	{
-		FEventOption Option;
-		Option.Type = EEventOptionType::PermanentStat;
-		Option.StatKind = FMath::RandRange(0, 2);
-		Option.Amount = Option.StatKind == 0 ? EventPermanentHealth : (Option.StatKind == 1 ? EventPermanentAttack : EventPermanentDefense);
-		const TCHAR* StatName = Option.StatKind == 0 ? TEXT("최대 체력") : (Option.StatKind == 1 ? TEXT("공격력") : TEXT("방어력"));
-		Option.Title = FText::FromString(FString::Printf(TEXT("%s +%d"), StatName, Option.Amount));
-		Option.Description = FText::FromString(TEXT("이번 던전이 끝날 때까지 유지됩니다."));
-		if (Option.Amount > 0) Candidates.Add(Option);
+		const ERelicTier Current = EventRelicTierOf(Tier);
+		TArray<FName> Relics;
+		if (Pool.Contains(TEXT("Theme"))) Relics = EventThemeRelicPool(PS, Current, Pool);
+		else if (Pool.Contains(TEXT("DeepTier"))) Relics = EventRelicPool(PS, ERelicTier::Deep);
+		else if (Pool.Contains(TEXT("MidTier"))) Relics = EventRelicPool(PS, ERelicTier::Mid);
+		else Relics = EventRelicPool(PS, EventNextRelicTier(Current));
+		if (Relics.Num() > 0) Option.RelicRow = EventPickRandom(Relics);
+		else Unavailable(TEXT("받을 수 있는 유물이 없습니다."));
+		break;
 	}
 
-	// ---- 일시 버프 (공용: 대가 있음 / 테마: 대가 없음)
-	{
-		FEventOption Option;
-		Option.Type = EEventOptionType::TempStat;
-		Option.Amount = EventTempAttack;
-		Option.Penalty = EventTempDefensePenalty;
-		Option.Battles = EventTempBattles;
-		Option.Title = FText::FromString(FString::Printf(TEXT("공격력 +%d (전투 %d번)"), Option.Amount, Option.Battles));
-		Option.Description = FText::FromString(Option.Penalty > 0
-			? FString::Printf(TEXT("다음 전투 %d번 동안 공격력 +%d, 방어력 -%d."), Option.Battles, Option.Amount, Option.Penalty)
-			: FString::Printf(TEXT("다음 전투 %d번 동안 공격력 +%d."), Option.Battles, Option.Amount));
-		if (Option.Amount > 0) Candidates.Add(Option);
-	}
-	{
-		const FString ThemeName = MapMgr && MapMgr->FloorTheme && !MapMgr->FloorTheme->DisplayName.IsEmpty()
-			? MapMgr->FloorTheme->DisplayName.ToString()
-			: FString(TEXT("이곳"));
+	case EEventOutcomeType::SwapRelicSameTierRandom:
+	case EEventOutcomeType::SwapRelicHigherTierRandom:
+		// 바뀌는 유물이 곧 대가 (LoseRandomRelic). 따로 또 잃지 않음
+		Option.CostRelics = 0;
+		if (EventSwappableRelics(PS, Choice->OutcomeType == EEventOutcomeType::SwapRelicHigherTierRandom).Num() == 0)
+		{
+			Unavailable(TEXT("바꿀 수 있는 유물이 없습니다."));
+		}
+		// PlusGold: 툴팁의 "던전 재화 20" 만큼 더
+		if (Pool.Contains(TEXT("PlusGold")))
+		{
+			const FString Tooltip = Choice->ChoiceTooltip_KR.ToString();
+			int32 Close = INDEX_NONE;
+			Tooltip.FindChar(TEXT(']'), Close);
+			Option.Amount = EventFindNumber(Tooltip.Mid(Close + 1), TEXT("재화 (\\d+)"));
+		}
+		break;
 
-		FEventOption Option;
-		Option.Type = EEventOptionType::ThemeTempStat;
-		Option.Amount = EventThemeAttack;
-		Option.Battles = EventTempBattles;
-		Option.Title = FText::FromString(FString::Printf(TEXT("%s의 기운"), *ThemeName));
-		Option.Description = FText::FromString(FString::Printf(TEXT("다음 전투 %d번 동안 공격력 +%d."), Option.Battles, Option.Amount));
-		if (Option.Amount > 0) Candidates.Add(Option);
-	}
+	case EEventOutcomeType::GiveCurrencyRange:
+		Option.Amount = FMath::RandRange(Min, Max);
+		break;
 
-	// ---- 유물 변화 (바꿀 수 있는 유물이 있을 때만)
-	if (EventSwappableRelics(PS).Num() > 0)
-	{
-		FEventOption Random;
-		Random.Type = EEventOptionType::RelicSwapRandom;
-		Random.Title = FText::FromString(TEXT("유물 변화 (무작위)"));
-		Random.Description = FText::FromString(TEXT("내 유물 하나가 무작위로\n같은 계층의 다른 유물로 바뀝니다."));
-		Candidates.Add(Random);
+	case EEventOutcomeType::HealHP:
+		Option.Amount = Max;
+		break;
 
-		FEventOption Chosen;
-		Chosen.Type = EEventOptionType::RelicSwapChosen;
-		Chosen.Title = FText::FromString(TEXT("유물 변화 (선택)"));
-		Chosen.Description = FText::FromString(TEXT("고른 유물 하나를\n같은 계층의 다른 유물로 바꿉니다."));
-		Candidates.Add(Chosen);
+	case EEventOutcomeType::StartWeakGuardianBattle:
+		Option.Amount = Min > 0 ? Min : 70;   // 체력 %
+		break;
+
+	default:
+		break;
 	}
 
-	// 섞어서 앞에서부터 (종류가 겹치지 않음)
-	for (int32 i = Candidates.Num() - 1; i > 0; --i)
+	// ---- 대가를 치를 수 있나
+	const ATerminusBattler* Battler = Cast<ATerminusBattler>(PS->GetPawn());
+	const UCombatStatsComponent* Stats = Battler ? Battler->GetCombatStats() : nullptr;
+	const int32 Health = Stats ? Stats->GetCombatState().Health : 0;
+	const int32 MaxHealth = Stats ? Stats->GetStats().MaxHealth : 0;
+
+	if (Option.bAvailable && Option.CostHealth > 0 && Health <= Option.CostHealth) Unavailable(TEXT("체력이 부족합니다."));
+	if (Option.bAvailable && Option.CostMaxHealth > 0 && MaxHealth <= Option.CostMaxHealth) Unavailable(TEXT("최대 체력이 부족합니다."));
+	if (Option.bAvailable && Option.CostCurrency > 0 && PS->GetRunState().Currency < Option.CostCurrency) Unavailable(TEXT("던전 재화가 부족합니다."));
+	if (Option.bAvailable && Option.CostSkills > 0 && EventEquippedSkills(PS, false, false).Num() < Option.CostSkills) Unavailable(TEXT("잃을 스킬이 없습니다."));
+	if (Option.bAvailable && Option.CostRelics > 0 && EventLosableRelics(PS).Num() < Option.CostRelics) Unavailable(TEXT("잃을 유물이 없습니다."));
+	if (Option.bAvailable && !Option.CostRelic.IsNone())
 	{
-		Candidates.Swap(i, FMath::RandRange(0, i));
+		// 디버프 유물은 칸 하나를 차지함. 꽉 찼거나 이미 있으면 못 고름 (버릴 유물을 고르게 하면 대가가 없어지는 셈이라)
+		const bool bFull = PS->GetRelics().Num() >= PS->GetRelicCapacity();
+		if (!UTerminusDataSettings::FindRelicRow(Option.CostRelic)) Unavailable(TEXT("유물 데이터가 없습니다."));
+		else if (PS->GetRelics().Contains(Option.CostRelic)) Unavailable(TEXT("이미 같은 저주를 받고 있습니다."));
+		else if (bFull) Unavailable(TEXT("유물 칸이 가득 차 고를 수 없습니다."));
 	}
-	Candidates.SetNum(FMath::Min(Candidates.Num(), FMath::Max(1, EventOptionCount)));
-	return Candidates;
+
+	return Option;
 }
 
 bool ADungeonArea::ApplyEventOption(ATerminusPlayerState* PS, const FEventOption& Option, int32 ReplaceSlot, FName RelicRow, FString& OutResult)
 {
-	switch (Option.Type)
+	if (!PS || !Option.bAvailable) return false;
+
+	const FEventChoiceRow* Choice = UTerminusDataSettings::FindEventChoiceRow(Option.ChoiceRow);
+	ATerminusBattler* Battler = Cast<ATerminusBattler>(PS->GetPawn());
+	UCombatStatsComponent* Stats = Battler ? Battler->GetCombatStats() : nullptr;
+	if (!Choice) return false;
+
+	// ---- 먼저 다 되는지 확인 (대가만 치르고 못 받는 일이 없게)
+	if (Option.CostHealth > 0 && (!Stats || Stats->GetCombatState().Health <= Option.CostHealth)) return false;
+	if (Option.CostCurrency > 0 && PS->GetRunState().Currency < Option.CostCurrency) return false;
+	if (Option.GivesSkill() && PS->GetRunState().EnhanceSkills.Num() >= PS->GetEnhanceSlotCount()
+		&& !PS->GetRunState().EnhanceSkills.IsValidIndex(ReplaceSlot)) return false;
+
+	const bool bRelicFull = PS->GetRelics().Num() >= PS->GetRelicCapacity();
+	if (Option.GivesRelic() && bRelicFull && !EventLosableRelics(PS).Contains(RelicRow)) return false;
+
+	const bool bHigher = Option.Outcome == EEventOutcomeType::SwapRelicHigherTierRandom;
+	const bool bSwap = bHigher || Option.Outcome == EEventOutcomeType::SwapRelicSameTierRandom;
+	const TArray<FName> Swappable = bSwap ? EventSwappableRelics(PS, bHigher) : TArray<FName>();
+	if (bSwap && Swappable.Num() == 0) return false;
+
+	TArray<FString> Lines;
+
+	// ---- 대가
+	if (Option.CostCurrency > 0)
 	{
-	case EEventOptionType::ClassSkill:
-	case EEventOptionType::OtherClassSkill:
-	case EEventOptionType::EventSkill:
+		PS->AddCurrency(-Option.CostCurrency);
+		Lines.Add(FString::Printf(TEXT("던전 재화 -%d"), Option.CostCurrency));
+	}
+	if (Option.CostHealth > 0 && Stats)
 	{
-		if (!PS->EquipEnhanceSkill(Option.SkillRow, ReplaceSlot)) return false;
-		OutResult = FString::Printf(TEXT("스킬 획득: %s"), *Option.Title.ToString());
-		return true;
+		Stats->ApplyDamage(Option.CostHealth);
+		Lines.Add(FString::Printf(TEXT("체력 -%d"), Option.CostHealth));
+	}
+	if (Option.CostMaxHealth > 0)
+	{
+		PS->ApplyPermanentStat(0, -Option.CostMaxHealth);
+		Lines.Add(FString::Printf(TEXT("최대 체력 -%d"), Option.CostMaxHealth));
+	}
+	for (int32 i = 0; i < Option.CostSkills; ++i)
+	{
+		const TArray<FName> Equipped = EventEquippedSkills(PS, false, false);
+		if (Equipped.Num() == 0) break;
+		const FName Lost = EventPickRandom(Equipped);
+		PS->UnequipEnhanceSkill(Lost);
+		Lines.Add(FString::Printf(TEXT("스킬 소실: %s"), *UTerminusDataSettings::GetSkillName(Lost)));
+	}
+	for (int32 i = 0; i < Option.CostRelics; ++i)
+	{
+		const TArray<FName> Losable = EventLosableRelics(PS);
+		if (Losable.Num() == 0) break;
+		const FName Lost = EventPickRandom(Losable);
+		PS->RemoveRelic(Lost);
+		Lines.Add(FString::Printf(TEXT("유물 소실: %s"), *UTerminusDataSettings::GetRelicName(Lost)));
+	}
+	if (!Option.CostRelic.IsNone() && PS->GainRelic(Option.CostRelic))
+	{
+		Lines.Add(FString::Printf(TEXT("저주 유물: %s"), *UTerminusDataSettings::GetRelicName(Option.CostRelic)));
 	}
 
-	case EEventOptionType::Currency:
+	// ---- 결과
+	switch (Option.Outcome)
+	{
+	case EEventOutcomeType::GiveOwnClassSkill:
+	case EEventOutcomeType::GiveCommonSkill:
+	case EEventOutcomeType::GiveOtherClassSkill:
+	case EEventOutcomeType::GiveEventSkill:
+	case EEventOutcomeType::GiveHigherTierSkill:
+		if (PS->EquipEnhanceSkill(Option.SkillRow, ReplaceSlot))
+		{
+			Lines.Add(FString::Printf(TEXT("스킬 획득: %s"), *UTerminusDataSettings::GetSkillName(Option.SkillRow)));
+		}
+		break;
+
+	case EEventOutcomeType::UpgradeRandomSkill:
+		for (int32 i = 0; i < Option.Amount; ++i)
+		{
+			const TArray<FName> Candidates = EventEquippedSkills(PS, Choice->OutcomeTargetPool.ToString().Contains(TEXT("Attack")), true);
+			if (Candidates.Num() == 0) break;
+			const FName Skill = EventPickRandom(Candidates);
+			if (PS->UpgradePickupSkill(Skill))
+			{
+				Lines.Add(FString::Printf(TEXT("스킬 강화: %s +%d"), *UTerminusDataSettings::GetSkillName(Skill), PS->GetPickupSkillLevel(Skill)));
+			}
+		}
+		break;
+
+	case EEventOutcomeType::GiveTempStatRelic:
+	case EEventOutcomeType::GivePermStatRelic:
+	case EEventOutcomeType::GiveThemeQuestRelic:
+	case EEventOutcomeType::GiveHigherTierRelic:
+		if (bRelicFull && PS->RemoveRelic(RelicRow))
+		{
+			Lines.Add(FString::Printf(TEXT("유물 버림: %s"), *UTerminusDataSettings::GetRelicName(RelicRow)));
+		}
+		if (PS->GainRelic(Option.RelicRow))
+		{
+			const int32 Battles = PS->GetTempRelicBattlesLeft(Option.RelicRow);
+			Lines.Add(Battles > 0
+				? FString::Printf(TEXT("유물 획득: %s (전투 %d번)"), *UTerminusDataSettings::GetRelicName(Option.RelicRow), Battles)
+				: FString::Printf(TEXT("유물 획득: %s"), *UTerminusDataSettings::GetRelicName(Option.RelicRow)));
+		}
+		break;
+
+	case EEventOutcomeType::SwapRelicSameTierRandom:
+	case EEventOutcomeType::SwapRelicHigherTierRandom:
+	{
+		const FName Old = EventPickRandom(Swappable);
+		const FName New = EventPickRandom(EventSwapPool(PS, Old, bHigher));
+		if (PS->SwapRelic(Old, New))
+		{
+			Lines.Add(FString::Printf(TEXT("유물 변화: %s → %s"), *UTerminusDataSettings::GetRelicName(Old), *UTerminusDataSettings::GetRelicName(New)));
+		}
+		if (Option.Amount > 0)
+		{
+			PS->AddCurrency(Option.Amount);
+			Lines.Add(FString::Printf(TEXT("던전 재화 +%d"), Option.Amount));
+		}
+		break;
+	}
+
+	case EEventOutcomeType::GiveCurrencyRange:
 		PS->AddCurrency(Option.Amount);
-		OutResult = FString::Printf(TEXT("던전 재화 +%d"), Option.Amount);
-		return true;
+		Lines.Add(FString::Printf(TEXT("던전 재화 +%d"), Option.Amount));
+		break;
 
-	case EEventOptionType::PermanentStat:
-		PS->ApplyPermanentStat(Option.StatKind, Option.Amount);
-		OutResult = Option.Title.ToString();
-		return true;
+	case EEventOutcomeType::HealHP:
+		if (Stats)
+		{
+			Stats->Heal(Option.Amount);
+			Lines.Add(FString::Printf(TEXT("체력 +%d"), Option.Amount));
+		}
+		break;
 
-	case EEventOptionType::TempStat:
-	case EEventOptionType::ThemeTempStat:
-	{
-		FTempStatBuff Buff;
-		Buff.Attack = Option.Amount;
-		Buff.Defense = -Option.Penalty;
-		Buff.BattlesLeft = Option.Battles;
-		Buff.Source = Option.Title.ToString();
-		PS->AddTempBuff(Buff);
-		OutResult = Option.Description.ToString();
-		return true;
+	case EEventOutcomeType::StartWeakGuardianBattle:
+		EventGuardianHealth = FMath::Max(EventGuardianHealth, Option.Amount / 100.f);
+		Lines.Add(TEXT("모두가 고르면 약해진 가디언과 전투합니다."));
+		break;
+
+	default:
+		break;
 	}
 
-	case EEventOptionType::RelicSwapRandom:
-	case EEventOptionType::RelicSwapChosen:
-	{
-		const TArray<FName> Swappable = EventSwappableRelics(PS);
-		if (Swappable.Num() == 0) return false;
-
-		const FName Old = Option.Type == EEventOptionType::RelicSwapChosen ? RelicRow : EventPickRandom(Swappable);
-		if (!Swappable.Contains(Old)) return false;
-
-		const FName New = EventPickRandom(EventSwapPool(PS, Old));
-		if (!PS->SwapRelic(Old, New)) return false;
-
-		OutResult = FString::Printf(TEXT("유물 변화: %s → %s"), *UTerminusDataSettings::GetRelicName(Old), *UTerminusDataSettings::GetRelicName(New));
-		return true;
-	}
-	}
-
-	return false;
+	// 기획 결과 문구 + 실제로 바뀐 것
+	const FString Story = Choice->ResultText_KR.ToString();
+	OutResult = Story.IsEmpty() ? FString::Join(Lines, TEXT("\n")) : Story + (Lines.Num() > 0 ? TEXT("\n\n") + FString::Join(Lines, TEXT("\n")) : FString());
+	return true;
 }
 
 void ADungeonArea::HandleEventChoice(ATerminusPlayerState* Chooser, int32 Index, int32 ReplaceSlot, FName RelicRow)
@@ -649,24 +1017,38 @@ void ADungeonArea::HandleEventChoice(ATerminusPlayerState* Chooser, int32 Index,
 	FString Result;
 	if (!Offers->IsValidIndex(Index) || !ApplyEventOption(Chooser, (*Offers)[Index], ReplaceSlot, RelicRow, Result))
 	{
-		// 잘못 골랐거나(칸 / 유물이 그새 바뀜) 적용 실패: 화면을 처음으로 돌려 다시 고르게
+		// 잘못 골랐거나(칸 / 유물 / 재화가 그새 바뀜) 적용 실패: 선택지를 지금 상태로 다시 풀어서 보내 다시 고르게
 		UE_LOG(LogTemp, Warning, TEXT("[Area %d] 이벤트: %s 의 선택(%d) 적용 실패. 다시 고르게 함"), AreaIndex, *Chooser->GetPlayerName(), Index);
-		if (PC) PC->Client_ShowEvent(*Offers);
+		TArray<FEventOption> Fresh;
+		for (const FEventOption& Old : *Offers)
+		{
+			FEventOption Again = MakeEventOption(Chooser, Old.ChoiceRow);
+			// 미리 보여 준 스킬 / 유물 / 재화는 그대로 (다시 굴려서 바뀌지 않게)
+			Again.SkillRow = Old.SkillRow;
+			Again.RelicRow = Old.RelicRow;
+			Again.Amount = Old.Amount;
+			Fresh.Add(Again);
+		}
+		EventOffers.Add(Chooser, Fresh);
+
+		const FEventRow* Event = UTerminusDataSettings::FindEventRow(CurrentEvent);
+		if (PC) PC->Client_ShowEvent(Event ? Event->EventName_KR : FText::GetEmpty(), Event ? Event->SituationDesc_KR : EventFallbackText, Fresh);
 		return;
 	}
 
 	EventChosen.Add(Chooser);
 	if (PC) PC->Client_EventResult(FText::FromString(Result));
 
+	const FString Summary = (*Offers)[Index].Title.ToString();
 	if (Occupants.Num() > 1)
 	{
 		FChatMessage Notice;
 		Notice.Kind = EChatMessageKind::System;
-		Notice.Text = FString::Printf(TEXT("[이벤트] %s 님: %s"), *Chooser->GetPlayerName(), *Result);
+		Notice.Text = FString::Printf(TEXT("[이벤트] %s 님: %s"), *Chooser->GetPlayerName(), *Summary);
 		ATerminusPlayerController::BroadcastChat(GetWorld(), Notice);
 	}
 
-	UE_LOG(LogTemp, Log, TEXT("[Area %d] 이벤트: %s -> %s"), AreaIndex, *Chooser->GetPlayerName(), *Result);
+	UE_LOG(LogTemp, Log, TEXT("[Area %d] 이벤트: %s -> %s / %s"), AreaIndex, *Chooser->GetPlayerName(), *(*Offers)[Index].ChoiceRow.ToString(), *Result.Replace(TEXT("\n"), TEXT(" / ")));
 
 	CheckEventDone();
 }
@@ -678,14 +1060,43 @@ void ADungeonArea::CheckEventDone()
 		if (PS && !EventChosen.Contains(PS)) return;
 	}
 
-	// 전원이 골랐으면 결과를 잠깐 보여주고 끝
-	GetWorldTimerManager().SetTimer(EventTimer, this, &ADungeonArea::FinishEvent, 1.5f, false);
+	// 전원이 골랐으면 결과를 잠깐 보여주고 끝 (전투가 있으면 조금 더 길게)
+	GetWorldTimerManager().SetTimer(EventTimer, this, &ADungeonArea::FinishEvent, EventGuardianHealth > 0.f ? 2.5f : 1.5f, false);
 }
 
 void ADungeonArea::FinishEvent()
 {
 	if (!bInEvent) return;
-	MarkCleared();
+
+	if (EventGuardianHealth <= 0.f || !Combat)
+	{
+		MarkCleared();
+		return;
+	}
+
+	// 쉬는 가디언: 이벤트 화면을 닫고 이 방 전원이 가디언과 싸움. 끝나면 전투 쪽이 가디언 보상 후 MarkCleared
+	GetWorldTimerManager().ClearTimer(EventTimer);
+	TArray<ATerminusPlayerState*> Players;
+	for (ATerminusPlayerState* PS : Occupants)
+	{
+		if (!PS) continue;
+		Players.Add(PS);
+		if (ATerminusPlayerController* PC = Cast<ATerminusPlayerController>(PS->GetOwner()))
+		{
+			PC->Client_CloseEvent();
+		}
+	}
+	bInEvent = false;
+	EventOffers.Reset();
+	EventChosen.Reset();
+
+	FRoomNode GuardianRoom = Room;
+	GuardianRoom.Type = ERoomType::GUARDIAN;
+	Combat->SetNextSpawnHealthScale(EventGuardianHealth);
+	EventGuardianHealth = 0.f;
+
+	UE_LOG(LogTemp, Log, TEXT("[Area %d] 이벤트: 쉬는 가디언 전투 시작"), AreaIndex);
+	Combat->StartCombat(GuardianRoom, Players, CurrentTheme.Get());
 }
 
 // =====================================================================
@@ -1071,6 +1482,8 @@ void ADungeonArea::Release()
 		EventOffers.Reset();
 		EventChosen.Reset();
 	}
+	CurrentEvent = NAME_None;
+	EventGuardianHealth = 0.f;
 
 	// 몬스터 치우고 전투 상태 초기화
 	if (Combat)
