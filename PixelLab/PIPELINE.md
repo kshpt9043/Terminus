@@ -110,6 +110,22 @@ MCP로 안 되는 것: 시퀀스의 `animSource` 변경(읽기 전용), PaperZD 
   ```
   `[ActionAnim] BP_Monster_C_0 -> Attack/Defend/Hit/Death` 가 찍히면 코드 쪽은 정상. 안 찍히면 시퀀스 연결, 찍히는데 안 보이면 Sprite/BP 노드 쪽.
 
+## ABP 없이 넣기 (DT_MonsterVisual, 2026-10-26)
+
+변종이 많아서 몬스터마다 AS / ABP 를 손으로 만들지 않고, **플립북 6개를 표로 연결**하는 방식으로 바꿨다.
+`DT_MonsterVisual`(행 이름 = DT_Monster 행)에 행이 있는 몬스터는 ABP 를 끄고 그 플립북을 직접 재생한다
+(대기 반복, 공격 / 방어 / 스페셜 / 피격은 한 번 재생 후 대기, 사망은 끝나면 그림을 끔). 행이 없는 몬스터는 BP_Monster 의 ABP 그대로.
+
+```
+python -I PixelLab/tools/ue_monster_flipbooks.py prepare slime_red slime_heal     # Saved/MonsterSheets 에 언리얼용 시트
+UnrealEditor-Cmd.exe Terminus.uproject -run=pythonscript -script="PixelLab/tools/ue_monster_flipbooks.py" -unattended -nop4 -nosplash
+```
+
+- 지금 PixelLab 시트(`<이름>_<동작>_sheet.png`)는 **왼쪽을 본다** (미리보기 GIF 와 같음). `prepare` 가 프레임마다 좌우만 뒤집어 언리얼용(오른쪽)으로 만든다.
+- 에셋 위치: `/Game/KSH/Characters/Monster/Sprites/<이름>/` (텍스처 6, 스프라이트, 플립북 6)
+- 그다음 `Data/DT_MonsterVisual.csv` 에 행을 넣고 DT 를 다시 임포트한다. 자동 테스트 `Terminus.Data.MonsterVisuals` 가 플립북 / 시트 칸을 검사한다.
+- ⚠️ 스프라이트를 복제해 **텍스처를 바꾸면 UV 가 예전 텍스처 크기 비율로 다시 맞춰진다** (192 -> 213.3, 64 -> 71.1). 옆 프레임과 반씩 섞여 보인다. 스크립트는 `source_texture_dimension` 을 새 텍스처 크기로 먼저 정하고 UV 를 넣는다.
+
 ## 재활용 먼저 (새로 뽑기 전에)
 
 기획서의 외형·동작을 기존 몬스터와 비교해 먼저 나눈다.

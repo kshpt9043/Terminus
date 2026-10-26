@@ -8,6 +8,8 @@
 #include "Combat/CombatStatsComponent.h"
 #include "Data/TerminusDataSettings.h"
 #include "Dungeon/DungeonCombatComponent.h"
+#include "Net/UnrealNetwork.h"
+#include "PaperFlipbook.h"
 
 ATerminusMonster::ATerminusMonster()
 {
@@ -20,6 +22,7 @@ void ATerminusMonster::BeginPlay()
 	Super::BeginPlay();
 
 	InitAsMonster(MonsterRow);
+	ApplyVisual();
 
 	if (HasAuthority())
 	{
@@ -41,8 +44,58 @@ void ATerminusMonster::InitAsMonster(FName RowName)
 	CombatStats->InitFrom(Row->ToStats());
 }
 
+void ATerminusMonster::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	DOREPLIFETIME(ATerminusMonster, MonsterRow);
+}
+
+void ATerminusMonster::SetMonsterRow(FName RowName)
+{
+	MonsterRow = RowName;
+	if (HasActorBegunPlay()) ApplyVisual();   // 보통은 FinishSpawning 전이라 BeginPlay 가 적용함
+}
+
+void ATerminusMonster::OnRep_MonsterRow()
+{
+	ApplyVisual();
+}
+
+void ATerminusMonster::ApplyVisual()
+{
+	const FMonsterVisualRow* Look = UTerminusDataSettings::FindMonsterVisualRow(MonsterRow);
+	UPaperFlipbook* Idle = Look ? Look->Idle.LoadSynchronous() : nullptr;
+	if (!Idle) return;   // 외형 표에 없음 -> BP 의 ABP 그대로
+
+	VisualIdle = Idle;
+	VisualAttack = Look->Attack.LoadSynchronous();
+	VisualHit = Look->Hit.LoadSynchronous();
+	VisualDefend = Look->Defend.LoadSynchronous();
+	VisualSpecial = Look->Special.LoadSynchronous();
+	VisualDeath = Look->Death.LoadSynchronous();
+
+	// ABP 가 매 프레임 플립북을 덮어쓰니 끄고, 플립북을 직접 재생 (배틀러의 MulticastPlayActionFlipbook 경로)
+	if (Animation) Animation->SetAnimInstanceClass(nullptr);
+	if (Sprite)
+	{
+		Sprite->SetFlipbook(VisualIdle);
+		Sprite->SetLooping(true);
+		Sprite->PlayFromStart();
+	}
+	UE_LOG(LogTemp, Log, TEXT("[MonsterVisual] %s -> %s (%s)"), *GetName(), *MonsterRow.ToString(), *Look->Source);
+}
+
 void ATerminusMonster::PlayIntentAnim(EMonsterIntentKind Kind)
 {
+	if (UsesFlipbooks())
+	{
+		UPaperFlipbook* Flipbook = Kind == EMonsterIntentKind::Attack ? VisualAttack.Get()
+			: Kind == EMonsterIntentKind::Defend ? VisualDefend.Get()
+			: VisualSpecial.Get();
+		if (Flipbook) MulticastPlayActionFlipbook(Flipbook);
+		return;
+	}
+
 	UPaperZDAnimSequence* Sequence = nullptr;
 	switch (Kind)
 	{
@@ -64,14 +117,20 @@ void ATerminusMonster::PlayIntentAnim(EMonsterIntentKind Kind)
 void ATerminusMonster::HandleDamaged(UCombatStatsComponent* Self, int32 HealthLost, UCombatStatsComponent* DamageInstigator)
 {
 	// 이 한 대로 죽었으면 사망 연출이 따로 나감
-	if (!HitSequence || CombatStats->IsDead()) return;
+	if (CombatStats->IsDead()) return;
+	if (UsesFlipbooks())
+	{
+		if (VisualHit) MulticastPlayActionFlipbook(VisualHit);
+		return;
+	}
+	if (!HitSequence) return;
 
 	MulticastPlaySequence(HitSequence);
 }
 
 void ATerminusMonster::HandleDied(UCombatStatsComponent* Self)
 {
-	if (DeathSequence) MulticastPlayDeath();
+	if (DeathSequence || VisualDeath) MulticastPlayDeath();
 }
 
 void ATerminusMonster::MulticastPlaySequence_Implementation(UPaperZDAnimSequence* Sequence)
@@ -81,7 +140,26 @@ void ATerminusMonster::MulticastPlaySequence_Implementation(UPaperZDAnimSequence
 
 void ATerminusMonster::MulticastPlayDeath_Implementation()
 {
+	if (UsesFlipbooks())
+	{
+		if (!VisualDeath || !Sprite) return;
+		// 끝나면 대기로 돌아가지 않고 그림을 끔
+		Sprite->OnFinishedPlaying.RemoveAll(this);
+		Sprite->OnFinishedPlaying.AddUniqueDynamic(this, &ATerminusMonster::OnDeathFlipbookFinished);
+		RestFlipbook = nullptr;
+		Sprite->SetFlipbook(VisualDeath);
+		Sprite->SetLooping(false);
+		Sprite->PlayFromStart();
+		UE_LOG(LogTemp, Log, TEXT("[ActionAnim] %s -> %s"), *GetName(), *VisualDeath->GetName());
+		return;
+	}
 	PlayOverride(DeathSequence, true);
+}
+
+void ATerminusMonster::OnDeathFlipbookFinished()
+{
+	Sprite->OnFinishedPlaying.RemoveDynamic(this, &ATerminusMonster::OnDeathFlipbookFinished);
+	Sprite->SetVisibility(false);
 }
 
 bool ATerminusMonster::PlayOverride(UPaperZDAnimSequence* Sequence, bool bDeath)
@@ -114,7 +192,9 @@ void ATerminusMonster::HideAfterDeath()
 	if (bHideQueued) return;
 	bHideQueued = true;
 
-	const float Delay = DeathSequence ? DeathSequence->GetTotalDuration() : 0.f;
+	const float Delay = UsesFlipbooks()
+		? (VisualDeath ? VisualDeath->GetTotalDuration() : 0.f)
+		: (DeathSequence ? DeathSequence->GetTotalDuration() : 0.f);
 	if (Delay <= 0.f)
 	{
 		FinishHide();

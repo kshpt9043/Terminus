@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "Engine/DataTable.h"
 #include "Data/StatTypes.h"
+#include "PaperFlipbook.h"
 #include "MonsterTypes.generated.h"
 
 // 몬스터 한 마리를 정의하는 열거형과 행 구조체
@@ -118,4 +119,43 @@ struct FMonsterRow : public FTableRowBase
 		S.Defense = BaseDEF;
 		return S;
 	}
+};
+
+/**
+ * 몬스터 외형 (DT_MonsterVisual, 행 이름 = DT_Monster 행 이름). 기획 엑셀이 아니라 아트 쪽 표
+ * PixelLab 시트(PixelLab/<이름>/) 를 넣은 플립북 6개. 그림은 오른쪽을 보는 원본 기준 (몬스터는 좌우 반전돼 왼쪽을 봄)
+ * 행이 있는 몬스터는 ABP 대신 이 플립북을 직접 재생하고, 없는 몬스터는 BP_Monster 의 ABP(파란 슬라임) 그대로
+ */
+USTRUCT(BlueprintType)
+struct FMonsterVisualRow : public FTableRowBase
+{
+	GENERATED_BODY()
+
+	// 평소 (반복)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	TSoftObjectPtr<UPaperFlipbook> Idle;
+
+	// 공격 의도
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	TSoftObjectPtr<UPaperFlipbook> Attack;
+
+	// 체력이 깎였을 때
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	TSoftObjectPtr<UPaperFlipbook> Hit;
+
+	// 방어 의도
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	TSoftObjectPtr<UPaperFlipbook> Defend;
+
+	// 버프 / 디버프 의도
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	TSoftObjectPtr<UPaperFlipbook> Special;
+
+	// 끝나면 대기로 돌아가지 않고 사라짐
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	TSoftObjectPtr<UPaperFlipbook> Death;
+
+	// 어느 그림인지 (PixelLab 폴더 이름). 메모용
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	FString Source;
 };

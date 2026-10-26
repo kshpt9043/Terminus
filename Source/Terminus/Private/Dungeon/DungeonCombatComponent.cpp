@@ -630,6 +630,7 @@ void UDungeonCombatComponent::SpawnMonsters(const FRoomNode& Room, const UDungeo
 
 		// 구역끼리 떨어져 있어도 모든 클라가 받게 (관전 대비). 몇 마리 안 됨
 		Monster->bAlwaysRelevant = true;
+		Monster->SetMonsterRow(Rows[i]);   // 외형 (DT_MonsterVisual). 복제돼서 클라도 같은 그림
 		Monster->FinishSpawning(SpawnTransform);
 
 		// 스텟: 층 보정 -> 인원 체력 보정 -> 개체 랜덤 (기획 순서)

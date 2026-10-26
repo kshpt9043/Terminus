@@ -9,6 +9,10 @@
 #include "Data/TerminusDataSettings.h"
 #include "Engine/DataTable.h"
 #include "GameFramework/Actor.h"
+#include "Data/MonsterTypes.h"
+#include "PaperFlipbook.h"
+#include "PaperSprite.h"
+#include "Engine/Texture2D.h"
 
 #if WITH_DEV_AUTOMATION_TESTS
 
@@ -119,6 +123,49 @@ bool FTerminusMonsterSkillRefsTest::RunTest(const FString& Parameters)
 	});
 	AddInfo(FString::Printf(TEXT("몬스터 스킬 칸 %d개 확인"), Checked));
 	return Checked > 0;
+}
+
+// 몬스터 외형 표: 플립북 6개가 다 있고, 스프라이트가 시트의 정사각형 칸 하나씩을 가리키는지
+// (10-26: 템플릿 스프라이트의 텍스처를 바꾸면 UV 가 예전 텍스처 비율로 틀어져 옆 프레임과 섞여 보이던 문제)
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FTerminusMonsterVisualTest, "Terminus.Data.MonsterVisuals",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FTerminusMonsterVisualTest::RunTest(const FString& Parameters)
+{
+	const UDataTable* Table = UTerminusDataSettings::Get()->MonsterVisualTable.LoadSynchronous();
+	if (!TestNotNull(TEXT("DT_MonsterVisual"), Table)) return false;
+
+	int32 Sprites = 0;
+	Table->ForeachRow<FMonsterVisualRow>(TEXT("MonsterVisuals"), [&](const FName& Key, const FMonsterVisualRow& Row)
+	{
+		TestNotNull(FString::Printf(TEXT("%s: DT_Monster 에 있음"), *Key.ToString()), UTerminusDataSettings::FindMonsterRow(Key));
+
+		for (const TSoftObjectPtr<UPaperFlipbook>& Ref : { Row.Idle, Row.Attack, Row.Hit, Row.Defend, Row.Special, Row.Death })
+		{
+			const UPaperFlipbook* Flipbook = Ref.LoadSynchronous();
+			if (!TestNotNull(FString::Printf(TEXT("%s: 플립북 %s"), *Key.ToString(), *Ref.ToString()), Flipbook)) continue;
+			TestTrue(FString::Printf(TEXT("%s: %s 프레임 있음"), *Key.ToString(), *Flipbook->GetName()), Flipbook->GetNumKeyFrames() > 0);
+
+			for (int32 i = 0; i < Flipbook->GetNumKeyFrames(); ++i)
+			{
+				const UPaperSprite* Sprite = Flipbook->GetKeyFrameChecked(i).Sprite;
+				if (!TestNotNull(TEXT("스프라이트"), Sprite)) continue;
+				++Sprites;
+
+				const FVector2D Size = Sprite->GetSourceSize();
+				const FVector2D UV = Sprite->GetSourceUV();
+				// 원본 이미지 크기로 비교 (-nullrhi 에선 GetSizeX/Y 가 0)
+				const UTexture2D* Texture = Sprite->GetSourceTexture();
+				const FIntPoint TexSize = Texture ? Texture->GetImportedSize() : FIntPoint::ZeroValue;
+				const bool bSquare = FMath::IsNearlyEqual(Size.X, Size.Y) && FMath::IsNearlyEqual(Size.Y, (float)TexSize.Y);
+				const bool bOnGrid = Size.X > 0 && FMath::IsNearlyEqual(FMath::Fmod(UV.X, Size.X), 0.0, 0.01) && FMath::IsNearlyZero(UV.Y)
+					&& UV.X + Size.X <= TexSize.X + 0.01;
+				TestTrue(FString::Printf(TEXT("%s: 시트 칸 하나 (UV %.1f, 크기 %.1f x %.1f)"), *Sprite->GetName(), UV.X, Size.X, Size.Y), bSquare && bOnGrid);
+			}
+		}
+	});
+	AddInfo(FString::Printf(TEXT("스프라이트 %d개 확인"), Sprites));
+	return Sprites > 0;
 }
 
 // 조합형 / 새 규칙 수치 확인

@@ -114,6 +114,13 @@ FName UTerminusDataSettings::ResolveSkillRow(FName RowOrSkillID)
 	return NAME_None;
 }
 
+const FMonsterVisualRow* UTerminusDataSettings::FindMonsterVisualRow(FName RowName)
+{
+	const UDataTable* Table = Get()->MonsterVisualTable.LoadSynchronous();
+	// 외형이 없는 몬스터가 많아서 경고 없이
+	return Table && !RowName.IsNone() ? Table->FindRow<FMonsterVisualRow>(RowName, TEXT("FindMonsterVisualRow"), false) : nullptr;
+}
+
 const FEventRow* UTerminusDataSettings::FindEventRow(FName RowName)
 {
 	return FindIn<FEventRow>(Get()->EventTable, RowName, TEXT("FindEventRow"));

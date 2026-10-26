@@ -7,7 +7,9 @@
 #include "TerminusMonster.generated.h"
 
 class UCombatStatsComponent;
+class UPaperFlipbook;
 class UPaperZDAnimSequence;
+struct FMonsterVisualRow;
 enum class EMonsterIntentKind : uint8;
 
 /**
@@ -32,12 +34,24 @@ public:
 	// 죽은 몬스터를 숨길 때 서버가 부름. 사망 시퀀스가 있으면 끝까지 보여주고 숨김
 	void HideAfterDeath();
 
+	// 어떤 몬스터인지 (DT_Monster 행). 스폰할 때 FinishSpawning 전에 서버가 정함. 복제돼서 각 화면이 외형을 고름
+	void SetMonsterRow(FName RowName);
+	FName GetMonsterRow() const { return MonsterRow; }
+
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
 protected:
 	virtual void BeginPlay() override;
 
-	// 어떤 몬스터인지. DT_Monster 의 행 이름. 레벨에 세울 때 디테일에서 바꿈
-	UPROPERTY(EditAnywhere, Category = "Terminus|Monster")
+	// 어떤 몬스터인지. DT_Monster 의 행 이름. 레벨에 세울 때 디테일에서 바꿈 / 전투가 스폰할 때 정함
+	UPROPERTY(EditAnywhere, ReplicatedUsing = OnRep_MonsterRow, Category = "Terminus|Monster")
 	FName MonsterRow = TEXT("mon_slime");
+
+	UFUNCTION()
+	void OnRep_MonsterRow();
+
+	// DT_MonsterVisual 에 이 몬스터 행이 있으면 ABP 를 끄고 그 플립북으로. 없으면 ABP 그대로
+	void ApplyVisual();
 
 	void InitAsMonster(FName RowName);
 
@@ -83,4 +97,23 @@ private:
 
 	FTimerHandle DeathHideTimer;
 	bool bHideQueued = false;
+
+	// DT_MonsterVisual 의 플립북 (로드해 둠). Idle 이 있으면 플립북 모드
+	UPROPERTY(Transient)
+	TObjectPtr<UPaperFlipbook> VisualIdle;
+	UPROPERTY(Transient)
+	TObjectPtr<UPaperFlipbook> VisualAttack;
+	UPROPERTY(Transient)
+	TObjectPtr<UPaperFlipbook> VisualHit;
+	UPROPERTY(Transient)
+	TObjectPtr<UPaperFlipbook> VisualDefend;
+	UPROPERTY(Transient)
+	TObjectPtr<UPaperFlipbook> VisualSpecial;
+	UPROPERTY(Transient)
+	TObjectPtr<UPaperFlipbook> VisualDeath;
+
+	bool UsesFlipbooks() const { return VisualIdle != nullptr; }
+
+	UFUNCTION()
+	void OnDeathFlipbookFinished();
 };

@@ -60,6 +60,13 @@ public:
 		meta = (RequiredAssetDataTags = "RowStructure=/Script/Terminus.MonsterRow"))
 	TSoftObjectPtr<UDataTable> MonsterTable;
 
+	// 몬스터 외형 (DT_Monster 행 이름으로). 없으면 nullptr -> BP 의 ABP 그대로
+	static const FMonsterVisualRow* FindMonsterVisualRow(FName RowName);
+
+	UPROPERTY(Config, EditAnywhere, Category = "Monster",
+		meta = (RequiredAssetDataTags = "RowStructure=/Script/Terminus.MonsterVisualRow"))
+	TSoftObjectPtr<UDataTable> MonsterVisualTable;
+
 	// 행 이름으로 유물 찾기 (RLC_Common_001 등). 스킬 / 몬스터와 같은 방식
 	static const FRelicRow* FindRelicRow(FName RowName);
 
