@@ -1,0 +1,15 @@
+{
+  "name": "slime_blue",
+  "ue_name": "SlimeBlue",
+  "object_url": "https://backblaze.pixellab.ai/file/pixellab-characters/objects/a0e72fb6-30d5-48e6-8038-473d53fadd5f/fdc9f184-d563-4f7b-9e25-e4f787b5643d",
+  "fps": 10,
+  "preview_scale": 4,
+  "animations": [
+    { "name": "idle",    "kind": "pixellab", "uuid": "3a0b0677-3a9d-40b5-a99d-ab3538c05100", "frames": 9 },
+    { "name": "attack",  "kind": "pixellab", "uuid": "ba21234b-4651-4e8e-8e0c-8629a5624b72", "frames": 7, "pingpong": true },
+    { "name": "hit",     "kind": "pixellab", "uuid": "ca1727f4-3b1c-42a2-835f-bad2a3f5294d", "frames": 9 },
+    { "name": "defend",  "kind": "defend",   "deep": [10, 40, 150] },
+    { "name": "special", "kind": "hop",      "glow_color": [170, 230, 255] },
+    { "name": "death",   "kind": "pixellab", "uuid": "b9fab327-a385-4baa-ae2b-be4d78556735", "frames": 13, "fade_out": 4 }
+  ]
+}

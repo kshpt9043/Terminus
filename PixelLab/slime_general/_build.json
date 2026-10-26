@@ -1,0 +1,12 @@
+{
+  "name": "slime_general",
+  "object": "https://backblaze.pixellab.ai/file/pixellab-characters/objects/a0e72fb6-30d5-48e6-8038-473d53fadd5f/e241e621-d8f7-4bc9-b5aa-097ccc5b5a5e",
+  "base_image": "_pixellab_src/base_shield.png",
+  "idle": "41228203-6495-4244-b0f3-564a33976d13",
+  "attack": "860a2d59-5e91-4bd5-972f-a3a516ad933e",
+  "defend_mode": "raise", "defend_keep": [9, 64, 64, 81],"attack_mode": "raw",
+  "hit": "9c5397f5-0d58-41ca-8dfc-a672549c5d49",
+  "defend": "fd7c43ca-cf19-40ce-8a9c-a8c9bf3ec52d",
+  "special": "22111b4a-469e-4300-9f28-8b92ba2fb508",
+  "death": "9e849125-fe80-46dc-bcc8-7269ee5b34fe"
+}

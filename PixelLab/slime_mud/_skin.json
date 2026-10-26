@@ -1,0 +1,7 @@
+{
+  "name": "slime_mud",
+  "src": "slime_blue",
+  "texture": "_pixellab_src/texture.png",
+  "protrude": "_pixellab_src/twigs.png",
+  "matte": 0.7
+}
