@@ -116,7 +116,7 @@ void ATerminusMonster::PlayIntentAnim(EMonsterIntentKind Kind)
 
 void ATerminusMonster::HandleDamaged(UCombatStatsComponent* Self, int32 HealthLost, UCombatStatsComponent* DamageInstigator)
 {
-	// 이 한 대로 죽었으면 사망 연출이 따로 나감
+	// 이 한 대로 죽었으면 피격 -> 사망을 사망 연출 쪽에서 이어서 재생
 	if (CombatStats->IsDead()) return;
 	if (UsesFlipbooks())
 	{
@@ -140,19 +140,65 @@ void ATerminusMonster::MulticastPlaySequence_Implementation(UPaperZDAnimSequence
 
 void ATerminusMonster::MulticastPlayDeath_Implementation()
 {
+	// 마지막 한 대도 맞는 모습이 보이게: 피격 -> 사망
 	if (UsesFlipbooks())
 	{
-		if (!VisualDeath || !Sprite) return;
-		// 끝나면 대기로 돌아가지 않고 그림을 끔
+		if (!Sprite) return;
 		Sprite->OnFinishedPlaying.RemoveAll(this);
-		Sprite->OnFinishedPlaying.AddUniqueDynamic(this, &ATerminusMonster::OnDeathFlipbookFinished);
 		RestFlipbook = nullptr;
-		Sprite->SetFlipbook(VisualDeath);
-		Sprite->SetLooping(false);
-		Sprite->PlayFromStart();
-		UE_LOG(LogTemp, Log, TEXT("[ActionAnim] %s -> %s"), *GetName(), *VisualDeath->GetName());
+		if (VisualHit)
+		{
+			Sprite->OnFinishedPlaying.AddUniqueDynamic(this, &ATerminusMonster::OnLethalHitFlipbookFinished);
+			Sprite->SetFlipbook(VisualHit);
+			Sprite->SetLooping(false);
+			Sprite->PlayFromStart();
+			UE_LOG(LogTemp, Log, TEXT("[ActionAnim] %s -> %s (마지막 피격)"), *GetName(), *VisualHit->GetName());
+			return;
+		}
+		PlayDeathFlipbook();
 		return;
 	}
+
+	if (HitSequence && PlayLethalHitOverride()) return;
+	PlayOverride(DeathSequence, true);
+}
+
+void ATerminusMonster::OnLethalHitFlipbookFinished()
+{
+	Sprite->OnFinishedPlaying.RemoveDynamic(this, &ATerminusMonster::OnLethalHitFlipbookFinished);
+	PlayDeathFlipbook();
+}
+
+void ATerminusMonster::PlayDeathFlipbook()
+{
+	// 사망 그림이 없으면 바로 끔
+	if (!VisualDeath)
+	{
+		Sprite->SetVisibility(false);
+		return;
+	}
+	// 끝나면 대기로 돌아가지 않고 그림을 끔
+	Sprite->OnFinishedPlaying.AddUniqueDynamic(this, &ATerminusMonster::OnDeathFlipbookFinished);
+	Sprite->SetFlipbook(VisualDeath);
+	Sprite->SetLooping(false);
+	Sprite->PlayFromStart();
+	UE_LOG(LogTemp, Log, TEXT("[ActionAnim] %s -> %s"), *GetName(), *VisualDeath->GetName());
+}
+
+bool ATerminusMonster::PlayLethalHitOverride()
+{
+	UPaperZDAnimInstance* AnimInstance = Animation ? Animation->GetAnimInstance() : nullptr;
+	if (!AnimInstance) return false;
+
+	UE_LOG(LogTemp, Log, TEXT("[ActionAnim] %s -> %s (마지막 피격)"), *GetName(), *HitSequence->GetName());
+	FZDOnAnimationOverrideEndSignature OnEnd;
+	OnEnd.BindUObject(this, &ATerminusMonster::OnLethalHitOverrideEnd);
+	return AnimInstance->PlayAnimationOverride(HitSequence, TEXT("DefaultSlot"), 1.f, 0.f, OnEnd);
+}
+
+void ATerminusMonster::OnLethalHitOverrideEnd(bool bCompleted)
+{
+	// 끊겼어도(다른 연출이 덮음) 사망은 나와야 함
 	PlayOverride(DeathSequence, true);
 }
 
@@ -192,9 +238,10 @@ void ATerminusMonster::HideAfterDeath()
 	if (bHideQueued) return;
 	bHideQueued = true;
 
+	// 마지막 피격 + 사망을 다 보여 준 뒤 숨김
 	const float Delay = UsesFlipbooks()
-		? (VisualDeath ? VisualDeath->GetTotalDuration() : 0.f)
-		: (DeathSequence ? DeathSequence->GetTotalDuration() : 0.f);
+		? (VisualHit ? VisualHit->GetTotalDuration() : 0.f) + (VisualDeath ? VisualDeath->GetTotalDuration() : 0.f)
+		: (HitSequence ? HitSequence->GetTotalDuration() : 0.f) + (DeathSequence ? DeathSequence->GetTotalDuration() : 0.f);
 	if (Delay <= 0.f)
 	{
 		FinishHide();

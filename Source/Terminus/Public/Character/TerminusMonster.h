@@ -116,4 +116,11 @@ private:
 
 	UFUNCTION()
 	void OnDeathFlipbookFinished();
+
+	// 죽는 한 대: 피격을 먼저 보여 주고 끝나면 사망
+	UFUNCTION()
+	void OnLethalHitFlipbookFinished();
+	void PlayDeathFlipbook();
+	bool PlayLethalHitOverride();
+	void OnLethalHitOverrideEnd(bool bCompleted);
 };
