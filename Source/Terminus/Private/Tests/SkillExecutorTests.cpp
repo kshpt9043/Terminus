@@ -98,6 +98,29 @@ bool FTerminusAllSkillsTest::RunTest(const FString& Parameters)
 	return Count > 0;
 }
 
+// 모든 몬스터의 스킬 칸이 실제 스킬 행을 가리키는지 (10-26: SkillID 로 적힌 칸 때문에 몬스터가 아무 행동도 안 하던 버그)
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FTerminusMonsterSkillRefsTest, "Terminus.Data.MonsterSkillRefs",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FTerminusMonsterSkillRefsTest::RunTest(const FString& Parameters)
+{
+	const UDataTable* Table = UTerminusDataSettings::Get()->MonsterTable.LoadSynchronous();
+	if (!TestNotNull(TEXT("DT_Monster"), Table)) return false;
+
+	int32 Checked = 0;
+	Table->ForeachRow<FMonsterRow>(TEXT("MonsterSkillRefs"), [&](const FName& Key, const FMonsterRow& Row)
+	{
+		for (const FName& Skill : { Row.Skill1_ID, Row.Skill2_ID, Row.Skill3_ID })
+		{
+			if (Skill.IsNone()) continue;
+			++Checked;
+			TestNotNull(FString::Printf(TEXT("%s: 스킬 '%s' 이 DT_Skill 행"), *Key.ToString(), *Skill.ToString()), UTerminusDataSettings::FindSkillRow(Skill));
+		}
+	});
+	AddInfo(FString::Printf(TEXT("몬스터 스킬 칸 %d개 확인"), Checked));
+	return Checked > 0;
+}
+
 // 조합형 / 새 규칙 수치 확인
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FTerminusSkillRulesTest, "Terminus.Skill.Rules",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)

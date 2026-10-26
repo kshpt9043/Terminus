@@ -1,58 +1,58 @@
 ﻿RowName,MonsterID,DisplayName_KR,MonsterCategory,Theme_KR,AppearFloor,BaseHP,BaseATK,BaseDEF,Skill1_ID,Skill1_Weight,Skill2_ID,Skill2_Weight,Skill3_ID,Skill3_Weight,PassiveID,SpecialMechanic_Notes,SkeletalMesh,AnimMontageTag,Concept_KR
-mon_slime,M_SLI_N01,슬라임,Normal,슬라임 왕국,표층,25,0,0,SK_SLI_001,5,SK_SLI_002,5,,0,,,,,기본적인 슬라임
-mon_healslime,M_SLI_N02,힐 슬라임,Normal,슬라임 왕국,표층,22,0,1,SK_SLI_001,5,SK_SLI_002,5,SK_SLI_003,10,,,,,회복을 사용하는 슬라임
-mon_lavaslime,M_SLI_N03,라바 슬라임,Normal,슬라임 왕국,표층,27,0,0,SK_SLI_004,3,SK_SLI_002,5,SK_SLI_001,5,,,,,방어를 하락시키는 [용암] 상태이상을 활용하는 슬라임
-mon_redslime,M_SLI_N04,레드 슬라임,Normal,슬라임 왕국,표층,30,2,2,SK_SLI_001,5,SK_SLI_002,5,,0,,"기본 슬라임과 동일 스킬 구성, 스탯만 상향하여 차별화",,,기본 슬라임보다 조금 강한 슬라임
-mon_poisonslime,M_SLI_N05,포이즌 슬라임,Normal,슬라임 왕국,표층,26,0,1,SK_SLI_005,3,SK_SLI_002,5,SK_SLI_001,5,,,,,지속 데미지를 주는 [중독] 공격을 하는 슬라임
-mon_iceslime,M_SLI_N06,아이스 슬라임,Normal,슬라임 왕국,표층,24,0,0,SK_SLI_006,3,SK_SLI_002,5,SK_SLI_001,5,,,,,[얼음] 상태이상을 통해 공격력을 감소시키는 슬라임
-mon_mudslime,M_SLI_N07,머드 슬라임,Normal,슬라임 왕국,표층,28,0,0,SK_SLI_007,5,SK_SLI_002,5,SK_SLI_001,5,RLC_Monster_SLI01,,,,"피격 시 보호막을 획득하는 패시브를 가진 슬라임
+mon_slime,M_SLI_N01,슬라임,Normal,슬라임 왕국,표층,25,0,0,slime_strike,5,condense,5,,0,,,,,기본적인 슬라임
+mon_healslime,M_SLI_N02,힐 슬라임,Normal,슬라임 왕국,표층,22,0,1,slime_strike,5,condense,5,mucus_heal,10,,,,,회복을 사용하는 슬라임
+mon_lavaslime,M_SLI_N03,라바 슬라임,Normal,슬라임 왕국,표층,27,0,0,lava_spit,3,condense,5,slime_strike,5,,,,,방어를 하락시키는 [용암] 상태이상을 활용하는 슬라임
+mon_redslime,M_SLI_N04,레드 슬라임,Normal,슬라임 왕국,표층,30,2,2,slime_strike,5,condense,5,,0,,"기본 슬라임과 동일 스킬 구성, 스탯만 상향하여 차별화",,,기본 슬라임보다 조금 강한 슬라임
+mon_poisonslime,M_SLI_N05,포이즌 슬라임,Normal,슬라임 왕국,표층,26,0,1,toxic_split,3,condense,5,slime_strike,5,,,,,지속 데미지를 주는 [중독] 공격을 하는 슬라임
+mon_iceslime,M_SLI_N06,아이스 슬라임,Normal,슬라임 왕국,표층,24,0,0,ice_split,3,condense,5,slime_strike,5,,,,,[얼음] 상태이상을 통해 공격력을 감소시키는 슬라임
+mon_mudslime,M_SLI_N07,머드 슬라임,Normal,슬라임 왕국,표층,28,0,0,slime_charge,5,condense,5,slime_strike,5,RLC_Monster_SLI01,,,,"피격 시 보호막을 획득하는 패시브를 가진 슬라임
 패시브: 체력이 소모될 시 3의 보호막을 획득한다."
-mon_metalslime,M_SLI_G01,메탈 슬라임,Guardian,슬라임 왕국,표층,58,0,5,SK_SLI_008,3,SK_SLI_009,5,SK_SLI_005,3,,"높은 DEF 스탯 자체가 핵심 특징, 스킬은 보조 수단",,,방어력이 높은 단단한 슬라임
-mon_acidslime,M_SLI_G02,에씨드 슬라임,Guardian,슬라임 왕국,표층,47,1,3,SK_SLI_010,3,SK_SLI_002,5,SK_SLI_007,5,,EnergyCostDebuff는 순수 디버프(피해 없음) — 대상 스킬 에너지 소모량 +1,,,스킬의 에너지 사용량을 1 높이는 디버프를 거는 슬라임
-mon_ancientslime,M_SLI_G03,에이션트 슬라임,Guardian,슬라임 왕국,표층,40,1,1,SK_SLI_011,3,SK_SLI_007,5,SK_SLI_015,5,RLC_Monster_SLI02,"부활할 때마다 ATK/DEF 누적 변동(ReviveATKMod/ReviveDEFMod 값만큼), 최대 3회",,,"3번 부활하는 슬라임. 부활할 때마다 공격 증가, 방어 감소   패시브: 3번 부활. 부활할때마다 공격 1증가 방어 1 감소"
-mon_slimegeneral,M_SLI_G04,슬라임 장군,Guardian,슬라임 왕국,표층,65,2,0,SK_SLI_013,5,SK_SLI_012,3,SK_SLI_002,5,,,,,"강력한 공격력을 바탕으로 전투하는 슬라임
+mon_metalslime,M_SLI_G01,메탈 슬라임,Guardian,슬라임 왕국,표층,58,0,5,metallic,3,metal_press,5,toxic_split,3,,"높은 DEF 스탯 자체가 핵심 특징, 스킬은 보조 수단",,,방어력이 높은 단단한 슬라임
+mon_acidslime,M_SLI_G02,에씨드 슬라임,Guardian,슬라임 왕국,표층,47,1,3,acid_split,3,condense,5,slime_charge,5,,EnergyCostDebuff는 순수 디버프(피해 없음) — 대상 스킬 에너지 소모량 +1,,,스킬의 에너지 사용량을 1 높이는 디버프를 거는 슬라임
+mon_ancientslime,M_SLI_G03,에이션트 슬라임,Guardian,슬라임 왕국,표층,40,1,1,primal_fear,3,slime_charge,5,harden,5,RLC_Monster_SLI02,"부활할 때마다 ATK/DEF 누적 변동(ReviveATKMod/ReviveDEFMod 값만큼), 최대 3회",,,"3번 부활하는 슬라임. 부활할 때마다 공격 증가, 방어 감소   패시브: 3번 부활. 부활할때마다 공격 1증가 방어 1 감소"
+mon_slimegeneral,M_SLI_G04,슬라임 장군,Guardian,슬라임 왕국,표층,65,2,0,generals_sword,5,declaration_of_war,3,condense,5,,,,,"강력한 공격력을 바탕으로 전투하는 슬라임
 랜덤한 일반 슬라임 몬스터 2마리와 같이 스폰된다"
-mon_fusionslime,M_SLI_B01,퓨전 슬라임,Boss,슬라임 왕국,1층,75,1,2,SK_SLI_014,3,SK_SLI_015,5,,0,,라바/포이즌/아이스의 상태이상을 확률적으로 동시에 걸 수 있는 새로운 스킬,,,"라바, 포이즌, 아이스 슬라임의 기술을 모두 사용하는 슬라임 기술 한 개가 3가지 상태이상을 확률적으로 모두 제어한다."
-mon_slimeking,M_SLI_B02,슬라임 킹,Boss,슬라임 왕국,2층,100,2,3,SK_SLI_017,5,SK_SLI_016,3,SK_SLI_015,5,RLC_Monster_SLI03,전투 시작 시 가디언 몬스터 1종을 랜덤 소환. 소환된 가디언이 모두 처치되기 전까지 본체가 받는 피해는 1로 고정됨 — Summon 시스템 및 DamageCap 로직 별도 구현 필요(5개 기본 EffectType 범위 밖),,,"가디언 몬스터를 1마리 소환한 채로 전투를 진행한다. 자체 전투력은 낮지만, 가디언 몬스터를 처치하기 전까지 데미지가 1만 입는다.
+mon_fusionslime,M_SLI_B01,퓨전 슬라임,Boss,슬라임 왕국,1층,75,1,2,trinity,3,harden,5,,0,,라바/포이즌/아이스의 상태이상을 확률적으로 동시에 걸 수 있는 새로운 스킬,,,"라바, 포이즌, 아이스 슬라임의 기술을 모두 사용하는 슬라임 기술 한 개가 3가지 상태이상을 확률적으로 모두 제어한다."
+mon_slimeking,M_SLI_B02,슬라임 킹,Boss,슬라임 왕국,2층,100,2,3,kings_sword,5,kings_roar,3,harden,5,RLC_Monster_SLI03,전투 시작 시 가디언 몬스터 1종을 랜덤 소환. 소환된 가디언이 모두 처치되기 전까지 본체가 받는 피해는 1로 고정됨 — Summon 시스템 및 DamageCap 로직 별도 구현 필요(5개 기본 EffectType 범위 밖),,,"가디언 몬스터를 1마리 소환한 채로 전투를 진행한다. 자체 전투력은 낮지만, 가디언 몬스터를 처치하기 전까지 데미지가 1만 입는다.
 패시브: 가디언 몬스터가 존재할 경우 한번의 공격에 받는 데미지는 1로 고정된다."
-mon_lizardharrier,M_LIZ_N01,리자드맨 약탈자,Normal,리자드의 늪,중층,58,0,0,SK_LIZ_001,5,SK_LIZ_002,5,SK_LIZ_003,5,,,,,"기본적인 리자드 맨, 단검을 무장함"
-mon_lizardspearman,M_LIZ_N02,리자드맨 창병,Normal,리자드의 늪,중층,62,1,0,SK_LIZ_004,5,SK_LIZ_002,5,,0,,,,,창을 활용하여 높은 공격력을 가진 리자드 맨
-mon_lizardwarrior,M_LIZ_N03,리자드맨 전사,Normal,리자드의 늪,중층,64,1,1,SK_LIZ_005,5,SK_LIZ_006,5,,0,,,,,적당한 공격력과 적당한 방어력을 보유한 리자드 맨
-mon_lizardpowwow,M_LIZ_N04,리자드맨 주술사,Normal,리자드의 늪,중층,54,1,0,SK_LIZ_007,1,SK_LIZ_008,1,SK_LIZ_009,4,RLC_Monster_LIZ01,,,,버프와 디버프를 활용하는 리자드맨
-mon_lizardhunter,M_LIZ_N05,리자드맨 사냥꾼,Normal,리자드의 늪,중층,54,2,-1,SK_LIZ_010,5,SK_LIZ_011,2,SK_LIZ_002,5,,,,,포박(에너지 사용량 증가)을 활용한 리자드맨
-mon_lizardscout,M_LIZ_N06,리자드맨 정찰병,Normal,리자드의 늪,중층,60,1,1,SK_LIZ_003,5,SK_LIZ_011,3,SK_LIZ_002,5,,,,,"회피와 활을 활용한 강력한 공격력을 보유한 리자드맨, 방어력이 낮음"
-mon_lizardguard,M_LIZ_N07,리자드맨 수호병,Normal,리자드의 늪,중층,70,0,4,SK_LIZ_012,5,SK_LIZ_013,5,,0,,,,,높은 방어력을 보유한 리자드맨
-mon_lizardchampion,M_LIZ_G01,리자드맨 투사,Guardian,리자드의 늪,중층,124,3,0,SK_LIZ_014,3,SK_LIZ_015,5,SK_LIZ_016,5,,,,,강력한 공격력을 보유한 투사
-mon_lizardassassin,M_LIZ_G02,리자드맨 암살자,Guardian,리자드의 늪,중층,90,4,-1,SK_LIZ_017,3,SK_LIZ_018,3,SK_LIZ_011,3,RLC_Monster_LIZ02,,,,"독과 암기, 회피를 활용한 공격을 하는 암살자"
-mon_lizarddestroyer,M_LIZ_G03,리자드맨 파괴자,Guardian,리자드의 늪,중층,140,3,1,SK_LIZ_020,5,SK_LIZ_021,5,SK_LIZ_016,5,RLC_Monster_LIZ03,,,,철퇴를 활용하여 굉장히 강력한 공격력을 보유한 파괴자. 한번 공격한 후에는 적의 공격에 무력해진다.
-mon_lizardleader,M_LIZ_G04,리자드맨 인도자,Guardian,리자드의 늪,중층,100,0,3,SK_LIZ_022,1,SK_LIZ_023,1,SK_LIZ_024,4,RLC_Monster_LIZ04,,,,일반 몬스터와 함께 등장하며 다양한 버프와 디버프를 활용하는 주술사의 상위존재.
-mon_lizardchieftain,M_LIZ_B01,리자드맨 족장,Boss,리자드의 늪,3층,170,2,2,SK_LIZ_025,3,SK_LIZ_026,3,SK_LIZ_027,5,RLC_Monster_LIZ05,,,,일반 몬스터와 함께 소환되며 강력한 공격력과 방어력을 소유한 공방일체의 존재.
-mon_lizardking,M_LIZ_B02,리자드 킹,Boss,리자드의 늪,4층,210,4,4,SK_LIZ_028,3,SK_LIZ_029,5,SK_LIZ_026,3,RLC_Monster_LIZ06,,,,리자드의 부흥을 이끌었던 존재. 보호막을 보유중인 존재를 더 강하게 때릴 수 있다.
-mon_salamander,M_ELM_N01,샐러맨더,Normal,정령계,심층,108,0,0,SK_ELM_006,3,SK_ELM_002,5,SK_ELM_007,4,,,,,불의 하급 정령. 허점(용암) 관련 디버프 스킬을 사용한다.
-mon_undine,M_ELM_N02,운디네,Normal,정령계,심층,114,0,1,SK_ELM_001,5,SK_ELM_005,3,SK_ELM_008,3,,,,,물의 하급 정령. 회복과 관련된 효과가 있는 스킬을 사용한다.
-mon_sylph,M_ELM_N03,실프,Normal,정령계,심층,104,1,0,SK_ELM_009,5,SK_ELM_002,5,SK_ELM_010,3,,,,,바람의 하급 정령. 강력한 공격이 특징이다.
-mon_gnome,M_ELM_N04,노움,Normal,정령계,심층,120,1,1,SK_ELM_001,5,SK_ELM_003,3,SK_ELM_011,3,,,,,땅의 하급 정령. 단단한 방어가 특징이다.
-mon_wisp,M_ELM_N05,위스프,Normal,정령계,심층,115,2,-1,SK_ELM_012,3,SK_ELM_002,5,SK_ELM_013,3,,,,,빛의 하급 정령. 불굴(실명) 관련 디버프를 사용한다.
-mon_shade,M_ELM_N06,셰이드,Normal,정령계,심층,116,-1,2,SK_ELM_014,3,SK_ELM_002,5,SK_ELM_015,4,,,,,어둠의 하급 정령. 과욕(어둠) 관련 디버프를 사용한다.
-mon_frost,M_ELM_N07,프로스트,Normal,정령계,심층,115,2,-1,SK_ELM_016,3,SK_ELM_017,3,SK_ELM_018,4,,,,,얼음의 하급 정령. 허약(얼음) 관련 디버프를 사용한다.
-mon_ignis,M_ELM_G01,이그니스,Guardian,정령계,심층,168,2,-1,SK_ELM_019,3,SK_ELM_004,3,SK_ELM_020,4,,,,,불의 상급 정령. 내상을 활용한 공격을 사용한다.
-mon_nereid,M_ELM_G02,네레이드,Guardian,정령계,심층,177,0,1,SK_ELM_021,3,SK_ELM_005,3,SK_ELM_022,4,,,,,물의 상급 정령. 허약(침수) 디버프를 활용한 공격을 사용한다.
-mon_jinn,M_ELM_G03,진,Guardian,정령계,심층,162,2,-1,SK_ELM_023,3,SK_ELM_024,3,SK_ELM_025,4,,,,,바람의 상급 정령. 공포(역풍) 디버프를 활용한 강력한 공격을 사용한다.
-mon_clay,M_ELM_G04,클레이,Guardian,정령계,심층,185,1,2,SK_ELM_026,3,SK_ELM_003,3,SK_ELM_027,3,,,,,땅의 상급 정령. 단단한 방어와 강력한 공격을 사용한다.
-mon_ifrit,M_ELM_B01,이프리트,Boss,정령계,심층,310,2,1,SK_ELM_028,3,SK_ELM_004,3,SK_ELM_029,3,RLC_Monster_ELM06,,,,불의 정령왕. 강력한 공격력이 특징이다.
-mon_naiad,M_ELM_B02,나이아드,Boss,정령계,심층,340,1,3,SK_ELM_030,5,SK_ELM_005,3,SK_ELM_031,3,RLC_Monster_ELM06,,,,물의 정령왕. 공격과 회복을 동시에 하는 것이 특징이다.
-mon_sylphid,M_ELM_B03,실피드,Boss,정령계,심층,320,3,1,SK_ELM_032,5,SK_ELM_033,5,SK_ELM_034,3,RLC_Monster_ELM06,,,,바람의 정령왕. 타수가 많은 공격을 하는 것이 특징이다.
-mon_oread,M_ELM_B04,오레아드,Boss,정령계,심층,350,3,3,SK_ELM_035,5,SK_ELM_036,3,SK_ELM_037,3,RLC_Monster_ELM06,,,,땅의 정령왕. 공격과 동시에 보호막을 획득하는 것이 특징이다.
-mon_magma_imp,M_LAV_N01,마그마 임프,Normal,용암 지대,표층,25,0,0,SK_LAV_002,3,SK_LAV_003,5,SK_LAV_005,3,,,,,용암 웅덩이에서 태어난 소악마. 방어를 하락시키는 [용암] 상태이상을 활용한다.
-mon_ash_hound,M_LAV_N02,애쉬 하운드,Normal,용암 지대,표층,20,0,0,SK_LAV_006,5,SK_LAV_003,5,SK_LAV_007,3,,,,,화산재 평원을 달리는 사냥개. 빠른 2연속 공격과 아군 공격력 증가(용기)가 특징이다.
-mon_basalt_turtle,M_LAV_N03,바살트 터틀,Normal,용암 지대,표층,32,0,1,SK_LAV_001,5,SK_LAV_004,5,SK_LAV_008,3,,,,,현무암 등껍질을 지닌 화산 거북. 단단한 보호막과 방어 상승(철벽)이 특징이다.
-mon_cinder_bat,M_LAV_N04,신더 배트,Normal,용암 지대,표층,22,0,0,SK_LAV_009,5,SK_LAV_003,5,SK_LAV_010,3,,,,,뜨거운 재를 흩뿌리는 화산 박쥐. 회피를 활용한다.
-mon_sulfur_lizard,M_LAV_N05,설퍼 리자드,Normal,용암 지대,표층,27,0,0,SK_LAV_001,5,SK_LAV_003,5,SK_LAV_011,3,,,,,유황 분출구에 서식하는 도마뱀. 에너지 소모량을 늘리는 [산성(과욕)] 공격을 사용한다.
-mon_obsidian_scorpion,M_LAV_N06,옵시디언 스콜피온,Normal,용암 지대,표층,28,0,1,SK_LAV_012,3,SK_LAV_013,5,SK_LAV_014,3,,,,,흑요석 외골격을 지닌 전갈. 받는 피해를 늘리는 [급소] 공격과 [반격] 보호막을 사용한다.
-mon_lava_crab,M_LAV_N07,라바 크랩,Normal,용암 지대,표층,25,0,1,SK_LAV_015,5,SK_LAV_004,5,SK_LAV_016,3,,,,,용암 껍질을 두른 화산 게. 공격과 동시에 보호막을 획득하며 [용암] 디버프를 부여한다.
-mon_magma_golem,M_LAV_G01,마그마 골렘,Guardian,용암 지대,표층,60,0,2,SK_LAV_017,3,SK_LAV_004,5,SK_LAV_018,3,,,,,바위 틈으로 용암이 흐르는 거석 수호자. [강철] 버프와 묵직한 [용암] 강타를 사용한다.
-mon_pyro_wyrm,M_LAV_G02,파이로 웜,Guardian,용암 지대,표층,58,1,1,SK_LAV_019,3,SK_LAV_020,5,SK_LAV_021,3,,,,,지하 마그마 맥을 헤엄치는 화염 지룡. 강한 [용암] 브레스와 [용기] 버프를 사용한다.
-mon_ash_wraith,M_LAV_G03,애쉬 레이스,Guardian,용암 지대,표층,55,1,-1,SK_LAV_022,3,SK_LAV_023,5,SK_LAV_024,3,,,,,화산재 폭풍에서 태어난 망령. 최종 데미지를 낮추는 [공포] 디버프와 [민첩]을 활용한다.
-mon_volcano_salamander,M_LAV_G04,약화된 샐러맨더,Guardian,용암 지대,표층,60,1,1,SK_LAV_025,5,SK_LAV_026,5,SK_LAV_027,4,,,,,불완전하게 현현한 샐러맨더. 체력 회복([가호])과 강력한 물리 공격을 사용한다.
-mon_vulcanus,M_LAV_B01,볼카누스,Boss,용암 지대,1층,75,1,2,SK_LAV_031,3,SK_LAV_032,5,SK_LAV_033,5,,,,,분화구를 등딱지로 삼은 태고의 화산 거신. 광역 [용암] 공격과 3연속 화산탄 폭격을 사용한다.
-mon_weakened_ignis,M_LAV_B02,약화된 이그니스,Boss,용암 지대,2층,100,3,1,SK_LAV_028,3,SK_LAV_029,5,SK_LAV_030,3,,,,,표층에 불완전하게 현현한 상급 불의 정령. 스킬 에너지 사용 시 피해를 주는 [내상]과 [용암]을 사용한다.
+mon_lizardharrier,M_LIZ_N01,리자드맨 약탈자,Normal,리자드의 늪,중층,58,0,0,lizard_dagger_first_form,5,lizard_defense_first_form,5,lizard_dagger_second_form,5,,,,,"기본적인 리자드 맨, 단검을 무장함"
+mon_lizardspearman,M_LIZ_N02,리자드맨 창병,Normal,리자드의 늪,중층,62,1,0,lizard_spear_first_form,5,lizard_defense_first_form,5,,0,,,,,창을 활용하여 높은 공격력을 가진 리자드 맨
+mon_lizardwarrior,M_LIZ_N03,리자드맨 전사,Normal,리자드의 늪,중층,64,1,1,lizard_sword_first_form,5,lizard_defense_second_form,5,,0,,,,,적당한 공격력과 적당한 방어력을 보유한 리자드 맨
+mon_lizardpowwow,M_LIZ_N04,리자드맨 주술사,Normal,리자드의 늪,중층,54,1,0,courage_spell,1,fortitude_spell,1,spell_attack,4,RLC_Monster_LIZ01,,,,버프와 디버프를 활용하는 리자드맨
+mon_lizardhunter,M_LIZ_N05,리자드맨 사냥꾼,Normal,리자드의 늪,중층,54,2,-1,lizard_archery_first_form,5,swift_movement,2,lizard_defense_first_form,5,,,,,포박(에너지 사용량 증가)을 활용한 리자드맨
+mon_lizardscout,M_LIZ_N06,리자드맨 정찰병,Normal,리자드의 늪,중층,60,1,1,lizard_dagger_second_form,5,swift_movement,3,lizard_defense_first_form,5,,,,,"회피와 활을 활용한 강력한 공격력을 보유한 리자드맨, 방어력이 낮음"
+mon_lizardguard,M_LIZ_N07,리자드맨 수호병,Normal,리자드의 늪,중층,70,0,4,lizard_shield_first_form,5,lizard_shield_second_form,5,,0,,,,,높은 방어력을 보유한 리자드맨
+mon_lizardchampion,M_LIZ_G01,리자드맨 투사,Guardian,리자드의 늪,중층,124,3,0,martial_arts_first_form,3,martial_arts_second_form,5,lizard_defense_third_form,5,,,,,강력한 공격력을 보유한 투사
+mon_lizardassassin,M_LIZ_G02,리자드맨 암살자,Guardian,리자드의 늪,중층,90,4,-1,lizard_ambush_first_form,3,lizard_ambush_second_form,3,swift_movement,3,RLC_Monster_LIZ02,,,,"독과 암기, 회피를 활용한 공격을 하는 암살자"
+mon_lizarddestroyer,M_LIZ_G03,리자드맨 파괴자,Guardian,리자드의 늪,중층,140,3,1,lizard_mace_first_form,5,lizard_mace_second_form,5,lizard_defense_third_form,5,RLC_Monster_LIZ03,,,,철퇴를 활용하여 굉장히 강력한 공격력을 보유한 파괴자. 한번 공격한 후에는 적의 공격에 무력해진다.
+mon_lizardleader,M_LIZ_G04,리자드맨 인도자,Guardian,리자드의 늪,중층,100,0,3,guides_fear_spell,1,guides_courage_spell,1,guides_spell_attack,4,RLC_Monster_LIZ04,,,,일반 몬스터와 함께 등장하며 다양한 버프와 디버프를 활용하는 주술사의 상위존재.
+mon_lizardchieftain,M_LIZ_B01,리자드맨 족장,Boss,리자드의 늪,3층,170,2,2,lizard_spear_second_form,3,lizard_shield_final_form,3,lizard_spear_final_form,5,RLC_Monster_LIZ05,,,,일반 몬스터와 함께 소환되며 강력한 공격력과 방어력을 소유한 공방일체의 존재.
+mon_lizardking,M_LIZ_B02,리자드 킹,Boss,리자드의 늪,4층,210,4,4,lizard_sword_second_form,3,lizard_sword_final_form,5,lizard_shield_final_form,3,RLC_Monster_LIZ06,,,,리자드의 부흥을 이끌었던 존재. 보호막을 보유중인 존재를 더 강하게 때릴 수 있다.
+mon_salamander,M_ELM_N01,샐러맨더,Normal,정령계,심층,108,0,0,flame_baptism,3,elm_shield,5,lava_eruption,4,,,,,불의 하급 정령. 허점(용암) 관련 디버프 스킬을 사용한다.
+mon_undine,M_ELM_N02,운디네,Normal,정령계,심층,114,0,1,elm_strike,5,abyssal_veil,3,water_of_life,3,,,,,물의 하급 정령. 회복과 관련된 효과가 있는 스킬을 사용한다.
+mon_sylph,M_ELM_N03,실프,Normal,정령계,심층,104,1,0,gale_slash,5,elm_shield,5,sharp_wind,3,,,,,바람의 하급 정령. 강력한 공격이 특징이다.
+mon_gnome,M_ELM_N04,노움,Normal,정령계,심층,120,1,1,elm_strike,5,earth_shield,3,petrify_skin,3,,,,,땅의 하급 정령. 단단한 방어가 특징이다.
+mon_wisp,M_ELM_N05,위스프,Normal,정령계,심층,115,2,-1,flash_bolt,3,elm_shield,5,blinding_flash,3,,,,,빛의 하급 정령. 불굴(실명) 관련 디버프를 사용한다.
+mon_shade,M_ELM_N06,셰이드,Normal,정령계,심층,116,-1,2,shadow_strike,3,elm_shield,5,dark_erosion,4,,,,,어둠의 하급 정령. 과욕(어둠) 관련 디버프를 사용한다.
+mon_frost,M_ELM_N07,프로스트,Normal,정령계,심층,115,2,-1,icicle_hurl,3,frost_armor,3,freezing_breath,4,,,,,얼음의 하급 정령. 허약(얼음) 관련 디버프를 사용한다.
+mon_ignis,M_ELM_G01,이그니스,Guardian,정령계,심층,168,2,-1,searing_wave,3,flame_barrier,3,spalling,4,,,,,불의 상급 정령. 내상을 활용한 공격을 사용한다.
+mon_nereid,M_ELM_G02,네레이드,Guardian,정령계,심층,177,0,1,torrent_smash,3,abyssal_veil,3,water_pressure,4,,,,,물의 상급 정령. 허약(침수) 디버프를 활용한 공격을 사용한다.
+mon_jinn,M_ELM_G03,진,Guardian,정령계,심층,162,2,-1,tempest_slash,3,whirlwind_barrier,3,raging_headwind,4,,,,,바람의 상급 정령. 공포(역풍) 디버프를 활용한 강력한 공격을 사용한다.
+mon_clay,M_ELM_G04,클레이,Guardian,정령계,심층,185,1,2,earth_shatter,3,earth_shield,3,fortification,3,,,,,땅의 상급 정령. 단단한 방어와 강력한 공격을 사용한다.
+mon_ifrit,M_ELM_B01,이프리트,Boss,정령계,심층,310,2,1,hellfire_strike,3,flame_barrier,3,incarnate_roar,3,RLC_Monster_ELM06,,,,불의 정령왕. 강력한 공격력이 특징이다.
+mon_naiad,M_ELM_B02,나이아드,Boss,정령계,심층,340,1,3,purifying_tidal,5,abyssal_veil,3,purifying_maelstrom,3,RLC_Monster_ELM06,,,,물의 정령왕. 공격과 회복을 동시에 하는 것이 특징이다.
+mon_sylphid,M_ELM_B03,실피드,Boss,정령계,심층,320,3,1,celestial_flurry,5,zephyr_wings,5,blade_wind,3,RLC_Monster_ELM06,,,,바람의 정령왕. 타수가 많은 공격을 하는 것이 특징이다.
+mon_oread,M_ELM_B04,오레아드,Boss,정령계,심층,350,3,3,tectonic_shift,5,citadel,3,judgment_of_earth,3,RLC_Monster_ELM06,,,,땅의 정령왕. 공격과 동시에 보호막을 획득하는 것이 특징이다.
+mon_magma_imp,M_LAV_N01,마그마 임프,Normal,용암 지대,표층,25,0,0,magma_bolt,3,volcanic_wall,5,lava_puddle,3,,,,,용암 웅덩이에서 태어난 소악마. 방어를 하락시키는 [용암] 상태이상을 활용한다.
+mon_ash_hound,M_LAV_N02,애쉬 하운드,Normal,용암 지대,표층,20,0,0,double_bite,5,volcanic_wall,5,wild_howl,3,,,,,화산재 평원을 달리는 사냥개. 빠른 2연속 공격과 아군 공격력 증가(용기)가 특징이다.
+mon_basalt_turtle,M_LAV_N03,바살트 터틀,Normal,용암 지대,표층,32,0,1,heat_headbutt,5,basalt_harden,5,shell_crouch,3,,,,,현무암 등껍질을 지닌 화산 거북. 단단한 보호막과 방어 상승(철벽)이 특징이다.
+mon_cinder_bat,M_LAV_N04,신더 배트,Normal,용암 지대,표층,22,0,0,ember_scatter,5,volcanic_wall,5,choking_ash,3,,,,,뜨거운 재를 흩뿌리는 화산 박쥐. 회피를 활용한다.
+mon_sulfur_lizard,M_LAV_N05,설퍼 리자드,Normal,용암 지대,표층,27,0,0,heat_headbutt,5,volcanic_wall,5,sulfur_gas,3,,,,,유황 분출구에 서식하는 도마뱀. 에너지 소모량을 늘리는 [산성(과욕)] 공격을 사용한다.
+mon_obsidian_scorpion,M_LAV_N06,옵시디언 스콜피온,Normal,용암 지대,표층,28,0,1,obsidian_sting,3,sharp_carapace,5,raise_spikes,3,,,,,흑요석 외골격을 지닌 전갈. 받는 피해를 늘리는 [급소] 공격과 [반격] 보호막을 사용한다.
+mon_lava_crab,M_LAV_N07,라바 크랩,Normal,용암 지대,표층,25,0,1,pincer_guard_strike,5,basalt_harden,5,lava_spitting,3,,,,,용암 껍질을 두른 화산 게. 공격과 동시에 보호막을 획득하며 [용암] 디버프를 부여한다.
+mon_magma_golem,M_LAV_G01,마그마 골렘,Guardian,용암 지대,표층,60,0,2,lava_smash,3,basalt_harden,5,magma_cooling,3,,,,,바위 틈으로 용암이 흐르는 거석 수호자. [강철] 버프와 묵직한 [용암] 강타를 사용한다.
+mon_pyro_wyrm,M_LAV_G02,파이로 웜,Guardian,용암 지대,표층,58,1,1,magma_breath,3,searing_scales,5,heat_condense,3,,,,,지하 마그마 맥을 헤엄치는 화염 지룡. 강한 [용암] 브레스와 [용기] 버프를 사용한다.
+mon_ash_wraith,M_LAV_G03,애쉬 레이스,Guardian,용암 지대,표층,55,1,-1,ash_engulf,3,smoke_veil,5,shadow_of_calamity,3,,,,,화산재 폭풍에서 태어난 망령. 최종 데미지를 낮추는 [공포] 디버프와 [민첩]을 활용한다.
+mon_volcano_salamander,M_LAV_G04,약화된 샐러맨더,Guardian,용암 지대,표층,60,1,1,flame_tail_sweep,5,lava_carapace,5,lava_inundation,4,,,,,불완전하게 현현한 샐러맨더. 체력 회복([가호])과 강력한 물리 공격을 사용한다.
+mon_vulcanus,M_LAV_B01,볼카누스,Boss,용암 지대,1층,75,1,2,great_eruption,3,caldera_armor,5,volcanic_bombardment,5,,,,,분화구를 등딱지로 삼은 태고의 화산 거신. 광역 [용암] 공격과 3연속 화산탄 폭격을 사용한다.
+mon_weakened_ignis,M_LAV_B02,약화된 이그니스,Boss,용암 지대,2층,100,3,1,imperfect_searing_wave,3,unstable_heat_barrier,5,rift_flame,3,,,,,표층에 불완전하게 현현한 상급 불의 정령. 스킬 에너지 사용 시 피해를 주는 [내상]과 [용암]을 사용한다.

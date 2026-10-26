@@ -66,7 +66,8 @@ TABLES = [
          int_cols=['BaseHP', 'BaseATK', 'BaseDEF',
                    'Skill1_Weight', 'Skill2_Weight', 'Skill3_Weight'],
          enums={'MonsterCategory': 'EMonsterCategory'},
-         skill_refs=['Skill1_ID', 'Skill2_ID', 'Skill3_ID']),
+         skill_refs=['Skill1_ID', 'Skill2_ID', 'Skill3_ID'],
+         strict_refs=['Skill1_ID', 'Skill2_ID', 'Skill3_ID']),
 
     # 이벤트 / 퀘스트. 첫 열이 RowName 이 아니라 ChoiceID / QuestID / RoomID 인 시트는 key 로 알려 줌
     dict(src='Event_DataTable.xlsx', sheet='Event_DataTable', out='DT_Event.csv',
@@ -157,6 +158,8 @@ def convert(t, enums, skill_names):
             v = vals[col[c]]
             if v in skill_names:
                 vals[col[c]] = skill_names[v]
+            elif v and c in t.get('strict_refs', []):
+                errors.append('%s %s=%s (스킬 행 이름 / SkillID 에 없음)' % (vals[0], c, v))
         for c in t['int_cols']:
             if vals[col[c]] == '':
                 vals[col[c]] = int_default.get(c, '0')
@@ -200,9 +203,12 @@ def convert(t, enums, skill_names):
 if __name__ == '__main__':
     enums = load_enums()
 
-    # 스킬 원래 행 이름 -> 정리된 행 이름. 몬스터 / 유물이 원래 이름(general's_sword)으로 가리키니까 같이 바꿔 줌
+    # 스킬 원래 행 이름 / SkillID -> 정리된 행 이름. 몬스터 / 유물이 원래 이름(general's_sword)이나
+    # SkillID(SK_SLI_001)로 가리키니까 같이 바꿔 줌 (게임은 행 이름으로만 찾음)
     hdr, data = read_sheet('skill_data.xlsx', 'Skill_DataTable')
+    id_col = hdr.index('SkillID')
     skill_names = {v[0]: norm_row_name(v[0]) for v in data if ROW_NAME.match(v[0])}
+    skill_names.update({v[id_col]: norm_row_name(v[0]) for v in data if ROW_NAME.match(v[0]) and v[id_col]})
 
     for t in TABLES:
         convert(t, enums, skill_names)

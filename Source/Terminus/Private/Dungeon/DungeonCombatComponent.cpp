@@ -780,11 +780,12 @@ void UDungeonCombatComponent::ChooseIntents()
 		UCombatStatsComponent* Stats = Monster ? Monster->GetCombatStats() : nullptr;
 		if (!Stats || Stats->IsDead()) continue;
 
-		const FName SkillName = PickMonsterSkill(MonsterRows[i]);
-		const FSkillRow* Skill = UTerminusDataSettings::FindSkillRow(SkillName);
+		const FName Picked = PickMonsterSkill(MonsterRows[i]);
+		const FName SkillName = UTerminusDataSettings::ResolveSkillRow(Picked);   // SkillID 로 적힌 데이터도
+		const FSkillRow* Skill = SkillName.IsNone() ? nullptr : UTerminusDataSettings::FindSkillRow(SkillName);
 		if (!Skill)
 		{
-			UE_LOG(LogDungeonCombat, Warning, TEXT("[Combat] %s 의 스킬 '%s' 이 DT_Skill 에 없음"), *MonsterRows[i].ToString(), *SkillName.ToString());
+			UE_LOG(LogDungeonCombat, Warning, TEXT("[Combat] %s 의 스킬 '%s' 이 DT_Skill 에 없음 -> 이 몬스터는 이번 사이클에 아무것도 안 함"), *MonsterRows[i].ToString(), *Picked.ToString());
 			continue;
 		}
 

@@ -100,6 +100,20 @@ namespace
 	}
 }
 
+FName UTerminusDataSettings::ResolveSkillRow(FName RowOrSkillID)
+{
+	const UDataTable* Table = Get()->SkillTable.LoadSynchronous();
+	if (!Table || RowOrSkillID.IsNone()) return NAME_None;
+	if (Table->GetRowMap().Contains(RowOrSkillID)) return RowOrSkillID;
+
+	const FString Id = RowOrSkillID.ToString();
+	for (const TPair<FName, uint8*>& Pair : Table->GetRowMap())
+	{
+		if (reinterpret_cast<const FSkillRow*>(Pair.Value)->SkillID == Id) return Pair.Key;
+	}
+	return NAME_None;
+}
+
 const FEventRow* UTerminusDataSettings::FindEventRow(FName RowName)
 {
 	return FindIn<FEventRow>(Get()->EventTable, RowName, TEXT("FindEventRow"));

@@ -45,6 +45,9 @@ public:
 	
 	// 같은 방식으로 스킬을 찾는 법
 	static const FSkillRow* FindSkillRow(FName RowName);
+
+	// 행 이름 또는 SkillID(SK_SLI_001) -> 행 이름. 둘 다 없으면 None (몬스터 데이터가 SkillID 로 적혀 와도 찾게)
+	static FName ResolveSkillRow(FName RowOrSkillID);
 	
 	UPROPERTY(Config, EditAnywhere, Category = "Skill",
 	meta = (RequiredAssetDataTags = "RowStructure=/Script/Terminus.SkillRow"))
