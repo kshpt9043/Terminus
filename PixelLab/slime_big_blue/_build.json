@@ -1,0 +1,9 @@
+{
+  "name": "slime_big_blue",
+  "object": "https://backblaze.pixellab.ai/file/pixellab-characters/objects/a0e72fb6-30d5-48e6-8038-473d53fadd5f/134299e5-428b-4e1a-a8c7-ad3b6972ee32",
+  "idle": "f3fe66f1-f5ae-419a-b716-618329471f04",
+  "attack": "868cb141-23da-4eaa-ac82-ec7033cc3349",
+  "hit": "02966828-d17f-4536-a198-d3e888b7110b",
+  "death": "26c54e20-e622-44e7-941b-8afbb1e856c5",
+  "attack_extra_lean": true
+}

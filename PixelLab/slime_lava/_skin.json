@@ -1,0 +1,7 @@
+{
+  "name": "slime_lava",
+  "src": "slime_blue",
+  "texture": "_pixellab_src/texture.png",
+  "defend_texture": "_pixellab_src/shell.png",
+  "embers": true
+}

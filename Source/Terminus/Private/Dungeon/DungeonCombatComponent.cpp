@@ -996,7 +996,7 @@ void UDungeonCombatComponent::RunNextMonsterAction()
 			const TArray<UCombatStatsComponent*> Targets =
 				ResolveTargets(Skill->TargetType, Stats, GetAlivePlayerStats(), GetAliveMonsterStats());
 
-			if (Intent->Kind == EMonsterIntentKind::Attack) Monster->PlayAttackAnim();
+			Monster->PlayIntentAnim(Intent->Kind);
 
 			FSkillExecutor::Execute(*Skill, Stats, Targets, GetAlivePlayerStats());
 			UE_LOG(LogDungeonCombat, Log, TEXT("[Combat]   몬스터 %d -> %s"), NextMonsterIndex - 1, *Skill->DisplayName_KR.ToString());
@@ -1043,7 +1043,7 @@ void UDungeonCombatComponent::HideDeadMonsters()
 		UCombatStatsComponent* Stats = Monster ? Monster->GetCombatStats() : nullptr;
 		if (Stats && Stats->IsDead() && !Monster->IsHidden())
 		{
-			Monster->SetActorHiddenInGame(true);   // 복제됨
+			Monster->HideAfterDeath();   // 사망 플립북이 끝나면 숨김 (복제됨)
 		}
 	}
 }
