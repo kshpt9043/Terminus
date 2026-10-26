@@ -16,6 +16,8 @@
   "defend", "special": 생성본 uuid 를 주면 직접 만든 방어/점프 대신 생성본을 씀 (예: 장군의 검 동작)
   "defend_mode": "raise" 이면 방어 생성본을 '들어올리기'만으로 보고, 올리기 -> 마지막 자세 유지 -> 거꾸로 내리기로 조립
     (장군: 기본 자세 + 방패 든 자세를 end_frame 으로 줘서 사이만 생성. 칼 팔/몸이 같이 움직이는 걸 막음)
+  "idle_eyes": [x0, y0, x1, y1] (왼쪽을 보는 기준) 대기 생성본이 눈을 자꾸 감을 때, 기본 이미지의 뜬 눈을 이 칸째로
+    프레임마다 몸 움직임에 맞춰 옮겨 붙임 (장군: "눈 너무 깜빡거림")
   "defend_keep": [x0, y0, x1, y1] (왼쪽을 보는 기준) 이 칸 안의 기본 이미지 장식(갑옷띠 등)을 방어 프레임에 다시 그림.
     방패 든 자세에서 갑옷이 사라지는 걸 막음. 지금 프레임이 몸 색인 곳에만 그려서 방패는 앞에 남음
   "attack_mode": "raw" 이면 공격 생성본을 그대로 씀 (몸통박치기가 아닌 검 휘두르기 등)
@@ -187,6 +189,37 @@ def keep_decor(frames, base, rect):
     return out
 
 
+def paste_eyes(frames, base, rect, pad=6):
+    """base 의 rect(뜬 눈)를 각 프레임에 붙임. 위치는 rect 둘레(투구 아래·갑옷띠)를 맞춰 찾음"""
+    b = np.asarray(base).astype(np.float32)
+    x0, y0, x1, y1 = rect
+    H, W = b.shape[:2]
+    ring = np.zeros((H, W), bool)
+    ring[max(0, y0 - pad):y1 + pad, max(0, x0 - pad):x1 + pad] = True
+    ring[y0:y1, x0:x1] = False
+    out = []
+    for f in frames:
+        a = np.asarray(f).astype(np.float32)
+        best = None
+        for dy in range(-4, 5):
+            for dx in range(-3, 4):
+                sh = np.roll(np.roll(b, dy, 0), dx, 1)
+                rg = np.roll(np.roll(ring, dy, 0), dx, 1) & (a[..., 3] > 128) & (sh[..., 3] > 128)
+                if rg.sum() < 50:
+                    continue
+                err = np.abs(a[..., :3] - sh[..., :3])[rg].mean()
+                if best is None or err < best[0]:
+                    best = (err, dx, dy)
+        _, dx, dy = best
+        res = a.copy()
+        patch = b[y0:y1, x0:x1]
+        tgt = res[y0 + dy:y1 + dy, x0 + dx:x1 + dx]
+        m = patch[..., 3] > 128
+        tgt[m] = patch[m]
+        out.append(Image.fromarray(res.astype(np.uint8), "RGBA"))
+    return out
+
+
 def build_special(base, scale):
     steps = [(1, 1, 0, 0), (1.08, 0.9, 0, 0), (0.94, 1.08, 4, 0), (1, 1, 10, 0), (1, 1, 14, 0.35),
              (1, 1, 15, 0.6), (1, 1, 14, 0.35), (1, 1, 10, 0), (0.94, 1.08, 4, 0), (1.08, 0.9, 0, 0), (1, 1, 0, 0)]
@@ -249,7 +282,10 @@ def main():
         for i, f in enumerate(raw[anim]):
             L(f).save(os.path.join(d, f"frame_{i}.png"))
 
-    save_anim(out_dir, name, "idle", [L(f) for f in raw["idle"]])
+    idle = [L(f) for f in raw["idle"]]
+    if cfg.get("idle_eyes"):
+        idle = paste_eyes(idle, base, cfg["idle_eyes"])
+    save_anim(out_dir, name, "idle", idle)
     if cfg.get("attack_mode") == "raw":
         save_anim(out_dir, name, "attack", [L(f) for f in raw["attack"]])
     else:
