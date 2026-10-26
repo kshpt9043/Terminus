@@ -38,7 +38,7 @@ void USettlementWidget::NativeOnInitialized()
 	{
 		Settlement = Profile->GetPendingSettlement();
 	}
-	Chosen = NAME_None;
+	Kept.Reset();
 
 	if (SubtitleText)
 	{
@@ -69,12 +69,11 @@ void USettlementWidget::NativeOnInitialized()
 				: FString(TEXT("장착 중인 픽업 스킬을 이미 모두 보유하고 있어 건너뜁니다."))));
 	}
 
-	// 사망 정산: 유물은 이미 전부 판매된 걸로 보여 줌
-	if (Settlement.bDeath)
+	// 유물: 원하는 만큼 보관, 나머지는 판매 (사망도 같음)
+	if (TitleText && Settlement.bDeath) TitleText->SetText(FText::FromString(TEXT("사망 정산")));
+	if (RelicHeaderText) RelicHeaderText->SetText(FText::FromString(TEXT("1. 유물 보관 / 판매")));
 	{
-		if (TitleText) TitleText->SetText(FText::FromString(TEXT("사망 정산")));
-		if (RelicHeaderText) RelicHeaderText->SetText(FText::FromString(TEXT("1. 판매된 유물")));
-		FString Help = TEXT("전멸해서 던전에서 얻은 유물은 모두 골드로 판매됩니다.");
+		FString Help = TEXT("보관할 유물을 눌러 고르세요 (여러 개 가능). 고르지 않은 유물은 자동으로 판매되어 골드가 됩니다.");
 		if (Settlement.LostStoredRelics.Num() > 0)
 		{
 			TArray<FString> Names;
@@ -117,10 +116,10 @@ void USettlementWidget::BuildDefaultLayout()
 	MainPanel = Main;
 	TerminusUI::AddRow(Root, Main, 18.f, HAlign_Fill);
 
-	RelicHeaderText = TerminusUI::MakeWrapText(WidgetTree, TEXT("RelicHeaderText"), TEXT("1. 보관할 유물"), TerminusUI::FontSize::Section, TerminusUI::Color::Gold, ETextJustify::Left);
+	RelicHeaderText = TerminusUI::MakeWrapText(WidgetTree, TEXT("RelicHeaderText"), TEXT("1. 유물 보관 / 판매"), TerminusUI::FontSize::Section, TerminusUI::Color::Gold, ETextJustify::Left);
 	TerminusUI::SetBold(RelicHeaderText);
 	TerminusUI::AddRow(Main, RelicHeaderText, 0.f, HAlign_Fill);
-	RelicHelpText = TerminusUI::MakeWrapText(WidgetTree, TEXT("RelicHelpText"), TEXT("던전에서 얻은 유물 중 하나를 골라 창고에 보관합니다. 나머지 유물은 사라집니다."), TerminusUI::FontSize::Aux, TerminusUI::Color::TextAux, ETextJustify::Left);
+	RelicHelpText = TerminusUI::MakeWrapText(WidgetTree, TEXT("RelicHelpText"), TEXT(""), TerminusUI::FontSize::Aux, TerminusUI::Color::TextAux, ETextJustify::Left);
 	TerminusUI::AddRow(Main, RelicHelpText, 4.f, HAlign_Fill);
 
 	USizeBox* ListHeight = WidgetTree->ConstructWidget<USizeBox>();
@@ -186,70 +185,62 @@ void USettlementWidget::RebuildRelics()
 			RelicSlot->SetSlotSize(RelicSlotSize);
 			RelicSlot->SetShowName(true);
 			RelicSlot->SetRelic(Settlement.Relics[i]);
-			RelicSlot->SetSelected(!Settlement.bDeath && Settlement.Relics[i] == Chosen);
-			if (!Settlement.bDeath)
-			{
-				RelicSlot->OnSlotClicked.BindUObject(this, &USettlementWidget::HandleRelicClicked);
-			}
+			RelicSlot->SetSelected(Kept.Contains(Settlement.Relics[i]));
+			RelicSlot->OnSlotClicked.BindUObject(this, &USettlementWidget::HandleRelicClicked);
 			RelicList->AddChild(RelicSlot);
 		}
 	}
 }
 
-int32 USettlementWidget::DeathGold() const
+int32 USettlementWidget::SaleGold() const
 {
 	int64 Total = 0;
-	for (const int32 Gold : Settlement.RelicGold) Total += FMath::Max(0, Gold);
+	for (int32 i = 0; i < Settlement.Relics.Num(); ++i)
+	{
+		if (Kept.Contains(Settlement.Relics[i]) || !Settlement.RelicGold.IsValidIndex(i)) continue;
+		Total += FMath::Max(0, Settlement.RelicGold[i]);
+	}
 	return static_cast<int32>(FMath::Min<int64>(Total, MAX_int32));
 }
 
 void USettlementWidget::RefreshGuide()
 {
-	const bool bHasRelics = Settlement.Relics.Num() > 0;
-
-	if (Settlement.bDeath)
-	{
-		if (RelicGuideText)
-		{
-			RelicGuideText->SetText(FText::FromString(bHasRelics
-				? FString::Printf(TEXT("유물 판매  +%s"), *TerminusUI::GoldText(DeathGold()))
-				: FString(TEXT("던전에서 얻은 유물이 없습니다."))));
-		}
-		if (ConfirmButton) ConfirmButton->SetIsEnabled(true);
-		return;
-	}
-
 	if (RelicGuideText)
 	{
 		FString Guide;
-		if (!bHasRelics)
+		if (Settlement.Relics.Num() == 0)
 		{
 			Guide = TEXT("던전에서 얻은 유물이 없습니다.");
 		}
-		else if (Chosen.IsNone())
-		{
-			Guide = TEXT("보관할 유물을 하나 고르세요.");
-		}
 		else
 		{
-			Guide = FString::Printf(TEXT("고른 유물: %s"), *UTerminusDataSettings::GetRelicName(Chosen));
-			if (IsAlreadyStored(Chosen)) Guide += TEXT("  (창고에 이미 있어 아무 일도 일어나지 않습니다)");
+			Guide = FString::Printf(TEXT("보관 %d개 · 판매 %d개  +%s"), Kept.Num(), Settlement.Relics.Num() - Kept.Num(), *TerminusUI::GoldText(SaleGold()));
+
+			// 창고에 이미 있는 걸 보관하면 아무 일도 없음 -> 파는 게 이득
+			TArray<FString> Dup;
+			for (const FName& Row : Kept)
+			{
+				if (IsAlreadyStored(Row)) Dup.Add(UTerminusDataSettings::GetRelicName(Row));
+			}
+			if (Dup.Num() > 0)
+			{
+				Guide += FString::Printf(TEXT("\n[%s] 은(는) 창고에 이미 있어 보관해도 아무 일도 없습니다. 판매하면 골드를 받습니다."), *FString::Join(Dup, TEXT(", ")));
+			}
 		}
 		RelicGuideText->SetText(FText::FromString(Guide));
 	}
 
-	// 고를 유물이 있으면 하나는 골라야 완료
-	if (ConfirmButton)
-	{
-		ConfirmButton->SetIsEnabled(!bHasRelics || !Chosen.IsNone());
-	}
+	// 하나도 안 골라도 됨 (전부 판매)
+	if (ConfirmButton) ConfirmButton->SetIsEnabled(true);
 }
 
 void USettlementWidget::HandleRelicClicked(UItemSlotWidget* ClickedSlot)
 {
 	if (!ClickedSlot || !Settlement.Relics.IsValidIndex(ClickedSlot->GetSlotIndex())) return;
 
-	Chosen = Settlement.Relics[ClickedSlot->GetSlotIndex()];
+	// 누를 때마다 보관 <-> 판매
+	const FName Row = Settlement.Relics[ClickedSlot->GetSlotIndex()];
+	if (Kept.Remove(Row) == 0) Kept.Add(Row);
 	RebuildRelics();
 	RefreshGuide();
 }
@@ -258,25 +249,27 @@ void USettlementWidget::HandleConfirm()
 {
 	UTerminusProfileSubsystem* Profile = GetGameInstance() ? GetGameInstance()->GetSubsystem<UTerminusProfileSubsystem>() : nullptr;
 	if (!Profile) return;
-	if (!Settlement.bDeath && Settlement.Relics.Num() > 0 && Chosen.IsNone()) return;
-	if (Settlement.bDeath) Chosen = NAME_None;   // 사망: 보관 없음
 
-	const bool bNewRelic = !Chosen.IsNone() && !IsAlreadyStored(Chosen);
+	TArray<FName> NewRelics;
+	for (const FName& Row : Kept)
+	{
+		if (!IsAlreadyStored(Row)) NewRelics.Add(Row);
+	}
 	const bool bNewSkill = !Settlement.KeptSkill.IsNone() && !Profile->GetOwnedSkills().Contains(Settlement.KeptSkill);
-	const int32 QuestGold = 0;   // TODO: 퀘스트가 생기면 완료한 퀘스트 보상 (사망이면 없음)
-	const int32 RelicGold = Settlement.bDeath ? DeathGold() : 0;
+	const int32 RelicGold = SaleGold();
+	const int32 BonusGold = FMath::Max(0, Settlement.BonusGold);   // 퀘스트 골드 / 배신 분배
 
-	const int32 BonusGold = FMath::Max(0, Settlement.BonusGold);
-
-	Profile->FinishSettlement(Chosen, QuestGold + RelicGold + BonusGold);
+	Profile->FinishSettlement(Kept, RelicGold + BonusGold);
 
 	if (SummaryText)
 	{
-		FString Summary = Settlement.bDeath
-			? FString::Printf(TEXT("유물 판매  +%s\n\n보유 골드  %s"), *TerminusUI::GoldText(RelicGold), *TerminusUI::GoldText(Profile->GetGold()))
-			: FString::Printf(TEXT("퀘스트 골드  +%s\n\n보유 골드  %s"), *TerminusUI::GoldText(QuestGold), *TerminusUI::GoldText(Profile->GetGold()));
+		FString Summary = FString::Printf(TEXT("유물 판매  +%s"), *TerminusUI::GoldText(RelicGold));
 		if (BonusGold > 0) Summary = FString::Printf(TEXT("%s  +%s\n"), *Settlement.BonusReason, *TerminusUI::GoldText(BonusGold)) + Summary;
-		if (bNewRelic) Summary += FString::Printf(TEXT("\n\n창고에 보관: %s"), *UTerminusDataSettings::GetRelicName(Chosen));
+		Summary += FString::Printf(TEXT("\n\n보유 골드  %s"), *TerminusUI::GoldText(Profile->GetGold()));
+
+		TArray<FString> Names;
+		for (const FName& Row : NewRelics) Names.Add(UTerminusDataSettings::GetRelicName(Row));
+		if (Names.Num() > 0) Summary += FString::Printf(TEXT("\n\n창고에 보관: %s"), *FString::Join(Names, TEXT(", ")));
 		if (bNewSkill) Summary += FString::Printf(TEXT("\n새 보유 스킬: %s"), *UTerminusDataSettings::GetSkillName(Settlement.KeptSkill));
 		SummaryText->SetText(FText::FromString(Summary));
 	}

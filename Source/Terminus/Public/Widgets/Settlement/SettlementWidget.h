@@ -11,12 +11,12 @@ class UTextBlock;
 class UItemSlotWidget;
 
 /**
- * 정산 화면 (메인 화면에서 뜸). 순서: 유물 하나 보관 -> 완료된 퀘스트 -> 가져가는 스킬 -> 최종 골드
- * 전멸로 끝났으면 사망 정산 (기획 사망 순서도): 유물은 고르지 않고 전부 골드로 판매, 스킬은 못 가져감
- *  - 던전에서 얻은 유물(시작 유물 제외) 중 하나를 골라 창고에 보관, 나머지는 사라짐 (사용자 결정 10-08, 유물 판매 없음)
- *  - 창고(도감)에 이미 있는 유물을 고르면 아무 일도 없음 (사용자 결정 10-06)
- *  - 장착 중인 픽업 스킬 중 아직 없는 것 하나를 보유 스킬로 (전부 있으면 건너뜀)
- *  - 퀘스트는 아직 없어서 '없음'만 보여 줌
+ * 정산 화면 (메인 화면에서 뜸). 순서: 유물 보관 / 판매 -> 완료된 퀘스트 -> 가져가는 스킬 -> 최종 골드
+ *  - 노션(10-26) + 사용자 결정(10-26): 던전에서 얻은 유물(시작 유물 제외) 중 원하는 만큼 골라 창고에 보관,
+ *    안 고른 유물은 자동으로 정산 판매가에 팔려 골드가 됨. 사망(전멸)도 퇴장이라 똑같이 고름
+ *  - 창고(도감)에 이미 있는 유물을 보관하면 아무 일도 없음 (사용자 결정 10-06) -> 파는 쪽이 이득이라 안내
+ *  - 장착 중인 픽업 스킬 중 아직 없는 것 하나를 보유 스킬로 (전부 있으면 건너뜀). 사망이면 스킬은 못 가져감
+ *  - 퀘스트 골드 / 배신 분배 골드는 BonusGold
  *  - '정산 완료' -> 프로필에 반영 -> 최종 골드 -> 닫기
  * 내용은 프로필의 정산 대기(UTerminusProfileSubsystem::GetPendingSettlement)
  *
@@ -67,13 +67,13 @@ protected:
 
 private:
 	FPendingSettlement Settlement;
-	FName Chosen;
+	TArray<FName> Kept;   // 보관할 유물 (나머지는 판매)
 
 	void BuildDefaultLayout();
 	void RebuildRelics();
 	void RefreshGuide();
 	bool IsAlreadyStored(FName Row) const;
-	int32 DeathGold() const;
+	int32 SaleGold() const;   // 안 고른 유물 판매 골드
 
 	void HandleRelicClicked(UItemSlotWidget* ClickedSlot);
 

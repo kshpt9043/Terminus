@@ -264,12 +264,9 @@ FPendingSettlement UTerminusProfileSubsystem::MakeSettlement(const TArray<FName>
 		if (!IsStorableRelic(Row) || StartRelics.Contains(Row) || Out.Relics.Contains(Row)) continue;
 		Out.Relics.Add(Row);
 
-		// 사망: 유물만 골드로 판매 (DT 정산 판매가 그대로)
-		if (bDeath)
-		{
-			const FRelicRow* Relic = UTerminusDataSettings::FindRelicRow(Row);
-			Out.RelicGold.Add(Relic && Relic->CanSellAtSettlement() ? Relic->SellPrice_Gold : 0);
-		}
+		// 안 고르면 이 값에 판매 (DT 정산 판매가 그대로, 못 파는 건 0)
+		const FRelicRow* Relic = UTerminusDataSettings::FindRelicRow(Row);
+		Out.RelicGold.Add(Relic && Relic->CanSellAtSettlement() ? Relic->SellPrice_Gold : 0);
 	}
 
 	// 사망: 강화 스킬은 사라짐 (가져가는 스킬 없음)
@@ -312,7 +309,7 @@ const FPendingSettlement& UTerminusProfileSubsystem::GetPendingSettlement() cons
 	return Profile ? Profile->PendingSettlement : Empty;
 }
 
-void UTerminusProfileSubsystem::FinishSettlement(FName KeptRelic, int32 GoldEarned)
+void UTerminusProfileSubsystem::FinishSettlement(const TArray<FName>& KeptRelics, int32 GoldEarned)
 {
 	if (!HasPendingSettlement()) return;
 
@@ -326,10 +323,10 @@ void UTerminusProfileSubsystem::FinishSettlement(FName KeptRelic, int32 GoldEarn
 		RemoveStoredRelic(Row);
 	}
 
-	// 고른 유물 하나만 보관 (이미 있는 유물은 아무 일도 없음: 사용자 결정 10-06). 나머지는 사라짐
-	if (!KeptRelic.IsNone() && Done.Relics.Contains(KeptRelic))
+	// 고른 유물을 보관 (이미 있는 유물은 아무 일도 없음: 사용자 결정 10-06). 나머지는 판매되어 GoldEarned 에 들어 있음
+	for (const FName& Kept : KeptRelics)
 	{
-		AddStoredRelic(KeptRelic);
+		if (Done.Relics.Contains(Kept)) AddStoredRelic(Kept);
 	}
 	if (!Done.KeptSkill.IsNone())
 	{
@@ -337,7 +334,9 @@ void UTerminusProfileSubsystem::FinishSettlement(FName KeptRelic, int32 GoldEarn
 	}
 	AddGold(GoldEarned);
 
-	UE_LOG(LogTemp, Log, TEXT("[Profile] 정산 끝: 골드 +%d, 보관 %s, 스킬 %s"), GoldEarned, *KeptRelic.ToString(), *Done.KeptSkill.ToString());
+	TArray<FString> KeptNames;
+	for (const FName& Kept : KeptRelics) KeptNames.Add(Kept.ToString());
+	UE_LOG(LogTemp, Log, TEXT("[Profile] 정산 끝: 골드 +%d, 보관 [%s], 스킬 %s"), GoldEarned, *FString::Join(KeptNames, TEXT(", ")), *Done.KeptSkill.ToString());
 }
 
 void UTerminusProfileSubsystem::AddGold(int32 Amount)

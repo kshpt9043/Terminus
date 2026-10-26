@@ -17,7 +17,7 @@ struct FPendingSettlement
 
 	UPROPERTY() bool bValid = false;
 
-	// 전멸로 끝남 (기획 사망 순서도): 유물은 고르지 않고 전부 골드로 판매 (RelicGold), 스킬은 못 가져감
+	// 전멸로 끝남 (기획 사망 순서도): 스킬은 못 가져감. 유물은 탈출과 똑같이 보관 / 판매 (노션 10-26: 사망도 퇴장 경우)
 	UPROPERTY() bool bDeath = false;
 
 	// "던전을 탈출했습니다." 같은 안내 / 던전 이름 / 몇 층까지 갔는지
@@ -29,6 +29,7 @@ struct FPendingSettlement
 	UPROPERTY() TArray<FName> Relics;
 
 	// 사망 정산일 때 Relics 와 같은 순서의 판매 골드 (DT 정산 판매가, 못 파는 건 0)
+	// 노션(10-26) + 사용자 결정(10-26): 원하는 만큼 보관하고, 안 고른 유물은 자동 판매 (DT 정산 판매가, 못 파는 건 0)
 	UPROPERTY() TArray<int32> RelicGold;
 
 	// 하드 모드에서 죽음: 창고에서 들고 간 시작 유물이 창고(도감)에서 지워짐 (사용자 결정 10-08)
@@ -171,9 +172,9 @@ public:
 	bool HasPendingSettlement() const;
 	const FPendingSettlement& GetPendingSettlement() const;
 
-	// 정산 끝: 고른 유물 하나를 창고에(None = 없음), 스킬을 보유 스킬에, 퀘스트 골드를 골드에. 정산 대기는 비움
+	// 정산 끝: 고른 유물들을 창고에, 스킬을 보유 스킬에, 골드(안 고른 유물 판매 + 퀘스트 / 배신 보너스)를 골드에. 정산 대기는 비움
 	// 하드 모드 사망이면 LostStoredRelics 를 창고에서 지움
-	void FinishSettlement(FName KeptRelic, int32 GoldEarned);
+	void FinishSettlement(const TArray<FName>& KeptRelics, int32 GoldEarned);
 
 	// 게임을 켤 때 세이브가 조작 / 손상돼서 백업으로 복구했거나 새로 시작했으면 그 안내. 꺼내면 비워짐 (메인 메뉴 팝업)
 	FText ConsumeLoadNotice();
