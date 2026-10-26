@@ -107,6 +107,9 @@ public:
 	// 강화 스킬 장착 (서버만). 빈 칸이 있으면 거기에, 꽉 찼으면 ReplaceIndex 칸을 바꿈. 못 넣으면 false
 	bool EquipEnhanceSkill(FName SkillRow, int32 ReplaceIndex = INDEX_NONE);
 
+	// 장착한 강화 스킬 하나를 뺌 (이벤트 대가 '스킬 소실'). 칸은 앞으로 당겨짐
+	bool UnequipEnhanceSkill(FName SkillRow);
+
 	// -------------------------------------------------------------
 	// [유물] 서버만 바꿈. 목록은 RunState.Relics (모두에게 복제)
 	// -------------------------------------------------------------
@@ -128,7 +131,11 @@ public:
 
 	// [이벤트] 일시 버프 (다음 전투 몇 번). 전투가 시작될 때 상태로 걸리고, 끝날 때마다 ConsumeTempBuffBattle 로 1 씩 줄어듦
 	void AddTempBuff(const FTempStatBuff& Buff);
+	// 전투 한 번이 끝남: 일시 버프 / 일시적 이벤트 유물의 남은 전투 수를 1 씩 (0 이면 사라짐)
 	void ConsumeTempBuffBattle();
+
+	// 일시적 이벤트 유물의 남은 전투 수. 일시적 유물이 아니면 -1
+	int32 GetTempRelicBattlesLeft(FName RelicRow) const;
 
 	const TArray<FName>& GetRelics() const { return RunState.Relics; }
 
@@ -146,6 +153,9 @@ public:
 
 	// 던전 재화. 음수면 깎음 (0 아래로는 안 내려감)
 	void AddCurrency(int32 Amount);
+
+	// 런 상태를 직접 고치고 복제 / 화면 갱신 (서버만). 퀘스트처럼 칸이 여럿인 것을 한 번에
+	void ModifyRunState(TFunctionRef<void(FRunState&)> Edit);
 
 	// 방을 클리어하고 그 방으로 진행. 지도상 현재 위치와 진행 레벨을 갱신하고 선택을 비운다
 	void AdvanceToRoom(int32 TargetRoomId, int32 TargetRow);

@@ -41,6 +41,10 @@ struct FRoomNode
 
 	UPROPERTY(BlueprintReadWrite)
 	TArray<int32> ConnectedRoomIds;
+
+	// 퀘스트 특수 방 (DT_QuestRoom 행). 비어 있으면 일반 방. 들어가면 그 방의 SpawnMonster 가 나옴
+	UPROPERTY(BlueprintReadWrite)
+	FName SpecialRoom;
 };
 
 class ATerminusPlayerController;

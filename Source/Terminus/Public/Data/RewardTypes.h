@@ -2,43 +2,57 @@
 
 #include "CoreMinimal.h"
 #include "Map/MapManager.h"
+#include "Data/EventQuestTypes.h"
 #include "RewardTypes.generated.h"
 
-// 이벤트 방 후보 종류 (기획 '이벤트 방 밸런싱'. 수치는 기획 미정이라 임시)
-UENUM(BlueprintType)
-enum class EEventOptionType : uint8
-{
-	ClassSkill,        // 내 직업 / 공용 픽업 스킬
-	OtherClassSkill,   // 다른 직업 픽업 스킬
-	EventSkill,        // 이벤트 풀 스킬
-	Currency,          // 던전 재화
-	PermanentStat,     // 이번 런 동안 스탯 상승
-	TempStat,          // 다음 전투 몇 번 동안 스탯 상승 (+ 디버프)
-	ThemeTempStat,     // 테마 이벤트: 일시 스탯 상승 (공용보다 큼)
-	RelicSwapRandom,   // 내 유물 하나(랜덤)를 같은 계층 다른 유물로
-	RelicSwapChosen    // 내가 고른 유물 하나를 같은 계층 다른 유물로
-};
-
-// 이벤트 후보 하나. 서버가 만들어 보내고, 화면은 Title / Description 을 그대로 보여줌
+// 이벤트 선택지 하나 (DT_EventChoice 한 행을 이 사람 기준으로 풀어 둔 것). 서버가 만들어 보내고 화면은 그대로 보여줌
+// 무엇을 줄지(스킬 / 유물 / 재화)는 서버가 미리 정해 둠 -> 카드에 그 스킬 / 유물이 보이고, 고르면 그대로 받음
 USTRUCT(BlueprintType)
 struct FEventOption
 {
 	GENERATED_BODY()
 
-	UPROPERTY(BlueprintReadOnly) EEventOptionType Type = EEventOptionType::Currency;
+	// DT_EventChoice 행 이름
+	UPROPERTY(BlueprintReadOnly) FName ChoiceRow;
+	UPROPERTY(BlueprintReadOnly) EEventOutcomeType Outcome = EEventOutcomeType::Leave;
+
+	// 버튼 문구 / 대가와 결과 안내 (ChoiceTitle_KR / ChoiceTooltip_KR)
 	UPROPERTY(BlueprintReadOnly) FText Title;
 	UPROPERTY(BlueprintReadOnly) FText Description;
 
-	// 스킬 후보면 그 스킬
+	// 받을 스킬 / 유물 (미리 정해 둔 것). 없으면 None
 	UPROPERTY(BlueprintReadOnly) FName SkillRow;
+	UPROPERTY(BlueprintReadOnly) FName RelicRow;
 
-	// 재화 / 스탯 수치. 스탯 종류는 StatKind (0 = 체력, 1 = 공격, 2 = 방어)
+	// 재화 / 회복 수치 (범위는 미리 굴려 둠)
 	UPROPERTY(BlueprintReadOnly) int32 Amount = 0;
-	UPROPERTY(BlueprintReadOnly) int32 StatKind = 0;
 
-	// 일시 버프: 방어 감소 / 전투 수
-	UPROPERTY(BlueprintReadOnly) int32 Penalty = 0;
-	UPROPERTY(BlueprintReadOnly) int32 Battles = 0;
+	// 대가 (툴팁 대괄호 안 문구 기준. 문구가 없으면 CostType / CostValue)
+	UPROPERTY(BlueprintReadOnly) int32 CostHealth = 0;
+	UPROPERTY(BlueprintReadOnly) int32 CostMaxHealth = 0;
+	UPROPERTY(BlueprintReadOnly) int32 CostCurrency = 0;
+	UPROPERTY(BlueprintReadOnly) int32 CostSkills = 0;     // 장착 픽업 스킬 무작위로 잃음
+	UPROPERTY(BlueprintReadOnly) int32 CostRelics = 0;     // 유물 무작위로 잃음 (유물 변화면 바뀌는 그 유물)
+	UPROPERTY(BlueprintReadOnly) FName CostRelic;          // 대가로 받는 디버프 유물 (GainDebuffRelic)
+
+	// 툴팁에만 적힌 추가 결과 ("체력을 8 회복하고 ... +1강 강화", "승리 시 용암 지대 유물 및 던전 재화 55 획득")
+	UPROPERTY(BlueprintReadOnly) int32 BonusHeal = 0;
+	UPROPERTY(BlueprintReadOnly) int32 BonusUpgrades = 0;
+	UPROPERTY(BlueprintReadOnly) int32 BonusWinCurrency = 0;     // 쉬는 가디언을 이기면
+	UPROPERTY(BlueprintReadOnly) bool bBonusWinRelic = false;    // 쉬는 가디언을 이기면 테마 유물
+
+	// 고를 수 있나. 못 고르면 이유 ("던전 재화가 부족합니다")
+	UPROPERTY(BlueprintReadOnly) bool bAvailable = true;
+	UPROPERTY(BlueprintReadOnly) FText UnavailableReason;
+
+	// 스킬을 받는 선택지 (강화 칸이 꽉 찼으면 바꿀 칸부터 고름)
+	bool GivesSkill() const { return !SkillRow.IsNone(); }
+
+	// 유물 칸을 하나 차지하는 선택지 (꽉 찼으면 버릴 유물부터 고름)
+	bool GivesRelic() const
+	{
+		return !RelicRow.IsNone() && Outcome != EEventOutcomeType::SwapRelicSameTierRandom && Outcome != EEventOutcomeType::SwapRelicHigherTierRandom;
+	}
 };
 
 /**

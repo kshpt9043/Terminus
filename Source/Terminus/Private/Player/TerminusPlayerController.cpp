@@ -2,6 +2,7 @@
 
 
 #include "Player/TerminusPlayerController.h"
+#include "Game/TerminusQuests.h"
 
 #include "Widgets/TavernWidget.h"
 #include "Blueprint/UserWidget.h"
@@ -870,6 +871,15 @@ void ATerminusPlayerController::Client_BeginSettlement_Implementation(const FTex
 		Settlement.BonusGold = Adjust.BonusGold;
 		Settlement.BonusReason = Adjust.BonusReason;
 
+		// 퀘스트 골드 보상 (대상 Gold). 깬 퀘스트 보상이라 전멸해도 줌
+		if (RunState.QuestGold > 0)
+		{
+			Settlement.BonusGold += RunState.QuestGold;
+			Settlement.BonusReason = Settlement.BonusReason.IsEmpty()
+				? FString(TEXT("퀘스트 보상"))
+				: Settlement.BonusReason + TEXT(" · 퀘스트 보상");
+		}
+
 		// 하드 모드에서 죽으면 들고 간 창고 유물이 창고(도감)에서 사라짐 (사용자 결정 10-08)
 		if (bDeath && RunState.bHardMode)
 		{
@@ -1039,14 +1049,14 @@ void ATerminusPlayerController::Server_ShopLeave_Implementation()
 	if (ADungeonArea* Area = PS ? PS->GetCurrentArea() : nullptr) Area->HandleShopLeave(PS);
 }
 
-void ATerminusPlayerController::Client_ShowEvent_Implementation(const TArray<FEventOption>& Options)
+void ATerminusPlayerController::Client_ShowEvent_Implementation(const FText& Title, const FText& Situation, const TArray<FEventOption>& Options)
 {
 	ShowPCWidget(this, EventWidget, UTerminusUISettings::Pick(EventClass, &UTerminusUISettings::Event), TerminusUI::Layer::RoomPanel);   // 보상 / 휴식터 화면과 같은 높이, 채팅 아래
 	UpdateRoomTopBar();
 
 	if (EventWidget)
 	{
-		EventWidget->Setup(Options);
+		EventWidget->Setup(Title, Situation, Options);
 	}
 }
 
@@ -1392,6 +1402,78 @@ void ATerminusPlayerController::DebugShowStartSkillPick()
 	ClosePCWidget(StartSkillPick);
 	Server_DebugResetStartSkill();
 	OpenStartSkillPick();
+}
+
+void ATerminusPlayerController::DebugForceEvent(FName EventRow)
+{
+	Server_DebugForceEvent(EventRow);
+}
+
+void ATerminusPlayerController::Server_DebugForceEvent_Implementation(FName EventRow)
+{
+	if (!EventRow.IsNone() && !UTerminusDataSettings::FindEventRow(EventRow))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Debug] DT_Event 에 '%s' 없음"), *EventRow.ToString());
+		return;
+	}
+	ADungeonArea::DebugForcedEvent = EventRow;
+	UE_LOG(LogTemp, Log, TEXT("[Debug] 다음 이벤트: %s"), EventRow.IsNone() ? TEXT("무작위") : *EventRow.ToString());
+}
+
+void ATerminusPlayerController::DebugRoomsToEvent()
+{
+	Server_DebugRoomsToEvent();
+}
+
+void ATerminusPlayerController::Server_DebugRoomsToEvent_Implementation()
+{
+	Server_DebugRoomsTo_Implementation(TEXT("EVENT"));
+}
+
+void ATerminusPlayerController::DebugAcceptQuest(FName QuestRow)
+{
+	Server_DebugAcceptQuest(QuestRow);
+}
+
+void ATerminusPlayerController::Server_DebugAcceptQuest_Implementation(FName QuestRow)
+{
+	if (!UTerminusDataSettings::FindQuestRow(QuestRow))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Debug] DT_Quest 에 '%s' 없음"), *QuestRow.ToString());
+		return;
+	}
+	TerminusQuests::Accept(GetPlayerState<ATerminusPlayerState>(), QuestRow);
+}
+
+void ATerminusPlayerController::DebugRoomsTo(FName RoomType)
+{
+	Server_DebugRoomsTo(RoomType);
+}
+
+void ATerminusPlayerController::Server_DebugRoomsTo_Implementation(FName RoomType)
+{
+	const int64 Value = StaticEnum<ERoomType>()->GetValueByName(FName(*(TEXT("ERoomType::") + RoomType.ToString().ToUpper())));
+	if (Value == INDEX_NONE)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Debug] 방 종류 '%s' 없음"), *RoomType.ToString());
+		return;
+	}
+	const ERoomType NewType = static_cast<ERoomType>(Value);
+
+	AMapManager* MapMgr = Cast<AMapManager>(UGameplayStatics::GetActorOfClass(this, AMapManager::StaticClass()));
+	if (!MapMgr) return;
+
+	int32 Changed = 0;
+	for (FRoomNode& Node : MapMgr->Rooms)
+	{
+		if (Node.Type == ERoomType::MONSTER || Node.Type == ERoomType::BREAK || Node.Type == ERoomType::STORE || Node.Type == ERoomType::GUARDIAN)
+		{
+			Node.Type = NewType;
+			++Changed;
+		}
+	}
+	MapMgr->OnMapGenerated.Broadcast(MapMgr->Rooms);   // 리슨 서버 호스트 화면도 (클라는 복제로 OnRep_Rooms)
+	UE_LOG(LogTemp, Log, TEXT("[Debug] 방 %d개를 %s 방으로"), Changed, *RoomType.ToString());
 }
 
 void ATerminusPlayerController::DebugGainRelic(FName RelicRow)

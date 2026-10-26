@@ -2,6 +2,7 @@
 
 
 #include "Player/TerminusPlayerState.h"
+#include "Game/TerminusQuests.h"
 
 #include "Net/UnrealNetwork.h"
 #include "Data/TerminusDataSettings.h"
@@ -124,6 +125,11 @@ void ATerminusPlayerState::BeginRun()
 	RunState.Currency = 0;
 	RunState.SavedHealth = -1;
 	RunState.TempBuffs.Reset();
+	RunState.TempRelics.Reset();
+	RunState.ActiveQuest = FQuestProgress();
+	RunState.FloorMonsterRooms = 0;
+	RunState.FloorGuardianRooms = 0;
+	RunState.QuestGold = 0;
 	RunState.SeenRelics.Reset();
 	RunState.StartRelics.Reset();
 	RunState.BossRelic = NAME_None;
@@ -301,6 +307,15 @@ bool ATerminusPlayerState::EquipEnhanceSkill(FName SkillRow, int32 ReplaceIndex)
 	return true;
 }
 
+bool ATerminusPlayerState::UnequipEnhanceSkill(FName SkillRow)
+{
+	if (!HasAuthority() || RunState.EnhanceSkills.RemoveSingle(SkillRow) == 0) return false;
+
+	UE_LOG(LogTemp, Log, TEXT("[Skill] %s: 강화 스킬 %s 잃음"), *GetPlayerName(), *SkillRow.ToString());
+	OnRep_RunState();
+	return true;
+}
+
 FName ATerminusPlayerState::GetCombatSkillRow(int32 SlotIndex) const
 {
 	if (SlotIndex >= 0 && SlotIndex < NumBasicSkills)
@@ -350,8 +365,9 @@ bool ATerminusPlayerState::GainRelic(FName RelicRow)
 		return false;
 	}
 
-	// 가질 수 있는 유물인가: 공용이거나 내 직업 것
-	if (!CanClassHoldRelic(RunState.CharacterClass, *Relic))
+	// 가질 수 있는 유물인가: 공용이거나 내 직업 것. 이벤트 / 퀘스트 유물은 그쪽이 직접 주는 거라 누구나
+	const bool bGivenOnly = Relic->OwnerClass == ESkillOwner::Event || Relic->OwnerClass == ESkillOwner::Quest;
+	if (!bGivenOnly && !CanClassHoldRelic(RunState.CharacterClass, *Relic))
 	{
 		UE_LOG(LogTemp, Warning, TEXT("[Relic] %s 는 다른 직업 / 몬스터 전용이라 가질 수 없음"), *RelicRow.ToString());
 		return false;
@@ -385,6 +401,15 @@ bool ATerminusPlayerState::GainRelic(FName RelicRow)
 	RunState.SeenRelics.AddUnique(RelicRow);
 	UE_LOG(LogTemp, Log, TEXT("[Relic] %s 획득: %s"), *GetPlayerName(), *Relic->RelicName.ToString());
 
+	// 일시적 이벤트 유물: 전투 RemainBattle 번이 끝나면 사라짐
+	if (Relic->RemainBattle > 0)
+	{
+		RunState.TempRelics.RemoveAll([RelicRow](const FTempRelicEntry& E) { return E.Relic == RelicRow; });
+		FTempRelicEntry& Entry = RunState.TempRelics.AddDefaulted_GetRef();
+		Entry.Relic = RelicRow;
+		Entry.BattlesLeft = Relic->RemainBattle;
+	}
+
 	// 얻는 순간 효과 (팔아도 유지되는 것들)
 	if (Relic->TriggerTiming == ERelicTrigger::OnGainRelic)
 	{
@@ -392,6 +417,7 @@ bool ATerminusPlayerState::GainRelic(FName RelicRow)
 	}
 
 	OnRep_RunState();
+	TerminusQuests::OnRelicGained(this);
 	return true;
 }
 
@@ -421,6 +447,8 @@ bool ATerminusPlayerState::RemoveRelic(FName RelicRow)
 {
 	if (!HasAuthority() || RunState.Relics.Remove(RelicRow) == 0) return false;
 
+	RunState.TempRelics.RemoveAll([RelicRow](const FTempRelicEntry& E) { return E.Relic == RelicRow; });
+
 	OnRep_RunState();
 	return true;
 }
@@ -437,6 +465,8 @@ bool ATerminusPlayerState::SwapRelic(FName OldRelic, FName NewRelic)
 		OnRep_RunState();
 		return false;
 	}
+
+	RunState.TempRelics.RemoveAll([OldRelic](const FTempRelicEntry& E) { return E.Relic == OldRelic; });
 
 	// GainRelic 은 맨 뒤에 붙이니 원래 자리로
 	RunState.Relics.Remove(NewRelic);
@@ -501,14 +531,31 @@ void ATerminusPlayerState::AddTempBuff(const FTempStatBuff& Buff)
 
 void ATerminusPlayerState::ConsumeTempBuffBattle()
 {
-	if (!HasAuthority() || RunState.TempBuffs.Num() == 0) return;
+	if (!HasAuthority() || (RunState.TempBuffs.Num() == 0 && RunState.TempRelics.Num() == 0)) return;
 
 	for (FTempStatBuff& Buff : RunState.TempBuffs)
 	{
 		--Buff.BattlesLeft;
 	}
 	RunState.TempBuffs.RemoveAll([](const FTempStatBuff& Buff) { return Buff.BattlesLeft <= 0; });
+
+	// 일시적 이벤트 유물도 전투 한 번에 1 씩. 다 되면 유물째 사라짐
+	for (int32 i = RunState.TempRelics.Num() - 1; i >= 0; --i)
+	{
+		FTempRelicEntry& Entry = RunState.TempRelics[i];
+		if (--Entry.BattlesLeft > 0) continue;
+
+		UE_LOG(LogTemp, Log, TEXT("[Relic] %s: 일시적 유물 %s 소멸"), *GetPlayerName(), *UTerminusDataSettings::GetRelicName(Entry.Relic));
+		RunState.Relics.Remove(Entry.Relic);
+		RunState.TempRelics.RemoveAt(i);
+	}
 	OnRep_RunState();
+}
+
+int32 ATerminusPlayerState::GetTempRelicBattlesLeft(FName RelicRow) const
+{
+	const FTempRelicEntry* Entry = RunState.TempRelics.FindByPredicate([RelicRow](const FTempRelicEntry& E) { return E.Relic == RelicRow; });
+	return Entry ? Entry->BattlesLeft : -1;
 }
 
 void ATerminusPlayerState::ApplyRelicMetaEffect(const FRelicRow& Relic)
@@ -566,6 +613,19 @@ void ATerminusPlayerState::AddCurrency(int32 Amount)
 
 	RunState.Currency = FMath::Max(0, RunState.Currency + Amount);
 	OnRep_RunState();
+
+	if (Amount > 0)
+	{
+		TerminusQuests::OnCurrencyEarned(this, Amount);
+	}
+}
+
+void ATerminusPlayerState::ModifyRunState(TFunctionRef<void(FRunState&)> Edit)
+{
+	if (!HasAuthority()) return;
+
+	Edit(RunState);
+	OnRep_RunState();
 }
 
 void ATerminusPlayerState::AdvanceToRoom(int32 TargetRoomId, int32 TargetRow)
@@ -595,6 +655,8 @@ void ATerminusPlayerState::BeginFloor()
 	RunState.VisitedRoomIds.Reset();
 	RunState.BossRelic = NAME_None;
 	RunState.BossSkill = NAME_None;
+	RunState.FloorMonsterRooms = 0;   // 퀘스트 '한 층에서 N 번'
+	RunState.FloorGuardianRooms = 0;
 	OnRep_RunState();
 
 	// 기획: 층이 바뀌면 체력 전부 회복

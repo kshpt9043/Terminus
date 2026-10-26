@@ -60,7 +60,13 @@ int32 PartyComms::EstimateHit(int32 Amount, const UCombatStatsComponent* Caster,
 	{
 		Amount = FMath::RoundToInt(Amount * 1.25f);
 	}
-	if (Target && Amount > 0 && (Target->HasStatus(EStatusEffect::Indomitable) || Target->HasStatus(EStatusEffect::Metal)))
+	// 공격자 유물: 보호막 있는 대상 피해 +% (서버 값이라 클라에선 0 -> 예상치가 조금 작게 나올 수 있음)
+	if (Caster && Target && Target->GetCombatState().Shield > 0 && Caster->GetShieldBonusPercent() > 0)
+	{
+		Amount = FMath::RoundToInt(Amount * (100 + Caster->GetShieldBonusPercent()) / 100.f);
+	}
+	// 불굴 그룹 (불굴 / 강철 / 정령화 / 실명)
+	if (Target && Amount > 0 && Target->HasStatus(EStatusEffect::Indomitable))
 	{
 		Amount = 1;
 	}

@@ -37,6 +37,8 @@ namespace TerminusUI
 		case ESkillOwner::Engineer: return TEXT("마도 공학자");
 		case ESkillOwner::Paladin:  return TEXT("성기사");
 		case ESkillOwner::Assassin: return TEXT("암살자");
+		case ESkillOwner::Event:    return TEXT("이벤트");
+		case ESkillOwner::Quest:    return TEXT("퀘스트");
 		default:                    return TEXT("공용");
 		}
 	}

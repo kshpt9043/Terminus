@@ -26,7 +26,8 @@ DECLARE_DELEGATE_RetVal_OneParam(bool, FPreventDeath, UCombatStatsComponent* /*S
  * 플레이어랑 몬스터가 범용으로 쓰는 컴포넌트
  *
  * 피해 계산 순서 (ApplyDamage):
- *  공격자 공포 -25% -> 내 급소 +25% -> 불굴 / 강철 1 고정 -> 철벽 수치만큼 감소 -> 보호막 -> 체력
+ *  공격자 공포 -25% -> 내 급소 +25% -> 보호막 대상 추가 피해(공격자 유물 %) -> 불굴 / 강철 1 고정 -> 철벽 수치만큼 감소
+ *  -> 보호막 -> 체술(회피만큼 감소) -> 체력
  *  -> 불사(체력 1 아래로 안 내려감) -> 흡수(깎인 만큼 % 회복) -> 반격(공격자에게 수치만큼)
  */
 
@@ -57,6 +58,7 @@ public:
 	// --- 서버 전용 사건 알림 (유물 발동용). 클라에선 안 불림
 	FOnStatsDamaged OnDamaged;            // 체력이 실제로 깎였을 때 (보호막만 깎이면 안 불림)
 	FOnStatsAmount OnShieldGained;        // 보호막이 늘었을 때
+	FOnStatsAmount OnHitShieldTarget;     // 내가 보호막 있는 대상을 때렸을 때 (Amount = 그 한 대의 피해)
 	FOnStatsAmount OnHealed;              // 체력이 실제로 회복됐을 때
 	FOnStatsAmount OnEnergySpent;         // 에너지를 썼을 때
 	FOnStatsAmount OnSkillEnergySpent;    // 스킬 에너지를 썼을 때
@@ -69,7 +71,8 @@ public:
 
 	// 전투 함수
 	// Instigator = 때린 쪽 (공포 / 반격 / 타격 판정에 씀). 중독처럼 때린 쪽이 없으면 nullptr
-	void ApplyDamage(int32 Amount, UCombatStatsComponent* Instigator = nullptr);
+	// 돌려주는 값 = 실제로 깎인 체력 (흡혈 스킬이 "체력을 깎았으면" 을 볼 때)
+	int32 ApplyDamage(int32 Amount, UCombatStatsComponent* Instigator = nullptr);
 	void AddShield(int32 Amount);
 	void Heal(int32 Amount);
 	bool SpendEnergy(int32 Cost);
@@ -86,6 +89,7 @@ public:
 	void ClearShield();
 
 	// Duration -1 = 전투 끝까지 (사이클이 지나도 안 줄어듦)
+	// 같은 그룹(GetStatusGroup)이 이미 걸려 있으면 그걸 덮어씀 (이름만 다른 같은 효과는 하나만)
 	void ApplyStatus(EStatusEffect Type, int32 Value, int32 Duration);
 	void RemoveStatus(EStatusEffect Type);
 
@@ -102,11 +106,21 @@ public:
 	int32 GetStatusValue(EStatusEffect Type) const;
 
 	// 수치가 0 인 상태(급소 / 공포 / 불굴)도 있어서 걸려 있는지는 따로 봄
+	// 둘 다 그룹 기준: HasStatus(Ice) 는 허약(침수)도 참
 	UFUNCTION(BlueprintPure, Category = "Terminus|Combat")
 	bool HasStatus(EStatusEffect Type) const;
 
 	// 과욕(산성): 에너지를 쓰는 스킬은 소모량 +1
 	int32 GetEffectiveEnergyCost(int32 BaseCost) const;
+
+	// 체술 (암살자 기본 유물). 켜져 있으면 보호막이 받고 남은 피해를 회피(스텟 + 민첩)만큼 줄임
+	// 데미지 계산은 서버에서만 하니까 복제 안 함. 유물 목록을 만들 때 전투 컴포넌트가 켜고 끔
+	void SetEvasionReduction(bool bEnable) { bEvasionReduction = bEnable; }
+	int32 GetEvasion() const;
+
+	// 보호막 있는 대상을 때릴 때 피해 +% (무도가 기본 유물 BonusDamageOnShield). 체술처럼 전투 컴포넌트가 정함
+	void SetShieldBonusPercent(int32 Percent) { ShieldBonusPercent = FMath::Max(0, Percent); }
+	int32 GetShieldBonusPercent() const { return ShieldBonusPercent; }
 
 	// 자기 턴 끝
 	void OnTurnEnd();
@@ -131,4 +145,10 @@ protected:
 
 private:
 	bool HasAuth() const;
+
+	bool bEvasionReduction = false;
+	int32 ShieldBonusPercent = 0;
+
+	FStatusInstance* FindStatus(EStatusEffect Type);
+	const FStatusInstance* FindStatus(EStatusEffect Type) const;
 };

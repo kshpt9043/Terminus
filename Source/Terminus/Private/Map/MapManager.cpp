@@ -2,6 +2,7 @@
 
 
 #include "Map/MapManager.h"
+#include "Game/TerminusQuests.h"
 #include "Player/TerminusPlayerState.h"
 #include "Player/TerminusPlayerController.h"
 #include "Game/DungeonGameMode.h"
@@ -1503,9 +1504,19 @@ void AMapManager::AdvanceFloor()
             if (ATerminusPlayerState* TPS = Cast<ATerminusPlayerState>(PS))
             {
                 TPS->BeginFloor();
+
+                // 퀘스트: 새 테마로 들어가면 못 깬 퀘스트는 사라짐, 층 도착 조건
+                if (HasQuestRoom(CurrentFloor))
+                {
+                    TerminusQuests::ExpireForNewTheme(TPS);
+                }
+                TerminusQuests::OnFloorReached(TPS, CurrentFloor);
             }
         }
     }
+
+    // 진행 중 퀘스트의 특수 방이 이 층에 있으면 넣음
+    TerminusQuests::InjectSpecialRooms(GetWorld());
 
     // 리슨 서버 자신의 지도 화면 (손님은 Rooms 복제 -> OnRep_Rooms)
     OnMapGenerated.Broadcast(Rooms);

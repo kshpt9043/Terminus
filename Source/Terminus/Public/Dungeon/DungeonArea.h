@@ -81,8 +81,8 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Dungeon Area|Rest", meta = (ClampMin = "0.0", ClampMax = "1.0"))
 	float RestExploreRelicChance = 0.05f;
 
-	// [이벤트] 후보 고르기 (PC 의 Server_ChooseEvent). 한 사람 한 번, 전원이 고르면 방이 끝남
-	// ReplaceSlot = 강화 칸이 꽉 찼을 때 바꿀 칸, RelicRow = '유물 변화(선택)' 에서 바꿀 내 유물
+	// [이벤트] 선택지 고르기 (PC 의 Server_ChooseEvent). 한 사람 한 번, 전원이 고르면 방이 끝남
+	// ReplaceSlot = 강화 칸이 꽉 찼을 때 바꿀 칸, RelicRow = 유물 칸이 꽉 찼을 때 버릴 내 유물
 	void HandleEventChoice(ATerminusPlayerState* Chooser, int32 Index, int32 ReplaceSlot, FName RelicRow);
 
 	// [상점] 구매 / 판매 / 강화 / 나가기 (PC 의 Server_Shop*). 사람마다 따로, 전원이 나가면 방이 끝남
@@ -99,7 +99,7 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Dungeon Area|Shop", meta = (ClampMin = "0"))
 	int32 ShopSkillCount = 3;
 
-	// 픽업 스킬 구매가 (스킬 데이터에 가격 칸이 없어서 임시 고정가)
+	// 픽업 스킬 구매가. 10-24 엑셀부터 스킬 BuyPrice_Dungeon 을 쓰고, 가격이 0 인 스킬만 이 임시 고정가
 	UPROPERTY(EditAnywhere, Category = "Dungeon Area|Shop", meta = (ClampMin = "0"))
 	int32 ShopSkillPrice = 30;
 
@@ -107,36 +107,12 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Dungeon Area|Shop", meta = (ClampMin = "0"))
 	int32 ShopUpgradeCostPerLevel = 20;
 
-	// 이벤트 후보 수 (사용자 결정: 3개, 각자 받음)
-	UPROPERTY(EditAnywhere, Category = "Dungeon Area|Event", meta = (ClampMin = "1"))
-	int32 EventOptionCount = 3;
+	// 디버그: 다음 이벤트 방이 고를 이벤트 (PC DebugForceEvent). None 이면 무작위. 서버만
+	static FName DebugForcedEvent;
 
-	// 아래 수치는 기획 미정이라 임시 (사용자 결정 2026-10-06: 제안값 그대로)
+	// 데이터에 맞는 이벤트가 하나도 없을 때 화면에 띄울 말
 	UPROPERTY(EditAnywhere, Category = "Dungeon Area|Event")
-	FIntPoint EventCurrency = FIntPoint(15, 30);
-
-	UPROPERTY(EditAnywhere, Category = "Dungeon Area|Event")
-	int32 EventPermanentHealth = 5;
-
-	UPROPERTY(EditAnywhere, Category = "Dungeon Area|Event")
-	int32 EventPermanentAttack = 1;
-
-	UPROPERTY(EditAnywhere, Category = "Dungeon Area|Event")
-	int32 EventPermanentDefense = 1;
-
-	// 공용 일시 버프: 공격 +2, 방어 -1, 전투 3번
-	UPROPERTY(EditAnywhere, Category = "Dungeon Area|Event")
-	int32 EventTempAttack = 2;
-
-	UPROPERTY(EditAnywhere, Category = "Dungeon Area|Event")
-	int32 EventTempDefensePenalty = 1;
-
-	UPROPERTY(EditAnywhere, Category = "Dungeon Area|Event", meta = (ClampMin = "1"))
-	int32 EventTempBattles = 3;
-
-	// 테마 일시 버프: 공격 +3, 디버프 없음, 전투 EventTempBattles 번
-	UPROPERTY(EditAnywhere, Category = "Dungeon Area|Event")
-	int32 EventThemeAttack = 3;
+	FText EventFallbackText = FText::FromString(TEXT("조용한 방입니다. 아무 일도 일어나지 않았습니다."));
 
 	// -------------------------------------------------------------
 	// [조회]
@@ -259,15 +235,35 @@ private:
 	void CheckShopDone();
 	void FinishShop();
 
-	// 이벤트: 각자 받은 후보 / 이미 고른 사람 (서버만)
+	// 이벤트 (서버만). 방 하나에 이벤트 하나(DT_Event), 선택지는 사람마다 따로 풀어서 보냄
+	FName CurrentEvent;
 	TMap<TWeakObjectPtr<ATerminusPlayerState>, TArray<FEventOption>> EventOffers;
 	TSet<TWeakObjectPtr<ATerminusPlayerState>> EventChosen;
 	bool bInEvent = false;
 	FTimerHandle EventTimer;
 
+	// '쉬는 가디언' 을 고른 사람이 있으면 전원이 고른 뒤 그 체력 비율로 가디언 전투 (0 = 없음)
+	float EventGuardianHealth = 0.f;
+
+	// 쉬는 가디언을 이기면 줄 추가 보상 (고른 사람만). 방이 클리어될 때 줌
+	struct FGuardianWinBonus { int32 Currency = 0; bool bThemeRelic = false; };
+	TMap<TWeakObjectPtr<ATerminusPlayerState>, FGuardianWinBonus> EventGuardianBonus;
+	void GiveGuardianWinBonus();
+
+	// BeginRoom 에서 받은 이 층 테마 (이벤트 테마 / 쉬는 가디언 전투)
+	TWeakObjectPtr<const UDungeonThemeData> CurrentTheme;
+
+	// 퀘스트 방 (테마 첫 층의 첫 칸): 각자 3개 중 1개 수락 또는 거절. 화면은 이벤트 화면을 같이 씀
+	TMap<TWeakObjectPtr<ATerminusPlayerState>, TArray<FName>> QuestOffers;
+	bool bInQuest = false;
+
+	void BeginQuestRoom();
+	void HandleQuestChoice(ATerminusPlayerState* Chooser, int32 Index);
+
 	void BeginEvent();
 	void CheckEventDone();
 	void FinishEvent();
-	TArray<FEventOption> MakeEventOptions(const ATerminusPlayerState* PS) const;
+	FName PickEventRow() const;
+	FEventOption MakeEventOption(const ATerminusPlayerState* PS, FName ChoiceRow) const;
 	bool ApplyEventOption(ATerminusPlayerState* PS, const FEventOption& Option, int32 ReplaceSlot, FName RelicRow, FString& OutResult);
 };

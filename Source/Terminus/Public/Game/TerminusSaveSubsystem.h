@@ -90,6 +90,10 @@ public:
 	UPROPERTY()
 	TArray<FName> SeenGuardians;
 
+	// 이번 런에 나온 이벤트 (한 런 한 번 이벤트용)
+	UPROPERTY()
+	TArray<FName> SeenEvents;
+
 	UPROPERTY()
 	TArray<FRunSavePlayer> Players;
 };
