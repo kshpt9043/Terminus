@@ -19,7 +19,10 @@ enum class ESkillOwner : uint8
 	// 공용 스킬. ECharacterClass 에 끼우면 MAX 반복문 도는 주점 버튼까지 같이 늘어서 따로 뺌
 	Shared   UMETA(DisplayName = "공용"),
 	// 몬스터 스킬
-	Monster  UMETA(DisplayName = "몬스터")
+	Monster  UMETA(DisplayName = "몬스터"),
+	// 이벤트 / 퀘스트에서만 주는 유물 (10-24 엑셀). 누구나 가질 수 있지만 보상 / 상점 후보엔 안 나옴
+	Event    UMETA(DisplayName = "이벤트"),
+	Quest    UMETA(DisplayName = "퀘스트")
 };
 
 // 스킬을 어떻게 획득하는지
@@ -94,8 +97,22 @@ enum class EStatusEffect : uint8
 	// 아래는 유물 데이터(Relic_DataTable)에서 추가. 기존 값이 밀리지 않게 맨 뒤에만 붙일 것
 	Solid,           // 견고. 방어가 수치만큼 오름 (가호와 같은 그룹, 이름만 다름)
 	Indomitable,     // 불굴. 한 사이클 동안 받는 데미지가 1 로 고정 (강철과 같은 그룹)
-	IronWall         // 철벽. 받는 데미지가 수치만큼 줄어듦
+	IronWall,        // 철벽. 받는 데미지가 수치만큼 줄어듦
+	// 아래는 10-24 엑셀(Enum_State 시트)에서 추가. 테마 이름만 다르고 효과는 같은 그룹의 기존 상태와 같음
+	Dark,            // 과욕(어둠)   = 산성 그룹
+	Flooding,        // 허약(침수)   = 얼음 그룹
+	Contrarywind,    // 공포(역풍)   = 공포 그룹
+	Spirit,          // 불굴(정령화) = 불굴 그룹
+	Blindness,       // 불굴(실명)   = 불굴 그룹
+	SelfDamage       // 반동 피해. 상태로 남지 않음 (SelfDamage 칸이 즉시 피해를 줌)
 };
+
+// 같은 그룹 = 이름만 다르고 효과가 같음, 한 번에 하나만 걸림 (Enum_State: "같은 그룹일 경우 중복이 불가능")
+// 그룹의 대표값을 돌려줌. 효과 계산은 전부 대표값으로 함
+TERMINUS_API EStatusEffect GetStatusGroup(EStatusEffect Type);
+
+// 화면 표시 이름. "시스템 이름(테마 이름)", 둘이 같으면 시스템 이름만 (Enum_State 시트)
+TERMINUS_API FString GetStatusDisplayName(EStatusEffect Type);
 
 // 실제 효과를 실행하는 로직 종류. 엑셀 Enum_Reference 시트 그대로 44개
 //
@@ -163,7 +180,71 @@ enum class EActionKind : uint8
 	MaxHPUp,                 // 최대 체력 증가 (현재 체력도 같이)
 	MaxHPDown,               // 최대 체력 감소
 	StatusMarkAll,           // 적 전체 급소
-	IronWallSelf             // 자신 철벽
+	IronWallSelf,            // 자신 철벽
+	EvasionDamageReduction,  // 체술 (유물 패시브). 받는 피해를 회피만큼 줄임. 실제 계산은 UCombatStatsComponent::ApplyDamage
+
+	// 아래는 10-24 엑셀(Enum_Reference 시트 순서)에서 추가. 맨 뒤에만 붙일 것
+	// 대부분 "원자 + 원자" 조합이라 실행부는 FSkillExecutor::GetRecipe 표 한 줄씩만 늘어남
+	HitAllEnemiesMulti,      // 적 전체 다단 피해
+	SolidAll,                // 아군 전체 견고
+	HitAllEnemiesShield,     // 적 전체 피해 + 자신 보호막 (SecondaryValue + 방어)
+	HitAllEnemiesMark,       // 적 전체 피해 + 급소
+	ShieldSelfSolid,         // 자신 보호막 + 견고
+	HitEnemyLava,            // 적 1명 피해 + 용암
+	HitEnemyIce,             // 적 1명 피해 + 얼음
+	HitEnemyAcid,            // 적 1명 피해 + 산성
+	HitEnemyFear,            // 적 1명 피해 + 공포
+	StatusInternalInjury,    // 적 1명 내상
+	StatusInternalInjuryAll, // 적 전체 내상
+	HitEnemyInternalInjury,  // 적 1명 피해 + 내상
+	HitAllEnemiesInternalInjuryAll, // 적 전체 피해 + 내상
+	AbsorptionSelf,          // 자신 흡수
+	ShieldSelfAbsorption,    // 자신 보호막 + 흡수
+	ShieldSelfProtect,       // 자신 보호막 + 가호
+	ShieldSelfEvasion,       // 자신 보호막 + 민첩
+	ShieldSelfIronWall,      // 자신 보호막 + 철벽
+	HealSelfProtect,         // 자신 회복 + 가호
+	HitEnemyHealSelf,        // 적 1명 피해 + 자신 회복 (SecondaryValue + 방어)
+	HitAllEnemiesHealSelf,   // 적 전체 피해 + 자신 회복
+	HitEnemyHealSelfIce,     // 적 1명 피해 + 자신 회복 + 얼음
+	HitAllEnemiesHealSelfIceAll, // 적 전체 피해 + 자신 회복 + 적 전체 얼음
+	HitEnemyShieldMetal,     // 적 1명 피해 + 자신 보호막 + 자신 강철
+	HitAllEnemiesShieldMetal, // 적 전체 피해 + 자신 보호막 + 자신 강철
+	BlindnessSelf,           // 자신 불굴(실명)
+	SpiritSelf,              // 자신 불굴(정령화)
+	StatusDark,              // 적 1명 과욕(어둠)
+	StatusDarkAll,           // 적 전체 과욕(어둠)
+	HitEnemyDark,            // 적 1명 피해 + 과욕(어둠)
+	HitAllEnemiesDarkAll,    // 적 전체 피해 + 과욕(어둠)
+	StatusFlooding,          // 적 1명 허약(침수)
+	StatusFloodingAll,       // 적 전체 허약(침수)
+	HitEnemyFlooding,        // 적 1명 피해 + 허약(침수)
+	HitAllEnemiesFloodingAll, // 적 전체 피해 + 허약(침수)
+	StatusContrarywind,      // 적 1명 공포(역풍)
+	StatusContrarywindAll,   // 적 전체 공포(역풍)
+	HitEnemyContrarywind,    // 적 1명 피해 + 공포(역풍)
+	HitAllEnemiesContrarywindAll, // 적 전체 피해 + 공포(역풍)
+	GainEnergyProtectSelf,   // 에너지 회복 + 자신 가호
+	GainEnergyIndomitableSelf, // 에너지 회복 + 자신 불굴
+	BraveSelfDmg,            // 반동 피해 + 자신 용기
+	HitEnemySelfDmgDrain,    // 반동 + 적 1명 피해 + 체력을 깎으면 SecondaryValue 회복
+	HitEnemyMultiSelfDmgDrain, // 반동 + 적 1명 다단 피해 + 체력을 깎은 타격마다 SecondaryValue 회복
+	HitAllSelfDmgDrain,      // 반동 + 적 전체 피해 + 체력을 깎은 적 수만큼 SecondaryValue 회복
+	BonusDamageOnShield,     // 보호막 가진 대상 공격 시 피해 +BaseValue% (무도가 패시브). 계산은 UCombatStatsComponent::ApplyDamage
+	HealSelfBraveSelf,       // 자신 회복 + 용기
+	ShieldSelfBraveSelf,     // 자신 보호막 + 용기
+	HitEnemySingleAoeLava,   // 주 피해 + 광역 피해 + 주 대상 용암
+	HitEnemySingleAoeMark,   // 주 피해 + 광역 피해 + 주 대상 급소
+	GainEnergyBraveSelf,     // 에너지 회복 + 자신 용기
+	ShieldAllSolidAll,       // 아군 전체 보호막 + 견고
+	BraveAllSolidAll,        // 아군 전체 용기 + 견고 (같은 수치)
+	HitEnemyMultiMark,       // 적 1명 다단 피해 + 급소
+	HitEnemyEvasionSelf,     // 적 1명 피해 + 자신 민첩
+	EvasionSelfBraveSelf,    // 자신 민첩 + 용기 (같은 수치)
+	EvasionSelfCounterSelf,  // 자신 민첩 + 반격
+	HitEnemySingleAoePoison, // 주 피해 + 광역 피해 + 적 전체 중독
+	GainEnergyBlindnessSelf, // 에너지 회복 + 자신 불굴(실명)
+	StatusMarkFearAll        // 적 전체 급소 + 공포
 };
 
 /**
@@ -283,4 +364,13 @@ struct FSkillRow : public FTableRowBase
 	// 기획 의도랑 확정 안 된 것들. 런타임에선 안 씀
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (MultiLine = true))
 	FString Notes;
+
+	// --- 가격 (10-24 엑셀에서 추가). 기본 스킬은 0 / 0
+	// 상점 구매가 (던전 재화)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	int32 BuyPrice_Dungeon = 0;
+
+	// 상점 판매가 (던전 재화)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	int32 SellPrice_Dungeon = 0;
 };

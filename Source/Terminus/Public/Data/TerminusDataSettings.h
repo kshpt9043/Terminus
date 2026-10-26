@@ -6,6 +6,7 @@
 #include "Data/SkillTypes.h"
 #include "Data/MonsterTypes.h"
 #include "Data/RelicTypes.h"
+#include "Data/EventQuestTypes.h"
 #include "TerminusDataSettings.generated.h"
 
 class UDataTable;
@@ -66,6 +67,28 @@ public:
 	UPROPERTY(Config, EditAnywhere, Category = "Relic",
 		meta = (RequiredAssetDataTags = "RowStructure=/Script/Terminus.RelicRow"))
 	TSoftObjectPtr<UDataTable> RelicTable;
+
+	// 이벤트 / 퀘스트 (10-24 엑셀). 행 이름으로 찾기, 없으면 nullptr
+	static const FEventRow* FindEventRow(FName RowName);
+	static const FEventChoiceRow* FindEventChoiceRow(FName RowName);
+	static const FQuestRow* FindQuestRow(FName RowName);
+	static const FQuestRoomRow* FindQuestRoomRow(FName RowName);
+
+	UPROPERTY(Config, EditAnywhere, Category = "Event",
+		meta = (RequiredAssetDataTags = "RowStructure=/Script/Terminus.EventRow"))
+	TSoftObjectPtr<UDataTable> EventTable;
+
+	UPROPERTY(Config, EditAnywhere, Category = "Event",
+		meta = (RequiredAssetDataTags = "RowStructure=/Script/Terminus.EventChoiceRow"))
+	TSoftObjectPtr<UDataTable> EventChoiceTable;
+
+	UPROPERTY(Config, EditAnywhere, Category = "Quest",
+		meta = (RequiredAssetDataTags = "RowStructure=/Script/Terminus.QuestRow"))
+	TSoftObjectPtr<UDataTable> QuestTable;
+
+	UPROPERTY(Config, EditAnywhere, Category = "Quest",
+		meta = (RequiredAssetDataTags = "RowStructure=/Script/Terminus.QuestRoomRow"))
+	TSoftObjectPtr<UDataTable> QuestRoomTable;
 	
 	// 직업의 기본 스킬. 공격 방어 특수 순서로 돌려준다 (데이터에 없는 칸은 빠짐)
 	static TArray<const FSkillRow*> FindBasicSkills(ECharacterClass InClass);

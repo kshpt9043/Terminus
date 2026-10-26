@@ -1,0 +1,98 @@
+﻿RowName,QuestName,QuestDesc,Force,Theme,AppearanceWeight,bInjectSpecialRoom,SpecialRoomID,ConditionType,ConditionTargetID,ConditionValue,AcceptRewardType,AcceptRewardTargetID,AcceptRewardValue,ClearRewardType,ClearRewardTargetID,ClearRewardValue
+Q_SLI_001,슬라임 학살자,슬라임 왕국의 지배자인 슬라임 킹을 처치하세요.,마탑,슬라임 왕국,5,False,None,KillMonster,M_SLI_B02,1,None,None,0,GiveRelic,RLC_Surface_Q008,1
+Q_SLI_002,슬라임 왕국 조사,슬라임 왕국의 에이션트 슬라임을 발견 후 처치하세요.,마탑,슬라임 왕국,5,True,Room_AncientSlime,KillMonster,M_SLI_G03,1,None,None,0,GiveRelic,RLC_Surface_Q003,1
+Q_SLI_003,가디언 몬스터 조사 1,슬라임 왕국의 가디언 몬스터를 1마리 처치하세요.,마탑,슬라임 왕국,5,False,None,KillMonster,Guardian,1,None,None,0,UpgradeSkill,None,1
+Q_SLI_004,가디언 몬스터 조사 2,슬라임 왕국의 가디언 몬스터를 2마리 처치하세요.,마탑,슬라임 왕국,5,False,None,KillMonster,Guardian,2,None,None,0,UpgradeSkill,None,2
+Q_SLI_005,가디언 몬스터 조사 3,슬라임 왕국의 가디언 몬스터를 3마리 처치하세요.,마탑,슬라임 왕국,4,False,None,KillMonster,Guardian,3,None,None,0,UpgradeSkill,None,3
+Q_SLI_006,가디언 몬스터 조사 4,슬라임 왕국의 가디언 몬스터를 4마리 처치하세요.,마탑,슬라임 왕국,3,False,None,KillMonster,Guardian,4,None,None,0,GiveRelic,RLC_Surface_Q018,1
+Q_SLI_007,슬라임 학살자,슬라임 왕국의 지배자인 슬라임 킹을 처치하세요.,모험가 길드,슬라임 왕국,5,False,None,KillMonster,M_SLI_B02,1,None,None,0,GiveRelic,RLC_Surface_Q008,1
+Q_SLI_008,슬라임 왕국 생태 조사 1,최근 모험가들에게 큰 피해를 입히고 있는 라바 슬라임 4마리를 처치하세요.,모험가 길드,슬라임 왕국,4,False,None,KillMonster,M_SLI_N03,4,None,None,0,GiveRelic,RLC_Surface_Q001,1
+Q_SLI_009,슬라임 왕국 생태 조사 2,최근 모험가들에게 큰 피해를 입히고 있는 아이스 슬라임 4마리를 처치하세요.,모험가 길드,슬라임 왕국,4,False,None,KillMonster,M_SLI_N06,4,None,None,0,GiveRelic,RLC_Surface_Q002,1
+Q_SLI_010,슬라임 왕국 생태 조사 3,최근 모험가들에게 큰 피해를 입히고 있는 포이즌 슬라임 4마리를 처치하세요.,모험가 길드,슬라임 왕국,4,False,None,KillMonster,M_SLI_N05,4,None,None,0,GiveRelic,RLC_Surface_Q005,1
+Q_SLI_011,슬라임 왕국 생태 조사 4,최근 모험가들에게 큰 피해를 입히고 있는 머드 슬라임 4마리를 처치하세요.,모험가 길드,슬라임 왕국,4,False,None,KillMonster,M_SLI_N07,4,None,None,0,GiveRelic,RLC_Surface_Q006,1
+Q_SLI_012,슬라임 학살자,슬라임 왕국의 지배자인 슬라임 킹을 처치하세요.,테르미누스,슬라임 왕국,5,False,None,KillMonster,M_SLI_B02,1,None,None,0,GiveRelic,RLC_Surface_Q008,1
+Q_SLI_013,힐 슬라임 조사,다른 슬라임에게 체력 회복 스킬을 사용하는 힐 슬라임을 4마리 처치하세요.,테르미누스,슬라임 왕국,5,False,None,KillMonster,M_SLI_N02,4,None,None,0,GiveRelic,RLC_Surface_Q004,1
+Q_SLI_014,슬라임 학살자,슬라임 왕국의 지배자인 슬라임 킹을 처치하세요.,황실,슬라임 왕국,1,False,None,KillMonster,M_SLI_B02,1,None,None,0,GiveRelic,RLC_Surface_Q008,1
+Q_SLI_015,융합체 연구,3가지 속성이 융합된 퓨전 슬라임을 처치하고 핵을 회수하세요.,마탑,슬라임 왕국,4,False,None,KillMonster,M_SLI_B01,1,None,None,0,GiveRelic,RLC_Surface_Q007,1
+Q_SLI_016,산성 성소 정화,산성 점액으로 오염된 성소 방을 찾아 정화(클리어)하세요.,테르미누스,슬라임 왕국,4,True,Room_AcidShrine,CompleteSpecialRoom,Room_AcidShrine,1,None,None,0,GiveCurrency,DungeonGold,200
+Q_LAV_001,화산의 지배자 토벌,용암지대의 군주 볼카누스를 처치하세요.,마탑,용암 지대,5,False,None,KillMonster,M_LAV_B02,1,None,None,0,GiveRelic,RLC_Surface_Q009,1
+Q_LAV_002,균열의 정령 조사,심층에서 유입된 약화된 이그니스를 처치하고 파편을 조사하세요.,마탑,용암 지대,4,False,None,KillMonster,M_LAV_B01,1,None,None,0,GiveRelic,RLC_Surface_Q010,1
+Q_LAV_003,마그마 골렘 핵 채취,특수 용암 동굴의 마그마 골렘을 발견 후 처치하세요.,마탑,용암 지대,5,True,Room_MagmaGolem,KillMonster,M_LAV_G01,1,None,None,0,GiveRelic,RLC_Surface_Q011,1
+Q_LAV_004,용암 가디언 조사 1,용암지대의 가디언 몬스터를 1마리 처치하세요.,마탑,용암 지대,5,False,None,KillMonster,Guardian,1,None,None,0,UpgradeSkill,None,1
+Q_LAV_005,용암 가디언 조사 2,용암지대의 가디언 몬스터를 2마리 처치하세요.,마탑,용암 지대,5,False,None,KillMonster,Guardian,2,None,None,0,UpgradeSkill,None,2
+Q_LAV_006,용암 가디언 조사 3,용암지대의 가디언 몬스터를 3마리 처치하세요.,마탑,용암 지대,4,False,None,KillMonster,Guardian,3,None,None,0,GiveCurrency,DungeonGold,250
+Q_LAV_007,화산의 지배자 토벌,용암지대의 군주 볼카누스를 처치하세요.,모험가 길드,용암 지대,5,False,None,KillMonster,M_LAV_B02,1,None,None,0,GiveRelic,RLC_Surface_Q009,1
+Q_LAV_008,용암지대 생태 조사 1,용암 웅덩이를 퍼뜨리는 마그마 임프 4마리를 처치하세요.,모험가 길드,용암 지대,4,False,None,KillMonster,M_LAV_N01,4,None,None,0,GiveRelic,RLC_Surface_Q012,1
+Q_LAV_009,용암지대 생태 조사 2,무리를 지어 습격하는 애쉬 하운드 4마리를 처치하세요.,모험가 길드,용암 지대,4,False,None,KillMonster,M_LAV_N02,4,None,None,0,GiveRelic,RLC_Surface_Q013,1
+Q_LAV_010,용암지대 생태 조사 3,날카로운 갑피와 독침을 지닌 옵시디언 스콜피온 4마리를 처치하세요.,모험가 길드,용암 지대,4,False,None,KillMonster,M_LAV_N06,4,None,None,0,GiveRelic,RLC_Surface_Q014,1
+Q_LAV_011,용암지대 생태 조사 4,단단한 등껍질을 가진 바살트 터틀 4마리를 처치하세요.,모험가 길드,용암 지대,4,False,None,KillMonster,M_LAV_N03,4,None,None,0,GiveCurrency,DungeonGold,180
+Q_LAV_012,화산의 지배자 토벌,용암지대의 군주 볼카누스를 처치하세요.,테르미누스,용암 지대,5,False,None,KillMonster,M_LAV_B02,1,None,None,0,GiveRelic,RLC_Surface_Q009,1
+Q_LAV_013,재앙의 망령 정화,화산재 속에서 공포를 퍼뜨리는 애쉬 레이스를 처치하세요.,테르미누스,용암 지대,5,True,Room_AshAltar,KillMonster,M_LAV_G03,1,None,None,0,GiveRelic,RLC_Surface_Q015,1
+Q_LAV_014,부정한 가스 정화,유황 가스를 뿜어내는 설퍼 리자드 4마리를 처치하세요.,테르미누스,용암 지대,4,False,None,KillMonster,M_LAV_N05,4,None,None,0,GiveCurrency,DungeonGold,200
+Q_LAV_015,화산의 지배자 토벌,용암지대의 군주 볼카누스를 처치하세요.,황실,용암 지대,2,False,None,KillMonster,M_LAV_B02,1,None,None,0,GiveCurrency,Gold,600
+Q_LIZ_001,리자드 왕권 찬탈,리자드의 부흥을 이끈 리자드 킹을 처치하세요.,마탑,리자드의 늪,5,False,None,KillMonster,M_LIZ_B02,1,None,None,0,GiveRelic,RLC_Mid_Q001,1
+Q_LIZ_002,늪지대 주술 체계 분석,주술 의식장의 리자드맨 인도자를 발견 후 처치하세요.,마탑,리자드의 늪,5,True,Room_LizardRitual,KillMonster,M_LIZ_G04,1,None,None,0,GiveRelic,RLC_Mid_Q002,1
+Q_LIZ_003,늪지대 가디언 조사 1,리자드의 늪의 가디언 몬스터를 1마리 처치하세요.,마탑,리자드의 늪,5,False,None,KillMonster,Guardian,1,None,None,0,UpgradeSkill,None,1
+Q_LIZ_004,늪지대 가디언 조사 2,리자드의 늪의 가디언 몬스터를 2마리 처치하세요.,마탑,리자드의 늪,5,False,None,KillMonster,Guardian,2,None,None,0,UpgradeSkill,None,2
+Q_LIZ_005,늪지대 가디언 조사 3,리자드의 늪의 가디언 몬스터를 3마리 처치하세요.,마탑,리자드의 늪,4,False,None,KillMonster,Guardian,3,None,None,0,UpgradeSkill,None,3
+Q_LIZ_006,늪지대 유물 회수,리자드의 늪에서 유물을 1개 획득하여 마탑에 공유하세요.,마탑,리자드의 늪,4,False,None,AcquireRelic,Any,1,None,None,0,GiveCurrency,DungeonGold,250
+Q_LIZ_007,리자드 왕권 찬탈,리자드의 부흥을 이끈 리자드 킹을 처치하세요.,모험가 길드,리자드의 늪,5,False,None,KillMonster,M_LIZ_B02,1,None,None,0,GiveRelic,RLC_Mid_Q001,1
+Q_LIZ_008,족장 토벌 의뢰,리자드 부족을 통솔하는 리자드맨 족장을 처치하세요.,모험가 길드,리자드의 늪,4,False,None,KillMonster,M_LIZ_B01,1,None,None,0,GiveRelic,RLC_Mid_Q003,1
+Q_LIZ_009,늪지대 생태 조사 1,모험가들을 포박하는 리자드맨 사냥꾼 4마리를 처치하세요.,모험가 길드,리자드의 늪,4,False,None,KillMonster,M_LIZ_N05,4,None,None,0,GiveRelic,RLC_Mid_Q004,1
+Q_LIZ_010,늪지대 생태 조사 2,날렵하게 활을 쏘는 리자드맨 정찰병 4마리를 처치하세요.,모험가 길드,리자드의 늪,4,False,None,KillMonster,M_LIZ_N06,4,None,None,0,GiveRelic,RLC_Mid_Q005,1
+Q_LIZ_011,늪지대 생태 조사 3,거대한 방패로 길을 막는 리자드맨 수호병 4마리를 처치하세요.,모험가 길드,리자드의 늪,4,False,None,KillMonster,M_LIZ_N07,4,None,None,0,GiveRelic,RLC_Mid_Q006,1
+Q_LIZ_012,암살자 수배령,모험가들을 암습하는 리자드맨 암살자를 처치하세요.,모험가 길드,리자드의 늪,4,True,Room_AssassinDen,KillMonster,M_LIZ_G02,1,None,None,0,GiveRelic,RLC_Mid_Q007,1
+Q_LIZ_013,리자드 왕권 찬탈,리자드의 부흥을 이끈 리자드 킹을 처치하세요.,테르미누스,리자드의 늪,5,False,None,KillMonster,M_LIZ_B02,1,None,None,0,GiveRelic,RLC_Mid_Q001,1
+Q_LIZ_014,이단 주술사 처단,사악한 주술을 부리는 리자드맨 주술사 4마리를 처치하세요.,테르미누스,리자드의 늪,5,False,None,KillMonster,M_LIZ_N04,4,None,None,0,GiveRelic,RLC_Mid_Q008,1
+Q_LIZ_015,피의 토템 파괴,리자드의 늪에 세워진 주술 의식장을 찾아 정화(클리어)하세요.,테르미누스,리자드의 늪,4,True,Room_LizardRitual,CompleteSpecialRoom,Room_LizardRitual,1,None,None,0,GiveCurrency,DungeonGold,300
+Q_LIZ_016,리자드 왕권 찬탈,리자드의 부흥을 이끈 리자드 킹을 처치하세요.,황실,리자드의 늪,2,False,None,KillMonster,M_LIZ_B02,1,None,None,0,GiveCurrency,Gold,1000
+Q_ELM_001,불의 정령왕 토벌,불의 정령왕 이프리트를 처치하고 코어를 확보하세요.,마탑,정령계,4,True,Room_Ifrit,KillMonster,M_ELM_B01,1,None,None,0,GiveRelic,RLC_Deep_Q001,1
+Q_ELM_002,물의 정령왕 토벌,물의 정령왕 나이아드를 처치하고 코어를 확보하세요.,마탑,정령계,4,True,Room_Naiad,KillMonster,M_ELM_B02,1,None,None,0,GiveRelic,RLC_Deep_Q002,1
+Q_ELM_003,바람의 정령왕 토벌,바람의 정령왕 실피드를 처치하고 코어를 확보하세요.,마탑,정령계,4,True,Room_Sylphid,KillMonster,M_ELM_B03,1,None,None,0,GiveRelic,RLC_Deep_Q003,1
+Q_ELM_004,땅의 정령왕 토벌,땅의 정령왕 오레아드를 처치하고 코어를 확보하세요.,마탑,정령계,4,True,Room_Oread,KillMonster,M_ELM_B04,1,None,None,0,GiveRelic,RLC_Deep_Q004,1
+Q_ELM_005,원소 융합 제단 조사,정령계 내부의 원소 제단 방을 발견하여 조사를 완료하세요.,마탑,정령계,5,True,Room_ElementalAltar,CompleteSpecialRoom,Room_ElementalAltar,1,None,None,0,GiveRelic,RLC_Deep_Q005,1
+Q_ELM_006,상급 정령 연구 1,정령계의 상급 정령(가디언)을 2마리 처치하세요.,마탑,정령계,5,False,None,KillMonster,Guardian,2,None,None,0,UpgradeSkill,None,2
+Q_ELM_007,상급 정령 연구 2,정령계의 상급 정령(가디언)을 3마리 처치하세요.,마탑,정령계,4,False,None,KillMonster,Guardian,3,None,None,0,UpgradeSkill,None,3
+Q_ELM_008,정령계 생태 조사 1,화염을 뿜어내는 샐러맨더 4마리를 처치하세요.,모험가 길드,정령계,4,False,None,KillMonster,M_ELM_N01,4,None,None,0,GiveRelic,RLC_Deep_Q006,1
+Q_ELM_009,정령계 생태 조사 2,돌풍을 일으키는 실프 4마리를 처치하세요.,모험가 길드,정령계,4,False,None,KillMonster,M_ELM_N03,4,None,None,0,GiveRelic,RLC_Deep_Q007,1
+Q_ELM_010,정령계 생태 조사 3,암석 피부를 지닌 노움 4마리를 처치하세요.,모험가 길드,정령계,4,False,None,KillMonster,M_ELM_N04,4,None,None,0,GiveRelic,RLC_Deep_Q008,1
+Q_ELM_011,정령계 생태 조사 4,혹한의 숨결을 내뿜는 프로스트 4마리를 처치하세요.,모험가 길드,정령계,4,False,None,KillMonster,M_ELM_N07,4,None,None,0,GiveCurrency,DungeonGold,350
+Q_ELM_012,상급 정령 수배령,폭풍을 부르는 상급 정령 진을 찾아 처치하세요.,모험가 길드,정령계,4,True,Room_StormCore,KillMonster,M_ELM_G03,1,None,None,0,GiveCurrency,DungeonGold,450
+Q_ELM_013,어둠의 침식 정화,과욕의 어둠을 퍼뜨리는 셰이드 4마리를 처치하세요.,테르미누스,정령계,5,False,None,KillMonster,M_ELM_N06,4,None,None,0,GiveRelic,RLC_Deep_Q009,1
+Q_ELM_014,거짓된 빛의 심판,눈부신 섬광으로 현혹하는 위스프 4마리를 처치하세요.,테르미누스,정령계,5,False,None,KillMonster,M_ELM_N05,4,None,None,0,GiveRelic,RLC_Deep_Q010,1
+Q_ELM_015,치유의 물 정화,생명의 물을 다루는 운디네 4마리를 처치하세요.,테르미누스,정령계,4,False,None,KillMonster,M_ELM_N02,4,None,None,0,GiveRelic,RLC_Deep_Q011,1
+Q_ELM_016,성스러운 유물 봉헌,정령계에서 유물을 2개 획득하여 교단에 증명하세요.,테르미누스,정령계,4,False,None,AcquireRelic,Any,2,None,None,0,GiveRelic,RLC_Deep_Q005,1
+Q_ELM_017,정령왕 제압 작전 1,심층의 위협인 불의 정령왕 이프리트를 처치하세요.,황실,정령계,2,False,None,KillMonster,M_ELM_B01,1,None,None,0,GiveCurrency,Gold,1500
+Q_ELM_018,정령왕 제압 작전 2,심층의 위협인 물의 정령왕 나이아드를 처치하세요.,황실,정령계,2,False,None,KillMonster,M_ELM_B02,1,None,None,0,GiveCurrency,Gold,1500
+Q_ELM_019,정령왕 제압 작전 3,심층의 위협인 바람의 정령왕 실피드를 처치하세요.,황실,정령계,2,False,None,KillMonster,M_ELM_B03,1,None,None,0,GiveCurrency,Gold,1500
+Q_ELM_020,정령왕 제압 작전 4,심층의 위협인 땅의 정령왕 오레아드를 처치하세요.,황실,정령계,2,False,None,KillMonster,M_ELM_B04,1,None,None,0,GiveCurrency,Gold,1500
+Q_S_001,던전 재화 조사 1,던전 내부에서 사용되는 던전 재화를 300개 모으세요.,황실,표층,5,False,None,EarnCurrency,DungeonGold,300,None,None,0,GiveCurrency,Gold,200
+Q_S_002,가디언 몬스터 조사 1,표층의 가디언 몬스터 2마리를 처치하세요.,황실,표층,5,False,None,KillMonster,Guardian,2,None,None,0,GiveCurrency,Gold,300
+Q_S_003,가디언 몬스터 조사 2,표층의 가디언 몬스터 3마리를 처치하세요.,황실,표층,5,False,None,KillMonster,Guardian,3,None,None,0,GiveCurrency,Gold,500
+Q_S_004,가디언 몬스터 조사 3,표층의 가디언 몬스터 4마리를 처치하세요.,황실,표층,5,False,None,KillMonster,Guardian,4,None,None,0,GiveCurrency,Gold,700
+Q_S_005,가디언 몬스터 조사 4,표층의 가디언 몬스터 5마리를 처치하세요.,황실,표층,6,False,None,KillMonster,Guardian,5,None,None,0,GiveCurrency,Gold,1000
+Q_S_006,표층 개척 지원,표층의 끝인 2층에 도달하여 안전한 길을 확보하세요.,황실,표층,4,False,None,ReachFloor,2,1,GiveCurrency,DungeonGold,100,GiveCurrency,Gold,400
+Q_S_007,표층 강행군 1,표층의 한 층에서 몬스터 방에 4번 이상 입장하세요.,황실,표층,5,False,None,EnterRoomInSingleFloor,MonsterRoom,4,None,None,0,GiveCurrency,Gold,250
+Q_S_008,표층 강행군 2,표층의 한 층에서 몬스터 방에 5번 이상 입장하세요.,황실,표층,5,False,None,EnterRoomInSingleFloor,MonsterRoom,5,None,None,0,GiveCurrency,Gold,400
+Q_S_009,표층 완전 소탕,표층의 한 층에서 몬스터 방에 6번 이상 입장하세요.,황실,표층,4,False,None,EnterRoomInSingleFloor,MonsterRoom,6,None,None,0,GiveCurrency,Gold,650
+Q_S_010,표층 정예병 격파,표층의 한 층에서 가디언 방에 2번 이상 입장하세요.,황실,표층,4,False,None,EnterRoomInSingleFloor,GuardianRoom,2,None,None,0,GiveCurrency,DungeonGold,200
+Q_M_001,중층 재화 회수,중층에서 유통되는 던전 재화를 500개 모으세요.,황실,중층,5,False,None,EarnCurrency,DungeonGold,500,None,None,0,GiveCurrency,Gold,400
+Q_M_002,중층 가디언 토벌 1,중층의 가디언 몬스터 2마리를 처치하세요.,황실,중층,5,False,None,KillMonster,Guardian,2,None,None,0,GiveCurrency,Gold,500
+Q_M_003,중층 가디언 토벌 2,중층의 가디언 몬스터 3마리를 처치하세요.,황실,중층,5,False,None,KillMonster,Guardian,3,None,None,0,GiveCurrency,Gold,800
+Q_M_004,중층 가디언 토벌 3,중층의 가디언 몬스터 4마리를 처치하세요.,황실,중층,4,False,None,KillMonster,Guardian,4,None,None,0,GiveCurrency,Gold,1200
+Q_M_005,중층 보급품 조달,중층 4층까지 진격로를 확보하세요. (군자금 선지급),황실,중층,4,False,None,ReachFloor,4,1,GiveCurrency,DungeonGold,150,GiveCurrency,Gold,700
+Q_M_006,황실 유물 회수령,중층 탐색 중 유물을 2개 획득하여 보고하세요.,황실,중층,4,False,None,AcquireRelic,Any,2,None,None,0,GiveCurrency,DungeonGold,300
+Q_M_007,중층 강행군 1,중층의 한 층에서 몬스터 방에 4번 이상 입장하세요.,황실,중층,5,False,None,EnterRoomInSingleFloor,MonsterRoom,4,None,None,0,GiveCurrency,Gold,450
+Q_M_008,중층 강행군 2,중층의 한 층에서 몬스터 방에 5번 이상 입장하세요.,황실,중층,5,False,None,EnterRoomInSingleFloor,MonsterRoom,5,None,None,0,GiveCurrency,Gold,750
+Q_M_009,중층 완전 소탕,중층의 한 층에서 몬스터 방에 6번 이상 입장하세요.,황실,중층,4,False,None,EnterRoomInSingleFloor,MonsterRoom,6,None,None,0,GiveCurrency,Gold,1100
+Q_M_010,중층 정예병 격파,중층의 한 층에서 가디언 방에 2번 이상 입장하세요.,황실,중층,4,False,None,EnterRoomInSingleFloor,GuardianRoom,2,None,None,0,GiveCurrency,DungeonGold,350
+Q_D_001,심층 재화 회수,심층에서 유통되는 던전 재화를 800개 모으세요.,황실,심층,5,False,None,EarnCurrency,DungeonGold,800,None,None,0,GiveCurrency,Gold,800
+Q_D_002,심층 가디언 토벌 1,심층의 가디언 몬스터 2마리를 처치하세요.,황실,심층,5,False,None,KillMonster,Guardian,2,None,None,0,GiveCurrency,Gold,900
+Q_D_003,심층 가디언 토벌 2,심층의 가디언 몬스터 3마리를 처치하세요.,황실,심층,5,False,None,KillMonster,Guardian,3,None,None,0,GiveCurrency,Gold,1400
+Q_D_004,심층 가디언 토벌 3,심층의 가디언 몬스터 4마리를 처치하세요.,황실,심층,4,False,None,KillMonster,Guardian,4,None,None,0,GiveCurrency,Gold,2000
+Q_D_005,심층 최심부 개척,심층의 끝인 6층에 도달하세요. (특수 군자금 선지급),황실,심층,4,False,None,ReachFloor,6,1,GiveCurrency,DungeonGold,250,GiveCurrency,Gold,1500
+Q_D_006,심층 고대 유물 확보,심층에서 유물을 3개 획득하여 황실에 증명하세요.,황실,심층,4,False,None,AcquireRelic,Any,3,None,None,0,GiveCurrency,DungeonGold,500
+Q_D_007,심층 강행군 1,심층의 한 층에서 몬스터 방에 4번 이상 입장하세요.,황실,심층,5,False,None,EnterRoomInSingleFloor,MonsterRoom,4,None,None,0,GiveCurrency,Gold,800
+Q_D_008,심층 강행군 2,심층의 한 층에서 몬스터 방에 5번 이상 입장하세요.,황실,심층,5,False,None,EnterRoomInSingleFloor,MonsterRoom,5,None,None,0,GiveCurrency,Gold,1300
+Q_D_009,심층 완전 소탕,심층의 한 층에서 몬스터 방에 6번 이상 입장하세요.,황실,심층,4,False,None,EnterRoomInSingleFloor,MonsterRoom,6,None,None,0,GiveCurrency,Gold,2000
+Q_D_010,심층 정예병 격파,심층의 한 층에서 가디언 방에 2번 이상 입장하세요.,황실,심층,4,False,None,EnterRoomInSingleFloor,GuardianRoom,2,None,None,0,GiveCurrency,DungeonGold,500

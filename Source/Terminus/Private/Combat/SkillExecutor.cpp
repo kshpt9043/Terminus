@@ -3,7 +3,8 @@
 
 void FSkillExecutor::Execute(const FSkillRow& Skill,
 							 UCombatStatsComponent* Caster,
-							 const TArray<UCombatStatsComponent*>& Targets)
+							 const TArray<UCombatStatsComponent*>& Targets,
+							 const TArray<UCombatStatsComponent*>& Opponents)
 {
 	if (!Caster)
 	{
@@ -14,8 +15,9 @@ void FSkillExecutor::Execute(const FSkillRow& Skill,
 	const int32 Stat = GetEffectiveStat(Caster, Skill.ScalingStat);
 	const int32 Amount = Skill.BaseValue + FMath::RoundToInt(Stat * Skill.ScalingRatio);
 
-	// ② BaseValue 를 뭘로 누구한테 쓸지
+	// ② 무엇을 누구한테 할지
 	const FRecipe Recipe = GetRecipe(Skill.ActionKind);
+	const TArray<UCombatStatsComponent*>& AllOpponents = Opponents.Num() > 0 ? Opponents : Targets;
 
 	TArray<UCombatStatsComponent*> Receivers = Targets;
 	if (Recipe.bOnCaster)
@@ -24,7 +26,8 @@ void FSkillExecutor::Execute(const FSkillRow& Skill,
 		Receivers.Add(Caster);
 	}
 
-	// ③ BaseValue 적용
+	// ③ BaseValue 적용. 흡혈은 체력을 깎은 타격 수를 셈
+	int32 DrainHits = 0;
 	for (UCombatStatsComponent* R : Receivers)
 	{
 		if (!R)
@@ -35,9 +38,12 @@ void FSkillExecutor::Execute(const FSkillRow& Skill,
 		switch (Recipe.Use)
 		{
 		case EValueUse::Damage:
-			for (int32 i = 0; i < Skill.HitCount; ++i)
+			for (int32 i = 0; i < FMath::Max(1, Skill.HitCount); ++i)
 			{
-				R->ApplyDamage(Amount, Caster);   // 시전자 = 때린 쪽 (공포 / 반격 / 타격 판정)
+				if (R->ApplyDamage(Amount, Caster) > 0)   // 시전자 = 때린 쪽 (공포 / 반격 / 타격 판정)
+				{
+					++DrainHits;
+				}
 			}
 			break;
 		case EValueUse::Shield:
@@ -51,29 +57,82 @@ void FSkillExecutor::Execute(const FSkillRow& Skill,
 		}
 	}
 
-	// 에너지 회복은 BaseValue 를 시전자 에너지로 (신의 축복 / 아드레날린)
-	if (Skill.ActionKind == EActionKind::GainEnergy)
+	// ④ SecondaryValue: 광역 추가 피해는 공격, 시전자 보호막 / 회복은 방어 보정 ("(2+공격)", "(3+방어)")
+	if (Recipe.bAoeDamage)
+	{
+		const int32 Aoe = Skill.SecondaryValue + GetEffectiveStat(Caster, EScalingStat::ATK);
+		for (UCombatStatsComponent* O : AllOpponents)
+		{
+			if (O && !O->IsDead())
+			{
+				O->ApplyDamage(Aoe, Caster);
+			}
+		}
+	}
+	const int32 SecondaryDef = Skill.SecondaryValue + GetEffectiveStat(Caster, EScalingStat::DEF);
+	if (Recipe.SecondaryOnCaster == EValueUse::Shield)
+	{
+		Caster->AddShield(SecondaryDef);
+	}
+	else if (Recipe.SecondaryOnCaster == EValueUse::Heal)
+	{
+		Caster->Heal(SecondaryDef);
+	}
+	if (Recipe.bDrain && DrainHits > 0)
+	{
+		Caster->Heal(Skill.SecondaryValue * DrainHits);
+	}
+
+	// 에너지 회복 (신의 축복 / 아드레날린). 최대치는 안 넘김
+	if (Recipe.bGainEnergy)
 	{
 		Caster->AddEnergy(Amount);
 	}
 
-	// ④ 상태이상. 컬럼이 None 이 아니면 대상들한테
-	if (Skill.StatusEffect != EStatusEffect::None)
+	// ⑤ 상태이상. 컬럼이 None 이 아니면 레시피가 말한 쪽한테
+	TArray<UCombatStatsComponent*> StatusReceivers;
+	switch (Recipe.StatusTo)
 	{
-		for (UCombatStatsComponent* T : Targets)
-		{
-			if (T)
-			{
-				// 반격은 반사 데미지가 SecondaryValue (+ 스텟 보정). Enum_State: "SecondaryValue 만큼의 데미지"
-				const int32 Value = Skill.StatusEffect == EStatusEffect::Counter
-					? Skill.SecondaryValue + FMath::RoundToInt(Stat * Skill.ScalingRatio)
-					: Skill.StatusValue;
-				T->ApplyStatus(ResolveFusion(Skill.StatusEffect), Value, Skill.StatusDuration);
-			}
-		}
+	case EStatusTo::Caster:    StatusReceivers.Add(Caster); break;
+	case EStatusTo::Opponents: StatusReceivers = AllOpponents; break;
+	default:                   StatusReceivers = Targets; break;
 	}
 
-	// ⑤ 반동. 컬럼이 0 보다 크면 시전자가 받음
+	auto ApplyTo = [&](EStatusEffect Type, int32 Value)
+	{
+		for (UCombatStatsComponent* T : StatusReceivers)
+		{
+			if (T && !T->IsDead())
+			{
+				T->ApplyStatus(ResolveFusion(Type), Value, Skill.StatusDuration);
+			}
+		}
+	};
+
+	if (Skill.StatusEffect != EStatusEffect::None)
+	{
+		// 반격은 반사 데미지가 SecondaryValue (+ 스텟 보정). Enum_State: "SecondaryValue 만큼의 데미지"
+		int32 Value = Skill.StatusValue;
+		if (Skill.StatusEffect == EStatusEffect::Counter)
+		{
+			Value = Skill.SecondaryValue + FMath::RoundToInt(Stat * Skill.ScalingRatio);
+		}
+		else if (Recipe.bScaleStatus)
+		{
+			Value = Skill.StatusValue + FMath::RoundToInt(Stat * Skill.ScalingRatio);
+		}
+		ApplyTo(Skill.StatusEffect, Value);
+	}
+	if (Recipe.ExtraStatus != EStatusEffect::None)
+	{
+		ApplyTo(Recipe.ExtraStatus, Skill.StatusValue);
+	}
+	if (Recipe.bStatusFromBase && Recipe.BaseStatus != EStatusEffect::None && Skill.BaseValue > 0)
+	{
+		Caster->ApplyStatus(Recipe.BaseStatus, Skill.BaseValue, Skill.StatusDuration);
+	}
+
+	// ⑥ 반동. 컬럼이 0 보다 크면 시전자가 받음
 	if (Skill.SelfDamage > 0)
 	{
 		Caster->ApplyDamage(Skill.SelfDamage);
@@ -107,35 +166,108 @@ FSkillExecutor::FRecipe FSkillExecutor::GetRecipe(EActionKind Kind)
 
 	switch (Kind)
 	{
-		// 피해 -> 대상
+		// 피해 -> 대상, 상태 -> 대상
 	case EActionKind::HitEnemy:
 	case EActionKind::HitEnemyMulti:
-	case EActionKind::HitEnemySingleAoe:
 	case EActionKind::HitAllEnemies:
+	case EActionKind::HitAllEnemiesMulti:
 	case EActionKind::HitEnemyMark:
+	case EActionKind::HitEnemyMultiMark:
 	case EActionKind::HitEnemyPoison:
 	case EActionKind::HitEnemySelfDmg:
-	case EActionKind::HitEnemyShield:
-	case EActionKind::HitEnemyProtect:
+	case EActionKind::HitEnemyLava:
+	case EActionKind::HitEnemyIce:
+	case EActionKind::HitEnemyAcid:
+	case EActionKind::HitEnemyFear:
+	case EActionKind::HitEnemyInternalInjury:
+	case EActionKind::HitEnemyDark:
+	case EActionKind::HitEnemyFlooding:
+	case EActionKind::HitEnemyContrarywind:
+	case EActionKind::HitAllEnemiesMark:
 	case EActionKind::HitAllEnemiesLavaAll:
 	case EActionKind::HitAllEnemiesIceAll:
 	case EActionKind::HitAllEnemiesPoisonAll:
 	case EActionKind::HitAllEnemiesAcidAll:
 	case EActionKind::HitAllEnemiesFearAll:
 	case EActionKind::HitAllEnemiesFusionAll:
+	case EActionKind::HitAllEnemiesInternalInjuryAll:
+	case EActionKind::HitAllEnemiesDarkAll:
+	case EActionKind::HitAllEnemiesFloodingAll:
+	case EActionKind::HitAllEnemiesContrarywindAll:
 		R.Use = EValueUse::Damage;
 		break;
 
-		// 보호막 -> 시전자
+		// 주 대상 피해 + 상대 전체 (Secondary + 공격). 상태는 주 대상
+	case EActionKind::HitEnemySingleAoe:
+	case EActionKind::HitEnemySingleAoeLava:
+	case EActionKind::HitEnemySingleAoeMark:
+		R.Use = EValueUse::Damage;
+		R.bAoeDamage = true;
+		break;
+
+		// 위 + 상대 전체 중독
+	case EActionKind::HitEnemySingleAoePoison:
+		R.Use = EValueUse::Damage;
+		R.bAoeDamage = true;
+		R.StatusTo = EStatusTo::Opponents;
+		break;
+
+		// 피해 -> 대상, 버프 -> 시전자
+	case EActionKind::HitEnemyProtect:
+	case EActionKind::HitEnemyEvasionSelf:
+		R.Use = EValueUse::Damage;
+		R.StatusTo = EStatusTo::Caster;
+		break;
+
+		// 피해 + 시전자 보호막 (Secondary + 방어)
+	case EActionKind::HitEnemyShield:
+	case EActionKind::HitAllEnemiesShield:
+		R.Use = EValueUse::Damage;
+		R.SecondaryOnCaster = EValueUse::Shield;
+		break;
+
+		// 피해 + 시전자 보호막 + 시전자 강철
+	case EActionKind::HitEnemyShieldMetal:
+	case EActionKind::HitAllEnemiesShieldMetal:
+		R.Use = EValueUse::Damage;
+		R.SecondaryOnCaster = EValueUse::Shield;
+		R.StatusTo = EStatusTo::Caster;
+		break;
+
+		// 피해 + 시전자 회복 (Secondary + 방어). 얼음은 대상에게
+	case EActionKind::HitEnemyHealSelf:
+	case EActionKind::HitAllEnemiesHealSelf:
+	case EActionKind::HitEnemyHealSelfIce:
+	case EActionKind::HitAllEnemiesHealSelfIceAll:
+		R.Use = EValueUse::Damage;
+		R.SecondaryOnCaster = EValueUse::Heal;
+		break;
+
+		// 반동 + 피해 + 체력을 깎은 타격마다 Secondary 회복 (반동은 SelfDamage 칸)
+	case EActionKind::HitEnemySelfDmgDrain:
+	case EActionKind::HitEnemyMultiSelfDmgDrain:
+	case EActionKind::HitAllSelfDmgDrain:
+		R.Use = EValueUse::Damage;
+		R.bDrain = true;
+		break;
+
+		// 보호막 -> 시전자 (상태는 대상: Self 스킬이면 시전자, 독 연막이면 적 전체)
 	case EActionKind::ShieldSelf:
 	case EActionKind::ShieldSelfCounter:
 	case EActionKind::ShieldSelfPoisonAll:
+	case EActionKind::ShieldSelfSolid:
+	case EActionKind::ShieldSelfAbsorption:
+	case EActionKind::ShieldSelfProtect:
+	case EActionKind::ShieldSelfEvasion:
+	case EActionKind::ShieldSelfIronWall:
+	case EActionKind::ShieldSelfBraveSelf:
 		R.Use = EValueUse::Shield;
 		R.bOnCaster = true;
 		break;
 
 		// 보호막 -> 대상
 	case EActionKind::ShieldAll:
+	case EActionKind::ShieldAllSolidAll:
 		R.Use = EValueUse::Shield;
 		break;
 
@@ -148,11 +280,45 @@ FSkillExecutor::FRecipe FSkillExecutor::GetRecipe(EActionKind Kind)
 
 		// 회복 -> 시전자 (유물)
 	case EActionKind::HealSelf:
+	case EActionKind::HealSelfProtect:
+	case EActionKind::HealSelfBraveSelf:
 		R.Use = EValueUse::Heal;
 		R.bOnCaster = true;
 		break;
 
-		// 나머지 22개는 BaseValue 를 안 씀. 상태이상 반동은 컬럼이 따로 말해줌
+		// 에너지 회복 (+ 자신 버프)
+	case EActionKind::GainEnergy:
+	case EActionKind::GainEnergyProtectSelf:
+	case EActionKind::GainEnergyIndomitableSelf:
+	case EActionKind::GainEnergyBraveSelf:
+	case EActionKind::GainEnergyBlindnessSelf:
+		R.bGainEnergy = true;
+		break;
+
+		// 은신: (StatusValue + 방어) 만큼 민첩
+	case EActionKind::EvasionSelf:
+		R.bScaleStatus = true;
+		break;
+
+		// 시전자 민첩(BaseValue) + 적 전체 중독
+	case EActionKind::EvasionSelfPoisonAll:
+		R.bStatusFromBase = true;
+		R.BaseStatus = EStatusEffect::Evasion;
+		break;
+
+		// 상태 두 개를 같은 수치로
+	case EActionKind::BraveAllSolidAll:
+		R.ExtraStatus = EStatusEffect::Solid;
+		break;
+	case EActionKind::EvasionSelfBraveSelf:
+	case EActionKind::EvasionSelfCounterSelf:
+		R.ExtraStatus = EStatusEffect::Evasion;
+		break;
+	case EActionKind::StatusMarkFearAll:
+		R.ExtraStatus = EStatusEffect::Fear;
+		break;
+
+		// 나머지(상태만 거는 것, 반동만, 유물 전용)는 BaseValue 를 안 씀. 상태 / 반동은 컬럼이 따로 말해줌
 	default:
 		break;
 	}
@@ -167,14 +333,15 @@ int32 FSkillExecutor::GetEffectiveStat(const UCombatStatsComponent* Who, EScalin
 	switch (Stat)
 	{
 	case EScalingStat::ATK:
+		// 얼음 그룹 = 허약(얼음 / 침수)
 		return Base.Attack
 			+ Who->GetStatusValue(EStatusEffect::Brave)
 			- Who->GetStatusValue(EStatusEffect::Ice);
 
 	case EScalingStat::DEF:
+		// 가호와 견고는 같은 그룹이라 하나만 걸림 -> 한 번만 더함
 		return Base.Defense
 			+ Who->GetStatusValue(EStatusEffect::Protection)
-			+ Who->GetStatusValue(EStatusEffect::Solid)
 			- Who->GetStatusValue(EStatusEffect::Lava);
 
 	default:

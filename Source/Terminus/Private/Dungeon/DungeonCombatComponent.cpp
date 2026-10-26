@@ -814,7 +814,9 @@ void UDungeonCombatComponent::HandleUseSkill(ATerminusPlayerState* PS, int32 Ski
 	Caster->SpendEnergy(EnergyCost);
 	Caster->SpendSkillEnergy(Skill.SkillEnergyCost);
 
-	FSkillExecutor::Execute(Skill, Caster, Targets);
+	// 광역 추가 피해(마도 캐논 등)가 맞을 상대 편 전체
+	const TArray<UCombatStatsComponent*> Opponents = IsBetrayal() ? GetBetrayalSideStats(PS != Betrayer) : GetAliveMonsterStats();
+	FSkillExecutor::Execute(Skill, Caster, Targets, Opponents);
 	FireRelics(FindHolder(Caster), ERelicTrigger::OnSkillUsed, 0, PS->GetCombatSkillRow(SkillIndex), &Skill);
 
 
@@ -929,7 +931,7 @@ void UDungeonCombatComponent::RunNextMonsterAction()
 
 			if (Intent->Kind == EMonsterIntentKind::Attack) Monster->PlayAttackAnim();
 
-			FSkillExecutor::Execute(*Skill, Stats, Targets);
+			FSkillExecutor::Execute(*Skill, Stats, Targets, GetAlivePlayerStats());
 			UE_LOG(LogDungeonCombat, Log, TEXT("[Combat]   몬스터 %d -> %s"), NextMonsterIndex - 1, *Skill->DisplayName_KR.ToString());
 		}
 
@@ -1297,13 +1299,24 @@ int32 UDungeonCombatComponent::AddRelicHolder(UCombatStatsComponent* Stats, ATer
 	Holder.Stats = Stats;
 	Holder.Player = PS;
 	Holder.bMonster = bMonster;
+	bool bEvasionReduction = false;
+	int32 ShieldBonusPercent = 0;
 	for (const FName& Row : Relics)
 	{
-		if (UTerminusDataSettings::FindRelicRow(Row)) Holder.Relics.Add(Row);
+		if (const FRelicRow* Relic = UTerminusDataSettings::FindRelicRow(Row))
+		{
+			Holder.Relics.Add(Row);
+			bEvasionReduction |= Relic->ActionKind == EActionKind::EvasionDamageReduction;
+			if (Relic->ActionKind == EActionKind::BonusDamageOnShield) ShieldBonusPercent += Relic->BaseValue;
+		}
 	}
+	// 체술 / 보호막 관통은 발동형이 아니라 맞을 때마다 피해 계산에 끼어드는 거라 스텟 컴포넌트에 켜 둠
+	Stats->SetEvasionReduction(bEvasionReduction);
+	Stats->SetShieldBonusPercent(ShieldBonusPercent);
 
 	Stats->OnDamaged.AddUObject(this, &UDungeonCombatComponent::HandleStatsDamaged);
 	Stats->OnShieldGained.AddUObject(this, &UDungeonCombatComponent::HandleShieldGained);
+	Stats->OnHitShieldTarget.AddUObject(this, &UDungeonCombatComponent::HandleHitShield);
 	Stats->OnHealed.AddUObject(this, &UDungeonCombatComponent::HandleHealed);
 	Stats->OnEnergySpent.AddUObject(this, &UDungeonCombatComponent::HandleEnergySpent);
 	Stats->OnSkillEnergySpent.AddUObject(this, &UDungeonCombatComponent::HandleSkillEnergySpent);
@@ -1364,11 +1377,14 @@ void UDungeonCombatComponent::ClearRelicHolders()
 		{
 			Stats->OnDamaged.RemoveAll(this);
 			Stats->OnShieldGained.RemoveAll(this);
+			Stats->OnHitShieldTarget.RemoveAll(this);
 			Stats->OnHealed.RemoveAll(this);
 			Stats->OnEnergySpent.RemoveAll(this);
 			Stats->OnSkillEnergySpent.RemoveAll(this);
 			Stats->OnDiedNative.RemoveAll(this);
 			Stats->PreventDeath.Unbind();
+			Stats->SetEvasionReduction(false);
+			Stats->SetShieldBonusPercent(0);
 		}
 	}
 	Holders.Reset();
@@ -1416,11 +1432,14 @@ void UDungeonCombatComponent::FireRelics(int32 HolderIndex, ERelicTrigger Trigge
 		const FRelicRow* Relic = UTerminusDataSettings::FindRelicRow(Row);
 		if (!Relic || Relic->TriggerTiming != Trigger) continue;
 
-		// OnSkillUsed: OnSkill 칸이 쓴 스킬의 행 이름이나 SkillID 와 같을 때만
+		// OnSkillUsed: OnSkill 칸이 쓴 스킬의 행 이름 / SkillID / 스킬 종류(Attack, Defense, Special) 와 같을 때만
 		if (Trigger == ERelicTrigger::OnSkillUsed)
 		{
+			const FString OnSkill = Relic->OnSkill.ToString();
 			const bool bMatch = !Relic->OnSkill.IsNone()
-				&& (Relic->OnSkill == UsedSkill || (UsedSkillRow && Relic->OnSkill.ToString() == UsedSkillRow->SkillID));
+				&& (Relic->OnSkill == UsedSkill
+					|| (UsedSkillRow && (OnSkill == UsedSkillRow->SkillID
+						|| OnSkill == StaticEnum<ESkillType>()->GetNameStringByValue(static_cast<int64>(UsedSkillRow->SkillType)))));
 			if (!bMatch) continue;
 		}
 
@@ -1442,9 +1461,11 @@ void UDungeonCombatComponent::ExecuteRelic(int32 HolderIndex, const FRelicRow& R
 
 	switch (Relic.ActionKind)
 	{
-	// 부활은 죽는 순간(HandlePreventDeath)에서
+	// 부활은 죽는 순간(HandlePreventDeath)에서, 체술 / 보호막 관통은 피해 계산(ApplyDamage)에서
 	case EActionKind::RevivalSelfAll:
 	case EActionKind::RevivalSelfHalf:
+	case EActionKind::EvasionDamageReduction:
+	case EActionKind::BonusDamageOnShield:
 		return;
 
 	// 런 전체에 남는 효과 (플레이어만)
@@ -1481,6 +1502,7 @@ void UDungeonCombatComponent::ExecuteRelic(int32 HolderIndex, const FRelicRow& R
 	AsSkill.StatusEffect = Relic.StatusEffect;
 	AsSkill.StatusValue = Relic.StatusValue;
 	AsSkill.StatusDuration = Relic.StatusDuration;
+	AsSkill.SkillType = ESkillType::Special;   // 유물 효과는 공격 스킬이 아님 (OnSkillUsed 'Attack' 유물이 다시 안 걸리게)
 
 	// 대상: 유물 주인 기준 (몬스터 유물이면 적 = 플레이어). 배신 전투면 적 = 상대 편 플레이어
 	const bool bBetrayalSide = IsBetrayal() && !bMonster;
@@ -1498,7 +1520,7 @@ void UDungeonCombatComponent::ExecuteRelic(int32 HolderIndex, const FRelicRow& R
 	}
 	if (Targets.Num() == 0) return;
 
-	FSkillExecutor::Execute(AsSkill, Owner, Targets);
+	FSkillExecutor::Execute(AsSkill, Owner, Targets, Opponents);
 }
 
 // ---- 전투 사건 -> 유물
@@ -1528,6 +1550,13 @@ void UDungeonCombatComponent::HandleStatsDamaged(UCombatStatsComponent* Self, in
 }
 
 void UDungeonCombatComponent::HandleShieldGained(UCombatStatsComponent* Self, int32 Amount)     { FireRelics(FindHolder(Self), ERelicTrigger::OnGainShield, Amount); }
+
+void UDungeonCombatComponent::HandleHitShield(UCombatStatsComponent* Self, int32 Amount)
+{
+	// 유물이 준 피해로 또 발동하면 "보호막 적에게 추가 피해" 가 연쇄로 이어짐 -> 스킬 / 몬스터 행동에서 맞힌 것만
+	if (RelicDepth > 0) return;
+	FireRelics(FindHolder(Self), ERelicTrigger::OnHitShield, Amount);
+}
 void UDungeonCombatComponent::HandleHealed(UCombatStatsComponent* Self, int32 Amount)           { FireRelics(FindHolder(Self), ERelicTrigger::OnHealHP, Amount); }
 void UDungeonCombatComponent::HandleEnergySpent(UCombatStatsComponent* Self, int32 Amount)      { FireRelics(FindHolder(Self), ERelicTrigger::OnUseEnergy, Amount); }
 void UDungeonCombatComponent::HandleSkillEnergySpent(UCombatStatsComponent* Self, int32 Amount) { FireRelics(FindHolder(Self), ERelicTrigger::OnUseSkillEnergy, Amount); }

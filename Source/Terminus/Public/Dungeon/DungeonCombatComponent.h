@@ -370,6 +370,7 @@ private:
 	// 전투 사건 (UCombatStatsComponent 알림)
 	void HandleStatsDamaged(UCombatStatsComponent* Self, int32 HealthLost, UCombatStatsComponent* Instigator);
 	void HandleShieldGained(UCombatStatsComponent* Self, int32 Amount);
+	void HandleHitShield(UCombatStatsComponent* Self, int32 Amount);
 	void HandleHealed(UCombatStatsComponent* Self, int32 Amount);
 	void HandleEnergySpent(UCombatStatsComponent* Self, int32 Amount);
 	void HandleSkillEnergySpent(UCombatStatsComponent* Self, int32 Amount);

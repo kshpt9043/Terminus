@@ -41,19 +41,19 @@ void UCombatStatsComponent::GetLifetimeReplicatedProps(TArray<class FLifetimePro
 	DOREPLIFETIME(UCombatStatsComponent, State);
 }
 
-void UCombatStatsComponent::ApplyDamage(int32 Amount, UCombatStatsComponent* Instigator)
+int32 UCombatStatsComponent::ApplyDamage(int32 Amount, UCombatStatsComponent* Instigator)
 {
 	if (!HasAuth())
 	{
-		return;
+		return 0;
 	}
 	if (Amount <= 0)
 	{
-		return;
+		return 0;
 	}
 	if (IsDead())
 	{
-		return;
+		return 0;
 	}
 
 	// ① 공격자가 공포면 최종 데미지 -25%, 내가 급소면 받는 데미지 +25%
@@ -66,17 +66,30 @@ void UCombatStatsComponent::ApplyDamage(int32 Amount, UCombatStatsComponent* Ins
 		Amount = FMath::RoundToInt(Amount * 1.25f);
 	}
 
-	// ② 불굴 / 강철: 한 번에 받는 데미지 1 고정. 철벽: 수치만큼 줄어듦
-	if (Amount > 0 && (HasStatus(EStatusEffect::Indomitable) || HasStatus(EStatusEffect::Metal)))
+	// 보호막 있는 대상을 때림: 공격자 유물(파쇄의 권갑 등) 만큼 +%, 그리고 OnHitShield 유물 알림
+	const bool bHadShield = State.Shield > 0;
+	if (Instigator && Instigator != this && bHadShield && Instigator->ShieldBonusPercent > 0)
+	{
+		Amount = FMath::RoundToInt(Amount * (100 + Instigator->ShieldBonusPercent) / 100.f);
+	}
+
+	// ② 불굴 그룹(불굴 / 강철 / 정령화 / 실명): 한 번에 받는 데미지 1 고정. 철벽: 수치만큼 줄어듦
+	if (Amount > 0 && HasStatus(EStatusEffect::Indomitable))
 	{
 		Amount = 1;
 	}
 	Amount = FMath::Max(0, Amount - GetStatusValue(EStatusEffect::IronWall));
 
-	// ③ 보호막 먼저, 남은 만큼 체력. 회피(체술)는 암살자 기본 유물이 생기면 그쪽에서
+	// ③ 보호막 먼저, 남은 만큼 체력
+	//    체술: 보호막이 받고 남은 피해를 회피만큼 줄임. 회피 이하면 0 (노션 캐릭터 10-23)
 	const int32 Absorbed = FMath::Min(State.Shield, Amount);
 	State.Shield -= Absorbed;
-	int32 HealthLost = FMath::Min(State.Health, Amount - Absorbed);
+	int32 Remain = Amount - Absorbed;
+	if (bEvasionReduction)
+	{
+		Remain = FMath::Max(0, Remain - GetEvasion());
+	}
+	int32 HealthLost = FMath::Min(State.Health, Remain);
 
 	// ④ 불사: 체력이 1 아래로 내려가지 않음
 	if (HasStatus(EStatusEffect::Immortality) && State.Health - HealthLost < 1)
@@ -110,12 +123,18 @@ void UCombatStatsComponent::ApplyDamage(int32 Amount, UCombatStatsComponent* Ins
 	// 부활 유물 등이 막으면(PreventDeath 가 true) 안 죽은 걸로
 	if (IsDead())
 	{
-		if (PreventDeath.IsBound() && PreventDeath.Execute(this) && !IsDead())
+		const bool bPrevented = PreventDeath.IsBound() && PreventDeath.Execute(this) && !IsDead();
+		if (!bPrevented)
 		{
-			return;
+			NotifyDied();
 		}
-		NotifyDied();
 	}
+
+	if (Instigator && Instigator != this && bHadShield)
+	{
+		Instigator->OnHitShieldTarget.Broadcast(Instigator, Amount);
+	}
+	return HealthLost;
 }
 
 void UCombatStatsComponent::AddShield(int32 Amount)
@@ -232,6 +251,12 @@ void UCombatStatsComponent::AddEnergy(int32 Amount, bool bAllowOverMax)
 	NotifyStateChanged();
 }
 
+int32 UCombatStatsComponent::GetEvasion() const
+{
+	// 기본 / 연무장 회피 + 민첩(은신 같은 스킬)
+	return FMath::Max(0, Stats.Evasion + GetStatusValue(EStatusEffect::Evasion));
+}
+
 int32 UCombatStatsComponent::GetEffectiveEnergyCost(int32 BaseCost) const
 {
 	// 과욕(산성): 에너지만 적용 -> 에너지를 쓰는 스킬만 +1
@@ -281,7 +306,8 @@ void UCombatStatsComponent::ApplyStatus(EStatusEffect Type, int32 Value, int32 D
 	{
 		return;
 	}
-	if (Type == EStatusEffect::None)
+	// 반동 피해는 스킬의 SelfDamage 칸이 바로 처리함. 상태로 남길 게 없음
+	if (Type == EStatusEffect::None || Type == EStatusEffect::SelfDamage)
 	{
 		return;
 	}
@@ -299,12 +325,13 @@ void UCombatStatsComponent::ApplyStatus(EStatusEffect Type, int32 Value, int32 D
 	}
 	
 	
-	// 같은 종류가 이미 걸려 있나 찾기. 찾기만 하고 만들진 않음
+	// 같은 그룹이 이미 걸려 있나 찾기. 찾기만 하고 만들진 않음
 	// 배열 안 진짜 항목의 포인터라 여기다 바로 쓰면 원본이 바뀜. 없으면 nullptr 라서 else 에서 직접 Add
-	FStatusInstance* Existing = State.Statuses.FindByPredicate(
-	[Type](const FStatusInstance& S) { return S.Type == Type; });
+	// 그룹이 같으면 이름(Type)도 새 걸로 바꿈 -> 화면에 최근에 걸린 테마 이름이 보임
+	FStatusInstance* Existing = FindStatus(Type);
 	if (Existing)
 	{
+		Existing->Type = Type;
 		Existing->Value = Value;
 		Existing->Duration = Duration;
 	}
@@ -327,7 +354,8 @@ void UCombatStatsComponent::RemoveStatus(EStatusEffect Type)
 		return;
 	}
 
-	if (State.Statuses.RemoveAll([Type](const FStatusInstance& S) { return S.Type == Type; }) > 0)
+	const EStatusEffect Group = GetStatusGroup(Type);
+	if (State.Statuses.RemoveAll([Group](const FStatusInstance& S) { return GetStatusGroup(S.Type) == Group; }) > 0)
 	{
 		NotifyStateChanged();
 	}
@@ -373,16 +401,26 @@ void UCombatStatsComponent::Revive(float HealthRatio)
 
 bool UCombatStatsComponent::HasStatus(EStatusEffect Type) const
 {
-	return State.Statuses.ContainsByPredicate([Type](const FStatusInstance& S) { return S.Type == Type; });
+	return FindStatus(Type) != nullptr;
 }
 
 int32 UCombatStatsComponent::GetStatusValue(EStatusEffect Type) const
 {
-	// 같은 종류 찾기. const 함수 안이라 멤버가 전부 읽기 전용 -> 포인터도 const 로 받아야 함
-	const FStatusInstance* Existing = State.Statuses.FindByPredicate(
-	[Type](const FStatusInstance& S) { return S.Type == Type; });
-	
+	const FStatusInstance* Existing = FindStatus(Type);
 	return Existing ? Existing->Value : 0;
+}
+
+FStatusInstance* UCombatStatsComponent::FindStatus(EStatusEffect Type)
+{
+	const EStatusEffect Group = GetStatusGroup(Type);
+	return State.Statuses.FindByPredicate([Group](const FStatusInstance& S) { return GetStatusGroup(S.Type) == Group; });
+}
+
+const FStatusInstance* UCombatStatsComponent::FindStatus(EStatusEffect Type) const
+{
+	// const 함수 안이라 멤버가 전부 읽기 전용 -> 포인터도 const 로 받아야 함
+	const EStatusEffect Group = GetStatusGroup(Type);
+	return State.Statuses.FindByPredicate([Group](const FStatusInstance& S) { return GetStatusGroup(S.Type) == Group; });
 }
 
 void UCombatStatsComponent::OnTurnEnd()

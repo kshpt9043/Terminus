@@ -133,7 +133,13 @@ namespace
 		case EStatusEffect::Solid:          return { TEXT("견"), TEXT("7FB8E8") };
 		case EStatusEffect::Indomitable:    return { TEXT("불"), TEXT("FFD978") };
 		case EStatusEffect::IronWall:       return { TEXT("철"), TEXT("7FB8E8") };
-		default:                            return { TEXT("?"), TEXT("A89F8C") };
+		// 같은 그룹이라도 테마 이름 첫 글자로 (색은 그룹과 같게)
+		case EStatusEffect::Dark:           return { TEXT("어"), TEXT("FF5A4A") };
+		case EStatusEffect::Flooding:       return { TEXT("침"), TEXT("B07CD8") };
+		case EStatusEffect::Contrarywind:   return { TEXT("풍"), TEXT("B07CD8") };
+		case EStatusEffect::Spirit:         return { TEXT("정"), TEXT("FFD978") };
+		case EStatusEffect::Blindness:      return { TEXT("실"), TEXT("FFD978") };
+		default:                           return { TEXT("?"), TEXT("A89F8C") };
 		}
 	}
 

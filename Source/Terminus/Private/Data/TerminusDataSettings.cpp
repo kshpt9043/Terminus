@@ -90,6 +90,36 @@ const FRelicRow* UTerminusDataSettings::FindRelicRow(FName RowName)
 	return Table->FindRow<FRelicRow>(RowName, Ctx);
 }
 
+namespace
+{
+	template <typename RowType>
+	const RowType* FindIn(const TSoftObjectPtr<UDataTable>& Ref, FName RowName, const TCHAR* Ctx)
+	{
+		const UDataTable* Table = Ref.LoadSynchronous();
+		return Table ? Table->FindRow<RowType>(RowName, Ctx) : nullptr;
+	}
+}
+
+const FEventRow* UTerminusDataSettings::FindEventRow(FName RowName)
+{
+	return FindIn<FEventRow>(Get()->EventTable, RowName, TEXT("FindEventRow"));
+}
+
+const FEventChoiceRow* UTerminusDataSettings::FindEventChoiceRow(FName RowName)
+{
+	return FindIn<FEventChoiceRow>(Get()->EventChoiceTable, RowName, TEXT("FindEventChoiceRow"));
+}
+
+const FQuestRow* UTerminusDataSettings::FindQuestRow(FName RowName)
+{
+	return FindIn<FQuestRow>(Get()->QuestTable, RowName, TEXT("FindQuestRow"));
+}
+
+const FQuestRoomRow* UTerminusDataSettings::FindQuestRoomRow(FName RowName)
+{
+	return FindIn<FQuestRoomRow>(Get()->QuestRoomTable, RowName, TEXT("FindQuestRoomRow"));
+}
+
 FString UTerminusDataSettings::GetSkillName(FName RowName)
 {
 	const FSkillRow* Skill = FindSkillRow(RowName);

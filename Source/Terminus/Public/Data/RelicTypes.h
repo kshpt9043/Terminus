@@ -8,7 +8,7 @@
 class UTexture2D;
 
 // 유물 하나를 정의하는 열거형과 행 구조체
-// 전부 skill_data.xlsx 의 Relic_DataTable 시트 기준 (열 이름에서 _KR 은 뺌)
+// 전부 skill_data.xlsx 의 Relic_DataTable 시트 기준 (열 이름에서 _KR 은 뺌. Calc_StandardPrice / Effect_Category 는 기획용이라 안 가져옴)
 // 프로퍼티 이름 = CSV 컬럼 이름, 열거형 값 이름 = 엑셀 값. 하나라도 다르면 임포트 때 에러 없이 기본값이 들어감
 
 // 유물 등급 (노션 유물 페이지)
@@ -42,7 +42,8 @@ enum class ERelicTrigger : uint8
 	OnRestStart,            // 휴식터에 들어갈 때
 	OnGuardianBattleStart,  // 가디언 전투 시작
 	OnBossBattleStart,      // 보스 전투 시작
-	OnHealHP                // 내 체력이 회복될 때마다
+	OnHealHP,               // 내 체력이 회복될 때마다
+	OnHitShield             // 보호막 있는 대상을 공격했을 때 (10-24 엑셀). 무도가 패시브 BonusDamageOnShield 도 이 시점
 };
 
 /**
@@ -104,9 +105,13 @@ struct FRelicRow : public FTableRowBase
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	int32 StatusDuration = 0;
 
-	// TriggerTiming 이 OnSkillUsed 일 때 대상 스킬 (DT_Skill 행 이름)
+	// TriggerTiming 이 OnSkillUsed 일 때 대상 스킬. DT_Skill 행 이름 / SkillID / 스킬 종류(Attack, Defense, Special)
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	FName OnSkill;
+
+	// 일시적 이벤트 유물의 유지 전투 수. -1 = 영구, 3 = 전투 3번 끝나면 사라짐 (10-24 엑셀)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	int32 RemainBattle = -1;
 
 	// --- 가격
 	// 상점 구매가 (던전 재화). -1 = 상점에서 살 수 없음

@@ -350,8 +350,9 @@ bool ATerminusPlayerState::GainRelic(FName RelicRow)
 		return false;
 	}
 
-	// 가질 수 있는 유물인가: 공용이거나 내 직업 것
-	if (!CanClassHoldRelic(RunState.CharacterClass, *Relic))
+	// 가질 수 있는 유물인가: 공용이거나 내 직업 것. 이벤트 / 퀘스트 유물은 그쪽이 직접 주는 거라 누구나
+	const bool bGivenOnly = Relic->OwnerClass == ESkillOwner::Event || Relic->OwnerClass == ESkillOwner::Quest;
+	if (!bGivenOnly && !CanClassHoldRelic(RunState.CharacterClass, *Relic))
 	{
 		UE_LOG(LogTemp, Warning, TEXT("[Relic] %s 는 다른 직업 / 몬스터 전용이라 가질 수 없음"), *RelicRow.ToString());
 		return false;
