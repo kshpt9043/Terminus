@@ -27,6 +27,17 @@ struct FTempRelicEntry
 	UPROPERTY(BlueprintReadOnly) int32 BattlesLeft = 0;
 };
 
+// 진행 중 퀘스트 (DT_Quest 행). 테마 하나 동안 하나 (TerminusQuests)
+USTRUCT(BlueprintType)
+struct FQuestProgress
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadOnly) FName Quest;
+	UPROPERTY(BlueprintReadOnly) int32 Progress = 0;
+	UPROPERTY(BlueprintReadOnly) bool bCompleted = false;
+};
+
 // 픽업 스킬 강화 단계 (상점 / 유물 RandomUpgrade). 스킬 행 이름으로 찾음
 USTRUCT(BlueprintType)
 struct FSkillLevelEntry
@@ -149,4 +160,17 @@ struct FRunState
 	// 세이브에서 이어할 때의 체력. 던전에서 배틀러가 처음 빙의될 때 적용하고 -1 로 비움 (-1 = 최대 체력으로 시작)
 	UPROPERTY(BlueprintReadOnly)
 	int32 SavedHealth = -1;
+
+	// 퀘스트 (TerminusQuests). 진행 중인 것 하나 / 이번 층 몬스터 / 가디언 방 입장 수 / 정산 때 받을 골드
+	UPROPERTY(BlueprintReadOnly)
+	FQuestProgress ActiveQuest;
+
+	UPROPERTY(BlueprintReadOnly)
+	int32 FloorMonsterRooms = 0;
+
+	UPROPERTY(BlueprintReadOnly)
+	int32 FloorGuardianRooms = 0;
+
+	UPROPERTY(BlueprintReadOnly)
+	int32 QuestGold = 0;
 };

@@ -5,6 +5,7 @@
 #include "Data/SkillTypes.h"
 #include "Map/MapManager.h"
 #include "Data/RelicTypes.h"
+#include "Data/MonsterTypes.h"
 #include "DungeonCombatComponent.generated.h"
 
 class ADungeonArea;
@@ -32,6 +33,24 @@ enum class EMonsterIntentKind : uint8
 	Defend,
 	Buff,
 	Debuff
+};
+
+// 같이 나오는 몬스터 규칙 (노션 던전 테마: 슬라임 킹 = 가디언 1, 리자드맨 족장 = 일반 몬스터와 함께 등)
+// 몬스터 데이터에 칸이 없어서 전투 컴포넌트 설정으로 둠
+USTRUCT(BlueprintType)
+struct FMonsterCompanionRule
+{
+	GENERATED_BODY()
+
+	// 특정 몬스터(DT_Monster 행 이름). 비우면 아래 분류에서 같은 테마로 무작위
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	FName FixedRow;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	EMonsterCategory Category = EMonsterCategory::Normal;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (ClampMin = "1"))
+	int32 Count = 1;
 };
 
 // 몬스터 한 마리의 이번 사이클 행동. 사이클 시작 때 정해서 모두에게 보여줌
@@ -88,6 +107,9 @@ public:
 	// 몬스터를 스폰하고 첫 사이클 시작. 전투 방(몬스터 / 가디언 / 보스)일 때 구역이 부름
 	// 다음 StartCombat 한 번만 몬스터 체력에 곱함 (이벤트 '쉬는 가디언' 70%). StartCombat 이 1 로 되돌림
 	void SetNextSpawnHealthScale(float Scale) { NextSpawnHealthScale = FMath::Max(0.01f, Scale); }
+
+	// 다음 StartCombat 한 번만 이 몬스터들로 (퀘스트 특수 방). 비어 있으면 평소대로 고름
+	void SetNextForcedMonsters(const TArray<FName>& Rows) { NextForcedMonsters = Rows; }
 
 	void StartCombat(const FRoomNode& Room, const TArray<ATerminusPlayerState*>& InPlayers, const UDungeonThemeData* Theme);
 
@@ -201,6 +223,11 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Combat|Monster")
 	TMap<FName, int32> FallbackMonsterSkills = { { TEXT("slime_strike"), 70 }, { TEXT("condense"), 30 } };
 
+	// 같이 나오는 몬스터 (키 = DT_Monster 행). 구역 몬스터 슬롯이 남는 만큼만 나옴
+	// 수가 기획에 없는 것(족장 / 인도자)은 임시값
+	UPROPERTY(EditAnywhere, Category = "Combat|Monster")
+	TMap<FName, FMonsterCompanionRule> MonsterCompanions;
+
 	// 몬스터 행동 사이 간격(초). 한꺼번에 하면 무슨 일이 일어났는지 안 보임
 	UPROPERTY(EditAnywhere, Category = "Combat|Timing")
 	float MonsterActionInterval = 0.8f;
@@ -248,6 +275,7 @@ public:
 
 private:
 	float NextSpawnHealthScale = 1.f;
+	TArray<FName> NextForcedMonsters;
 
 	// ---- 복제되는 진행 상태
 

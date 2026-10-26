@@ -1,4 +1,5 @@
 #include "Widgets/Map/MapScreenWidget.h"
+#include "Game/TerminusQuests.h"
 
 #include "Player/TerminusPlayerController.h"
 #include "Widgets/Map/MapCanvasWidget.h"
@@ -101,7 +102,15 @@ void UMapScreenWidget::RefreshHint()
 	}
 
 	const bool bMine = LocalPS && LocalPS->GetSelectedRoomId() != INDEX_NONE;
-	TerminusUI::SetTextIfChanged(HintText, bMine && Total > 1 ? TEXT("동료의 선택을 기다리는 중") : TEXT("다음 방을 고르세요"));
+	FString Hint = bMine && Total > 1 ? TEXT("동료의 선택을 기다리는 중") : TEXT("다음 방을 고르세요");
+
+	// 진행 중 퀘스트 한 줄
+	const FString Quest = LocalPS ? TerminusQuests::DescribeActive(LocalPS->GetRunState()) : FString();
+	if (!Quest.IsEmpty())
+	{
+		Hint += TEXT("\n") + Quest;
+	}
+	TerminusUI::SetTextIfChanged(HintText, Hint);
 
 	if (HintSubText)
 	{

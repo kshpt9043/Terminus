@@ -33,8 +33,13 @@ void URoomNodeWidget::SetupRoomNode(const FRoomNode& InRoomData, const TMap<ERoo
 		}
 	}
 
+	// 퀘스트 특수 방: 금색 + 조금 크게 + 툴팁 (안 그러면 일반 가디언 방과 구분이 안 됨)
+	const bool bSpecial = !InRoomData.SpecialRoom.IsNone();
+	RoomButton->SetColorAndOpacity(bSpecial ? TerminusUI::Color::Gold : FLinearColor::White);
+	RoomButton->SetToolTipText(bSpecial ? FText::FromString(TEXT("퀘스트 특수 방")) : FText::GetEmpty());
+
 	// 2. 보스는 아이콘 / 동그라미를 크게 (아이콘 상자 가운데 기준이라 선 위치는 그대로)
-	const float Size = bIsBoss ? BossIconSize : IconSize;
+	const float Size = bIsBoss ? BossIconSize : (bSpecial ? IconSize * 1.25f : IconSize);
 	if (IconBox)
 	{
 		IconBox->SetWidthOverride(Size);

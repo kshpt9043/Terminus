@@ -154,6 +154,9 @@ public:
 	// 던전 재화. 음수면 깎음 (0 아래로는 안 내려감)
 	void AddCurrency(int32 Amount);
 
+	// 런 상태를 직접 고치고 복제 / 화면 갱신 (서버만). 퀘스트처럼 칸이 여럿인 것을 한 번에
+	void ModifyRunState(TFunctionRef<void(FRunState&)> Edit);
+
 	// 방을 클리어하고 그 방으로 진행. 지도상 현재 위치와 진행 레벨을 갱신하고 선택을 비운다
 	void AdvanceToRoom(int32 TargetRoomId, int32 TargetRow);
 

@@ -379,6 +379,7 @@ public:
 	// 이벤트 방 테스트
 	//   DebugForceEvent evt_alchemist_cauldron -> 다음 이벤트 방은 그 이벤트 (None 이면 다시 무작위)
 	//   DebugRoomsToEvent                       -> 이 층 지도에서 일반 방(몬스터 / 휴식 / 상점 / 가디언)을 전부 이벤트 방으로
+	//   DebugRoomsTo STORE                      -> 같은 방들을 그 종류로 (MONSTER / BREAK / STORE / GUARDIAN / EVENT / BOSS)
 	UFUNCTION(Exec)
 	void DebugForceEvent(FName EventRow);
 
@@ -390,6 +391,19 @@ public:
 
 	UFUNCTION(Server, Reliable)
 	void Server_DebugRoomsToEvent();
+
+	UFUNCTION(Exec)
+	void DebugRoomsTo(FName RoomType);
+
+	// 퀘스트 바로 받기 (DT_Quest 행). 예: DebugAcceptQuest Q_SLI_016
+	UFUNCTION(Exec)
+	void DebugAcceptQuest(FName QuestRow);
+
+	UFUNCTION(Server, Reliable)
+	void Server_DebugAcceptQuest(FName QuestRow);
+
+	UFUNCTION(Server, Reliable)
+	void Server_DebugRoomsTo(FName RoomType);
 
 protected:
 	// 전투 HUD 클래스. 비워 두면 프로젝트 설정(Terminus UI) -> C++ 기본 배치(UCombatHUDWidget)를 씀. WBP 를 만들면 BP_DungeonPC 에서 지정

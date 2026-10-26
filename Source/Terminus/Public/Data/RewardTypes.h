@@ -35,6 +35,12 @@ struct FEventOption
 	UPROPERTY(BlueprintReadOnly) int32 CostRelics = 0;     // 유물 무작위로 잃음 (유물 변화면 바뀌는 그 유물)
 	UPROPERTY(BlueprintReadOnly) FName CostRelic;          // 대가로 받는 디버프 유물 (GainDebuffRelic)
 
+	// 툴팁에만 적힌 추가 결과 ("체력을 8 회복하고 ... +1강 강화", "승리 시 용암 지대 유물 및 던전 재화 55 획득")
+	UPROPERTY(BlueprintReadOnly) int32 BonusHeal = 0;
+	UPROPERTY(BlueprintReadOnly) int32 BonusUpgrades = 0;
+	UPROPERTY(BlueprintReadOnly) int32 BonusWinCurrency = 0;     // 쉬는 가디언을 이기면
+	UPROPERTY(BlueprintReadOnly) bool bBonusWinRelic = false;    // 쉬는 가디언을 이기면 테마 유물
+
 	// 고를 수 있나. 못 고르면 이유 ("던전 재화가 부족합니다")
 	UPROPERTY(BlueprintReadOnly) bool bAvailable = true;
 	UPROPERTY(BlueprintReadOnly) FText UnavailableReason;

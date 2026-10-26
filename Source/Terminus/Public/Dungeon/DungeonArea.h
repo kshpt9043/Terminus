@@ -99,7 +99,7 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Dungeon Area|Shop", meta = (ClampMin = "0"))
 	int32 ShopSkillCount = 3;
 
-	// 픽업 스킬 구매가 (스킬 데이터에 가격 칸이 없어서 임시 고정가)
+	// 픽업 스킬 구매가. 10-24 엑셀부터 스킬 BuyPrice_Dungeon 을 쓰고, 가격이 0 인 스킬만 이 임시 고정가
 	UPROPERTY(EditAnywhere, Category = "Dungeon Area|Shop", meta = (ClampMin = "0"))
 	int32 ShopSkillPrice = 30;
 
@@ -245,8 +245,20 @@ private:
 	// '쉬는 가디언' 을 고른 사람이 있으면 전원이 고른 뒤 그 체력 비율로 가디언 전투 (0 = 없음)
 	float EventGuardianHealth = 0.f;
 
+	// 쉬는 가디언을 이기면 줄 추가 보상 (고른 사람만). 방이 클리어될 때 줌
+	struct FGuardianWinBonus { int32 Currency = 0; bool bThemeRelic = false; };
+	TMap<TWeakObjectPtr<ATerminusPlayerState>, FGuardianWinBonus> EventGuardianBonus;
+	void GiveGuardianWinBonus();
+
 	// BeginRoom 에서 받은 이 층 테마 (이벤트 테마 / 쉬는 가디언 전투)
 	TWeakObjectPtr<const UDungeonThemeData> CurrentTheme;
+
+	// 퀘스트 방 (테마 첫 층의 첫 칸): 각자 3개 중 1개 수락 또는 거절. 화면은 이벤트 화면을 같이 씀
+	TMap<TWeakObjectPtr<ATerminusPlayerState>, TArray<FName>> QuestOffers;
+	bool bInQuest = false;
+
+	void BeginQuestRoom();
+	void HandleQuestChoice(ATerminusPlayerState* Chooser, int32 Index);
 
 	void BeginEvent();
 	void CheckEventDone();

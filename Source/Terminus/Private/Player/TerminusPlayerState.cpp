@@ -2,6 +2,7 @@
 
 
 #include "Player/TerminusPlayerState.h"
+#include "Game/TerminusQuests.h"
 
 #include "Net/UnrealNetwork.h"
 #include "Data/TerminusDataSettings.h"
@@ -125,6 +126,10 @@ void ATerminusPlayerState::BeginRun()
 	RunState.SavedHealth = -1;
 	RunState.TempBuffs.Reset();
 	RunState.TempRelics.Reset();
+	RunState.ActiveQuest = FQuestProgress();
+	RunState.FloorMonsterRooms = 0;
+	RunState.FloorGuardianRooms = 0;
+	RunState.QuestGold = 0;
 	RunState.SeenRelics.Reset();
 	RunState.StartRelics.Reset();
 	RunState.BossRelic = NAME_None;
@@ -412,6 +417,7 @@ bool ATerminusPlayerState::GainRelic(FName RelicRow)
 	}
 
 	OnRep_RunState();
+	TerminusQuests::OnRelicGained(this);
 	return true;
 }
 
@@ -607,6 +613,19 @@ void ATerminusPlayerState::AddCurrency(int32 Amount)
 
 	RunState.Currency = FMath::Max(0, RunState.Currency + Amount);
 	OnRep_RunState();
+
+	if (Amount > 0)
+	{
+		TerminusQuests::OnCurrencyEarned(this, Amount);
+	}
+}
+
+void ATerminusPlayerState::ModifyRunState(TFunctionRef<void(FRunState&)> Edit)
+{
+	if (!HasAuthority()) return;
+
+	Edit(RunState);
+	OnRep_RunState();
 }
 
 void ATerminusPlayerState::AdvanceToRoom(int32 TargetRoomId, int32 TargetRow)
@@ -636,6 +655,8 @@ void ATerminusPlayerState::BeginFloor()
 	RunState.VisitedRoomIds.Reset();
 	RunState.BossRelic = NAME_None;
 	RunState.BossSkill = NAME_None;
+	RunState.FloorMonsterRooms = 0;   // 퀘스트 '한 층에서 N 번'
+	RunState.FloorGuardianRooms = 0;
 	OnRep_RunState();
 
 	// 기획: 층이 바뀌면 체력 전부 회복

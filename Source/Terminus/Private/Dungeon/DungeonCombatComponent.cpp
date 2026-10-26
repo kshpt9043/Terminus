@@ -16,6 +16,7 @@
 #include "Player/TerminusPlayerController.h"
 #include "Game/TerminusProfileSubsystem.h"
 #include "Game/TerminusRunSubsystem.h"
+#include "Game/TerminusQuests.h"
 #include "Kismet/GameplayStatics.h"
 #include "TimerManager.h"
 
@@ -73,6 +74,24 @@ UDungeonCombatComponent::UDungeonCombatComponent()
 {
 	PrimaryComponentTick.bCanEverTick = false;
 	SetIsReplicatedByDefault(true);
+
+	// 노션 던전 테마 페이지의 '함께 소환' 규칙
+	auto Rule = [](EMonsterCategory Category, int32 Count, FName Fixed = NAME_None)
+	{
+		FMonsterCompanionRule R;
+		R.Category = Category;
+		R.Count = Count;
+		R.FixedRow = Fixed;
+		return R;
+	};
+	MonsterCompanions.Add(TEXT("mon_slimeking"), Rule(EMonsterCategory::Guardian, 1));          // 랜덤 가디언 1마리 (잡기 전엔 받는 피해 1: 유물 RLC_Monster_SLI03)
+	MonsterCompanions.Add(TEXT("mon_slimegeneral"), Rule(EMonsterCategory::Normal, 2));         // 랜덤 일반 슬라임 2마리
+	MonsterCompanions.Add(TEXT("mon_lizardchieftain"), Rule(EMonsterCategory::Normal, 2));      // 일반 몬스터와 함께 (수 미정, 임시 2)
+	MonsterCompanions.Add(TEXT("mon_lizardleader"), Rule(EMonsterCategory::Normal, 1));         // 일반 몬스터와 함께 (수 미정, 임시 1)
+	MonsterCompanions.Add(TEXT("mon_ignis"), Rule(EMonsterCategory::Normal, 1, TEXT("mon_salamander")));   // 정령계 가디언 = 같은 속성 일반 1
+	MonsterCompanions.Add(TEXT("mon_nereid"), Rule(EMonsterCategory::Normal, 1, TEXT("mon_undine")));
+	MonsterCompanions.Add(TEXT("mon_jinn"), Rule(EMonsterCategory::Normal, 1, TEXT("mon_sylph")));
+	MonsterCompanions.Add(TEXT("mon_clay"), Rule(EMonsterCategory::Normal, 1, TEXT("mon_gnome")));
 }
 
 void UDungeonCombatComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -158,6 +177,7 @@ void UDungeonCombatComponent::StartCombat(const FRoomNode& Room, const TArray<AT
 	PendingRewards.Reset();
 	SpawnMonsters(Room, Theme);
 	NextSpawnHealthScale = 1.f;
+	NextForcedMonsters.Reset();
 	BuildRelicHolders();
 
 	// 이벤트 방에서 받은 일시 버프: 이번 전투 동안 용기(공격) / 용암(방어 감소)
@@ -472,27 +492,48 @@ TArray<FName> UDungeonCombatComponent::PickMonsterRows(ERoomType RoomType, const
 	// 테마 이름 = 몬스터 Theme_KR (예: "슬라임 왕국")
 	const FString ThemeName = Theme ? Theme->DisplayName.ToString() : FString();
 
-	TArray<FName> SameCategory;
-	TArray<FName> SameCategoryAndTheme;
-
-	Table->ForeachRow<FMonsterRow>(TEXT("PickMonsterRows"), [&](const FName& Key, const FMonsterRow& Row)
+	// 같은 분류 + 같은 테마. 테마에 하나도 없으면 테마 무시
+	auto PoolOf = [Table, &ThemeName](EMonsterCategory InCategory, bool bWarn)
 	{
-		if (Row.MonsterCategory != Category) return;
-
-		SameCategory.Add(Key);
-		if (!ThemeName.IsEmpty() && Row.Theme_KR.ToString() == ThemeName)
+		TArray<FName> SameCategory;
+		TArray<FName> SameCategoryAndTheme;
+		Table->ForeachRow<FMonsterRow>(TEXT("PickMonsterRows"), [&](const FName& Key, const FMonsterRow& Row)
 		{
-			SameCategoryAndTheme.Add(Key);
-		}
-	});
+			if (Row.MonsterCategory != InCategory) return;
 
-	const TArray<FName>& Pool = SameCategoryAndTheme.Num() > 0 ? SameCategoryAndTheme : SameCategory;
+			SameCategory.Add(Key);
+			if (!ThemeName.IsEmpty() && Row.Theme_KR.ToString() == ThemeName)
+			{
+				SameCategoryAndTheme.Add(Key);
+			}
+		});
+
+		if (SameCategoryAndTheme.Num() == 0 && bWarn)
+		{
+			UE_LOG(LogDungeonCombat, Warning, TEXT("[Combat] 테마 '%s' 의 %s 몬스터가 없어 테마 무시하고 고름 (테마 DisplayName 과 DT_Monster Theme_KR 을 맞출 것)"),
+				*ThemeName, *UEnum::GetValueAsString(InCategory));
+		}
+		return SameCategoryAndTheme.Num() > 0 ? SameCategoryAndTheme : SameCategory;
+	};
+
+	TArray<FName> Pool = PoolOf(Category, true);
 	if (Pool.Num() == 0) return Out;
 
-	if (SameCategoryAndTheme.Num() == 0)
+	// 보스: AppearFloor "1층" / "2층" = 테마의 첫째 / 둘째 층 (리자드처럼 "3층" / "4층" 으로 적힌 건 그 층 그대로)
+	// 맞는 게 없으면 테마 보스 전체에서
+	if (Category == EMonsterCategory::Boss)
 	{
-		UE_LOG(LogDungeonCombat, Warning, TEXT("[Combat] 테마 '%s' 의 %s 몬스터가 없어 테마 무시하고 고름 (테마 DisplayName 과 DT_Monster Theme_KR 을 맞출 것)"),
-			*ThemeName, *UEnum::GetValueAsString(Category));
+		const AMapManager* FloorMap = Cast<AMapManager>(UGameplayStatics::GetActorOfClass(this, AMapManager::StaticClass()));
+		const int32 Floor = FloorMap ? FloorMap->CurrentFloor : 1;
+		const int32 ThemeFloor = AMapManager::IsThemeEndFloor(Floor) ? 2 : 1;
+
+		const TArray<FName> ForFloor = Pool.FilterByPredicate([Floor, ThemeFloor](const FName& Row)
+		{
+			const FMonsterRow* Monster = UTerminusDataSettings::FindMonsterRow(Row);
+			const int32 N = Monster ? FCString::Atoi(*Monster->AppearFloor) : 0;   // "2층" -> 2, "심층" -> 0
+			return N > 0 && (N == ThemeFloor || N == Floor);
+		});
+		if (ForFloor.Num() > 0) Pool = ForFloor;
 	}
 
 	// 가디언: 그 테마 가디언이 전부 한 번씩 나오기 전엔 중복으로 안 나옴 (기획 10-07). 다 나왔으면 다시 처음부터
@@ -512,18 +553,39 @@ TArray<FName> UDungeonCombatComponent::PickMonsterRows(ERoomType RoomType, const
 			const FName Picked = Fresh[FMath::RandRange(0, Fresh.Num() - 1)];
 			Run->AddSeenGuardian(Picked);
 			Out.Add(Picked);
-			return Out;
 		}
 	}
 
 	// 몬스터방 1~3 마리, 가디언 / 보스는 1 마리
-	const int32 Count = (Category == EMonsterCategory::Normal)
-		? FMath::Clamp(FMath::RandRange(NormalMonsterCount.X, NormalMonsterCount.Y), 1, MaxCount)
-		: 1;
-
-	for (int32 i = 0; i < Count; ++i)
+	if (Out.Num() == 0)
 	{
-		Out.Add(Pool[FMath::RandRange(0, Pool.Num() - 1)]);
+		const int32 Count = (Category == EMonsterCategory::Normal)
+			? FMath::Clamp(FMath::RandRange(NormalMonsterCount.X, NormalMonsterCount.Y), 1, MaxCount)
+			: 1;
+
+		for (int32 i = 0; i < Count; ++i)
+		{
+			Out.Add(Pool[FMath::RandRange(0, Pool.Num() - 1)]);
+		}
+	}
+
+	// 같이 나오는 몬스터 (슬라임 킹의 가디언, 족장의 일반 몬스터 등). 남은 슬롯만큼
+	if (Category != EMonsterCategory::Normal)
+	{
+		if (const FMonsterCompanionRule* Rule = MonsterCompanions.Find(Out[0]))
+		{
+			const TArray<FName> CompanionPool = Rule->FixedRow.IsNone()
+				? PoolOf(Rule->Category, false).FilterByPredicate([&Out](const FName& Row) { return Row != Out[0]; })
+				: TArray<FName>{ Rule->FixedRow };
+
+			for (int32 i = 0; i < Rule->Count && Out.Num() < MaxCount && CompanionPool.Num() > 0; ++i)
+			{
+				const FName Companion = CompanionPool[FMath::RandRange(0, CompanionPool.Num() - 1)];
+				if (!UTerminusDataSettings::FindMonsterRow(Companion)) break;
+				Out.Add(Companion);
+			}
+			UE_LOG(LogDungeonCombat, Log, TEXT("[Combat] %s 와 함께 %d 마리"), *Out[0].ToString(), Out.Num() - 1);
+		}
 	}
 	return Out;
 }
@@ -543,7 +605,9 @@ void UDungeonCombatComponent::SpawnMonsters(const FRoomNode& Room, const UDungeo
 	}
 	if (!SpawnClass) SpawnClass = ATerminusMonster::StaticClass();
 
-	const TArray<FName> Rows = PickMonsterRows(Room.Type, Theme, FMath::Max(1, Area->GetNumMonsterSlots()));
+	const TArray<FName> Rows = NextForcedMonsters.Num() > 0
+		? NextForcedMonsters
+		: PickMonsterRows(Room.Type, Theme, FMath::Max(1, Area->GetNumMonsterSlots()));
 
 	// 기획(10-07): 테마의 두 번째 층 몬스터 / 가디언(보스 제외)은 기본 체력 +30%, 공방 +1
 	const AMapManager* FloorMap = Cast<AMapManager>(UGameplayStatics::GetActorOfClass(this, AMapManager::StaticClass()));
@@ -1029,6 +1093,15 @@ void UDungeonCombatComponent::FinishCombat(bool bVictory)
 	}
 
 	UE_LOG(LogDungeonCombat, Log, TEXT("[Combat] 전투 %s (사이클 %d)"), bVictory ? TEXT("승리") : TEXT("패배"), Cycle);
+
+	// 퀘스트 '몬스터 처치': 이긴 방의 몬스터는 그 방 사람 모두에게 (쓰러졌다 살아나는 사람 포함)
+	if (bVictory && !IsBetrayal())
+	{
+		for (const TWeakObjectPtr<ATerminusPlayerState>& PS : Players)
+		{
+			TerminusQuests::OnMonstersKilled(PS.Get(), MonsterRows);
+		}
+	}
 
 	// 살아 있는 플레이어의 전투 종료 유물 (재화 / 회복 / 최대 체력). 그다음 전투에서만 의미 있는 것들을 지움
 	FireRelicsForAll(ERelicTrigger::OnBattleEnd, true, false);

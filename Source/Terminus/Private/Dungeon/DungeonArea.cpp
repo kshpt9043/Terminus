@@ -15,6 +15,7 @@
 #include "Data/TerminusDataSettings.h"
 #include "Game/TerminusProfileSubsystem.h"
 #include "Game/TerminusRunSubsystem.h"
+#include "Game/TerminusQuests.h"
 #include "Internationalization/Regex.h"
 #include "Kismet/GameplayStatics.h"
 #include "TimerManager.h"
@@ -207,7 +208,27 @@ void ADungeonArea::BeginRoom(const FRoomNode& InRoom, const TArray<ATerminusPlay
 	//  - 휴식터: 회복 대상 고르기 (전원이 고르면 MarkCleared)
 	//  - 이벤트: DT_Event 하나, 각자 선택지 중 하나 고르기 (전원이 고르면 MarkCleared, 쉬는 가디언이면 전투)
 	//  - 상점: 각자 사고팔기, 전원이 나가면 MarkCleared
-	//  - TODO 퀘스트: 해당 UI. 지금은 DebugClearArea 로 넘김
+	//  - 퀘스트: 각자 퀘스트 3개 중 1개 수락 / 거절 (전원이 고르면 MarkCleared)
+	//  - 퀘스트 특수 방: 지정 몬스터와 전투
+
+	// 퀘스트 '한 층에서 몬스터 / 가디언 방 N 번'
+	for (ATerminusPlayerState* PS : Occupants)
+	{
+		TerminusQuests::OnRoomEntered(PS, Room.Type);
+	}
+
+	if (Room.Type == ERoomType::QUEST)
+	{
+		BeginQuestRoom();
+		return;
+	}
+	if (!Room.SpecialRoom.IsNone() && Combat)
+	{
+		const TArray<FName> Special = TerminusQuests::GetSpecialRoomMonsters(Room.SpecialRoom);
+		UE_LOG(LogTemp, Log, TEXT("[Area %d] 퀘스트 특수 방 %s: 몬스터 %d"), AreaIndex, *Room.SpecialRoom.ToString(), Special.Num());
+		Combat->SetNextForcedMonsters(Special);
+	}
+
 	if (Room.Type == ERoomType::BREAK)
 	{
 		BeginRest();
@@ -630,12 +651,94 @@ namespace
 	FText EventReason(const TCHAR* Text) { return FText::FromString(Text); }
 }
 
+// =====================================================================
+// 퀘스트 방 (사용자 결정 2026-10-26: 3개 중 1개, 1개는 내 세력, 사람마다 따로, 그 테마 동안)
+// =====================================================================
+
+void ADungeonArea::BeginQuestRoom()
+{
+	bInQuest = true;
+	QuestOffers.Reset();
+	EventChosen.Reset();
+
+	const AMapManager* MapMgr = Cast<AMapManager>(UGameplayStatics::GetActorOfClass(this, AMapManager::StaticClass()));
+	const int32 Floor = MapMgr ? MapMgr->CurrentFloor : 1;
+	const FString ThemeName = CurrentTheme.IsValid() ? CurrentTheme->DisplayName.ToString() : FString();
+
+	for (ATerminusPlayerState* PS : Occupants)
+	{
+		if (!PS) continue;
+
+		const TArray<FName> Offers = TerminusQuests::MakeOffers(PS, Floor, ThemeName);
+		QuestOffers.Add(PS, Offers);
+
+		// 카드: 퀘스트들 + 맨 끝에 거절
+		TArray<FEventOption> Options;
+		for (const FName& Row : Offers)
+		{
+			const FQuestRow* Quest = UTerminusDataSettings::FindQuestRow(Row);
+			FEventOption Option;
+			Option.ChoiceRow = Row;
+			Option.Outcome = EEventOutcomeType::Leave;
+			Option.Title = Quest->QuestName;
+			Option.Description = FText::FromString(TerminusQuests::DescribeOffer(Row));
+			Options.Add(Option);
+		}
+		FEventOption Decline;
+		Decline.Outcome = EEventOutcomeType::Leave;
+		Decline.Title = FText::FromString(TEXT("의뢰를 받지 않는다"));
+		Decline.Description = FText::FromString(TEXT("이번 테마에서는 퀘스트 없이 진행합니다."));
+		Options.Add(Decline);
+
+		if (ATerminusPlayerController* PC = Cast<ATerminusPlayerController>(PS->GetOwner()))
+		{
+			PC->Client_ShowEvent(FText::FromString(TEXT("세력의 의뢰")),
+				FText::FromString(FString::Printf(TEXT("%s에 들어서자 각 세력의 의뢰서가 도착했습니다. 하나를 수락하면 이 테마가 끝날 때까지 진행됩니다."),
+					ThemeName.IsEmpty() ? TEXT("새 테마") : *ThemeName)),
+				Options);
+		}
+	}
+
+	CheckEventDone();
+}
+
+void ADungeonArea::HandleQuestChoice(ATerminusPlayerState* Chooser, int32 Index)
+{
+	if (!Chooser || !Occupants.Contains(Chooser) || EventChosen.Contains(Chooser)) return;
+
+	const TArray<FName>* Offers = QuestOffers.Find(Chooser);
+	if (!Offers) return;
+
+	FString Result;
+	if (Offers->IsValidIndex(Index))
+	{
+		const FName Row = (*Offers)[Index];
+		TerminusQuests::Accept(Chooser, Row);
+		const FQuestRow* Quest = UTerminusDataSettings::FindQuestRow(Row);
+		Result = FString::Printf(TEXT("[%s] 의뢰를 수락했습니다.\n\n%s"), Quest ? *Quest->QuestName.ToString() : *Row.ToString(), *TerminusQuests::DescribeOffer(Row));
+	}
+	else
+	{
+		Result = TEXT("의뢰를 받지 않고 길을 나섭니다.");
+	}
+
+	EventChosen.Add(Chooser);
+	if (ATerminusPlayerController* PC = Cast<ATerminusPlayerController>(Chooser->GetOwner()))
+	{
+		PC->Client_EventResult(FText::FromString(Result));
+	}
+	UE_LOG(LogTemp, Log, TEXT("[Area %d] 퀘스트: %s -> %s"), AreaIndex, *Chooser->GetPlayerName(), Offers->IsValidIndex(Index) ? *(*Offers)[Index].ToString() : TEXT("거절"));
+
+	CheckEventDone();
+}
+
 void ADungeonArea::BeginEvent()
 {
 	bInEvent = true;
 	EventOffers.Reset();
 	EventChosen.Reset();
 	EventGuardianHealth = 0.f;
+	EventGuardianBonus.Reset();
 	CurrentEvent = PickEventRow();
 
 	const FEventRow* Event = CurrentEvent.IsNone() ? nullptr : UTerminusDataSettings::FindEventRow(CurrentEvent);
@@ -830,6 +933,27 @@ FEventOption ADungeonArea::MakeEventOption(const ATerminusPlayerState* PS, FName
 		break;
 	}
 
+	// ---- 툴팁에만 적힌 추가 결과 (대괄호 뒤 문구). 결과 칸이 하나뿐이라 데이터로는 안 들어옴
+	{
+		const FString Tooltip = Choice->ChoiceTooltip_KR.ToString();
+		int32 Close = INDEX_NONE;
+		const FString After = Tooltip.FindChar(TEXT(']'), Close) ? Tooltip.Mid(Close + 1) : Tooltip;
+
+		if (Choice->OutcomeType != EEventOutcomeType::HealHP)
+		{
+			Option.BonusHeal = EventFindNumber(After, TEXT("체력을 (\\d+) 회복"));
+		}
+		if (Choice->OutcomeType != EEventOutcomeType::UpgradeRandomSkill && After.Contains(TEXT("+1강 강화")))
+		{
+			Option.BonusUpgrades = 1;
+		}
+		if (Choice->OutcomeType == EEventOutcomeType::StartWeakGuardianBattle && After.Contains(TEXT("승리 시")))
+		{
+			Option.BonusWinCurrency = EventFindNumber(After, TEXT("재화 (\\d+) 획득"));
+			Option.bBonusWinRelic = After.Contains(TEXT("유물"));
+		}
+	}
+
 	// ---- 대가를 치를 수 있나
 	const ATerminusBattler* Battler = Cast<ATerminusBattler>(PS->GetPawn());
 	const UCombatStatsComponent* Stats = Battler ? Battler->GetCombatStats() : nullptr;
@@ -992,10 +1116,33 @@ bool ADungeonArea::ApplyEventOption(ATerminusPlayerState* PS, const FEventOption
 	case EEventOutcomeType::StartWeakGuardianBattle:
 		EventGuardianHealth = FMath::Max(EventGuardianHealth, Option.Amount / 100.f);
 		Lines.Add(TEXT("모두가 고르면 약해진 가디언과 전투합니다."));
+		if (Option.BonusWinCurrency > 0 || Option.bBonusWinRelic)
+		{
+			FGuardianWinBonus& Bonus = EventGuardianBonus.FindOrAdd(PS);
+			Bonus.Currency = Option.BonusWinCurrency;
+			Bonus.bThemeRelic = Option.bBonusWinRelic;
+		}
 		break;
 
 	default:
 		break;
+	}
+
+	// 툴팁에만 적힌 추가 결과
+	if (Option.BonusHeal > 0 && Stats)
+	{
+		Stats->Heal(Option.BonusHeal);
+		Lines.Add(FString::Printf(TEXT("체력 +%d"), Option.BonusHeal));
+	}
+	for (int32 i = 0; i < Option.BonusUpgrades; ++i)
+	{
+		const TArray<FName> Candidates = EventEquippedSkills(PS, false, true);
+		if (Candidates.Num() == 0) break;
+		const FName Skill = EventPickRandom(Candidates);
+		if (PS->UpgradePickupSkill(Skill))
+		{
+			Lines.Add(FString::Printf(TEXT("스킬 강화: %s +%d"), *UTerminusDataSettings::GetSkillName(Skill), PS->GetPickupSkillLevel(Skill)));
+		}
 	}
 
 	// 기획 결과 문구 + 실제로 바뀐 것
@@ -1006,6 +1153,11 @@ bool ADungeonArea::ApplyEventOption(ATerminusPlayerState* PS, const FEventOption
 
 void ADungeonArea::HandleEventChoice(ATerminusPlayerState* Chooser, int32 Index, int32 ReplaceSlot, FName RelicRow)
 {
+	if (HasAuthority() && bInQuest)
+	{
+		HandleQuestChoice(Chooser, Index);
+		return;
+	}
 	if (!HasAuthority() || !bInEvent || !Chooser) return;
 	if (!Occupants.Contains(Chooser) || EventChosen.Contains(Chooser)) return;
 
@@ -1064,8 +1216,50 @@ void ADungeonArea::CheckEventDone()
 	GetWorldTimerManager().SetTimer(EventTimer, this, &ADungeonArea::FinishEvent, EventGuardianHealth > 0.f ? 2.5f : 1.5f, false);
 }
 
+void ADungeonArea::GiveGuardianWinBonus()
+{
+	// 이벤트 '쉬는 가디언' 을 이김: 고른 사람에게 툴팁의 테마 유물 + 던전 재화 (일반 가디언 보상에 더해서)
+	for (const TPair<TWeakObjectPtr<ATerminusPlayerState>, FGuardianWinBonus>& Pair : EventGuardianBonus)
+	{
+		ATerminusPlayerState* PS = Pair.Key.Get();
+		if (!PS || !Occupants.Contains(PS)) continue;
+
+		TArray<FString> Lines;
+		if (Pair.Value.Currency > 0)
+		{
+			PS->AddCurrency(Pair.Value.Currency);
+			Lines.Add(FString::Printf(TEXT("던전 재화 +%d"), Pair.Value.Currency));
+		}
+		if (Pair.Value.bThemeRelic)
+		{
+			const TArray<FName> Pool = EventThemeRelicPool(PS, EventRelicTierOf(EventSkillTierOf(EventCurrentFloor(this))), FString());
+			if (Pool.Num() > 0)
+			{
+				const FName Relic = EventPickRandom(Pool);
+				PS->MarkRelicsSeen({ Relic });
+				Lines.Add(PS->GainRelic(Relic)
+					? FString::Printf(TEXT("유물 획득: %s"), *UTerminusDataSettings::GetRelicName(Relic))
+					: FString::Printf(TEXT("유물 [%s] 을(를) 찾았지만 유물 칸이 가득 차 가져가지 못했습니다."), *UTerminusDataSettings::GetRelicName(Relic)));
+			}
+		}
+		if (Lines.Num() == 0) continue;
+
+		FChatMessage Notice;
+		Notice.Kind = EChatMessageKind::System;
+		Notice.Text = FString::Printf(TEXT("[이벤트] %s 님 가디언 기습 성공: %s"), *PS->GetPlayerName(), *FString::Join(Lines, TEXT(", ")));
+		ATerminusPlayerController::BroadcastChat(GetWorld(), Notice);
+		UE_LOG(LogTemp, Log, TEXT("[Area %d] %s"), AreaIndex, *Notice.Text);
+	}
+	EventGuardianBonus.Reset();
+}
+
 void ADungeonArea::FinishEvent()
 {
+	if (bInQuest)
+	{
+		MarkCleared();
+		return;
+	}
 	if (!bInEvent) return;
 
 	if (EventGuardianHealth <= 0.f || !Combat)
@@ -1138,14 +1332,18 @@ FShopState ADungeonArea::MakeShopState(ATerminusPlayerState* PS) const
 	State.UpgradeCostPerLevel = ShopUpgradeCostPerLevel;
 	if (!PS) return State;
 
-	// 유물: 상점에 나올 수 있고(가격 있음, 기본 / 업그레이드 아님) 이 직업이 가질 수 있는 것, 가진 것 / 이번 런에 나온 것 빼고
+	// 노션 방 생성 메커니즘(10-09): 같은 계층 + 같은 직업 또는 shared 인 유물 / 픽업 스킬
+	const ESkillTier Tier = EventSkillTierOf(EventCurrentFloor(this));
+	const ERelicTier RelicTier = EventRelicTierOf(Tier);
+
+	// 유물: 상점에 나올 수 있고(가격 있음, 기본 / 업그레이드 아님) 지금 계층, 이 직업이 가질 수 있는 것, 가진 것 / 이번 런에 나온 것 빼고
 	TArray<FName> Relics;
 	if (const UDataTable* Table = UTerminusDataSettings::Get()->RelicTable.LoadSynchronous())
 	{
 		for (const FName& Row : Table->GetRowNames())
 		{
 			const FRelicRow* Relic = UTerminusDataSettings::FindRelicRow(Row);
-			if (!Relic || !Relic->CanBuyInShop()) continue;
+			if (!Relic || !Relic->CanBuyInShop() || Relic->RelicTier != RelicTier) continue;
 			if (!ATerminusPlayerState::CanClassHoldRelic(PS->GetCharacterClass(), *Relic)) continue;
 			if (PS->GetRelics().Contains(Row) || PS->HasSeenRelic(Row)) continue;
 			Relics.Add(Row);
@@ -1161,7 +1359,7 @@ FShopState ADungeonArea::MakeShopState(ATerminusPlayerState* PS) const
 	}
 	PS->MarkRelicsSeen(State.RelicOffers);   // 상점에 나온 유물은 안 사도 이번 런엔 다시 안 나옴 (기획 유물 특이사항)
 
-	// 픽업 스킬: 이 직업이 장착할 수 있는, 스킬 에너지를 쓰는 스킬. 이미 장착한 것 빼고
+	// 픽업 스킬: 지금 계층, 이 직업이 장착할 수 있는, 스킬 에너지를 쓰는 스킬 (이벤트 전용 제외). 이미 장착한 것 빼고
 	TArray<FName> Skills;
 	const TArray<FName> Equipped = PS->GetRunState().EnhanceSkills;
 	if (const UDataTable* Table = UTerminusDataSettings::Get()->SkillTable.LoadSynchronous())
@@ -1170,6 +1368,7 @@ FShopState ADungeonArea::MakeShopState(ATerminusPlayerState* PS) const
 		{
 			const FSkillRow* Skill = UTerminusDataSettings::FindSkillRow(Row);
 			if (!Skill || Skill->SkillEnergyCost <= 0 || Equipped.Contains(Row)) continue;
+			if (Skill->SkillTier != Tier || Skill->SkillCategory == ESkillCategory::Event) continue;
 			if (!UTerminusProfileSubsystem::IsEquippableSkill(Row, PS->GetCharacterClass())) continue;
 			Skills.Add(Row);
 		}
@@ -1179,7 +1378,9 @@ FShopState ADungeonArea::MakeShopState(ATerminusPlayerState* PS) const
 	for (const FName& Row : Skills)
 	{
 		State.SkillOffers.Add(Row);
-		State.SkillPrices.Add(ShopSkillPrice);
+		// 10-24 엑셀 스킬 구매가. 가격이 비어 있는(0) 스킬만 임시 고정가
+		const int32 DataPrice = UTerminusDataSettings::FindSkillRow(Row)->BuyPrice_Dungeon;
+		State.SkillPrices.Add(DataPrice > 0 ? DataPrice : ShopSkillPrice);
 		State.SkillBought.Add(false);
 	}
 	return State;
@@ -1269,6 +1470,16 @@ void ADungeonArea::HandleShopUpgradeSkill(ATerminusPlayerState* PS, FName SkillR
 	if (!bShopping || !PS || ShopDone.Contains(PS) || !ShopStates.Contains(PS)) return;
 	if (!PS->GetRunState().EnhanceSkills.Contains(SkillRow)) return;
 
+	// 노션(10-09): 같은 계층 + 같은 직업 또는 shared 인 픽업 스킬만 강화
+	const FSkillRow* Skill = UTerminusDataSettings::FindSkillRow(SkillRow);
+	const ESkillOwner MyOwner = EventSkillOwnerOf(PS->GetCharacterClass());
+	if (!Skill || Skill->SkillTier != EventSkillTierOf(EventCurrentFloor(this))
+		|| (Skill->OwnerClass != MyOwner && Skill->OwnerClass != ESkillOwner::Shared))
+	{
+		SendShop(PS, TEXT("이 상점에서는 지금 계층의 내 직업 / 공용 스킬만 강화할 수 있습니다."));
+		return;
+	}
+
 	const int32 Level = PS->GetPickupSkillLevel(SkillRow);
 	if (Level >= ATerminusPlayerState::MaxPickupSkillLevel)
 	{
@@ -1320,6 +1531,15 @@ void ADungeonArea::MarkCleared()
 	if (!HasAuthority() || !bInUse || bCleared) return;
 
 	bCleared = true;
+	GiveGuardianWinBonus();
+
+	if (!Room.SpecialRoom.IsNone())
+	{
+		for (ATerminusPlayerState* PS : Occupants)
+		{
+			TerminusQuests::OnSpecialRoomCleared(PS, Room.SpecialRoom);
+		}
+	}
 
 	UE_LOG(LogTemp, Log, TEXT("[Area %d] %d번 방 클리어"), AreaIndex, Room.RoomId);
 
@@ -1484,6 +1704,21 @@ void ADungeonArea::Release()
 	}
 	CurrentEvent = NAME_None;
 	EventGuardianHealth = 0.f;
+	EventGuardianBonus.Reset();
+
+	// 퀘스트 방 화면 닫기
+	if (bInQuest)
+	{
+		for (ATerminusPlayerState* PS : Occupants)
+		{
+			if (ATerminusPlayerController* PC = PS ? Cast<ATerminusPlayerController>(PS->GetOwner()) : nullptr)
+			{
+				PC->Client_CloseEvent();
+			}
+		}
+		bInQuest = false;
+		QuestOffers.Reset();
+	}
 
 	// 몬스터 치우고 전투 상태 초기화
 	if (Combat)
