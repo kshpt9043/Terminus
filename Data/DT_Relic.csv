@@ -1,156 +1,156 @@
 ﻿RowName,RelicName,RelicDesc,RelicTier,TriggerTiming,ActionKind,TargetType,BaseValue,ScalingStat,ScalingRatio,StatusEffect,OnSkill,StatusValue,StatusDuration,RemainBattle,OwnerClass,BuyPrice_Dungeon,SellPrice_Dungeon,SellPrice_Gold,Icon
-RLC_Common_001,전사의 증표,전투 시작 시 공격 1 증가,Surface,OnBattleStart,BraveSelf,Self,0,None,0,Brave,None,1,-1,-1,Shared,305,215,395,None
-RLC_Common_002,견습 기사의 방패,전투 시작 시 방어 1 증가,Surface,OnBattleStart,ProtectSelf,Self,0,None,0,Protection,None,1,-1,-1,Shared,305,215,395,None
-RLC_Common_003,보조 배터리,전투 시작 시 에너지 1 추가,Surface,OnBattleStart,GainEnergy,Self,1,None,0,None,None,0,0,-1,Shared,330,230,430,None
-RLC_Common_004,방어 보조 모듈,타격 시 보호막 2 획득,Surface,OnHitEnemy,ShieldSelf,Self,2,None,0,None,None,0,0,-1,Shared,300,210,390,None
-RLC_Common_005,유탄 발사기,전투 시작 시 적 전체에게 5 데미지 부여,Surface,OnBattleStart,HitAllEnemies,AllEnemies,5,None,0,None,None,0,0,-1,Shared,310,215,405,None
-RLC_Common_006,최하급 재생 플라스크,전투 시작 시 체력 3 회복,Surface,OnBattleStart,HealSelf,Self,3,None,0,None,None,0,0,-1,Shared,315,220,410,None
-RLC_Common_007,최하급 도적의 비술,전투 시작 시 민첩 1 증가,Surface,OnBattleStart,EvasionSelf,Self,0,None,0,Evasion,None,1,-1,-1,Shared,310,215,405,None
-RLC_Common_008,희미한 행운의 부적,전투 종료 시 던전 재화 10개 추가 획득,Surface,OnBattleEnd,GainMoney,Self,10,None,0,None,None,0,0,-1,Shared,215,150,280,None
-RLC_Common_009,보급형 에너지 코어,에너지 소모 시 보호막 1 획득,Surface,OnUseEnergy,ShieldSelf,Self,1,None,0,None,None,0,0,-1,Shared,285,200,370,None
-RLC_Common_010,부서진 훈련용 인형,유물 획득 시 보유한 픽업 스킬 중 1가지를 +1강 강화한다,Surface,OnGainRelic,RandomUpgrade,Self,1,None,0,None,None,0,0,-1,Shared,0,0,0,None
-RLC_Common_011,숨겨진 보물 상자,유물 획득 시 던전 재화 333개 획득,Surface,OnGainRelic,GainMoney,Self,333,None,0,None,None,0,0,-1,Shared,0,0,0,None
-RLC_Common_012,잘 익은 군고구마,휴식터에 입장할 시 체력 10 추가 회복,Surface,OnRestStart,HealSelf,Self,10,None,0,None,None,0,0,-1,Shared,350,245,455,None
-RLC_Common_013,깨진 돋보기 안경,전투 시작 시 적 전체에게 급소를 1 사이클 동안 부여,Surface,OnBattleStart,StatusMarkAll,AllEnemies,0,None,0,Mark,None,1,1,-1,Shared,310,215,405,None
-RLC_Common_014,도깨비 가면,전투 시작 시 적 전체에게 공포를 1 사이클 동안 부여,Surface,OnBattleStart,StatusFearAll,AllEnemies,0,None,0,Fear,None,1,1,-1,Shared,310,215,405,None
-RLC_Common_015,향긋한 백도,유물 획득 시 최대 체력 8 증가,Surface,OnGainRelic,MaxHPUp,Self,8,None,0,None,None,0,0,-1,Shared,0,0,0,None
-RLC_Common_016,조악한 갑옷,피격 시 받는 데미지가 1 줄어든다.,Surface,OnBattleStart,IronWallSelf,Self,0,None,0,IronWall,None,1,-1,-1,Shared,305,215,395,None
-RLC_Common_017,최하급 용기의 부적,가디언 전투 시작 시 공격 2 증가,Surface,OnGuardianBattleStart,BraveSelf,Self,0,None,0,Brave,None,2,-1,-1,Shared,330,230,430,None
-RLC_Common_018,사냥꾼의 쇠뇌,보스 전투 시작 시 공격 2 증가,Surface,OnBossBattleStart,BraveSelf,Self,0,None,0,Brave,None,2,-1,-1,Shared,330,230,430,None
-RLC_Common_019,사냥꾼의 가죽 갑옷,보스 전투 시작 시 방어 2 증가,Surface,OnBossBattleStart,SolidSelf,Self,0,None,0,Solid,None,2,-1,-1,Shared,330,230,430,None
-RLC_Deep_Q001,이프리트의 화염 코어,전투 시작 시 공격 3 증가,Deep,OnBattleStart,BraveSelf,Self,0,None,0,Brave,None,3,-1,-1,Quest,-1,490,910,None
-RLC_Deep_Q002,나이아드의 심해 코어,자신의 턴 종료 시 체력 2 회복,Deep,OnTurnEnd,HealSelf,Self,2,None,0,None,None,0,0,-1,Quest,-1,420,780,None
-RLC_Deep_Q003,실피드의 질풍 코어,자신의 턴 시작 시 에너지 1 추가 획득,Deep,OnTurnStart,GainEnergy,Self,1,None,0,None,None,0,0,-1,Quest,-1,460,860,None
-RLC_Deep_Q004,오레아드의 대지 코어,전투 시작 시 철벽 3 (영구 지속) 획득,Deep,OnBattleStart,IronWallSelf,Self,0,None,0,IronWall,None,3,-1,-1,Quest,-1,490,910,None
-RLC_Deep_Q005,사원소의 성배,체력 회복 시 체력 1 추가 회복 획득,Deep,OnHealHP,HealSelf,Self,2,None,0,None,None,0,0,-1,Quest,-1,420,780,None
-RLC_Deep_Q006,샐러맨더의 불꽃 정수,전투 시작 시 적 전체에게 2사이클 동안 허점(용암) 2 부여,Deep,OnBattleStart,StatusLavaAll,AllEnemies,0,None,0,Lava,None,2,2,-1,Quest,-1,455,845,None
-RLC_Deep_Q007,실프의 바람 정수,에너지를 소모할 때마다 보호막 7 획득,Deep,OnUseEnergy,ShieldSelf,Self,7,None,0,None,None,0,0,-1,Quest,-1,490,910,None
-RLC_Deep_Q008,노움의 대지 정수,보호막 획득 시 보호막 4를 추가로 획득한다,Deep,OnGainShield,ShieldSelf,Self,4,None,0,None,None,0,0,-1,Quest,-1,460,860,None
-RLC_Deep_Q009,정화된 어둠의 성유물,전투 시작 시 적 전체에게 2사이클 동안 공포 1 부여,Deep,OnBattleStart,StatusFearAll,AllEnemies,0,None,0,Fear,None,1,2,-1,Quest,-1,450,830,None
-RLC_Deep_Q010,위스프의 빛무리 정수,전투 시작 시 1사이클 동안 불굴(실명)(받는 피해 1 고정) 획득,Deep,OnBattleStart,BlindnessSelf,Self,0,None,0,Blindness,None,1,1,-1,Quest,-1,415,765,None
-RLC_Deep_Q011,운디네의 맑은 영수,휴식터에 입장할 시 체력 20 추가 회복,Deep,OnRestStart,HealSelf,Self,20,None,0,None,None,0,0,-1,Quest,-1,490,910,None
-RLC_Deep_Q012,선봉대장의 황금 훈장,전투 시작 시 아군 전체의 공격을 2 증가시킨다,Deep,OnBattleStart,BraveAll,AllAllies,0,None,0,Brave,None,2,-1,-1,Quest,-1,475,885,None
-RLC_Deep_Q013,대마법사의 마도서,자신의 턴 시작 시 에너지 1 추가 획득,Deep,OnTurnStart,GainEnergy,Self,1,None,0,None,None,0,0,-1,Quest,-1,460,860,None
-RLC_Deep_Q014,테르미누스의 성흔,전투 시작 시 철벽 2(영구 지속) 획득 (받는 피해 2 감소),Deep,OnBattleStart,IronWallSelf,Self,0,None,0,IronWall,None,2,-1,-1,Quest,-1,460,860,None
-RLC_Mid_Q001,리자드 킹의 왕관,상대의 보호막 공격 시 적 전체에게 5의 추가 피해 부여,Mid,OnHitShield,HitAllEnemies,AllEnemies,5,None,0,None,None,0,0,-1,Quest,-1,325,605,None
-RLC_Mid_Q002,인도자의 주술 지팡이,전투 시작 시 아군 전체의 방어를 2 증가시킨다,Mid,OnBattleStart,SolidAll,AllAllies,0,None,0,Solid,None,2,-1,-1,Quest,-1,355,665,None
-RLC_Mid_Q003,족장의 전투 깃발,전투 시작 시 아군 전체의 공격을 2 증가시킨다,Mid,OnBattleStart,BraveAll,AllAllies,0,None,0,Brave,None,2,-1,-1,Quest,-1,355,665,None
-RLC_Mid_Q004,사냥꾼의 올가미,가디언 전투 시작 시 적 전체에게 2사이클 동안 급소 부여,Mid,OnGuardianBattleStart,StatusMarkAll,AllEnemies,0,None,0,Mark,None,1,2,-1,Quest,-1,335,625,None
-RLC_Mid_Q005,정찰병의 깃털 망토,전투 시작 시 민첩(회피) 2 증가,Mid,OnBattleStart,EvasionSelf,Self,0,None,0,Evasion,None,2,-1,-1,Quest,-1,345,645,None
-RLC_Mid_Q006,수호병의 비늘 방패,전투 시작 시 2사이클 동안 철벽(받는 피해 2 감소) 획득,Mid,OnBattleStart,IronWallSelf,Self,0,None,0,IronWall,None,2,2,-1,Quest,-1,355,665,None
-RLC_Mid_Q007,암살자의 단검,"적에게 피해를 입힌 경우, 2의 데미지를 추가로 입힌다.",Mid,OnHitEnemy,HitEnemy,SingleEnemy,2,None,0,None,None,0,0,-1,Quest,-1,280,520,None
-RLC_Mid_Q008,정화된 주술 토템,스킬 에너지를 소모할 때마다 체력 3 회복,Mid,OnUseSkillEnergy,HealSelf,Self,3,None,0,None,None,0,0,-1,Quest,-1,330,615,None
-RLC_Mid_Q009,베테랑의 전술 교본,전투 시작 시 적 전체에게 1사이클 동안 급소 1 부여,Mid,OnBattleStart,StatusMarkAll,AllEnemies,0,None,0,Mark,None,1,1,-1,Quest,-1,325,605,None
-RLC_Mid_Q010,거물 사냥꾼의 전리품,가디언 전투 시작 시 적 전체에게 2사이클 동안 공포 부여,Mid,OnGuardianBattleStart,StatusFearAll,AllEnemies,0,None,0,Fear,None,1,2,-1,Quest,-1,335,625,None
-RLC_Mid_Q011,증폭된 마력 코어,전투 시작 시 에너지 2 추가 획득,Mid,OnBattleStart,GainEnergy,Self,2,None,0,None,None,0,0,-1,Quest,-1,370,685,None
-RLC_Mid_Q012,마탑의 가디언 분석기,가디언 전투 시작 시 아군 전체에게 보호막 10 부여,Mid,OnGuardianBattleStart,ShieldAll,AllAllies,10,None,0,None,None,0,0,-1,Quest,-1,370,685,None
-RLC_Mid_Q013,순례자의 성배,전투 종료 시 체력 5 회복,Mid,OnBattleEnd,HealSelf,Self,5,None,0,None,None,0,0,-1,Quest,-1,365,675,None
-RLC_Mid_Q014,이단심문관의 장검,타격에 성공했을 때 적 전체에게 3 데미지 부여,Mid,OnHitEnemy,HitAllEnemies,AllEnemies,3,None,0,None,None,0,0,-1,Quest,-1,305,565,None
-RLC_Monster_ELM06,정령왕의 힘,전투 시작 시 불굴(정령화)를 1 사이클 동안 부여,Basic,OnBattleStart,SpiritSelf,Self,0,None,0,Spirit,None,0,1,-1,Monster,-1,205,385,None
-RLC_Monster_LIZ01,저주 인형,전투 시작 시 적 전체에게 공포를 1 사이클 동안 부여,Basic,OnBattleStart,StatusFearAll,AllEnemies,0,None,0,Fear,None,1,1,-1,Monster,-1,215,405,None
-RLC_Monster_LIZ02,암살자의 로브,전투 시작 시 자신의 회피를 3 증가시킨다.,Basic,OnBattleStart,EvasionSelf,Self,0,None,0,Evasion,None,3,-1,-1,Monster,-1,245,455,None
-RLC_Monster_LIZ03,무거운 메이스,"공격 스킬 사용 시, 방어가 1 하락한다.",Basic,OnSkillUsed,SolidSelf,Self,0,None,0,Solid,Attack,-1,-1,-1,Monster,-1,215,395,None
-RLC_Monster_LIZ04,축복 인형,전투 시작 시 아군의 방어를 2 증가시킨다.,Basic,OnBattleStart,SolidAll,AllAllies,0,None,0,Solid,None,2,-1,-1,Monster,-1,240,440,None
-RLC_Monster_LIZ05,리자드 족장의 창,전투 시작 시 아군의 공격을 2 증가시킨다.,Basic,OnBattleStart,BraveAll,AllAllies,0,None,0,Brave,None,2,-1,-1,Monster,-1,240,440,None
-RLC_Monster_LIZ06,리자드 왕의 도,상대의 보호막 공격 시 5의 추가 피해를 입힌다.,Basic,OnHitShield,HitAllEnemies,AllEnemies,5,None,0,None,None,0,0,-1,Monster,-1,215,405,None
-RLC_Monster_SLI01,단단한 진흙,피격 시 보호막 3 획득,Basic,OnTakeDamage,ShieldSelf,Self,3,None,0,None,None,0,0,-1,Monster,-1,220,410,None
-RLC_Monster_SLI02,고대의 슬라임 코어,사망 시 부활 (3회 한도),Basic,OnDead,RevivalSelfAll,Self,3,None,0,None,None,0,0,-1,Monster,-1,240,450,None
-RLC_Monster_SLI03,왕의 위엄,데미지를 1만 받는다. (아군 사망 시 해제),Basic,OnBattleStart,IndomitableSelfAllyDead,Self,0,None,0,Indomitable,None,0,-1,-1,Monster,-1,205,385,None
-RLC_Assassin_001,체술 교본,"회피 수치 이하의 데미지는 받지 않으며, 회피 수치 이상의 데미지의 경우 회피 수치만큼 데미지가 감소된다.",Basic,OnTakeDamage,EvasionDamageReduction,Self,0,None,0,Evasion,None,0,-1,-1,Assassin,-1,195,365,None
-RLC_Assassin_002,무영 체술 비전서,"전투 시작 시 회피가 1 증가하며, 회피 수치 이하의 데미지는 받지 않고 회피 수치 이상의 데미지는 회피 수치만큼 감소된다.",Upgrade,OnBattleStart,EvasionDamageReduction,Self,1,None,0,Evasion,None,1,-1,-1,Assassin,-1,315,585,None
-RLC_Assassin_003,독 묻은 비도,적을 공격하여 체력을 깎았을 때 대상에게 2사이클 동안 중독 1 부여,Surface,OnHitEnemy,StatusPoison,SingleEnemy,0,None,0,Poison,None,1,2,-1,Assassin,300,210,390,None
-RLC_Assassin_004,비도 암기낭,특수 스킬 사용 직후 적 전체에게 3 데미지 부여,Surface,OnSkillUsed,HitAllEnemies,AllEnemies,3,None,0,None,Special,0,0,-1,Assassin,290,205,375,None
-RLC_Assassin_005,야행의 흑포,전투 시작 시 2사이클 동안 자신의 민첩(회피) 1 증가,Surface,OnBattleStart,EvasionSelf,Self,0,None,0,Evasion,None,1,2,-1,Assassin,320,225,415,None
-RLC_Assassin_006,철선 기관함,전투 시작 시 1사이클 동안 반격 2 부여,Surface,OnBattleStart,CounterSelf,Self,0,None,0,Counter,None,2,1,-1,Assassin,320,225,415,None
-RLC_Assassin_007,오독 향낭,스킬 에너지를 소모할 때마다 적 전체에게 2사이클 동안 중독 2 부여,Mid,OnUseSkillEnergy,StatusPoisonAll,AllEnemies,0,None,0,Poison,None,2,2,-1,Assassin,495,345,645,None
-RLC_Assassin_008,원앙쌍비도,적을 공격하여 체력을 깎았을 때 대상에게 2의 추가 데미지 부여,Mid,OnHitEnemy,HitEnemy,SingleEnemy,2,None,0,None,None,0,0,-1,Assassin,399,280,520,None
-RLC_Assassin_009,운무 연막탄,스킬 에너지를 소모할 때마다 1사이클 동안 자신의 민첩(회피) 1 증가,Mid,OnUseSkillEnergy,EvasionSelf,Self,0,None,0,Evasion,None,1,1,-1,Assassin,465,325,605,None
-RLC_Assassin_010,천리안의 옥패,보호막이 있는 대상을 공격했을 때 적 전체에게 1사이클 동안 급소 1 부여,Mid,OnHitShield,StatusMarkAll,AllEnemies,0,None,0,Mark,None,1,1,-1,Assassin,465,325,605,None
-RLC_Assassin_011,만독마향로,자신의 턴 시작 시 적 전체에게 2사이클 동안 중독 3 부여,Deep,OnTurnStart,StatusPoisonAll,AllEnemies,0,None,0,Poison,None,3,2,-1,Assassin,700,490,910,None
-RLC_Assassin_012,무영분신부,적을 공격하여 체력을 깎았을 때 적 전체에게 3 데미지 부여,Deep,OnHitEnemy,HitAllEnemies,AllEnemies,3,None,0,None,None,0,0,-1,Assassin,580,405,755,None
-RLC_Assassin_013,무영의 비단 흑화,전투 시작 시 자신의 공격 2 및 민첩(회피) 2 증가 (영구 지속),Deep,OnBattleStart,EvasionSelfBraveSelf,Self,0,None,0,Brave,None,2,-1,-1,Assassin,670,470,870,None
-RLC_Assassin_014,살수문주의 혈령패,자신의 턴 시작 시 적 전체에게 1사이클 동안 급소 1 및 공포 1 부여,Deep,OnTurnStart,StatusMarkFearAll,AllEnemies,0,None,0,Mark,None,1,1,-1,Assassin,640,450,830,None
-RLC_Engineer_001,마도 엔진,공격 대상의 체력을 1 이상 감소시킬 경우 자신에게 (1+방어)의 보호막을 생성한다.,Basic,OnHitEnemy,ShieldSelf,Self,1,DEF,1,None,None,0,0,-1,Engineer,-1,200,370,None
-RLC_Engineer_002,과충전 마도 엔진,공격 대상의 체력을 1 이상 감소시킬 경우 자신에게 (2+방어)의 보호막을 생성한다.,Upgrade,OnHitEnemy,ShieldSelf,Self,2,DEF,1,None,None,0,0,-1,Engineer,-1,315,585,None
-RLC_Engineer_003,소형 기관포탑,자신의 턴 시작 시 적 전체에게 2 데미지 부여,Surface,OnTurnStart,HitAllEnemies,AllEnemies,2,None,0,None,None,0,0,-1,Engineer,280,195,365,None
-RLC_Engineer_004,보조 방벽 생성기,자신의 턴 시작 시 자신에게 보호막 2 획득,Surface,OnTurnStart,ShieldSelf,Self,2,None,0,None,None,0,0,-1,Engineer,300,210,390,None
-RLC_Engineer_005,출력 증폭 비콘,전투 시작 시 2사이클 동안 자신의 공격 1 증가,Surface,OnBattleStart,BraveSelf,Self,0,None,0,Brave,None,1,2,-1,Engineer,315,220,410,None
-RLC_Engineer_006,표적 조준 비콘,전투 시작 시 적 전체에게 1사이클 동안 급소 1 부여,Surface,OnBattleStart,StatusMarkAll,AllEnemies,0,None,0,Mark,None,1,1,-1,Engineer,310,215,405,None
-RLC_Engineer_007,연장 박격포탑,자신의 턴 시작 시 적 전체에게 4 데미지 부여,Mid,OnTurnStart,HitAllEnemies,AllEnemies,4,None,0,None,None,0,0,-1,Engineer,450,315,585,None
-RLC_Engineer_008,광역 역장 생성기,자신의 턴 시작 시 아군 전체에게 보호막 2 부여,Mid,OnTurnStart,ShieldAll,AllAllies,2,None,0,None,None,0,0,-1,Engineer,456,320,595,None
-RLC_Engineer_009,마력 공명 파일런,스킬 에너지를 소모할 때마다 1사이클 동안 자신의 공격 1 증가,Mid,OnUseSkillEnergy,BraveSelf,Self,0,None,0,Brave,None,1,1,-1,Engineer,458,320,595,None
-RLC_Engineer_010,중력 교란 포탑,전투 시작 시 적 전체에게 1사이클 동안 허약(얼음) 1 부여,Mid,OnBattleStart,StatusIceAll,AllEnemies,0,None,0,Ice,None,1,1,-1,Engineer,443,310,575,None
-RLC_Engineer_011,마도 레이저 포탑,자신의 턴 시작 시 적 전체에게 (5+공격) 피해 및 1사이클 동안 허점(용암) 1 부여,Deep,OnTurnStart,HitAllEnemiesLavaAll,AllEnemies,5,ATK,1,Lava,None,1,1,-1,Engineer,620,435,805,None
-RLC_Engineer_012,요새 포탑,자신의 턴 시작 시 아군 전체에게 보호막 4 부여 및 1사이클 동안 방어 1 증가,Deep,OnTurnStart,ShieldAllSolidAll,AllAllies,4,None,0,Solid,None,1,1,-1,Engineer,648,455,840,None
-RLC_Engineer_013,영구 기관 코어,전투 시작 시 아군 전체의 공격 2 및 방어 2 증가 (영구 지속),Deep,OnBattleStart,BraveAllSolidAll,AllAllies,0,None,0,Brave,None,2,-1,-1,Engineer,690,485,895,None
-RLC_Engineer_014,특이점 관측 포탑,자신의 턴 시작 시 적 전체에게 1사이클 동안 급소 1 부여,Deep,OnTurnStart,StatusMarkAll,AllEnemies,0,None,0,Mark,None,1,1,-1,Engineer,620,435,805,None
-RLC_Fighter_001,파쇄의 권갑,공격 대상이 보호막을 보유 중일 경우 데미지가 20% 증가한다.,Basic,OnHitShield,BonusDamageOnShield,SingleEnemy,20,None,0,None,None,0,0,-1,Fighter,-1,210,390,None
-RLC_Fighter_002,천파의 신권,공격 대상이 보호막을 보유 중일 경우 데미지가 30% 증가한다.,Upgrade,OnHitShield,BonusDamageOnShield,SingleEnemy,30,None,0,None,None,0,0,-1,Fighter,-1,335,625,None
-RLC_Fighter_003,적옥 반지,전투 시작 시 체력 2 회복,Surface,OnBattleStart,HealSelf,Self,2,None,0,None,None,0,0,-1,Fighter,300,210,390,None
-RLC_Fighter_004,경량 가죽 각반,적을 공격하여 체력을 깎았을 때 보호막 1 획득,Surface,OnHitEnemy,ShieldSelf,Self,1,None,0,None,None,0,0,-1,Fighter,285,200,370,None
-RLC_Fighter_005,강철 너클,보호막이 있는 대상을 공격했을 때 적 전체에게 1사이클 동안 허점(용암) 1 부여,Surface,OnHitShield,StatusLavaAll,AllEnemies,0,None,0,Lava,None,1,1,-1,Fighter,295,205,385,None
-RLC_Fighter_006,수련생의 옥패,전투 시작 시 영구히 지속되는 반격 1 부여,Surface,OnBattleStart,CounterSelf,Self,0,None,0,Counter,None,1,-1,-1,Fighter,300,210,390,None
-RLC_Fighter_007,구리 경혈침,전투 시작 시 적 전체에게 1사이클 동안 내상 2 부여,Surface,OnBattleStart,StatusInternalInjuryAll,AllEnemies,0,None,0,InternalInjury,None,2,1,-1,Fighter,310,215,405,None
-RLC_Fighter_008,피 묻은 붕대,자신의 체력이 깎였을 때 1사이클 동안 공격 1 증가,Mid,OnTakeDamage,BraveSelf,Self,0,None,0,Brave,None,1,1,-1,Fighter,458,320,595,None
-RLC_Fighter_009,질풍의 경갑,특수 스킬 사용 직후 1사이클 동안 민첩(회피) 1 획득,Mid,OnSkillUsed,EvasionSelf,Self,0,None,0,Evasion,Special,1,1,-1,Fighter,465,325,605,None
-RLC_Fighter_010,강철 호완,스킬/패시브로 보호막을 획득했을 때 1사이클 동안 견고(방어) 1 획득,Mid,OnGainShield,SolidSelf,Self,0,None,0,Solid,None,1,1,-1,Fighter,458,320,595,None
-RLC_Fighter_011,청동 단전구,자신의 체력이 회복됐을 때 적 전체에게 4 데미지 부여,Mid,OnHealHP,HitAllEnemies,AllEnemies,4,None,0,None,None,0,0,-1,Fighter,450,315,585,None
-RLC_Fighter_012,점혈 입문서,가디언 전투 시작 시 적 전체에게 2사이클 동안 내상 3 부여,Mid,OnGuardianBattleStart,StatusInternalInjuryAll,AllEnemies,0,None,0,InternalInjury,None,3,2,-1,Fighter,503,350,655,None
-RLC_Fighter_013,천마의 혈옥,자신의 체력이 깎였을 때 체력 1 회복 및 1사이클 동안 공격 1 증가,Deep,OnTakeDamage,HealSelfBraveSelf,Self,1,None,0,Brave,None,1,1,-1,Fighter,620,435,805,None
-RLC_Fighter_014,풍신의 신발,전투 시작 시 공격 2 증가,Deep,OnBattleStart,BraveSelf,Self,0,None,0,Brave,None,2,-1,-1,Fighter,660,460,860,None
-RLC_Fighter_015,패왕의 금강갑,보스 전투 시작 시 3사이클 동안 철벽 3 획득,Deep,OnBossBattleStart,IronWallSelf,Self,0,None,0,IronWall,None,3,3,-1,Fighter,700,490,910,None
-RLC_Fighter_016,만파의 태극경,전투 시작 시 반격 3 부여,Deep,OnBattleStart,CounterSelf,Self,0,None,0,Counter,None,3,-1,-1,Fighter,680,475,885,None
-RLC_Fighter_017,뇌제의 사혈침,보호막이 있는 대상을 공격했을 때 적 전체에게 1사이클 동안 급소 1 부여,Deep,OnHitShield,StatusMarkAll,AllEnemies,0,None,0,Mark,None,1,1,-1,Fighter,620,435,805,None
-RLC_Paladin_001,빛의 석상,자신이 보호막 획득 시 체력 2 회복 (유물로 획득한 보호막은 체력 회복 X),Basic,OnGainShield,HealSelf,Self,2,None,0,None,None,0,0,-1,Paladin,-1,210,390,None
-RLC_Paladin_002,자애로운 빛의 석상,자신이 보호막 획득 시 체력 3 회복 (유물로 획득한 보호막은 체력 회복 X),Upgrade,OnGainShield,HealSelf,Self,3,None,0,None,None,0,0,-1,Paladin,-1,330,615,None
-RLC_Paladin_003,가시 박힌 성물,자신의 체력이 회복됐을 때 적 전체에게 2 피해,Surface,OnHealHP,HitAllEnemies,AllEnemies,2,None,0,None,None,0,0,-1,Paladin,280,195,365,None
-RLC_Paladin_004,성전사의 철방패,전투 시작 시 1 사이클 동안 불굴 획득,Surface,OnBattleStart,IndomitableSelf,Self,0,None,0,Indomitable,None,0,1,-1,Paladin,295,205,385,None
-RLC_Paladin_005,수습 사제의 성표,전투 종료 시 체력 3 회복,Surface,OnBattleEnd,HealSelf,Self,3,None,0,None,None,0,0,-1,Paladin,315,220,410,None
-RLC_Paladin_006,축복받은 붕대,자신의 체력이 깎였을 때 체력 1 회복,Surface,OnTakeDamage,HealSelf,Self,1,None,0,None,None,0,0,-1,Paladin,285,200,370,None
-RLC_Paladin_007,정화의 성화,자신의 체력이 회복됐을 때 적 전체에게 1사이클 동안 허점(용암) 1 부여,Mid,OnHealHP,StatusLavaAll,AllEnemies,0,None,0,Lava,None,1,1,-1,Paladin,443,310,575,None
-RLC_Paladin_008,성전사의 문장 방패,스킬/패시브로 보호막을 획득했을 때 보호막 2 추가 획득,Mid,OnGainShield,ShieldSelf,Self,2,None,0,None,None,0,0,-1,Paladin,450,315,585,None
-RLC_Paladin_009,성기사의 기도서,전투 시작 시 체력 4 회복 및 2사이클 동안 견고(가호) 1 획득,Mid,OnBattleStart,HealSelfProtect,Self,4,None,0,Protection,None,1,2,-1,Paladin,479,335,625,None
-RLC_Paladin_010,고행자의 묵주,자신의 체력이 깎였을 때 보호막 3 획득,Mid,OnTakeDamage,ShieldSelf,Self,3,None,0,None,None,0,0,-1,Paladin,473,330,615,None
-RLC_Paladin_011,단죄의 성광관,자신의 체력이 회복됐을 때 적 전체에게 (6+공격) 피해 및 1사이클 동안 허점(용암) 1 부여,Deep,OnHealHP,HitAllEnemiesLavaAll,AllEnemies,6,ATK,1,Lava,None,1,1,-1,Paladin,630,440,820,None
-RLC_Paladin_012,대천사의 성벽 방패,스킬/패시브로 보호막을 획득했을 때 1사이클 동안 철벽 1 획득,Deep,OnGainShield,IronWallSelf,Self,0,None,0,IronWall,None,1,1,-1,Paladin,610,425,795,None
-RLC_Paladin_013,구원의 성배,전투 시작 시 아군 전체의 체력을 (6+방어)만큼 회복하고 1사이클 동안 공격 1 증가,Deep,OnBattleStart,HealAllBraveAll,AllAllies,6,DEF,1,Brave,None,1,1,-1,Paladin,662,465,860,None
-RLC_Paladin_014,순교자의 성흔,자신의 체력이 깎였을 때 체력 2 회복 및 1사이클 동안 공격 2 증가,Deep,OnTakeDamage,HealSelfBraveSelf,Self,2,None,0,Brave,None,2,1,-1,Paladin,680,475,885,None
-RLC_Rare_001,미약한 신혈,전투 종료 시 최대 체력이 1 증가,Mid,OnBattleEnd,MaxHPUp,Self,1,None,0,None,None,0,0,-1,Shared,375,265,490,None
-RLC_Surface_Q001,라바 슬라임의 정수,전투 시작 시 적 전체에게 1사이클 동안 용암 1 부여,Surface,OnBattleStart,StatusLavaAll,AllEnemies,0,None,0,Lava,None,1,1,-1,Quest,-1,205,385,None
-RLC_Surface_Q002,아이스 슬라임의 정수,전투 시작 시 적 전체에게 1사이클 동안 얼음 1 부여,Surface,OnBattleStart,StatusIceAll,AllEnemies,0,None,0,Ice,None,1,1,-1,Quest,-1,205,385,None
-RLC_Surface_Q003,에이션트 슬라임의 정수,유물 획득 시 최대 체력 10 증가,Surface,OnGainRelic,MaxHPUp,Self,10,None,0,None,None,0,0,-1,Quest,0,0,0,None
-RLC_Surface_Q004,힐 슬라임의 정수,전투 시작 시 체력 3 회복,Surface,OnBattleStart,HealSelf,Self,3,None,0,None,None,0,0,-1,Quest,-1,220,410,None
-RLC_Surface_Q005,포이즌 슬라임의 정수,"적에게 피해를 입힌 경우, 1데미지의 중독을 2사이클 동안 부여",Surface,OnHitEnemy,StatusPoison,SingleEnemy,0,None,0,Poison,None,1,2,-1,Quest,-1,210,390,None
-RLC_Surface_Q006,머드 슬라임의 정수,보호막 획득 시 보호막 2를 추가로 획득한다.,Surface,OnGainShield,ShieldSelf,Self,2,None,0,None,None,0,0,-1,Quest,-1,210,390,None
-RLC_Surface_Q007,퓨전 슬라임의 핵,전투 시작 시 적 전체에게 1사이클 동안 퓨전 1 부여,Surface,OnBattleStart,StatusFusionAll,AllEnemies,0,None,0,Fusion,None,1,1,-1,Quest,-1,205,385,None
-RLC_Surface_Q008,슬라임 킹의 정수,전투 시작 시 방어 2 증가,Surface,OnBattleStart,ProtectSelf,Self,0,None,0,Protection,None,2,-1,-1,Quest,-1,230,430,None
-RLC_Surface_Q009,볼카누스의 심장,전투 시작 시 방어 2 증가,Surface,OnBattleStart,SolidSelf,Self,0,None,0,Solid,None,2,-1,-1,Quest,-1,230,430,None
-RLC_Surface_Q010,불완전한 불꽃 파편,전투 시작 시 적 전체에게 6 데미지 부여,Surface,OnBattleStart,HitAllEnemies,AllEnemies,6,None,0,None,None,0,0,-1,Quest,-1,225,415,None
-RLC_Surface_Q011,마그마 골렘의 핵,보스 전투 시작 시 1사이클 동안 불굴(강철) 획득,Surface,OnBossBattleStart,MetalSelf,Self,0,None,0,Metal,None,1,1,-1,Quest,-1,205,385,None
-RLC_Surface_Q012,마그마 임프의 불씨,전투 시작 시 적 전체에게 1사이클 동안 허점(용암) 1 부여,Surface,OnBattleStart,StatusLavaAll,AllEnemies,0,None,0,Lava,None,1,1,-1,Quest,-1,205,385,None
-RLC_Surface_Q013,애쉬 하운드의 송곳니,전투 시작 시 공격 1 증가,Surface,OnBattleStart,BraveSelf,Self,0,None,0,Brave,None,1,-1,-1,Quest,-1,215,395,None
-RLC_Surface_Q014,흑요석 전갈의 독침,전투 시작 시 적 전체에게 1사이클 동안 급소 1 부여,Surface,OnBattleStart,StatusMarkAll,AllEnemies,0,None,0,Mark,None,1,1,-1,Quest,-1,215,405,None
-RLC_Surface_Q015,정화된 잿빛 성물,전투 시작 시 적 전체에게 1사이클 동안 공포 1 부여,Surface,OnBattleStart,StatusFearAll,AllEnemies,0,None,0,Fear,None,1,1,-1,Quest,-1,215,405,None
-RLC_Surface_Q016,에너지 결정,전투 시작 시 에너지 1 증가,Surface,OnBattleStart,GainEnergy,Self,1,None,0,None,None,0,0,-1,Quest,-1,230,430,None
-RLC_Surface_Q017,길드 정찰병의 나침반,전투 종료 시 던전 재화 15개 추가 획득,Surface,OnBattleEnd,GainMoney,Self,15,None,0,None,None,0,0,-1,Quest,-1,155,285,None
-RLC_Surface_Q018,마탑의 기록 수정구,스킬 에너지를 소모할 때마다 보호막 3 획득,Surface,OnUseSkillEnergy,ShieldSelf,Self,3,None,0,None,None,0,0,-1,Quest,-1,220,410,None
-RLC_Surface_Q019,순례자의 묵주,자신의 체력이 회복될 때마다 보호막 3 획득,Surface,OnHealHP,ShieldSelf,Self,3,None,0,None,None,0,0,-1,Quest,-1,220,410,None
-RLC_Event_Temp_001,광폭의 진홍 영약,"전투 시작 시 공격 3 증가, 방어 1 감소 (3회 전투 후 소멸)",Surface,OnBattleStart,BraveSelf,Self,0,None,0,Brave,None,3,-1,3,Event,-1,0,0,None
-RLC_Event_Temp_002,중장갑의 창백 영약,"전투 시작 시 방어 3 증가, 공격 1 감소 (3회 전투 후 소멸)",Surface,OnBattleStart,SolidSelf,Self,0,None,0,Solid,None,3,-1,3,Event,-1,0,0,None
-RLC_Event_Temp_003,정제된 투지의 영약,"전투 시작 시 공격 1 증가 (페널티 없음, 3회 전투 후 소멸)",Surface,OnBattleStart,BraveSelf,Self,0,None,0,Brave,None,1,-1,3,Event,-1,0,0,None
-RLC_Event_Temp_004,과충전 마력 코어,"전투 시작 시 행동 에너지 1 추가 획득, 자신의 체력 3 감소 (3회 전투 후 소멸)",Surface,OnBattleStart,GainEnergy,Self,1,None,0,None,None,0,0,3,Event,-1,0,0,None
-RLC_Event_Temp_005,유령화의 비약,"전투 시작 시 민첩(회피) 2 증가, 방어 1 감소 (3회 전투 후 소멸)",Surface,OnBattleStart,EvasionSelf,Self,0,None,0,Evasion,None,2,-1,3,Event,-1,0,0,None
-RLC_Event_Temp_006,심연의 탐욕 낙인,"전투 시작 시 방어 1 감소 또는 에너지 소모 페널티 (재화 강탈 선택지 대가용, 3회 전투 후 소멸)",Surface,OnBattleStart,SolidSelf,Self,0,None,0,None,None,0,-1,3,Event,-1,0,0,None
-RLC_Event_Perm_001,투신의 낙인,전투 시작 시 자신의 공격 1 증가 (영구 유지),Surface,OnBattleStart,BraveSelf,Self,0,None,0,Brave,None,1,-1,-1,Event,-1,215,395,None
-RLC_Event_Perm_002,수호자의 낙인,전투 시작 시 자신의 방어 1 증가 (영구 유지),Surface,OnBattleStart,SolidSelf,Self,0,None,0,Solid,None,1,-1,-1,Event,-1,215,395,None
-RLC_Event_Perm_003,질풍의 낙인,전투 시작 시 자신의 민첩(회피) 1 증가 (영구 유지),Surface,OnBattleStart,EvasionSelf,Self,0,None,0,Evasion,None,1,-1,-1,Event,-1,215,405,None
-RLC_Event_Perm_004,불멸의 심장,유물 획득 시 최대 체력 12 즉시 증가 (영구 유지),Surface,OnGainRelic,MaxHPUp,Self,12,None,0,None,None,0,0,-1,Event,0,0,0,None
-RLC_Event_Perm_005,여신의 성유물,전투 시작 시 자신의 공격 1 및 방어 1 증가 (영구 유지),Surface,OnBattleStart,BraveAllSolidAll,Self,0,None,0,Brave,None,1,-1,-1,Event,-1,225,415,None
-RLC_Event_SLI_Temp01,적색 여왕 로열 젤리,[슬라임 왕국] 전투 시작 시 공격 3 증가 및 체력 3 회복 (3회 전투 후 소멸),Surface,OnBattleStart,HealSelfBraveSelf,Self,3,None,0,Brave,None,3,-1,3,Event,-1,0,0,None
-RLC_Event_SLI_Temp02,청색 여왕 로열 젤리,[슬라임 왕국] 전투 시작 시 방어 3 증가 및 보호막 4 획득 (3회 전투 후 소멸),Surface,OnBattleStart,ShieldSelfSolid,Self,4,None,0,Solid,None,3,-1,3,Event,-1,0,0,None
-RLC_Event_LAV_Temp01,화산신의 업화 각인,[용암 지대] 전투 시작 시 공격 3 증가 및 적 전체 1사이클 용암 1 부여 (3회 전투 후 소멸),Surface,OnBattleStart,BraveSelf,Self,0,None,0,Brave,None,3,-1,3,Event,-1,0,0,None
-RLC_Event_LAV_Temp02,현무암 마그마 코팅,[용암 지대] 전투 시작 시 방어 3 증가 및 철벽 1 획득 (3회 전투 후 소멸),Surface,OnBattleStart,SolidSelf,Self,0,None,0,Solid,None,3,-1,3,Event,-1,0,0,None
-RLC_Event_LIZ_Temp01,붉은 대주술사의 비전향,[리자드의 늪] 전투 시작 시 공격 4 증가 및 민첩(회피) 2 증가 (3회 전투 후 소멸),Mid,OnBattleStart,EvasionSelfBraveSelf,Self,0,None,0,Brave,None,4,-1,3,Event,-1,0,0,None
-RLC_Event_LIZ_Temp02,푸른 수호병의 비늘향,[리자드의 늪] 전투 시작 시 방어 4 증가 및 철벽 2 획득 (3회 전투 후 소멸),Mid,OnBattleStart,SolidSelf,Self,0,None,0,Solid,None,4,-1,3,Event,-1,0,0,None
-RLC_Event_ELM_Temp01,폭풍과 화염의 정령왕 각인,[정령계] 전투 시작 시 공격 5 증가 및 행동 에너지 1 추가 획득 (3회 전투 후 소멸),Deep,OnBattleStart,GainEnergyBraveSelf,Self,1,None,0,Brave,None,5,-1,3,Event,-1,0,0,None
-RLC_Event_ELM_Temp02,대지와 심해의 정령왕 각인,"[정령계] 전투 시작 시 방어 5 증가, 철벽 3 및 체력 6 회복 (3회 전투 후 소멸)",Deep,OnBattleStart,HealSelfProtect,Self,6,None,0,Protection,None,5,-1,3,Event,-1,0,0,None
+RLC_Common_001,전사의 증표,전투 시작 시 공격 1 증가,Surface,OnBattleStart,BraveSelf,Self,0,None,0,Brave,None,1,-1,-1,Shared,305,215,395,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Common_001.T_Relic_RLC_Common_001
+RLC_Common_002,견습 기사의 방패,전투 시작 시 방어 1 증가,Surface,OnBattleStart,ProtectSelf,Self,0,None,0,Protection,None,1,-1,-1,Shared,305,215,395,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Common_002.T_Relic_RLC_Common_002
+RLC_Common_003,보조 배터리,전투 시작 시 에너지 1 추가,Surface,OnBattleStart,GainEnergy,Self,1,None,0,None,None,0,0,-1,Shared,330,230,430,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Common_003.T_Relic_RLC_Common_003
+RLC_Common_004,방어 보조 모듈,타격 시 보호막 2 획득,Surface,OnHitEnemy,ShieldSelf,Self,2,None,0,None,None,0,0,-1,Shared,300,210,390,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Common_004.T_Relic_RLC_Common_004
+RLC_Common_005,유탄 발사기,전투 시작 시 적 전체에게 5 데미지 부여,Surface,OnBattleStart,HitAllEnemies,AllEnemies,5,None,0,None,None,0,0,-1,Shared,310,215,405,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Common_005.T_Relic_RLC_Common_005
+RLC_Common_006,최하급 재생 플라스크,전투 시작 시 체력 3 회복,Surface,OnBattleStart,HealSelf,Self,3,None,0,None,None,0,0,-1,Shared,315,220,410,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Common_006.T_Relic_RLC_Common_006
+RLC_Common_007,최하급 도적의 비술,전투 시작 시 민첩 1 증가,Surface,OnBattleStart,EvasionSelf,Self,0,None,0,Evasion,None,1,-1,-1,Shared,310,215,405,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Common_007.T_Relic_RLC_Common_007
+RLC_Common_008,희미한 행운의 부적,전투 종료 시 던전 재화 10개 추가 획득,Surface,OnBattleEnd,GainMoney,Self,10,None,0,None,None,0,0,-1,Shared,215,150,280,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Common_008.T_Relic_RLC_Common_008
+RLC_Common_009,보급형 에너지 코어,에너지 소모 시 보호막 1 획득,Surface,OnUseEnergy,ShieldSelf,Self,1,None,0,None,None,0,0,-1,Shared,285,200,370,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Common_009.T_Relic_RLC_Common_009
+RLC_Common_010,부서진 훈련용 인형,유물 획득 시 보유한 픽업 스킬 중 1가지를 +1강 강화한다,Surface,OnGainRelic,RandomUpgrade,Self,1,None,0,None,None,0,0,-1,Shared,0,0,0,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Common_010.T_Relic_RLC_Common_010
+RLC_Common_011,숨겨진 보물 상자,유물 획득 시 던전 재화 333개 획득,Surface,OnGainRelic,GainMoney,Self,333,None,0,None,None,0,0,-1,Shared,0,0,0,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Common_011.T_Relic_RLC_Common_011
+RLC_Common_012,잘 익은 군고구마,휴식터에 입장할 시 체력 10 추가 회복,Surface,OnRestStart,HealSelf,Self,10,None,0,None,None,0,0,-1,Shared,350,245,455,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Common_012.T_Relic_RLC_Common_012
+RLC_Common_013,깨진 돋보기 안경,전투 시작 시 적 전체에게 급소를 1 사이클 동안 부여,Surface,OnBattleStart,StatusMarkAll,AllEnemies,0,None,0,Mark,None,1,1,-1,Shared,310,215,405,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Common_013.T_Relic_RLC_Common_013
+RLC_Common_014,도깨비 가면,전투 시작 시 적 전체에게 공포를 1 사이클 동안 부여,Surface,OnBattleStart,StatusFearAll,AllEnemies,0,None,0,Fear,None,1,1,-1,Shared,310,215,405,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Common_014.T_Relic_RLC_Common_014
+RLC_Common_015,향긋한 백도,유물 획득 시 최대 체력 8 증가,Surface,OnGainRelic,MaxHPUp,Self,8,None,0,None,None,0,0,-1,Shared,0,0,0,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Common_015.T_Relic_RLC_Common_015
+RLC_Common_016,조악한 갑옷,피격 시 받는 데미지가 1 줄어든다.,Surface,OnBattleStart,IronWallSelf,Self,0,None,0,IronWall,None,1,-1,-1,Shared,305,215,395,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Common_016.T_Relic_RLC_Common_016
+RLC_Common_017,최하급 용기의 부적,가디언 전투 시작 시 공격 2 증가,Surface,OnGuardianBattleStart,BraveSelf,Self,0,None,0,Brave,None,2,-1,-1,Shared,330,230,430,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Common_017.T_Relic_RLC_Common_017
+RLC_Common_018,사냥꾼의 쇠뇌,보스 전투 시작 시 공격 2 증가,Surface,OnBossBattleStart,BraveSelf,Self,0,None,0,Brave,None,2,-1,-1,Shared,330,230,430,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Common_018.T_Relic_RLC_Common_018
+RLC_Common_019,사냥꾼의 가죽 갑옷,보스 전투 시작 시 방어 2 증가,Surface,OnBossBattleStart,SolidSelf,Self,0,None,0,Solid,None,2,-1,-1,Shared,330,230,430,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Common_019.T_Relic_RLC_Common_019
+RLC_Deep_Q001,이프리트의 화염 코어,전투 시작 시 공격 3 증가,Deep,OnBattleStart,BraveSelf,Self,0,None,0,Brave,None,3,-1,-1,Quest,-1,490,910,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Deep_Q001.T_Relic_RLC_Deep_Q001
+RLC_Deep_Q002,나이아드의 심해 코어,자신의 턴 종료 시 체력 2 회복,Deep,OnTurnEnd,HealSelf,Self,2,None,0,None,None,0,0,-1,Quest,-1,420,780,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Deep_Q002.T_Relic_RLC_Deep_Q002
+RLC_Deep_Q003,실피드의 질풍 코어,자신의 턴 시작 시 에너지 1 추가 획득,Deep,OnTurnStart,GainEnergy,Self,1,None,0,None,None,0,0,-1,Quest,-1,460,860,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Deep_Q003.T_Relic_RLC_Deep_Q003
+RLC_Deep_Q004,오레아드의 대지 코어,전투 시작 시 철벽 3 (영구 지속) 획득,Deep,OnBattleStart,IronWallSelf,Self,0,None,0,IronWall,None,3,-1,-1,Quest,-1,490,910,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Deep_Q004.T_Relic_RLC_Deep_Q004
+RLC_Deep_Q005,사원소의 성배,체력 회복 시 체력 1 추가 회복 획득,Deep,OnHealHP,HealSelf,Self,2,None,0,None,None,0,0,-1,Quest,-1,420,780,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Deep_Q005.T_Relic_RLC_Deep_Q005
+RLC_Deep_Q006,샐러맨더의 불꽃 정수,전투 시작 시 적 전체에게 2사이클 동안 허점(용암) 2 부여,Deep,OnBattleStart,StatusLavaAll,AllEnemies,0,None,0,Lava,None,2,2,-1,Quest,-1,455,845,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Deep_Q006.T_Relic_RLC_Deep_Q006
+RLC_Deep_Q007,실프의 바람 정수,에너지를 소모할 때마다 보호막 7 획득,Deep,OnUseEnergy,ShieldSelf,Self,7,None,0,None,None,0,0,-1,Quest,-1,490,910,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Deep_Q007.T_Relic_RLC_Deep_Q007
+RLC_Deep_Q008,노움의 대지 정수,보호막 획득 시 보호막 4를 추가로 획득한다,Deep,OnGainShield,ShieldSelf,Self,4,None,0,None,None,0,0,-1,Quest,-1,460,860,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Deep_Q008.T_Relic_RLC_Deep_Q008
+RLC_Deep_Q009,정화된 어둠의 성유물,전투 시작 시 적 전체에게 2사이클 동안 공포 1 부여,Deep,OnBattleStart,StatusFearAll,AllEnemies,0,None,0,Fear,None,1,2,-1,Quest,-1,450,830,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Deep_Q009.T_Relic_RLC_Deep_Q009
+RLC_Deep_Q010,위스프의 빛무리 정수,전투 시작 시 1사이클 동안 불굴(실명)(받는 피해 1 고정) 획득,Deep,OnBattleStart,BlindnessSelf,Self,0,None,0,Blindness,None,1,1,-1,Quest,-1,415,765,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Deep_Q010.T_Relic_RLC_Deep_Q010
+RLC_Deep_Q011,운디네의 맑은 영수,휴식터에 입장할 시 체력 20 추가 회복,Deep,OnRestStart,HealSelf,Self,20,None,0,None,None,0,0,-1,Quest,-1,490,910,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Deep_Q011.T_Relic_RLC_Deep_Q011
+RLC_Deep_Q012,선봉대장의 황금 훈장,전투 시작 시 아군 전체의 공격을 2 증가시킨다,Deep,OnBattleStart,BraveAll,AllAllies,0,None,0,Brave,None,2,-1,-1,Quest,-1,475,885,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Deep_Q012.T_Relic_RLC_Deep_Q012
+RLC_Deep_Q013,대마법사의 마도서,자신의 턴 시작 시 에너지 1 추가 획득,Deep,OnTurnStart,GainEnergy,Self,1,None,0,None,None,0,0,-1,Quest,-1,460,860,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Deep_Q013.T_Relic_RLC_Deep_Q013
+RLC_Deep_Q014,테르미누스의 성흔,전투 시작 시 철벽 2(영구 지속) 획득 (받는 피해 2 감소),Deep,OnBattleStart,IronWallSelf,Self,0,None,0,IronWall,None,2,-1,-1,Quest,-1,460,860,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Deep_Q014.T_Relic_RLC_Deep_Q014
+RLC_Mid_Q001,리자드 킹의 왕관,상대의 보호막 공격 시 적 전체에게 5의 추가 피해 부여,Mid,OnHitShield,HitAllEnemies,AllEnemies,5,None,0,None,None,0,0,-1,Quest,-1,325,605,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Mid_Q001.T_Relic_RLC_Mid_Q001
+RLC_Mid_Q002,인도자의 주술 지팡이,전투 시작 시 아군 전체의 방어를 2 증가시킨다,Mid,OnBattleStart,SolidAll,AllAllies,0,None,0,Solid,None,2,-1,-1,Quest,-1,355,665,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Mid_Q002.T_Relic_RLC_Mid_Q002
+RLC_Mid_Q003,족장의 전투 깃발,전투 시작 시 아군 전체의 공격을 2 증가시킨다,Mid,OnBattleStart,BraveAll,AllAllies,0,None,0,Brave,None,2,-1,-1,Quest,-1,355,665,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Mid_Q003.T_Relic_RLC_Mid_Q003
+RLC_Mid_Q004,사냥꾼의 올가미,가디언 전투 시작 시 적 전체에게 2사이클 동안 급소 부여,Mid,OnGuardianBattleStart,StatusMarkAll,AllEnemies,0,None,0,Mark,None,1,2,-1,Quest,-1,335,625,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Mid_Q004.T_Relic_RLC_Mid_Q004
+RLC_Mid_Q005,정찰병의 깃털 망토,전투 시작 시 민첩(회피) 2 증가,Mid,OnBattleStart,EvasionSelf,Self,0,None,0,Evasion,None,2,-1,-1,Quest,-1,345,645,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Mid_Q005.T_Relic_RLC_Mid_Q005
+RLC_Mid_Q006,수호병의 비늘 방패,전투 시작 시 2사이클 동안 철벽(받는 피해 2 감소) 획득,Mid,OnBattleStart,IronWallSelf,Self,0,None,0,IronWall,None,2,2,-1,Quest,-1,355,665,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Mid_Q006.T_Relic_RLC_Mid_Q006
+RLC_Mid_Q007,암살자의 단검,"적에게 피해를 입힌 경우, 2의 데미지를 추가로 입힌다.",Mid,OnHitEnemy,HitEnemy,SingleEnemy,2,None,0,None,None,0,0,-1,Quest,-1,280,520,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Mid_Q007.T_Relic_RLC_Mid_Q007
+RLC_Mid_Q008,정화된 주술 토템,스킬 에너지를 소모할 때마다 체력 3 회복,Mid,OnUseSkillEnergy,HealSelf,Self,3,None,0,None,None,0,0,-1,Quest,-1,330,615,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Mid_Q008.T_Relic_RLC_Mid_Q008
+RLC_Mid_Q009,베테랑의 전술 교본,전투 시작 시 적 전체에게 1사이클 동안 급소 1 부여,Mid,OnBattleStart,StatusMarkAll,AllEnemies,0,None,0,Mark,None,1,1,-1,Quest,-1,325,605,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Mid_Q009.T_Relic_RLC_Mid_Q009
+RLC_Mid_Q010,거물 사냥꾼의 전리품,가디언 전투 시작 시 적 전체에게 2사이클 동안 공포 부여,Mid,OnGuardianBattleStart,StatusFearAll,AllEnemies,0,None,0,Fear,None,1,2,-1,Quest,-1,335,625,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Mid_Q010.T_Relic_RLC_Mid_Q010
+RLC_Mid_Q011,증폭된 마력 코어,전투 시작 시 에너지 2 추가 획득,Mid,OnBattleStart,GainEnergy,Self,2,None,0,None,None,0,0,-1,Quest,-1,370,685,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Mid_Q011.T_Relic_RLC_Mid_Q011
+RLC_Mid_Q012,마탑의 가디언 분석기,가디언 전투 시작 시 아군 전체에게 보호막 10 부여,Mid,OnGuardianBattleStart,ShieldAll,AllAllies,10,None,0,None,None,0,0,-1,Quest,-1,370,685,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Mid_Q012.T_Relic_RLC_Mid_Q012
+RLC_Mid_Q013,순례자의 성배,전투 종료 시 체력 5 회복,Mid,OnBattleEnd,HealSelf,Self,5,None,0,None,None,0,0,-1,Quest,-1,365,675,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Mid_Q013.T_Relic_RLC_Mid_Q013
+RLC_Mid_Q014,이단심문관의 장검,타격에 성공했을 때 적 전체에게 3 데미지 부여,Mid,OnHitEnemy,HitAllEnemies,AllEnemies,3,None,0,None,None,0,0,-1,Quest,-1,305,565,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Mid_Q014.T_Relic_RLC_Mid_Q014
+RLC_Monster_ELM06,정령왕의 힘,전투 시작 시 불굴(정령화)를 1 사이클 동안 부여,Basic,OnBattleStart,SpiritSelf,Self,0,None,0,Spirit,None,0,1,-1,Monster,-1,205,385,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Monster_ELM06.T_Relic_RLC_Monster_ELM06
+RLC_Monster_LIZ01,저주 인형,전투 시작 시 적 전체에게 공포를 1 사이클 동안 부여,Basic,OnBattleStart,StatusFearAll,AllEnemies,0,None,0,Fear,None,1,1,-1,Monster,-1,215,405,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Monster_LIZ01.T_Relic_RLC_Monster_LIZ01
+RLC_Monster_LIZ02,암살자의 로브,전투 시작 시 자신의 회피를 3 증가시킨다.,Basic,OnBattleStart,EvasionSelf,Self,0,None,0,Evasion,None,3,-1,-1,Monster,-1,245,455,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Monster_LIZ02.T_Relic_RLC_Monster_LIZ02
+RLC_Monster_LIZ03,무거운 메이스,"공격 스킬 사용 시, 방어가 1 하락한다.",Basic,OnSkillUsed,SolidSelf,Self,0,None,0,Solid,Attack,-1,-1,-1,Monster,-1,215,395,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Monster_LIZ03.T_Relic_RLC_Monster_LIZ03
+RLC_Monster_LIZ04,축복 인형,전투 시작 시 아군의 방어를 2 증가시킨다.,Basic,OnBattleStart,SolidAll,AllAllies,0,None,0,Solid,None,2,-1,-1,Monster,-1,240,440,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Monster_LIZ04.T_Relic_RLC_Monster_LIZ04
+RLC_Monster_LIZ05,리자드 족장의 창,전투 시작 시 아군의 공격을 2 증가시킨다.,Basic,OnBattleStart,BraveAll,AllAllies,0,None,0,Brave,None,2,-1,-1,Monster,-1,240,440,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Monster_LIZ05.T_Relic_RLC_Monster_LIZ05
+RLC_Monster_LIZ06,리자드 왕의 도,상대의 보호막 공격 시 5의 추가 피해를 입힌다.,Basic,OnHitShield,HitAllEnemies,AllEnemies,5,None,0,None,None,0,0,-1,Monster,-1,215,405,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Monster_LIZ06.T_Relic_RLC_Monster_LIZ06
+RLC_Monster_SLI01,단단한 진흙,피격 시 보호막 3 획득,Basic,OnTakeDamage,ShieldSelf,Self,3,None,0,None,None,0,0,-1,Monster,-1,220,410,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Monster_SLI01.T_Relic_RLC_Monster_SLI01
+RLC_Monster_SLI02,고대의 슬라임 코어,사망 시 부활 (3회 한도),Basic,OnDead,RevivalSelfAll,Self,3,None,0,None,None,0,0,-1,Monster,-1,240,450,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Monster_SLI02.T_Relic_RLC_Monster_SLI02
+RLC_Monster_SLI03,왕의 위엄,데미지를 1만 받는다. (아군 사망 시 해제),Basic,OnBattleStart,IndomitableSelfAllyDead,Self,0,None,0,Indomitable,None,0,-1,-1,Monster,-1,205,385,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Monster_SLI03.T_Relic_RLC_Monster_SLI03
+RLC_Assassin_001,체술 교본,"회피 수치 이하의 데미지는 받지 않으며, 회피 수치 이상의 데미지의 경우 회피 수치만큼 데미지가 감소된다.",Basic,OnTakeDamage,EvasionDamageReduction,Self,0,None,0,Evasion,None,0,-1,-1,Assassin,-1,195,365,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Assassin_001.T_Relic_RLC_Assassin_001
+RLC_Assassin_002,무영 체술 비전서,"전투 시작 시 회피가 1 증가하며, 회피 수치 이하의 데미지는 받지 않고 회피 수치 이상의 데미지는 회피 수치만큼 감소된다.",Upgrade,OnBattleStart,EvasionDamageReduction,Self,1,None,0,Evasion,None,1,-1,-1,Assassin,-1,315,585,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Assassin_002.T_Relic_RLC_Assassin_002
+RLC_Assassin_003,독 묻은 비도,적을 공격하여 체력을 깎았을 때 대상에게 2사이클 동안 중독 1 부여,Surface,OnHitEnemy,StatusPoison,SingleEnemy,0,None,0,Poison,None,1,2,-1,Assassin,300,210,390,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Assassin_003.T_Relic_RLC_Assassin_003
+RLC_Assassin_004,비도 암기낭,특수 스킬 사용 직후 적 전체에게 3 데미지 부여,Surface,OnSkillUsed,HitAllEnemies,AllEnemies,3,None,0,None,Special,0,0,-1,Assassin,290,205,375,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Assassin_004.T_Relic_RLC_Assassin_004
+RLC_Assassin_005,야행의 흑포,전투 시작 시 2사이클 동안 자신의 민첩(회피) 1 증가,Surface,OnBattleStart,EvasionSelf,Self,0,None,0,Evasion,None,1,2,-1,Assassin,320,225,415,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Assassin_005.T_Relic_RLC_Assassin_005
+RLC_Assassin_006,철선 기관함,전투 시작 시 1사이클 동안 반격 2 부여,Surface,OnBattleStart,CounterSelf,Self,0,None,0,Counter,None,2,1,-1,Assassin,320,225,415,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Assassin_006.T_Relic_RLC_Assassin_006
+RLC_Assassin_007,오독 향낭,스킬 에너지를 소모할 때마다 적 전체에게 2사이클 동안 중독 2 부여,Mid,OnUseSkillEnergy,StatusPoisonAll,AllEnemies,0,None,0,Poison,None,2,2,-1,Assassin,495,345,645,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Assassin_007.T_Relic_RLC_Assassin_007
+RLC_Assassin_008,원앙쌍비도,적을 공격하여 체력을 깎았을 때 대상에게 2의 추가 데미지 부여,Mid,OnHitEnemy,HitEnemy,SingleEnemy,2,None,0,None,None,0,0,-1,Assassin,399,280,520,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Assassin_008.T_Relic_RLC_Assassin_008
+RLC_Assassin_009,운무 연막탄,스킬 에너지를 소모할 때마다 1사이클 동안 자신의 민첩(회피) 1 증가,Mid,OnUseSkillEnergy,EvasionSelf,Self,0,None,0,Evasion,None,1,1,-1,Assassin,465,325,605,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Assassin_009.T_Relic_RLC_Assassin_009
+RLC_Assassin_010,천리안의 옥패,보호막이 있는 대상을 공격했을 때 적 전체에게 1사이클 동안 급소 1 부여,Mid,OnHitShield,StatusMarkAll,AllEnemies,0,None,0,Mark,None,1,1,-1,Assassin,465,325,605,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Assassin_010.T_Relic_RLC_Assassin_010
+RLC_Assassin_011,만독마향로,자신의 턴 시작 시 적 전체에게 2사이클 동안 중독 3 부여,Deep,OnTurnStart,StatusPoisonAll,AllEnemies,0,None,0,Poison,None,3,2,-1,Assassin,700,490,910,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Assassin_011.T_Relic_RLC_Assassin_011
+RLC_Assassin_012,무영분신부,적을 공격하여 체력을 깎았을 때 적 전체에게 3 데미지 부여,Deep,OnHitEnemy,HitAllEnemies,AllEnemies,3,None,0,None,None,0,0,-1,Assassin,580,405,755,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Assassin_012.T_Relic_RLC_Assassin_012
+RLC_Assassin_013,무영의 비단 흑화,전투 시작 시 자신의 공격 2 및 민첩(회피) 2 증가 (영구 지속),Deep,OnBattleStart,EvasionSelfBraveSelf,Self,0,None,0,Brave,None,2,-1,-1,Assassin,670,470,870,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Assassin_013.T_Relic_RLC_Assassin_013
+RLC_Assassin_014,살수문주의 혈령패,자신의 턴 시작 시 적 전체에게 1사이클 동안 급소 1 및 공포 1 부여,Deep,OnTurnStart,StatusMarkFearAll,AllEnemies,0,None,0,Mark,None,1,1,-1,Assassin,640,450,830,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Assassin_014.T_Relic_RLC_Assassin_014
+RLC_Engineer_001,마도 엔진,공격 대상의 체력을 1 이상 감소시킬 경우 자신에게 (1+방어)의 보호막을 생성한다.,Basic,OnHitEnemy,ShieldSelf,Self,1,DEF,1,None,None,0,0,-1,Engineer,-1,200,370,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Engineer_001.T_Relic_RLC_Engineer_001
+RLC_Engineer_002,과충전 마도 엔진,공격 대상의 체력을 1 이상 감소시킬 경우 자신에게 (2+방어)의 보호막을 생성한다.,Upgrade,OnHitEnemy,ShieldSelf,Self,2,DEF,1,None,None,0,0,-1,Engineer,-1,315,585,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Engineer_002.T_Relic_RLC_Engineer_002
+RLC_Engineer_003,소형 기관포탑,자신의 턴 시작 시 적 전체에게 2 데미지 부여,Surface,OnTurnStart,HitAllEnemies,AllEnemies,2,None,0,None,None,0,0,-1,Engineer,280,195,365,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Engineer_003.T_Relic_RLC_Engineer_003
+RLC_Engineer_004,보조 방벽 생성기,자신의 턴 시작 시 자신에게 보호막 2 획득,Surface,OnTurnStart,ShieldSelf,Self,2,None,0,None,None,0,0,-1,Engineer,300,210,390,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Engineer_004.T_Relic_RLC_Engineer_004
+RLC_Engineer_005,출력 증폭 비콘,전투 시작 시 2사이클 동안 자신의 공격 1 증가,Surface,OnBattleStart,BraveSelf,Self,0,None,0,Brave,None,1,2,-1,Engineer,315,220,410,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Engineer_005.T_Relic_RLC_Engineer_005
+RLC_Engineer_006,표적 조준 비콘,전투 시작 시 적 전체에게 1사이클 동안 급소 1 부여,Surface,OnBattleStart,StatusMarkAll,AllEnemies,0,None,0,Mark,None,1,1,-1,Engineer,310,215,405,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Engineer_006.T_Relic_RLC_Engineer_006
+RLC_Engineer_007,연장 박격포탑,자신의 턴 시작 시 적 전체에게 4 데미지 부여,Mid,OnTurnStart,HitAllEnemies,AllEnemies,4,None,0,None,None,0,0,-1,Engineer,450,315,585,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Engineer_007.T_Relic_RLC_Engineer_007
+RLC_Engineer_008,광역 역장 생성기,자신의 턴 시작 시 아군 전체에게 보호막 2 부여,Mid,OnTurnStart,ShieldAll,AllAllies,2,None,0,None,None,0,0,-1,Engineer,456,320,595,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Engineer_008.T_Relic_RLC_Engineer_008
+RLC_Engineer_009,마력 공명 파일런,스킬 에너지를 소모할 때마다 1사이클 동안 자신의 공격 1 증가,Mid,OnUseSkillEnergy,BraveSelf,Self,0,None,0,Brave,None,1,1,-1,Engineer,458,320,595,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Engineer_009.T_Relic_RLC_Engineer_009
+RLC_Engineer_010,중력 교란 포탑,전투 시작 시 적 전체에게 1사이클 동안 허약(얼음) 1 부여,Mid,OnBattleStart,StatusIceAll,AllEnemies,0,None,0,Ice,None,1,1,-1,Engineer,443,310,575,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Engineer_010.T_Relic_RLC_Engineer_010
+RLC_Engineer_011,마도 레이저 포탑,자신의 턴 시작 시 적 전체에게 (5+공격) 피해 및 1사이클 동안 허점(용암) 1 부여,Deep,OnTurnStart,HitAllEnemiesLavaAll,AllEnemies,5,ATK,1,Lava,None,1,1,-1,Engineer,620,435,805,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Engineer_011.T_Relic_RLC_Engineer_011
+RLC_Engineer_012,요새 포탑,자신의 턴 시작 시 아군 전체에게 보호막 4 부여 및 1사이클 동안 방어 1 증가,Deep,OnTurnStart,ShieldAllSolidAll,AllAllies,4,None,0,Solid,None,1,1,-1,Engineer,648,455,840,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Engineer_012.T_Relic_RLC_Engineer_012
+RLC_Engineer_013,영구 기관 코어,전투 시작 시 아군 전체의 공격 2 및 방어 2 증가 (영구 지속),Deep,OnBattleStart,BraveAllSolidAll,AllAllies,0,None,0,Brave,None,2,-1,-1,Engineer,690,485,895,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Engineer_013.T_Relic_RLC_Engineer_013
+RLC_Engineer_014,특이점 관측 포탑,자신의 턴 시작 시 적 전체에게 1사이클 동안 급소 1 부여,Deep,OnTurnStart,StatusMarkAll,AllEnemies,0,None,0,Mark,None,1,1,-1,Engineer,620,435,805,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Engineer_014.T_Relic_RLC_Engineer_014
+RLC_Fighter_001,파쇄의 권갑,공격 대상이 보호막을 보유 중일 경우 데미지가 20% 증가한다.,Basic,OnHitShield,BonusDamageOnShield,SingleEnemy,20,None,0,None,None,0,0,-1,Fighter,-1,210,390,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Fighter_001.T_Relic_RLC_Fighter_001
+RLC_Fighter_002,천파의 신권,공격 대상이 보호막을 보유 중일 경우 데미지가 30% 증가한다.,Upgrade,OnHitShield,BonusDamageOnShield,SingleEnemy,30,None,0,None,None,0,0,-1,Fighter,-1,335,625,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Fighter_002.T_Relic_RLC_Fighter_002
+RLC_Fighter_003,적옥 반지,전투 시작 시 체력 2 회복,Surface,OnBattleStart,HealSelf,Self,2,None,0,None,None,0,0,-1,Fighter,300,210,390,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Fighter_003.T_Relic_RLC_Fighter_003
+RLC_Fighter_004,경량 가죽 각반,적을 공격하여 체력을 깎았을 때 보호막 1 획득,Surface,OnHitEnemy,ShieldSelf,Self,1,None,0,None,None,0,0,-1,Fighter,285,200,370,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Fighter_004.T_Relic_RLC_Fighter_004
+RLC_Fighter_005,강철 너클,보호막이 있는 대상을 공격했을 때 적 전체에게 1사이클 동안 허점(용암) 1 부여,Surface,OnHitShield,StatusLavaAll,AllEnemies,0,None,0,Lava,None,1,1,-1,Fighter,295,205,385,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Fighter_005.T_Relic_RLC_Fighter_005
+RLC_Fighter_006,수련생의 옥패,전투 시작 시 영구히 지속되는 반격 1 부여,Surface,OnBattleStart,CounterSelf,Self,0,None,0,Counter,None,1,-1,-1,Fighter,300,210,390,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Fighter_006.T_Relic_RLC_Fighter_006
+RLC_Fighter_007,구리 경혈침,전투 시작 시 적 전체에게 1사이클 동안 내상 2 부여,Surface,OnBattleStart,StatusInternalInjuryAll,AllEnemies,0,None,0,InternalInjury,None,2,1,-1,Fighter,310,215,405,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Fighter_007.T_Relic_RLC_Fighter_007
+RLC_Fighter_008,피 묻은 붕대,자신의 체력이 깎였을 때 1사이클 동안 공격 1 증가,Mid,OnTakeDamage,BraveSelf,Self,0,None,0,Brave,None,1,1,-1,Fighter,458,320,595,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Fighter_008.T_Relic_RLC_Fighter_008
+RLC_Fighter_009,질풍의 경갑,특수 스킬 사용 직후 1사이클 동안 민첩(회피) 1 획득,Mid,OnSkillUsed,EvasionSelf,Self,0,None,0,Evasion,Special,1,1,-1,Fighter,465,325,605,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Fighter_009.T_Relic_RLC_Fighter_009
+RLC_Fighter_010,강철 호완,스킬/패시브로 보호막을 획득했을 때 1사이클 동안 견고(방어) 1 획득,Mid,OnGainShield,SolidSelf,Self,0,None,0,Solid,None,1,1,-1,Fighter,458,320,595,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Fighter_010.T_Relic_RLC_Fighter_010
+RLC_Fighter_011,청동 단전구,자신의 체력이 회복됐을 때 적 전체에게 4 데미지 부여,Mid,OnHealHP,HitAllEnemies,AllEnemies,4,None,0,None,None,0,0,-1,Fighter,450,315,585,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Fighter_011.T_Relic_RLC_Fighter_011
+RLC_Fighter_012,점혈 입문서,가디언 전투 시작 시 적 전체에게 2사이클 동안 내상 3 부여,Mid,OnGuardianBattleStart,StatusInternalInjuryAll,AllEnemies,0,None,0,InternalInjury,None,3,2,-1,Fighter,503,350,655,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Fighter_012.T_Relic_RLC_Fighter_012
+RLC_Fighter_013,천마의 혈옥,자신의 체력이 깎였을 때 체력 1 회복 및 1사이클 동안 공격 1 증가,Deep,OnTakeDamage,HealSelfBraveSelf,Self,1,None,0,Brave,None,1,1,-1,Fighter,620,435,805,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Fighter_013.T_Relic_RLC_Fighter_013
+RLC_Fighter_014,풍신의 신발,전투 시작 시 공격 2 증가,Deep,OnBattleStart,BraveSelf,Self,0,None,0,Brave,None,2,-1,-1,Fighter,660,460,860,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Fighter_014.T_Relic_RLC_Fighter_014
+RLC_Fighter_015,패왕의 금강갑,보스 전투 시작 시 3사이클 동안 철벽 3 획득,Deep,OnBossBattleStart,IronWallSelf,Self,0,None,0,IronWall,None,3,3,-1,Fighter,700,490,910,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Fighter_015.T_Relic_RLC_Fighter_015
+RLC_Fighter_016,만파의 태극경,전투 시작 시 반격 3 부여,Deep,OnBattleStart,CounterSelf,Self,0,None,0,Counter,None,3,-1,-1,Fighter,680,475,885,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Fighter_016.T_Relic_RLC_Fighter_016
+RLC_Fighter_017,뇌제의 사혈침,보호막이 있는 대상을 공격했을 때 적 전체에게 1사이클 동안 급소 1 부여,Deep,OnHitShield,StatusMarkAll,AllEnemies,0,None,0,Mark,None,1,1,-1,Fighter,620,435,805,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Fighter_017.T_Relic_RLC_Fighter_017
+RLC_Paladin_001,빛의 석상,자신이 보호막 획득 시 체력 2 회복 (유물로 획득한 보호막은 체력 회복 X),Basic,OnGainShield,HealSelf,Self,2,None,0,None,None,0,0,-1,Paladin,-1,210,390,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Paladin_001.T_Relic_RLC_Paladin_001
+RLC_Paladin_002,자애로운 빛의 석상,자신이 보호막 획득 시 체력 3 회복 (유물로 획득한 보호막은 체력 회복 X),Upgrade,OnGainShield,HealSelf,Self,3,None,0,None,None,0,0,-1,Paladin,-1,330,615,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Paladin_002.T_Relic_RLC_Paladin_002
+RLC_Paladin_003,가시 박힌 성물,자신의 체력이 회복됐을 때 적 전체에게 2 피해,Surface,OnHealHP,HitAllEnemies,AllEnemies,2,None,0,None,None,0,0,-1,Paladin,280,195,365,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Paladin_003.T_Relic_RLC_Paladin_003
+RLC_Paladin_004,성전사의 철방패,전투 시작 시 1 사이클 동안 불굴 획득,Surface,OnBattleStart,IndomitableSelf,Self,0,None,0,Indomitable,None,0,1,-1,Paladin,295,205,385,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Paladin_004.T_Relic_RLC_Paladin_004
+RLC_Paladin_005,수습 사제의 성표,전투 종료 시 체력 3 회복,Surface,OnBattleEnd,HealSelf,Self,3,None,0,None,None,0,0,-1,Paladin,315,220,410,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Paladin_005.T_Relic_RLC_Paladin_005
+RLC_Paladin_006,축복받은 붕대,자신의 체력이 깎였을 때 체력 1 회복,Surface,OnTakeDamage,HealSelf,Self,1,None,0,None,None,0,0,-1,Paladin,285,200,370,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Paladin_006.T_Relic_RLC_Paladin_006
+RLC_Paladin_007,정화의 성화,자신의 체력이 회복됐을 때 적 전체에게 1사이클 동안 허점(용암) 1 부여,Mid,OnHealHP,StatusLavaAll,AllEnemies,0,None,0,Lava,None,1,1,-1,Paladin,443,310,575,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Paladin_007.T_Relic_RLC_Paladin_007
+RLC_Paladin_008,성전사의 문장 방패,스킬/패시브로 보호막을 획득했을 때 보호막 2 추가 획득,Mid,OnGainShield,ShieldSelf,Self,2,None,0,None,None,0,0,-1,Paladin,450,315,585,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Paladin_008.T_Relic_RLC_Paladin_008
+RLC_Paladin_009,성기사의 기도서,전투 시작 시 체력 4 회복 및 2사이클 동안 견고(가호) 1 획득,Mid,OnBattleStart,HealSelfProtect,Self,4,None,0,Protection,None,1,2,-1,Paladin,479,335,625,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Paladin_009.T_Relic_RLC_Paladin_009
+RLC_Paladin_010,고행자의 묵주,자신의 체력이 깎였을 때 보호막 3 획득,Mid,OnTakeDamage,ShieldSelf,Self,3,None,0,None,None,0,0,-1,Paladin,473,330,615,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Paladin_010.T_Relic_RLC_Paladin_010
+RLC_Paladin_011,단죄의 성광관,자신의 체력이 회복됐을 때 적 전체에게 (6+공격) 피해 및 1사이클 동안 허점(용암) 1 부여,Deep,OnHealHP,HitAllEnemiesLavaAll,AllEnemies,6,ATK,1,Lava,None,1,1,-1,Paladin,630,440,820,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Paladin_011.T_Relic_RLC_Paladin_011
+RLC_Paladin_012,대천사의 성벽 방패,스킬/패시브로 보호막을 획득했을 때 1사이클 동안 철벽 1 획득,Deep,OnGainShield,IronWallSelf,Self,0,None,0,IronWall,None,1,1,-1,Paladin,610,425,795,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Paladin_012.T_Relic_RLC_Paladin_012
+RLC_Paladin_013,구원의 성배,전투 시작 시 아군 전체의 체력을 (6+방어)만큼 회복하고 1사이클 동안 공격 1 증가,Deep,OnBattleStart,HealAllBraveAll,AllAllies,6,DEF,1,Brave,None,1,1,-1,Paladin,662,465,860,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Paladin_013.T_Relic_RLC_Paladin_013
+RLC_Paladin_014,순교자의 성흔,자신의 체력이 깎였을 때 체력 2 회복 및 1사이클 동안 공격 2 증가,Deep,OnTakeDamage,HealSelfBraveSelf,Self,2,None,0,Brave,None,2,1,-1,Paladin,680,475,885,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Paladin_014.T_Relic_RLC_Paladin_014
+RLC_Rare_001,미약한 신혈,전투 종료 시 최대 체력이 1 증가,Mid,OnBattleEnd,MaxHPUp,Self,1,None,0,None,None,0,0,-1,Shared,375,265,490,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Rare_001.T_Relic_RLC_Rare_001
+RLC_Surface_Q001,라바 슬라임의 정수,전투 시작 시 적 전체에게 1사이클 동안 용암 1 부여,Surface,OnBattleStart,StatusLavaAll,AllEnemies,0,None,0,Lava,None,1,1,-1,Quest,-1,205,385,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Surface_Q001.T_Relic_RLC_Surface_Q001
+RLC_Surface_Q002,아이스 슬라임의 정수,전투 시작 시 적 전체에게 1사이클 동안 얼음 1 부여,Surface,OnBattleStart,StatusIceAll,AllEnemies,0,None,0,Ice,None,1,1,-1,Quest,-1,205,385,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Surface_Q002.T_Relic_RLC_Surface_Q002
+RLC_Surface_Q003,에이션트 슬라임의 정수,유물 획득 시 최대 체력 10 증가,Surface,OnGainRelic,MaxHPUp,Self,10,None,0,None,None,0,0,-1,Quest,0,0,0,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Surface_Q003.T_Relic_RLC_Surface_Q003
+RLC_Surface_Q004,힐 슬라임의 정수,전투 시작 시 체력 3 회복,Surface,OnBattleStart,HealSelf,Self,3,None,0,None,None,0,0,-1,Quest,-1,220,410,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Surface_Q004.T_Relic_RLC_Surface_Q004
+RLC_Surface_Q005,포이즌 슬라임의 정수,"적에게 피해를 입힌 경우, 1데미지의 중독을 2사이클 동안 부여",Surface,OnHitEnemy,StatusPoison,SingleEnemy,0,None,0,Poison,None,1,2,-1,Quest,-1,210,390,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Surface_Q005.T_Relic_RLC_Surface_Q005
+RLC_Surface_Q006,머드 슬라임의 정수,보호막 획득 시 보호막 2를 추가로 획득한다.,Surface,OnGainShield,ShieldSelf,Self,2,None,0,None,None,0,0,-1,Quest,-1,210,390,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Surface_Q006.T_Relic_RLC_Surface_Q006
+RLC_Surface_Q007,퓨전 슬라임의 핵,전투 시작 시 적 전체에게 1사이클 동안 퓨전 1 부여,Surface,OnBattleStart,StatusFusionAll,AllEnemies,0,None,0,Fusion,None,1,1,-1,Quest,-1,205,385,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Surface_Q007.T_Relic_RLC_Surface_Q007
+RLC_Surface_Q008,슬라임 킹의 정수,전투 시작 시 방어 2 증가,Surface,OnBattleStart,ProtectSelf,Self,0,None,0,Protection,None,2,-1,-1,Quest,-1,230,430,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Surface_Q008.T_Relic_RLC_Surface_Q008
+RLC_Surface_Q009,볼카누스의 심장,전투 시작 시 방어 2 증가,Surface,OnBattleStart,SolidSelf,Self,0,None,0,Solid,None,2,-1,-1,Quest,-1,230,430,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Surface_Q009.T_Relic_RLC_Surface_Q009
+RLC_Surface_Q010,불완전한 불꽃 파편,전투 시작 시 적 전체에게 6 데미지 부여,Surface,OnBattleStart,HitAllEnemies,AllEnemies,6,None,0,None,None,0,0,-1,Quest,-1,225,415,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Surface_Q010.T_Relic_RLC_Surface_Q010
+RLC_Surface_Q011,마그마 골렘의 핵,보스 전투 시작 시 1사이클 동안 불굴(강철) 획득,Surface,OnBossBattleStart,MetalSelf,Self,0,None,0,Metal,None,1,1,-1,Quest,-1,205,385,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Surface_Q011.T_Relic_RLC_Surface_Q011
+RLC_Surface_Q012,마그마 임프의 불씨,전투 시작 시 적 전체에게 1사이클 동안 허점(용암) 1 부여,Surface,OnBattleStart,StatusLavaAll,AllEnemies,0,None,0,Lava,None,1,1,-1,Quest,-1,205,385,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Surface_Q012.T_Relic_RLC_Surface_Q012
+RLC_Surface_Q013,애쉬 하운드의 송곳니,전투 시작 시 공격 1 증가,Surface,OnBattleStart,BraveSelf,Self,0,None,0,Brave,None,1,-1,-1,Quest,-1,215,395,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Surface_Q013.T_Relic_RLC_Surface_Q013
+RLC_Surface_Q014,흑요석 전갈의 독침,전투 시작 시 적 전체에게 1사이클 동안 급소 1 부여,Surface,OnBattleStart,StatusMarkAll,AllEnemies,0,None,0,Mark,None,1,1,-1,Quest,-1,215,405,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Surface_Q014.T_Relic_RLC_Surface_Q014
+RLC_Surface_Q015,정화된 잿빛 성물,전투 시작 시 적 전체에게 1사이클 동안 공포 1 부여,Surface,OnBattleStart,StatusFearAll,AllEnemies,0,None,0,Fear,None,1,1,-1,Quest,-1,215,405,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Surface_Q015.T_Relic_RLC_Surface_Q015
+RLC_Surface_Q016,에너지 결정,전투 시작 시 에너지 1 증가,Surface,OnBattleStart,GainEnergy,Self,1,None,0,None,None,0,0,-1,Quest,-1,230,430,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Surface_Q016.T_Relic_RLC_Surface_Q016
+RLC_Surface_Q017,길드 정찰병의 나침반,전투 종료 시 던전 재화 15개 추가 획득,Surface,OnBattleEnd,GainMoney,Self,15,None,0,None,None,0,0,-1,Quest,-1,155,285,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Surface_Q017.T_Relic_RLC_Surface_Q017
+RLC_Surface_Q018,마탑의 기록 수정구,스킬 에너지를 소모할 때마다 보호막 3 획득,Surface,OnUseSkillEnergy,ShieldSelf,Self,3,None,0,None,None,0,0,-1,Quest,-1,220,410,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Surface_Q018.T_Relic_RLC_Surface_Q018
+RLC_Surface_Q019,순례자의 묵주,자신의 체력이 회복될 때마다 보호막 3 획득,Surface,OnHealHP,ShieldSelf,Self,3,None,0,None,None,0,0,-1,Quest,-1,220,410,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Surface_Q019.T_Relic_RLC_Surface_Q019
+RLC_Event_Temp_001,광폭의 진홍 영약,"전투 시작 시 공격 3 증가, 방어 1 감소 (3회 전투 후 소멸)",Surface,OnBattleStart,BraveSelf,Self,0,None,0,Brave,None,3,-1,3,Event,-1,0,0,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Event_Temp_001.T_Relic_RLC_Event_Temp_001
+RLC_Event_Temp_002,중장갑의 창백 영약,"전투 시작 시 방어 3 증가, 공격 1 감소 (3회 전투 후 소멸)",Surface,OnBattleStart,SolidSelf,Self,0,None,0,Solid,None,3,-1,3,Event,-1,0,0,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Event_Temp_002.T_Relic_RLC_Event_Temp_002
+RLC_Event_Temp_003,정제된 투지의 영약,"전투 시작 시 공격 1 증가 (페널티 없음, 3회 전투 후 소멸)",Surface,OnBattleStart,BraveSelf,Self,0,None,0,Brave,None,1,-1,3,Event,-1,0,0,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Event_Temp_003.T_Relic_RLC_Event_Temp_003
+RLC_Event_Temp_004,과충전 마력 코어,"전투 시작 시 행동 에너지 1 추가 획득, 자신의 체력 3 감소 (3회 전투 후 소멸)",Surface,OnBattleStart,GainEnergy,Self,1,None,0,None,None,0,0,3,Event,-1,0,0,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Event_Temp_004.T_Relic_RLC_Event_Temp_004
+RLC_Event_Temp_005,유령화의 비약,"전투 시작 시 민첩(회피) 2 증가, 방어 1 감소 (3회 전투 후 소멸)",Surface,OnBattleStart,EvasionSelf,Self,0,None,0,Evasion,None,2,-1,3,Event,-1,0,0,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Event_Temp_005.T_Relic_RLC_Event_Temp_005
+RLC_Event_Temp_006,심연의 탐욕 낙인,"전투 시작 시 방어 1 감소 또는 에너지 소모 페널티 (재화 강탈 선택지 대가용, 3회 전투 후 소멸)",Surface,OnBattleStart,SolidSelf,Self,0,None,0,None,None,0,-1,3,Event,-1,0,0,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Event_Temp_006.T_Relic_RLC_Event_Temp_006
+RLC_Event_Perm_001,투신의 낙인,전투 시작 시 자신의 공격 1 증가 (영구 유지),Surface,OnBattleStart,BraveSelf,Self,0,None,0,Brave,None,1,-1,-1,Event,-1,215,395,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Event_Perm_001.T_Relic_RLC_Event_Perm_001
+RLC_Event_Perm_002,수호자의 낙인,전투 시작 시 자신의 방어 1 증가 (영구 유지),Surface,OnBattleStart,SolidSelf,Self,0,None,0,Solid,None,1,-1,-1,Event,-1,215,395,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Event_Perm_002.T_Relic_RLC_Event_Perm_002
+RLC_Event_Perm_003,질풍의 낙인,전투 시작 시 자신의 민첩(회피) 1 증가 (영구 유지),Surface,OnBattleStart,EvasionSelf,Self,0,None,0,Evasion,None,1,-1,-1,Event,-1,215,405,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Event_Perm_003.T_Relic_RLC_Event_Perm_003
+RLC_Event_Perm_004,불멸의 심장,유물 획득 시 최대 체력 12 즉시 증가 (영구 유지),Surface,OnGainRelic,MaxHPUp,Self,12,None,0,None,None,0,0,-1,Event,0,0,0,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Event_Perm_004.T_Relic_RLC_Event_Perm_004
+RLC_Event_Perm_005,여신의 성유물,전투 시작 시 자신의 공격 1 및 방어 1 증가 (영구 유지),Surface,OnBattleStart,BraveAllSolidAll,Self,0,None,0,Brave,None,1,-1,-1,Event,-1,225,415,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Event_Perm_005.T_Relic_RLC_Event_Perm_005
+RLC_Event_SLI_Temp01,적색 여왕 로열 젤리,[슬라임 왕국] 전투 시작 시 공격 3 증가 및 체력 3 회복 (3회 전투 후 소멸),Surface,OnBattleStart,HealSelfBraveSelf,Self,3,None,0,Brave,None,3,-1,3,Event,-1,0,0,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Event_SLI_Temp01.T_Relic_RLC_Event_SLI_Temp01
+RLC_Event_SLI_Temp02,청색 여왕 로열 젤리,[슬라임 왕국] 전투 시작 시 방어 3 증가 및 보호막 4 획득 (3회 전투 후 소멸),Surface,OnBattleStart,ShieldSelfSolid,Self,4,None,0,Solid,None,3,-1,3,Event,-1,0,0,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Event_SLI_Temp02.T_Relic_RLC_Event_SLI_Temp02
+RLC_Event_LAV_Temp01,화산신의 업화 각인,[용암 지대] 전투 시작 시 공격 3 증가 및 적 전체 1사이클 용암 1 부여 (3회 전투 후 소멸),Surface,OnBattleStart,BraveSelf,Self,0,None,0,Brave,None,3,-1,3,Event,-1,0,0,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Event_LAV_Temp01.T_Relic_RLC_Event_LAV_Temp01
+RLC_Event_LAV_Temp02,현무암 마그마 코팅,[용암 지대] 전투 시작 시 방어 3 증가 및 철벽 1 획득 (3회 전투 후 소멸),Surface,OnBattleStart,SolidSelf,Self,0,None,0,Solid,None,3,-1,3,Event,-1,0,0,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Event_LAV_Temp02.T_Relic_RLC_Event_LAV_Temp02
+RLC_Event_LIZ_Temp01,붉은 대주술사의 비전향,[리자드의 늪] 전투 시작 시 공격 4 증가 및 민첩(회피) 2 증가 (3회 전투 후 소멸),Mid,OnBattleStart,EvasionSelfBraveSelf,Self,0,None,0,Brave,None,4,-1,3,Event,-1,0,0,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Event_LIZ_Temp01.T_Relic_RLC_Event_LIZ_Temp01
+RLC_Event_LIZ_Temp02,푸른 수호병의 비늘향,[리자드의 늪] 전투 시작 시 방어 4 증가 및 철벽 2 획득 (3회 전투 후 소멸),Mid,OnBattleStart,SolidSelf,Self,0,None,0,Solid,None,4,-1,3,Event,-1,0,0,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Event_LIZ_Temp02.T_Relic_RLC_Event_LIZ_Temp02
+RLC_Event_ELM_Temp01,폭풍과 화염의 정령왕 각인,[정령계] 전투 시작 시 공격 5 증가 및 행동 에너지 1 추가 획득 (3회 전투 후 소멸),Deep,OnBattleStart,GainEnergyBraveSelf,Self,1,None,0,Brave,None,5,-1,3,Event,-1,0,0,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Event_ELM_Temp01.T_Relic_RLC_Event_ELM_Temp01
+RLC_Event_ELM_Temp02,대지와 심해의 정령왕 각인,"[정령계] 전투 시작 시 방어 5 증가, 철벽 3 및 체력 6 회복 (3회 전투 후 소멸)",Deep,OnBattleStart,HealSelfProtect,Self,6,None,0,Protection,None,5,-1,3,Event,-1,0,0,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Event_ELM_Temp02.T_Relic_RLC_Event_ELM_Temp02

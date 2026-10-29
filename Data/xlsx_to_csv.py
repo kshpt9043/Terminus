@@ -36,6 +36,7 @@ HEADERS = os.path.join(HERE, '..', 'Source', 'Terminus', 'Public', 'Data')
 # rename    : 엑셀 열 이름 -> 구조체 프로퍼티 이름
 # drop      : 기획용 열이라 안 가져감
 # add       : 엑셀에 없는 열 (이름, 기본값). 맨 뒤에 붙음
+# icons     : (Content 폴더, 접두사). 접두사+행 이름 텍스처가 있으면 Icon 열에 그 경로
 # keep_names: 행 이름을 그대로 둠 (RLC_Common_001 처럼 코드가 대문자로 찾는 것)
 # skill_refs: DT_Skill 행 이름을 가리키는 컬럼 -> 스킬 행 이름과 같은 규칙으로 정리
 TABLES = [
@@ -60,6 +61,7 @@ TABLES = [
          rename={'RelicName_KR': 'RelicName', 'RelicDesc_KR': 'RelicDesc'},
          drop=['Calc_StandardPrice', 'Effect_Category'],
          add=[('Icon', 'None')],
+         icons=('/Game/KSH/Asset/RelicIcon', 'T_Relic_'),
          keep_names=True,
          skill_refs=['OnSkill']),
     dict(src='monster_data.xlsx', sheet='Monsters', out='DT_Monster.csv',
@@ -187,6 +189,16 @@ def convert(t, enums, skill_names):
     keep = [i for i, c in enumerate(hdr) if c not in t.get('drop', [])]
     out_hdr = [t.get('rename', {}).get(hdr[i], hdr[i]) for i in keep] + [a for a, _ in t.get('add', [])]
     out_rows = [[v[i] for i in keep] + [d for _, d in t.get('add', [])] for v in out]
+
+    # 아이콘: 행 이름대로 만든 텍스처가 Content 에 있으면 그 경로를 넣음 (없으면 add 기본값 None)
+    if 'icons' in t:
+        folder, prefix = t['icons']
+        ci = out_hdr.index('Icon')
+        disk = os.path.join(HERE, '..', 'Content', *folder.split('/')[2:])
+        for r in out_rows:
+            name = prefix + r[0]
+            if os.path.exists(os.path.join(disk, name + '.uasset')):
+                r[ci] = '%s/%s.%s' % (folder, name, name)
 
     buf = io.StringIO()
     w = csv.writer(buf, lineterminator='\n')
