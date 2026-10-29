@@ -43,6 +43,12 @@ void UItemSlotWidget::NativeOnInitialized()
 	{
 		BackgroundColor = Background->GetBrushColor();
 	}
+
+	// 유물 / 스킬 전환 때 되돌릴 원래 값
+	if (SlotSizeBox) RequestedSize = FVector2D(SlotSizeBox->GetWidthOverride(), SlotSizeBox->GetHeightOverride());
+	if (NameText) OrigNameFontSize = NameText->GetFont().Size;
+	if (Icon) OrigIconSize = Icon->GetBrush().GetImageSize();
+
 	ApplyIconOnly();
 
 	if (!bShownOnce)
@@ -122,6 +128,50 @@ void UItemSlotWidget::SetShowName(bool bShow)
 	{
 		NameText->SetVisibility(bShow && !bIconOnly ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Collapsed);
 	}
+	ApplyKindLayout();
+}
+
+void UItemSlotWidget::ApplyKindLayout()
+{
+	const bool bRelic = Kind == EItemSlotKind::Relic;
+
+	const bool bNameShown = NameText && NameText->GetVisibility() != ESlateVisibility::Collapsed;
+	if (NameText && OrigNameFontSize > 0.f)
+	{
+		FSlateFontInfo Font = NameText->GetFont();
+		const float Want = bRelic ? float(RelicNameFontSize) : OrigNameFontSize;
+		if (Font.Size != Want)
+		{
+			Font.Size = Want;
+			NameText->SetFont(Font);
+		}
+	}
+
+	FVector2D Size = RequestedSize;
+	if (SlotSizeBox && !RequestedSize.IsZero())
+	{
+		if (bRelic && bNameShown) Size = RequestedSize.ComponentMax(RelicNamedMinSize);
+		SlotSizeBox->SetWidthOverride(Size.X);
+		SlotSizeBox->SetHeightOverride(Size.Y);
+	}
+
+	// 아이콘 크기: 유물은 칸에서 테두리 / 띠 / 이름 자리를 뺀 만큼 정사각형으로 크게, 스킬은 원래 크기
+	if (Icon)
+	{
+		FVector2D IconSize = OrigIconSize;
+		if (bRelic && !Size.IsZero())
+		{
+			const float Edge = FMath::Min(Size.X - 12.f, Size.Y - 17.f - (bNameShown ? RelicNameReserve : 0.f));
+			IconSize = FVector2D(FMath::Max(16.f, FMath::FloorToFloat(Edge)));
+		}
+		// SetDesiredSizeOverride 는 아직 안 그려진 위젯엔 안 남아서 브러시 크기를 직접 바꿈
+		if (Icon->GetBrush().GetImageSize() != IconSize)
+		{
+			FSlateBrush Brush = Icon->GetBrush();
+			Brush.ImageSize = IconSize;
+			Icon->SetBrush(Brush);
+		}
+	}
 }
 
 void UItemSlotWidget::SetIconOnly(bool bInIconOnly)
@@ -138,11 +188,13 @@ void UItemSlotWidget::ApplyIconOnly()
 
 void UItemSlotWidget::SetSlotSize(FVector2D Size)
 {
+	RequestedSize = Size;
 	if (SlotSizeBox)
 	{
 		SlotSizeBox->SetWidthOverride(Size.X);
 		SlotSizeBox->SetHeightOverride(Size.Y);
 	}
+	ApplyKindLayout();
 }
 
 // =====================================================================
@@ -153,7 +205,10 @@ void UItemSlotWidget::ShowIcon(UTexture2D* Texture, const FText& Name)
 {
 	if (Icon)
 	{
-		if (Texture) Icon->SetBrushFromTexture(Texture);
+		if (Texture)
+		{
+			Icon->SetBrushFromTexture(Texture);
+		}
 		Icon->SetVisibility(Texture ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Hidden);
 	}
 	if (IconText)
@@ -177,6 +232,7 @@ void UItemSlotWidget::SetEmpty()
 	ItemColor = EmptyColor;
 	ShowIcon(nullptr, FText::GetEmpty());
 	SetToolTip(nullptr);
+	ApplyKindLayout();
 	ApplyFrameColor();
 	ApplyButtonEnabled();
 }
@@ -197,6 +253,7 @@ void UItemSlotWidget::SetSkill(FName SkillRow)
 	ItemRow = SkillRow;
 	ItemColor = TerminusUI::SkillTypeColor(Skill->SkillType);
 	ShowIcon(UTerminusDataSettings::FindSkillIcon(*Skill), Skill->DisplayName_KR);
+	ApplyKindLayout();
 
 	// 스킬 툴팁 (칸마다 하나 만들어 두고 내용만 바꿈)
 	if (!SkillTooltip)
@@ -230,6 +287,7 @@ void UItemSlotWidget::SetRelic(FName RelicRow)
 	ItemRow = RelicRow;
 	ItemColor = TerminusUI::RelicTierColor(Relic->RelicTier);
 	ShowIcon(Relic->Icon.LoadSynchronous(), Relic->RelicName);
+	ApplyKindLayout();
 
 	// 유물 툴팁 (칸마다 하나 만들어 두고 내용만 바꿈)
 	if (!RelicTooltip)

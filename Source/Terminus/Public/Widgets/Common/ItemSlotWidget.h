@@ -29,6 +29,7 @@ enum class EItemSlotKind : uint8
  * 스킬 / 유물 칸 공용 위젯. 전투 HUD 스킬 칸, 창고 격자, 보유 유물 줄이 모두 이걸 씀
  *
  *  - 아이콘 (없으면 이름 앞 두 글자) + 이름 (SetShowName 으로 숨길 수 있음)
+ *  - 유물: 아이콘을 칸에 맞는 정사각형으로 크게, 이름은 작게. 이름이 보이면 칸을 RelicNamedMinSize 이상으로 키움
  *  - 판 #262A32 + 1px #3A3F4A 테두리, 위쪽 4px 띠 색: 유물은 등급, 스킬은 공격 / 방어 / 특수
  *    호버면 #A8894A 테두리 + #2E333D 바탕, 선택(SetSelected)이면 강조 색 2px 테두리
  *  - 마우스를 올리면 툴팁 (스킬 = 스킬 툴팁 위젯, 유물 = 유물 툴팁 위젯). 둘 다 WBP 로 바꿀 수 있음
@@ -114,6 +115,18 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Item Slot")
 	FVector2D DefaultSlotSize = FVector2D(84.f, 104.f);
 
+	// 이름이 보이는 유물 칸의 최소 크기 (아이콘이 이름에 밀려 작아지지 않게)
+	UPROPERTY(EditAnywhere, Category = "Item Slot")
+	FVector2D RelicNamedMinSize = FVector2D(100.f, 128.f);
+
+	// 이름이 보일 때 아이콘 아래에 남겨 둘 이름 자리 (작은 글씨 두 줄)
+	UPROPERTY(EditAnywhere, Category = "Item Slot")
+	float RelicNameReserve = 32.f;
+
+	// 유물 이름 글자 크기 (스킬보다 작게)
+	UPROPERTY(EditAnywhere, Category = "Item Slot")
+	int32 RelicNameFontSize = 10;
+
 	UPROPERTY(EditAnywhere, Category = "Item Slot")
 	FLinearColor EmptyColor = TerminusUI::Color::Inset;
 
@@ -140,6 +153,11 @@ private:
 	bool bShowNameWanted = true;            // SetShowName 으로 받은 값 (아이콘만 모드가 꺼지면 되돌림)
 	FLinearColor BackgroundColor = TerminusUI::Color::Card;
 	void ApplyIconOnly();
+
+	FVector2D RequestedSize = FVector2D::ZeroVector;   // 쓰는 쪽이 정한 칸 크기 (SetSlotSize / WBP 값)
+	float OrigNameFontSize = 0.f;
+	FVector2D OrigIconSize = FVector2D(32.f, 32.f);
+	void ApplyKindLayout();                 // 유물 / 스킬에 따라 아이콘 맞춤, 이름 글자, 칸 크기
 
 	void BuildDefaultLayout();
 	void ShowIcon(class UTexture2D* Texture, const FText& Name);
