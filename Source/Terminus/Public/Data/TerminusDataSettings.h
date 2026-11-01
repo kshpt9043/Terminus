@@ -104,14 +104,18 @@ public:
 	static TArray<const FSkillRow*> FindBasicSkills(ECharacterClass InClass);
 
 	/**
-	 * 스킬 아이콘. DT_Skill 의 IconID 로 SkillIcons 에서 찾고, 없으면 종류별 기본 아이콘(SkillTypeIcons).
+	 * 스킬 아이콘. DT_Skill 의 IconID 로 SkillIcons -> SkillIconFolder 순으로 찾고, 없으면 종류별 기본 아이콘(SkillTypeIcons).
 	 * 둘 다 없으면 nullptr
 	 */
 	static UTexture2D* FindSkillIcon(const FSkillRow& Skill);
 
-	// IconID -> 아이콘 텍스처
+	// IconID -> 아이콘 텍스처. 여기 없으면 SkillIconFolder 의 T_Icon_<IconID>
 	UPROPERTY(Config, EditAnywhere, Category = "Skill|Icon")
 	TMap<FName, TSoftObjectPtr<UTexture2D>> SkillIcons;
+
+	// 기획 스킬 아이콘 폴더 (Data/SkillIcons 를 임포트한 곳)
+	UPROPERTY(Config, EditAnywhere, Category = "Skill|Icon")
+	FString SkillIconFolder = TEXT("/Game/KSH/Asset/SkillIcon");
 
 	// IconID 가 비었거나 SkillIcons 에 없을 때 쓸 공격 / 방어 / 특수 기본 아이콘
 	UPROPERTY(Config, EditAnywhere, Category = "Skill|Icon")

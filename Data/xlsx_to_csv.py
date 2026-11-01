@@ -37,6 +37,7 @@ HEADERS = os.path.join(HERE, '..', 'Source', 'Terminus', 'Public', 'Data')
 # drop      : 기획용 열이라 안 가져감
 # add       : 엑셀에 없는 열 (이름, 기본값). 맨 뒤에 붙음
 # icons     : (Content 폴더, 접두사). 접두사+행 이름 텍스처가 있으면 Icon 열에 그 경로
+# icon_ids  : (Content 폴더, 접두사, 열). 접두사+그 열 값 텍스처가 있으면 IconID 열에 그 값
 # keep_names: 행 이름을 그대로 둠 (RLC_Common_001 처럼 코드가 대문자로 찾는 것)
 # skill_refs: DT_Skill 행 이름을 가리키는 컬럼 -> 스킬 행 이름과 같은 규칙으로 정리
 TABLES = [
@@ -48,7 +49,11 @@ TABLES = [
          none_cols=['ScalingStat', 'StatusEffect'],
          enums={'OwnerClass': 'ESkillOwner', 'SkillCategory': 'ESkillCategory', 'SkillType': 'ESkillType',
                 'SkillTier': 'ESkillTier', 'ActionKind': 'EActionKind', 'TargetType': 'ETargetType',
-                'ScalingStat': 'EScalingStat', 'StatusEffect': 'EStatusEffect'}),
+                'ScalingStat': 'EScalingStat', 'StatusEffect': 'EStatusEffect'},
+         # 가격 계산용 열 (BuyPrice 를 뽑는 중간값)
+         drop=['Skill_PurePower', 'Skill_Grade', 'Grade_Bonus', 'Hit_Bonus',
+               'Status_Grade', 'Status_Bonus', 'Calc_RawPrice'],
+         icon_ids=('/Game/KSH/Asset/SkillIcon', 'T_Icon_', 'SkillID')),
     dict(src='skill_data.xlsx', sheet='Relic_DataTable', out='DT_Relic.csv',
          int_cols=['BaseValue', 'StatusValue', 'StatusDuration', 'RemainBattle',
                    'BuyPrice_Dungeon', 'SellPrice_Dungeon', 'SellPrice_Gold'],
@@ -59,7 +64,9 @@ TABLES = [
                 'ActionKind': 'EActionKind', 'TargetType': 'ETargetType',
                 'ScalingStat': 'EScalingStat', 'StatusEffect': 'EStatusEffect'},
          rename={'RelicName_KR': 'RelicName', 'RelicDesc_KR': 'RelicDesc'},
-         drop=['Calc_StandardPrice', 'Effect_Category'],
+         drop=['Calc_StandardPrice', 'Effect_Category',
+               'Trigger_Grade', 'Trigger_Bonus', 'Status_Grade', 'Status_Bonus',
+               'Relic_PurePower', 'Relic_Grade', 'Grade_Bonus'],
          add=[('Icon', 'None')],
          icons=('/Game/KSH/Asset/RelicIcon', 'T_Relic_'),
          keep_names=True,
@@ -199,6 +206,16 @@ def convert(t, enums, skill_names):
             name = prefix + r[0]
             if os.path.exists(os.path.join(disk, name + '.uasset')):
                 r[ci] = '%s/%s.%s' % (folder, name, name)
+
+    # 스킬 아이콘: 접두사+SkillID 텍스처가 있고 IconID 가 비었으면 IconID 에 SkillID
+    # (코드가 IconID 로 같은 폴더에서 텍스처를 찾음 - UTerminusDataSettings::FindSkillIcon)
+    if 'icon_ids' in t:
+        folder, prefix, id_col = t['icon_ids']
+        ci, si = out_hdr.index('IconID'), out_hdr.index(id_col)
+        disk = os.path.join(HERE, '..', 'Content', *folder.split('/')[2:])
+        for r in out_rows:
+            if not r[ci] and os.path.exists(os.path.join(disk, prefix + r[si] + '.uasset')):
+                r[ci] = r[si]
 
     buf = io.StringIO()
     w = csv.writer(buf, lineterminator='\n')

@@ -48,6 +48,8 @@ void UItemSlotWidget::NativeOnInitialized()
 	if (SlotSizeBox) RequestedSize = FVector2D(SlotSizeBox->GetWidthOverride(), SlotSizeBox->GetHeightOverride());
 	if (NameText) OrigNameFontSize = NameText->GetFont().Size;
 	if (Icon) OrigIconSize = Icon->GetBrush().GetImageSize();
+	if (Background) OrigInnerPadding = Background->GetPadding();
+	if (const UVerticalBoxSlot* S = NameText ? Cast<UVerticalBoxSlot>(NameText->Slot) : nullptr) OrigNamePadding = S->GetPadding();
 
 	ApplyIconOnly();
 
@@ -133,7 +135,8 @@ void UItemSlotWidget::SetShowName(bool bShow)
 
 void UItemSlotWidget::ApplyKindLayout()
 {
-	const bool bRelic = Kind == EItemSlotKind::Relic;
+	// 유물 / 스킬은 기획 아이콘이 있어서 아이콘을 칸에 맞게 크게, 이름은 작게 (11-01 스킬 아이콘 추가)
+	const bool bRelic = Kind == EItemSlotKind::Relic || Kind == EItemSlotKind::Skill;
 
 	const bool bNameShown = NameText && NameText->GetVisibility() != ESlateVisibility::Collapsed;
 	if (NameText && OrigNameFontSize > 0.f)
@@ -155,14 +158,29 @@ void UItemSlotWidget::ApplyKindLayout()
 		SlotSizeBox->SetHeightOverride(Size.Y);
 	}
 
-	// 아이콘 크기: 유물은 칸에서 테두리 / 띠 / 이름 자리를 뺀 만큼 정사각형으로 크게, 스킬은 원래 크기
+	// 안쪽 여백: 유물 / 스킬은 거의 없앰 (이름 위 여백 포함)
+	const FMargin InnerPadding = bRelic ? FMargin(IconPadding) : OrigInnerPadding;
+	const FMargin NamePadding = bRelic ? FMargin(0.f, IconPadding, 0.f, 0.f) : OrigNamePadding;
+	if (Background && !(Background->GetPadding() == InnerPadding))
+	{
+		Background->SetPadding(InnerPadding);
+	}
+	if (UVerticalBoxSlot* S = NameText ? Cast<UVerticalBoxSlot>(NameText->Slot) : nullptr)
+	{
+		if (!(S->GetPadding() == NamePadding)) S->SetPadding(NamePadding);
+	}
+
+	// 아이콘 크기: 유물 / 스킬은 칸에서 테두리 / 띠 / 여백 / 이름 자리를 뺀 만큼 정사각형으로 크게
 	if (Icon)
 	{
 		FVector2D IconSize = OrigIconSize;
 		if (bRelic && !Size.IsZero())
 		{
-			const float Edge = FMath::Min(Size.X - 12.f, Size.Y - 17.f - (bNameShown ? RelicNameReserve : 0.f));
-			IconSize = FVector2D(FMath::Max(16.f, FMath::FloorToFloat(Edge)));
+			const FMargin FramePad = Frame ? Frame->GetPadding() : FMargin(0.f);
+			const float W = Size.X - FramePad.Left - FramePad.Right - InnerPadding.Left - InnerPadding.Right;
+			const float H = Size.Y - FramePad.Top - FramePad.Bottom - InnerPadding.Top - InnerPadding.Bottom
+				- (bNameShown ? RelicNameReserve + NamePadding.Top : 0.f);
+			IconSize = FVector2D(FMath::Max(16.f, FMath::FloorToFloat(FMath::Min(W, H))));
 		}
 		// SetDesiredSizeOverride 는 아직 안 그려진 위젯엔 안 남아서 브러시 크기를 직접 바꿈
 		if (Icon->GetBrush().GetImageSize() != IconSize)

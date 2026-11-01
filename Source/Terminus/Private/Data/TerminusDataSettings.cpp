@@ -69,6 +69,14 @@ UTexture2D* UTerminusDataSettings::FindSkillIcon(const FSkillRow& Skill)
 				return Tex;
 			}
 		}
+
+		// 기획 아이콘은 IconID(= SkillID) 이름 그대로 한 폴더에 있음 -> 맵에 일일이 안 넣어도 찾게
+		const FString Name = TEXT("T_Icon_") + Skill.IconID.ToString();
+		const FSoftObjectPath Path(FString::Printf(TEXT("%s/%s.%s"), *Settings->SkillIconFolder, *Name, *Name));
+		if (UTexture2D* Tex = Cast<UTexture2D>(Path.TryLoad()))
+		{
+			return Tex;
+		}
 	}
 
 	if (const TSoftObjectPtr<UTexture2D>* Found = Settings->SkillTypeIcons.Find(Skill.SkillType))

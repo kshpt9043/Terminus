@@ -1168,7 +1168,10 @@ void UCombatHUDWidget::RefreshSkillDeco(FSkillDeco& Deco, const FSkillRow* Skill
 		{
 			UImage* Pip = WidgetTree->ConstructWidget<UImage>();
 			Pip->SetColorAndOpacity(PipColor);
-			Pip->SetDesiredSizeOverride(FVector2D(6.f, 6.f));
+			// SetDesiredSizeOverride 는 아직 안 그려진 위젯엔 안 남아서(5.8) 기본 32x32 로 크게 나왔음 -> 브러시 크기로
+			FSlateBrush PipBrush = Pip->GetBrush();
+			PipBrush.ImageSize = FVector2D(6.f, 6.f);
+			Pip->SetBrush(PipBrush);
 			Pip->SetRenderTransformAngle(45.f);
 			if (UHorizontalBoxSlot* S = Cast<UHorizontalBoxSlot>(Pips->AddChild(Pip)))
 			{

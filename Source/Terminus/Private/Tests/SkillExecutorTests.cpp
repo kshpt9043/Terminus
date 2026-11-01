@@ -125,6 +125,32 @@ bool FTerminusMonsterSkillRefsTest::RunTest(const FString& Parameters)
 	return Checked > 0;
 }
 
+// 플레이어가 쓰는 스킬(몬스터 스킬 빼고)은 전부 기획 아이콘이 있음
+// IconID(= SkillID) 로 SkillIconFolder 의 T_Icon_<IconID> 를 찾음. 종류별 기본 아이콘으로 빠지면 실패
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FTerminusSkillIconTest, "Terminus.Data.SkillIcons",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FTerminusSkillIconTest::RunTest(const FString& Parameters)
+{
+	const UDataTable* Table = UTerminusDataSettings::Get()->SkillTable.LoadSynchronous();
+	if (!TestNotNull(TEXT("DT_Skill"), Table)) return false;
+
+	int32 Checked = 0;
+	Table->ForeachRow<FSkillRow>(TEXT("SkillIcons"), [&](const FName& Key, const FSkillRow& Row)
+	{
+		if (Row.OwnerClass == ESkillOwner::Monster) return;
+		++Checked;
+		TestEqual(FString::Printf(TEXT("%s: IconID"), *Key.ToString()), Row.IconID.ToString(), Row.SkillID);
+		const UTexture2D* Tex = UTerminusDataSettings::FindSkillIcon(Row);
+		if (TestNotNull(FString::Printf(TEXT("%s: 아이콘"), *Key.ToString()), Tex))
+		{
+			TestEqual(FString::Printf(TEXT("%s: 아이콘 이름"), *Key.ToString()), Tex->GetName(), TEXT("T_Icon_") + Row.SkillID);
+		}
+	});
+	AddInfo(FString::Printf(TEXT("플레이어 스킬 아이콘 %d개 확인"), Checked));
+	return Checked > 0;
+}
+
 // 몬스터 외형 표: 플립북 6개가 다 있고, 스프라이트가 시트의 정사각형 칸 하나씩을 가리키는지
 // (10-26: 템플릿 스프라이트의 텍스처를 바꾸면 UV 가 예전 텍스처 비율로 틀어져 옆 프레임과 섞여 보이던 문제)
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FTerminusMonsterVisualTest, "Terminus.Data.MonsterVisuals",
