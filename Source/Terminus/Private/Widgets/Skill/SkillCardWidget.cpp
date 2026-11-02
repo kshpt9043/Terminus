@@ -25,6 +25,14 @@ void USkillCardWidget::NativeOnInitialized()
 	{
 		CardButton->OnClicked.AddDynamic(this, &USkillCardWidget::HandleCardClicked);
 	}
+
+	if (!IconImage)
+	{
+		WidgetTree->ForEachWidget([this](UWidget* W)
+		{
+			if (!IconImage) IconImage = Cast<UImage>(W);
+		});
+	}
 }
 
 void USkillCardWidget::BuildDefaultLayout()
@@ -62,7 +70,11 @@ void USkillCardWidget::BuildDefaultLayout()
 	CostText = TerminusUI::MakeWrapText(WidgetTree, NAME_None, TEXT(""), TerminusUI::FontSize::Aux, TerminusUI::Color::TextSub);
 	DescText = TerminusUI::MakeWrapText(WidgetTree, NAME_None, TEXT(""), 14, TerminusUI::Color::TextBody);
 
+	IconImage = WidgetTree->ConstructWidget<UImage>(UImage::StaticClass(), TEXT("IconImage"));
+
 	Add(NameText, 18.f);
+	Add(IconImage, 10.f);
+	if (UVerticalBoxSlot* S = Cast<UVerticalBoxSlot>(IconImage->Slot)) S->SetHorizontalAlignment(HAlign_Center);
 	Add(TypeText, 6.f);
 	Add(CostText, 4.f);
 	Add(TerminusUI::MakeGoldDivider(WidgetTree), 14.f);
@@ -84,6 +96,19 @@ void USkillCardWidget::SetSkill(FName InSkillRow)
 	if (NameText)
 	{
 		NameText->SetText(Row->DisplayName_KR);
+	}
+
+	if (IconImage)
+	{
+		UTexture2D* Tex = UTerminusDataSettings::FindSkillIcon(*Row);
+		if (Tex)
+		{
+			FSlateBrush Brush = IconImage->GetBrush();
+			Brush.SetResourceObject(Tex);
+			Brush.ImageSize = IconSize;   // SetDesiredSizeOverride 는 아직 안 그려진 위젯엔 안 남음(5.8)
+			IconImage->SetBrush(Brush);
+		}
+		IconImage->SetVisibility(Tex ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Collapsed);
 	}
 
 	if (TypeText)

@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "CoreMinimal.h"
 #include "Widgets/Common/TerminusUserWidget.h"
@@ -156,6 +156,18 @@ private:
 		TWeakObjectPtr<UWrapBox> StatusWrap;
 		TWeakObjectPtr<UButton> TargetButton;
 
+		// 몬스터 몸 위 투명 칸: 마우스를 올리면 정보 카드(툴팁). 대상 고르는 중엔 숨김 (대상 버튼이 같은 자리)
+		TWeakObjectPtr<UBorder> HoverArea;
+		TWeakObjectPtr<UTextBlock> CardTitle;
+		TWeakObjectPtr<UTextBlock> CardSub;
+		TWeakObjectPtr<UTextBlock> CardBody;
+
+		// 체력 줄 뒤의 주황 줄: 맞으면 잠깐 멈췄다가 따라 줄어듦 (격투 게임식)
+		TWeakObjectPtr<UProgressBar> ChipBar;
+		float ChipPercent = -1.f;
+		float ChipHold = 0.f;
+		float LastPercent = -1.f;
+
 		// 상태이상 칸을 다시 그릴지 판단 (종류 / 수치)
 		TArray<uint32> ShownStatuses;
 	};
@@ -189,6 +201,7 @@ private:
 
 	void LoadCombatTextures();
 	void RefreshOrbs(UPanelWidget* Box, FIntPoint& Shown, int32 Current, int32 Max, UTexture2D* Full, UTexture2D* Empty);
+	void RefreshMonsterCard(FBattlerTag& Tag, const class UDungeonCombatComponent* Combat);
 	void RefreshStatusIcons(FBattlerTag& Tag, const TArray<struct FStatusInstance>& Statuses);
 	void RefreshSkillDeco(FSkillDeco& Deco, const struct FSkillRow* Skill, int32 SlotIndex, bool bAffordable);
 	void ApplyPhaseStyle(int32 PhaseStyle);

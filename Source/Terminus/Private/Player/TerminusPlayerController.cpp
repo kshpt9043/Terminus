@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 
 #include "Player/TerminusPlayerController.h"
@@ -1128,6 +1128,36 @@ void ATerminusPlayerController::Server_DebugWinCombat_Implementation()
 	}
 
 	Combat->DebugKillAllMonsters();
+}
+
+void ATerminusPlayerController::DebugStatus(FName Type, int32 Value, int32 Duration)
+{
+	Server_DebugStatus(Type, Value, Duration);
+}
+
+void ATerminusPlayerController::Server_DebugStatus_Implementation(FName Type, int32 Value, int32 Duration)
+{
+	const int64 Raw = StaticEnum<EStatusEffect>()->GetValueByName(Type);
+	if (Raw == INDEX_NONE || Raw == static_cast<int64>(EStatusEffect::None))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Debug] '%s' 는 EStatusEffect 에 없음"), *Type.ToString());
+		return;
+	}
+	const EStatusEffect Status = static_cast<EStatusEffect>(Raw);
+
+	const ATerminusPlayerState* PS = GetPlayerState<ATerminusPlayerState>();
+	ADungeonArea* Area = PS ? PS->GetCurrentArea() : nullptr;
+	UDungeonCombatComponent* Combat = Area ? Area->GetCombat() : nullptr;
+	if (!Combat || !Combat->IsInCombat())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Debug] 전투 중이 아님"));
+		return;
+	}
+
+	for (ATerminusMonster* Monster : Combat->GetMonsters())
+	{
+		if (UCombatStatsComponent* Stats = Monster ? Monster->GetCombatStats() : nullptr) Stats->ApplyStatus(Status, Value, Duration);
+	}
 }
 
 void ATerminusPlayerController::DebugLoseCombat()

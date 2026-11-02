@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "CoreMinimal.h"
 #include "Widgets/Common/TerminusUserWidget.h"
@@ -10,6 +10,8 @@ class UButton;
 class USizeBox;
 class UTextBlock;
 class UItemSlotWidget;
+class URelicTooltipWidget;
+class USkillTooltipWidget;
 
 // 카드 상태. 기본 모양은 버튼 색으로, WBP 는 OnCardUpdated 에서 State 를 보고 꾸밈
 UENUM(BlueprintType)
@@ -86,6 +88,10 @@ protected:
 	EChoiceCardState State = EChoiceCardState::Normal;
 
 private:
+	// 칸(ItemSlot)이 없는 WBP 카드용: 카드가 직접 들고 있는 유물 / 스킬 설명 툴팁
+	UPROPERTY() TObjectPtr<URelicTooltipWidget> RelicTip;
+	UPROPERTY() TObjectPtr<USkillTooltipWidget> SkillTip;
+
 	bool bDefaultLayout = false;
 	FChoiceCardStyle Style;
 

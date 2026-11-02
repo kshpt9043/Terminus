@@ -1,4 +1,4 @@
-#include "Widgets/Common/ChoiceCardWidget.h"
+﻿#include "Widgets/Common/ChoiceCardWidget.h"
 
 #include "Blueprint/WidgetTree.h"
 #include "Components/Button.h"
@@ -7,7 +7,12 @@
 #include "Components/TextBlock.h"
 #include "Components/VerticalBox.h"
 #include "Components/VerticalBoxSlot.h"
+#include "Data/RelicTypes.h"
+#include "Data/TerminusDataSettings.h"
 #include "Widgets/Common/ItemSlotWidget.h"
+#include "Widgets/Relic/RelicTooltipWidget.h"
+#include "Widgets/Skill/SkillTooltipWidget.h"
+#include "Widgets/TerminusUISettings.h"
 #include "Widgets/Common/TerminusUIBuilder.h"
 #include "Widgets/TerminusUIColors.h"
 
@@ -117,11 +122,31 @@ void UChoiceCardWidget::SetTexts(const FString& Title, const FString& Descriptio
 
 void UChoiceCardWidget::SetItem(bool bRelic, FName Row)
 {
-	if (!ItemSlot) return;
+	// 칸이 없는 WBP 카드(이벤트 선택지): 칸 없이 카드에 설명 툴팁만
+	if (!ItemSlot)
+	{
+		SetToolTip(nullptr);
+		if (Row.IsNone()) return;
+		if (bRelic)
+		{
+			if (const FRelicRow* Relic = UTerminusDataSettings::FindRelicRow(Row))
+			{
+				if (!RelicTip) RelicTip = CreateWidget<URelicTooltipWidget>(this, UTerminusUISettings::Pick(TSubclassOf<URelicTooltipWidget>(), &UTerminusUISettings::RelicTooltip));
+				if (RelicTip) { RelicTip->SetRelic(Relic); SetToolTip(RelicTip); }
+			}
+		}
+		else if (const FSkillRow* Skill = UTerminusDataSettings::FindSkillRow(Row))
+		{
+			if (!SkillTip) SkillTip = CreateWidget<USkillTooltipWidget>(this, UTerminusUISettings::Pick(TSubclassOf<USkillTooltipWidget>(), &UTerminusUISettings::SkillTooltip));
+			if (SkillTip) { SkillTip->SetSkill(Skill); SetToolTip(SkillTip); }
+		}
+		return;
+	}
 
 	if (Row.IsNone())
 	{
 		ItemSlot->SetVisibility(ESlateVisibility::Collapsed);
+		SetToolTip(nullptr);
 	}
 	else
 	{
@@ -129,6 +154,8 @@ void UChoiceCardWidget::SetItem(bool bRelic, FName Row)
 		if (bRelic) ItemSlot->SetRelic(Row);
 		else        ItemSlot->SetSkill(Row);
 		ItemSlot->SetVisibility(ESlateVisibility::HitTestInvisible);   // 칸은 보기만 (누르는 건 카드)
+		// 칸이 마우스를 안 받으니 칸의 유물 / 스킬 설명 툴팁을 카드에 걸어 둠 -> 카드에 올리면 설명이 뜸
+		SetToolTip(ItemSlot->GetToolTip());
 	}
 	OnCardUpdated();
 }

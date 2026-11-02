@@ -155,7 +155,10 @@ bool UStartRelicPickWidget::IsRowSelected(FName Row) const
 bool UStartRelicPickWidget::CanEquip(FName Row) const
 {
 	const FRelicRow* Relic = UTerminusDataSettings::FindRelicRow(Row);
-	return Relic && ATerminusPlayerState::CanClassHoldRelic(PlayerClass, *Relic);
+	if (!Relic) return false;
+	// 이벤트 / 퀘스트 유물은 직업 상관없이 누구나 (GainRelic 과 같은 규칙). 예전엔 직업 검사에 걸려 못 들고 갔음
+	const bool bGivenOnly = Relic->OwnerClass == ESkillOwner::Event || Relic->OwnerClass == ESkillOwner::Quest;
+	return bGivenOnly || ATerminusPlayerState::CanClassHoldRelic(PlayerClass, *Relic);
 }
 
 void UStartRelicPickWidget::RefreshStates()

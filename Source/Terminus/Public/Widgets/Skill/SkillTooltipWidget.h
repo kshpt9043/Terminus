@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "CoreMinimal.h"
 #include "Widgets/Common/TerminusUserWidget.h"
@@ -40,10 +40,15 @@ protected:
 	// 설명 (DT 의 Description_KR)
 	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UTextBlock> DescText;
 
+	// 상태이상을 거는 스킬이면 오른쪽에 붙는 두 번째 창 (상태 이름 + 효과). 없으면 C++ 이 만들어 붙임 (WBP 도)
+	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UBorder> StatusPanel;
+	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UTextBlock> StatusText;
+
 	// 기본 모양의 폭 (설명이 길면 줄바꿈)
 	UPROPERTY(EditAnywhere, Category = "Skill Tooltip")
 	float DefaultWidth = 320.f;
 
 private:
 	void BuildDefaultLayout();
+	void BuildStatusPanel();   // 루트를 [원래 툴팁 | 상태이상 창] 가로 줄로 감쌈
 };

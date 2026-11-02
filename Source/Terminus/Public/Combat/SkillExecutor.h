@@ -26,6 +26,12 @@ public:
 	// 셋 다 false 면 수치를 안 쓰는 스킬. bOutOnCaster = 대상 말고 시전자에게
 	static void DescribeValueUse(EActionKind Kind, bool& bOutDamage, bool& bOutShield, bool& bOutHeal, bool& bOutOnCaster);
 
+	// 상태까지 더한 실제 공격 / 방어 (용기 +, 허약 -, 가호 +, 용암 -). 전투 화면 스텟 표시도 이걸 씀
+	static int32 GetEffectiveStat(const UCombatStatsComponent* Who, EScalingStat Stat);
+
+	// 이 스킬이 거는 상태 전부 (StatusEffect 칸 + 조합 스킬이 같이 거는 것). 스킬 툴팁의 상태이상 설명 창
+	static TArray<EStatusEffect> GetAppliedStatuses(const FSkillRow& Skill);
+
 private:
 	// 수치를 뭘로 쓰는지
 	enum class EValueUse : uint8
@@ -66,6 +72,5 @@ private:
 	};
 
 	static FRecipe GetRecipe(EActionKind Kind);
-	static int32 GetEffectiveStat(const UCombatStatsComponent* Who, EScalingStat Stat);
 	static EStatusEffect ResolveFusion(EStatusEffect Type);
 };

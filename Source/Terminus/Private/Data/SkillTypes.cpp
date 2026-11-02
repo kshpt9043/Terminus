@@ -1,4 +1,4 @@
-#include "Data/SkillTypes.h"
+﻿#include "Data/SkillTypes.h"
 
 EStatusEffect GetStatusGroup(EStatusEffect Type)
 {
@@ -53,5 +53,46 @@ FString GetStatusDisplayName(EStatusEffect Type)
 	case EStatusEffect::Blindness:      return Name(TEXT("불굴"), TEXT("실명"));
 	case EStatusEffect::SelfDamage:     return Name(TEXT("반동 피해"), TEXT("반동 피해"));
 	default:                            return FString();
+	}
+}
+
+FString GetStatusDescription(EStatusEffect Type)
+{
+	// Enum_State 시트 "효과" 열. 같은 그룹은 문구도 같음 (SecondaryValue / StatusValue 는 화면용으로 "수치")
+	switch (GetStatusGroup(Type))
+	{
+	case EStatusEffect::Counter:        return TEXT("자신을 공격한 대상에게 수치만큼의 피해를 돌려준다.");
+	case EStatusEffect::Mark:           return TEXT("받는 데미지가 25% 증가한다.");
+	case EStatusEffect::Evasion:        return TEXT("수치만큼 회피 스텟이 증가한다.");
+	case EStatusEffect::Poison:         return TEXT("자신의 턴 종료 시 수치만큼의 데미지를 받는다.");
+	case EStatusEffect::Brave:          return TEXT("수치만큼 공격 스텟이 오른다.");
+	case EStatusEffect::Protection:     return TEXT("수치만큼 방어 스텟이 오른다.");
+	case EStatusEffect::Ice:            return TEXT("수치만큼 공격 스텟이 하락한다.");
+	case EStatusEffect::Lava:           return TEXT("수치만큼 방어 스텟이 하락한다.");
+	case EStatusEffect::Indomitable:    return TEXT("한 사이클 동안 받는 데미지가 1로 고정된다.");
+	case EStatusEffect::Acid:           return TEXT("스킬 사용 시 에너지 소모량이 1 증가한다.");
+	case EStatusEffect::Fear:           return TEXT("주는 최종 데미지가 25% 감소한다.");
+	case EStatusEffect::Fusion:         return TEXT("중독, 허점(용암), 허약(얼음) 중 하나를 무작위로 건다.");
+	case EStatusEffect::Vitality:       return TEXT("자신의 턴 시작 시 에너지를 수치만큼 추가로 얻는다.");
+	case EStatusEffect::Reflux:         return TEXT("에너지를 사용할 때마다 수치만큼 데미지를 받는다.");
+	case EStatusEffect::InternalInjury: return TEXT("스킬 에너지를 사용할 때마다 수치만큼 데미지를 받는다.");
+	case EStatusEffect::Immortality:    return TEXT("체력이 1 아래로 내려가지 않는다.");
+	case EStatusEffect::Absorption:     return TEXT("데미지를 받으면 받은 데미지의 수치%만큼 회복한다.");
+	case EStatusEffect::IronWall:       return TEXT("받는 데미지가 수치만큼 줄어든다.");
+	case EStatusEffect::SelfDamage:     return TEXT("스킬 사용 시 시전자가 수치만큼 반동 피해를 받는다.");
+	default:                            return FString();
+	}
+}
+
+bool IsStatusDebuff(EStatusEffect Type)
+{
+	switch (GetStatusGroup(Type))
+	{
+	case EStatusEffect::Mark: case EStatusEffect::Poison: case EStatusEffect::Ice: case EStatusEffect::Lava:
+	case EStatusEffect::Acid: case EStatusEffect::Fear: case EStatusEffect::Fusion: case EStatusEffect::Reflux:
+	case EStatusEffect::InternalInjury: case EStatusEffect::SelfDamage:
+		return true;
+	default:
+		return false;
 	}
 }

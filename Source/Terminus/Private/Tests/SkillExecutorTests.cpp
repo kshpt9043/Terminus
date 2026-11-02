@@ -1,4 +1,4 @@
-// 스킬 실행기 / 피해 계산 자동 테스트
+﻿// 스킬 실행기 / 피해 계산 자동 테스트
 // 실행: 에디터 Session Frontend > Automation 에서 "Terminus" 또는
 //   UnrealEditor-Cmd Terminus.uproject -ExecCmds="Automation RunTests Terminus;Quit" -unattended -nullrhi
 // 월드 없이 액터 + 컴포넌트만 만들어서 돌림 (데미지 계산은 서버 = 권한 있는 액터면 됨)
@@ -123,6 +123,24 @@ bool FTerminusMonsterSkillRefsTest::RunTest(const FString& Parameters)
 	});
 	AddInfo(FString::Printf(TEXT("몬스터 스킬 칸 %d개 확인"), Checked));
 	return Checked > 0;
+}
+
+// 상태이상마다 화면 이름 + 효과 설명이 있음 (전투 툴팁 / 몬스터 카드 / 스킬 툴팁 상태이상 창이 씀)
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FTerminusStatusTextTest, "Terminus.Data.StatusTexts",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FTerminusStatusTextTest::RunTest(const FString& Parameters)
+{
+	const UEnum* Enum = StaticEnum<EStatusEffect>();
+	for (int32 i = 0; i < Enum->NumEnums() - 1; ++i)
+	{
+		const EStatusEffect Type = static_cast<EStatusEffect>(Enum->GetValueByIndex(i));
+		if (Type == EStatusEffect::None) continue;
+		const FString Name = Enum->GetNameStringByIndex(i);
+		TestFalse(FString::Printf(TEXT("%s: 화면 이름"), *Name), GetStatusDisplayName(Type).IsEmpty());
+		TestFalse(FString::Printf(TEXT("%s: 효과 설명"), *Name), GetStatusDescription(Type).IsEmpty());
+	}
+	return true;
 }
 
 // 플레이어가 쓰는 스킬(몬스터 스킬 빼고)은 전부 기획 아이콘이 있음

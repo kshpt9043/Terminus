@@ -1,10 +1,11 @@
-#include "Widgets/Combat/CombatHUDWidget.h"
+﻿#include "Widgets/Combat/CombatHUDWidget.h"
 
 #include "Blueprint/WidgetLayoutLibrary.h"
 #include "Blueprint/WidgetTree.h"
 #include "Character/TerminusBattler.h"
 #include "Character/TerminusMonster.h"
 #include "Combat/CombatStatsComponent.h"
+#include "Combat/SkillExecutor.h"
 #include "Components/Border.h"
 #include "Components/Button.h"
 #include "Components/CanvasPanel.h"
@@ -22,6 +23,7 @@
 #include "Components/TextBlock.h"
 #include "Components/VerticalBox.h"
 #include "Components/VerticalBoxSlot.h"
+#include "Data/MonsterTypes.h"
 #include "Data/TerminusDataSettings.h"
 #include "Dungeon/DungeonArea.h"
 #include "Dungeon/DungeonCombatComponent.h"
@@ -101,10 +103,22 @@ namespace
 		}
 	}
 
-	FString IntentNumber(const FMonsterIntent& Intent)
+	// 공격 예고 숫자. 턴 시작 때 정한 값(Intent.Amount) 대신 지금 몬스터 상태로 다시 계산
+	// -> 허약 / 용기가 걸리거나 풀리면 바로 바뀜. 공포(공격자 -25%)도 반영 (ApplyDamage 와 같은 반올림)
+	int32 LiveIntentAmount(const FMonsterIntent& Intent, const UCombatStatsComponent* MonsterStats)
+	{
+		const FSkillRow* Skill = UTerminusDataSettings::FindSkillRow(Intent.SkillRow);
+		if (!Skill || !MonsterStats) return Intent.Amount;
+		int32 Amount = FSkillExecutor::PreviewAmount(*Skill, MonsterStats);
+		if (MonsterStats->HasStatus(EStatusEffect::Fear)) Amount = FMath::RoundToInt(Amount * 0.75f);
+		return FMath::Max(0, Amount);
+	}
+
+	FString IntentNumber(const FMonsterIntent& Intent, const UCombatStatsComponent* MonsterStats)
 	{
 		if (Intent.Kind != EMonsterIntentKind::Attack) return FString();
-		return Intent.HitCount > 1 ? FString::Printf(TEXT("%dx%d"), Intent.Amount, Intent.HitCount) : FString::FromInt(Intent.Amount);
+		const int32 Amount = LiveIntentAmount(Intent, MonsterStats);
+		return Intent.HitCount > 1 ? FString::Printf(TEXT("%dx%d"), Amount, Intent.HitCount) : FString::FromInt(Amount);
 	}
 
 	// 상태이상 글자 칸 (전투 시안): 이로움 금 / 청, 해로움 적 / 보라
@@ -470,6 +484,7 @@ void UCombatHUDWidget::RebuildTags()
 		if (UBorder* Ready = Tag.ReadyBadge.Get())         Ready->RemoveFromParent();
 		if (UVerticalBox* Box = Tag.HealthBox.Get())       Box->RemoveFromParent();
 		if (UButton* Target = Tag.TargetButton.Get())      Target->RemoveFromParent();
+		if (UBorder* Hover = Tag.HoverArea.Get())          Hover->RemoveFromParent();
 	}
 	Tags.Reset();
 	TaggedBattlers.Reset();
@@ -533,32 +548,56 @@ void UCombatHUDWidget::RebuildTags()
 		}
 
 		// 발밑: 보호막 줄 4px / 체력 줄 7px / 숫자 / 상태이상 칸
+		// 상태이상 칸만 마우스를 받음 (올리면 효과 툴팁). 나머지는 통과
 		UVerticalBox* Box = WidgetTree->ConstructWidget<UVerticalBox>();
-		Box->SetVisibility(ESlateVisibility::HitTestInvisible);
+		Box->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
 
 		UHorizontalBox* ShieldTrack = WidgetTree->ConstructWidget<UHorizontalBox>();
 		UImage* ShieldFill = WidgetTree->ConstructWidget<UImage>();
 		ShieldFill->SetColorAndOpacity(TerminusUI::Hex(TEXT("8FA4B8")));
 		ShieldFill->SetDesiredSizeOverride(FVector2D(0.f, 4.f));
 		ShieldTrack->AddChildToHorizontalBox(ShieldFill);
+		ShieldTrack->SetVisibility(ESlateVisibility::HitTestInvisible);
 		if (UVerticalBoxSlot* S = Box->AddChildToVerticalBox(MakeSized(WidgetTree, ShieldTrack, 90.f, 4.f)))
 		{
 			S->SetHorizontalAlignment(HAlign_Center);
 		}
 
+		// 체력 줄 = 주황 줄(뒤, 바탕 포함) 위에 체력 줄(바탕 없음). 깎이면 주황 줄이 잠깐 남았다가 따라옴
+		UProgressBar* Chip = WidgetTree->ConstructWidget<UProgressBar>();
+		FProgressBarStyle ChipStyle = Chip->GetWidgetStyle();
+		ChipStyle.BackgroundImage = TerminusUI::MakeBoxBrush(TerminusUI::Hex(TEXT("120F16")), FLinearColor::Black, 0.f, 1.f);
+		ChipStyle.FillImage = FSlateBrush();
+		Chip->SetWidgetStyle(ChipStyle);
+		Chip->SetFillColorAndOpacity(TerminusUI::Hex(TEXT("FF9A3A")));
+		Chip->SetVisibility(ESlateVisibility::HitTestInvisible);
+
 		UProgressBar* Bar = WidgetTree->ConstructWidget<UProgressBar>();
 		FProgressBarStyle BarStyle = Bar->GetWidgetStyle();
-		BarStyle.BackgroundImage = TerminusUI::MakeBoxBrush(TerminusUI::Hex(TEXT("120F16")), FLinearColor::Black, 0.f, 1.f);
+		BarStyle.BackgroundImage = FSlateNoResource();
 		BarStyle.FillImage = FSlateBrush();
 		Bar->SetWidgetStyle(BarStyle);
 		Bar->SetFillColorAndOpacity(TerminusUI::Hex(bMonster ? TEXT("E8323A") : TEXT("5FC45A")));
-		if (UVerticalBoxSlot* S = Box->AddChildToVerticalBox(MakeSized(WidgetTree, Bar, 90.f, 7.f)))
+		Bar->SetVisibility(ESlateVisibility::HitTestInvisible);
+
+		UOverlay* BarStack = WidgetTree->ConstructWidget<UOverlay>();
+		BarStack->SetVisibility(ESlateVisibility::HitTestInvisible);
+		for (UWidget* Layer : { static_cast<UWidget*>(Chip), static_cast<UWidget*>(Bar) })
+		{
+			if (UOverlaySlot* S = BarStack->AddChildToOverlay(Layer))
+			{
+				S->SetHorizontalAlignment(HAlign_Fill);
+				S->SetVerticalAlignment(VAlign_Fill);
+			}
+		}
+		if (UVerticalBoxSlot* S = Box->AddChildToVerticalBox(MakeSized(WidgetTree, BarStack, 90.f, 7.f)))
 		{
 			S->SetHorizontalAlignment(HAlign_Center);
 			S->SetPadding(FMargin(0.f, 1.f, 0.f, 0.f));
 		}
 
 		UHorizontalBox* NumberRow = WidgetTree->ConstructWidget<UHorizontalBox>();
+		NumberRow->SetVisibility(ESlateVisibility::HitTestInvisible);
 		UTextBlock* HpText = MakeHUDText(WidgetTree, TEXT(""), 13, TerminusUI::MapColor::Text);
 		TerminusUI::SetBold(HpText);
 		NumberRow->AddChildToHorizontalBox(HpText);
@@ -574,6 +613,7 @@ void UCombatHUDWidget::RebuildTags()
 		UWrapBox* StatusWrap = WidgetTree->ConstructWidget<UWrapBox>();
 		StatusWrap->SetInnerSlotPadding(FVector2D(6.f, 4.f));
 		StatusWrap->SetHorizontalAlignment(HAlign_Center);
+		StatusWrap->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
 		if (UVerticalBoxSlot* S = Box->AddChildToVerticalBox(MakeSized(WidgetTree, StatusWrap, 150.f, 0.f)))
 		{
 			S->SetHorizontalAlignment(HAlign_Center);
@@ -586,6 +626,7 @@ void UCombatHUDWidget::RebuildTags()
 		Tag.HealthBox = Box;
 		Tag.ShieldFill = ShieldFill;
 		Tag.HealthBar = Bar;
+		Tag.ChipBar = Chip;
 		Tag.HealthText = HpText;
 		Tag.ShieldText = ShieldText;
 		Tag.StatusWrap = StatusWrap;
@@ -601,6 +642,38 @@ void UCombatHUDWidget::RebuildTags()
 		TargetSlot->SetAlignment(FVector2D(0.5f, 0.5f));
 		Target->SetVisibility(ESlateVisibility::Collapsed);
 		Tag.TargetButton = Target;
+
+		// 몬스터 정보 카드: 몸 위 투명 칸에 툴팁으로 (이름 / 분류 / 체력 / 공격 방어 / 다음 행동 / 상태이상)
+		if (bMonster)
+		{
+			UBorder* Card = WidgetTree->ConstructWidget<UBorder>();
+			Card->SetBrush(TerminusUI::MakeBoxBrush(TerminusUI::Hex(TEXT("17141C"), 0.96f), TerminusUI::Hex(TEXT("C9A55A"), 0.6f), 0.f, 1.f));
+			Card->SetPadding(FMargin(14.f, 12.f));
+			UVerticalBox* CardColumn = WidgetTree->ConstructWidget<UVerticalBox>();
+			Card->SetContent(CardColumn);
+			UTextBlock* CardTitle = TerminusUI::MakeText(WidgetTree, NAME_None, TEXT(""), 17, TerminusUI::Color::Gold, ETextJustify::Left);
+			TerminusUI::SetBold(CardTitle);
+			UTextBlock* CardSub = TerminusUI::MakeText(WidgetTree, NAME_None, TEXT(""), 12, TerminusUI::Color::TextAux, ETextJustify::Left);
+			UTextBlock* CardBody = TerminusUI::MakeWrapText(WidgetTree, NAME_None, TEXT(""), 13, TerminusUI::Color::TextBody, ETextJustify::Left);
+			CardBody->SetAutoWrapText(false);
+			CardBody->SetWrapTextAt(280.f);
+			CardColumn->AddChildToVerticalBox(CardTitle);
+			CardColumn->AddChildToVerticalBox(CardSub)->SetPadding(FMargin(0.f, 2.f, 0.f, 0.f));
+			CardColumn->AddChildToVerticalBox(CardBody)->SetPadding(FMargin(0.f, 8.f, 0.f, 0.f));
+
+			UBorder* Hover = WidgetTree->ConstructWidget<UBorder>();
+			Hover->SetBrush(FSlateNoResource());
+			Hover->SetToolTip(Card);
+			UCanvasPanelSlot* HoverSlot = TagLayer->AddChildToCanvas(Hover);
+			HoverSlot->SetAutoSize(false);
+			HoverSlot->SetSize(TargetButtonSize);
+			HoverSlot->SetAlignment(FVector2D(0.5f, 0.5f));
+			Hover->SetVisibility(ESlateVisibility::Collapsed);
+			Tag.HoverArea = Hover;
+			Tag.CardTitle = CardTitle;
+			Tag.CardSub = CardSub;
+			Tag.CardBody = CardBody;
+		}
 
 		Tags.Add(Tag);
 		TaggedBattlers.Add(Battler);
@@ -711,7 +784,7 @@ void UCombatHUDWidget::UpdateTags()
 				}
 				if (UTextBlock* Number = Tag.IntentText.Get())
 				{
-					const FString Label = IntentNumber(*Found);
+					const FString Label = IntentNumber(*Found, Stats);
 					TerminusUI::SetTextIfChanged(Number, Label);
 					Number->SetVisibility(Label.IsEmpty() ? ESlateVisibility::Collapsed : ESlateVisibility::HitTestInvisible);
 					Number->SetColorAndOpacity(FSlateColor(TerminusUI::Hex(Found->Kind == EMonsterIntentKind::Attack ? TEXT("FFE3DE") : TEXT("F0E8D6"))));
@@ -736,14 +809,26 @@ void UCombatHUDWidget::UpdateTags()
 		// 발밑 체력
 		if (UVerticalBox* Box = Tag.HealthBox.Get())
 		{
-			Box->SetVisibility(bAlive ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Collapsed);
+			Box->SetVisibility(bAlive ? ESlateVisibility::SelfHitTestInvisible : ESlateVisibility::Collapsed);
 			if (bAlive)
 			{
 				const FCombatState& State = Stats->GetCombatState();
 				const int32 MaxHealth = FMath::Max(1, Stats->GetStats().MaxHealth);
+				const float Percent = static_cast<float>(State.Health) / MaxHealth;
 				if (UProgressBar* Bar = Tag.HealthBar.Get())
 				{
-					Bar->SetPercent(static_cast<float>(State.Health) / MaxHealth);
+					Bar->SetPercent(Percent);
+				}
+				if (UProgressBar* Chip = Tag.ChipBar.Get())
+				{
+					// 깎이면 0.45초 멈췄다가 초당 최대 체력의 70% 속도로 따라 줄어듦. 회복은 바로 맞춤
+					const float Dt = GetWorld() ? GetWorld()->GetDeltaSeconds() : 0.f;
+					if (Tag.ChipPercent < 0.f || Percent >= Tag.ChipPercent) Tag.ChipPercent = Percent;
+					else if (Tag.LastPercent >= 0.f && Percent < Tag.LastPercent) Tag.ChipHold = 0.45f;
+					else if (Tag.ChipHold > 0.f) Tag.ChipHold -= Dt;
+					else Tag.ChipPercent = FMath::Max(Percent, Tag.ChipPercent - Dt * 0.7f);
+					Tag.LastPercent = Percent;
+					Chip->SetPercent(Tag.ChipPercent);
 				}
 				if (UTextBlock* HpText = Tag.HealthText.Get())
 				{
@@ -776,6 +861,16 @@ void UCombatHUDWidget::UpdateTags()
 				bSelectable = bAlive && ((bPickEnemy && !bSameSide) || (bPickAlly && bSameSide));
 			}
 			Target->SetVisibility(bSelectable ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
+			if (UBorder* Hover = Tag.HoverArea.Get())
+			{
+				const bool bShowHover = bAlive && !bSelectable && !bDraggingSkill;
+				Hover->SetVisibility(bShowHover ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
+				if (bShowHover)
+				{
+					Place(Hover, BodyCenterHeight);
+					if (Hover->IsHovered()) RefreshMonsterCard(Tag, Combat);
+				}
+			}
 			if (bSelectable)
 			{
 				Place(Target, BodyCenterHeight);
@@ -929,16 +1024,20 @@ void UCombatHUDWidget::UpdatePanels()
 			}
 		}
 
-		// ---- 오른쪽 아래: 상태. 기획 시안 "체력 [최대/현재] 힘 방어 회피"
+		// ---- 오른쪽 아래: 상태. 기획 시안 "체력 [최대/현재] 공격 방어 회피"
+		// 공격 / 방어는 상태(용기 / 허약 / 가호 / 용암, 유물이 거는 것 포함)까지 더한 실제 값, 회피도 실제 값
+		const int32 ShownAttack = FSkillExecutor::GetEffectiveStat(MyStats, EScalingStat::ATK);
+		const int32 ShownDefense = FSkillExecutor::GetEffectiveStat(MyStats, EScalingStat::DEF);
+		const int32 ShownEvasion = MyStats->GetEvasion();
 		if (StatusRow)
 		{
-			// 시안: "체력 21/30  보호막 6  힘 5  방어 3  회피 1" 이름은 흐리게, 값은 굵게
+			// 시안: "체력 21/30  보호막 6  공격 5  방어 3  회피 1" 이름은 흐리게, 값은 굵게
 			TArray<TPair<FString, FString>> Pairs;
 			Pairs.Emplace(TEXT("체력"), FString::Printf(TEXT("%d/%d"), State.Health, Stats.MaxHealth));
 			if (State.Shield > 0) Pairs.Emplace(TEXT("보호막"), FString::FromInt(State.Shield));
-			Pairs.Emplace(TEXT("힘"), FString::FromInt(Stats.Attack));
-			Pairs.Emplace(TEXT("방어"), FString::FromInt(Stats.Defense));
-			Pairs.Emplace(TEXT("회피"), FString::FromInt(Stats.Evasion));
+			Pairs.Emplace(TEXT("공격"), FString::FromInt(ShownAttack));
+			Pairs.Emplace(TEXT("방어"), FString::FromInt(ShownDefense));
+			Pairs.Emplace(TEXT("회피"), FString::FromInt(ShownEvasion));
 
 			FString Key;
 			for (const TPair<FString, FString>& Pair : Pairs) Key += Pair.Key + Pair.Value + TEXT("|");
@@ -965,7 +1064,7 @@ void UCombatHUDWidget::UpdatePanels()
 		{
 			FString Label = FString::Printf(TEXT("체력 %d/%d"), State.Health, Stats.MaxHealth);
 			if (State.Shield > 0) Label += FString::Printf(TEXT("  보호막 %d"), State.Shield);
-			Label += FString::Printf(TEXT("  힘 %d  방어 %d  회피 %d"), Stats.Attack, Stats.Defense, Stats.Evasion);
+			Label += FString::Printf(TEXT("  공격 %d  방어 %d  회피 %d"), ShownAttack, ShownDefense, ShownEvasion);
 			TerminusUI::SetTextIfChanged(StatusText, Label);
 		}
 	}
@@ -1061,6 +1160,66 @@ void UCombatHUDWidget::RefreshOrbs(UPanelWidget* Box, FIntPoint& Shown, int32 Cu
 	}
 }
 
+void UCombatHUDWidget::RefreshMonsterCard(FBattlerTag& Tag, const UDungeonCombatComponent* Combat)
+{
+	const ATerminusMonster* Monster = Cast<ATerminusMonster>(Tag.Battler.Get());
+	const UCombatStatsComponent* Stats = Monster ? Monster->GetCombatStats() : nullptr;
+	if (!Stats) return;
+
+	const FMonsterRow* Row = UTerminusDataSettings::FindMonsterRow(Monster->GetMonsterRow());
+	if (UTextBlock* Title = Tag.CardTitle.Get())
+	{
+		TerminusUI::SetTextIfChanged(Title, Row ? Row->DisplayName_KR.ToString() : Monster->GetMonsterRow().ToString());
+	}
+	if (UTextBlock* Sub = Tag.CardSub.Get())
+	{
+		FString Line;
+		if (Row)
+		{
+			Line = StaticEnum<EMonsterCategory>()->GetDisplayNameTextByValue(static_cast<int64>(Row->MonsterCategory)).ToString();
+			if (!Row->Theme_KR.IsEmpty()) Line += TEXT(" · ") + Row->Theme_KR.ToString();
+		}
+		TerminusUI::SetTextIfChanged(Sub, Line);
+	}
+
+	const FCombatState& State = Stats->GetCombatState();
+	FString Body = FString::Printf(TEXT("체력 %d/%d"), State.Health, Stats->GetStats().MaxHealth);
+	if (State.Shield > 0) Body += FString::Printf(TEXT("   보호막 %d"), State.Shield);
+	Body += FString::Printf(TEXT("\n공격 %d   방어 %d"),
+		FSkillExecutor::GetEffectiveStat(Stats, EScalingStat::ATK), FSkillExecutor::GetEffectiveStat(Stats, EScalingStat::DEF));
+
+	// 다음 행동: 스킬 이름 + (공격이면 지금 수치) + 설명
+	if (const FMonsterIntent* Intent = Combat ? Combat->FindIntent(Monster) : nullptr)
+	{
+		if (const FSkillRow* Skill = UTerminusDataSettings::FindSkillRow(Intent->SkillRow))
+		{
+			Body += FString::Printf(TEXT("\n\n다음 행동: %s"), *Skill->DisplayName_KR.ToString());
+			if (Intent->Kind == EMonsterIntentKind::Attack)
+			{
+				const int32 Amount = LiveIntentAmount(*Intent, Stats);
+				Body += Intent->HitCount > 1 ? FString::Printf(TEXT(" (피해 %dx%d)"), Amount, Intent->HitCount) : FString::Printf(TEXT(" (피해 %d)"), Amount);
+			}
+			const FString Desc = Skill->Description_KR.ToString().Replace(TEXT("\\n"), TEXT("\n"));
+			if (!Desc.IsEmpty()) Body += TEXT("\n") + Desc;
+		}
+	}
+
+	// 상태이상
+	bool bHeader = false;
+	for (const FStatusInstance& Status : State.Statuses)
+	{
+		if (Status.Type == EStatusEffect::None) continue;
+		if (!bHeader) { Body += TEXT("\n\n상태"); bHeader = true; }
+		Body += TEXT("\n· ") + GetStatusDisplayName(Status.Type);
+		if (Status.Value > 0) Body += FString::Printf(TEXT(" %d"), Status.Value);
+		if (Status.Duration > 0) Body += FString::Printf(TEXT(" (남은 %d사이클)"), Status.Duration);
+		const FString Desc = GetStatusDescription(Status.Type);
+		if (!Desc.IsEmpty()) Body += TEXT(": ") + Desc;
+	}
+
+	if (UTextBlock* Text = Tag.CardBody.Get()) TerminusUI::SetTextIfChanged(Text, Body);
+}
+
 void UCombatHUDWidget::RefreshStatusIcons(FBattlerTag& Tag, const TArray<FStatusInstance>& Statuses)
 {
 	UWrapBox* Wrap = Tag.StatusWrap.Get();
@@ -1104,6 +1263,14 @@ void UCombatHUDWidget::RefreshStatusIcons(FBattlerTag& Tag, const TArray<FStatus
 			S->SetVerticalAlignment(VAlign_Center);
 			S->SetPadding(FMargin(2.f, 0.f, 0.f, 0.f));
 		}
+		// 마우스를 올리면 "허약(얼음) 1 · 남은 2사이클 / 수치만큼 공격 스텟이 하락한다."
+		FString Tip = GetStatusDisplayName(Status.Type);
+		if (Status.Value > 0) Tip += FString::Printf(TEXT(" %d"), Status.Value);
+		if (Status.Duration > 0) Tip += FString::Printf(TEXT(" · 남은 %d사이클"), Status.Duration);
+		const FString Desc = GetStatusDescription(Status.Type);
+		if (!Desc.IsEmpty()) Tip += TEXT("\n") + Desc;
+		Item->SetToolTipText(FText::FromString(Tip));
+		Item->SetVisibility(ESlateVisibility::Visible);
 		Wrap->AddChild(Item);
 	}
 }

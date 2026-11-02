@@ -46,6 +46,13 @@ protected:
 	// 설명 (DT 의 Description_KR)
 	UPROPERTY(meta = (BindWidget)) TObjectPtr<UTextBlock> DescText;
 
+	// 스킬 아이콘. 없으면 WBP 안의 첫 이미지를 아이콘 자리로 씀 (WBP_SkillCard 는 임시 그림 Image 하나)
+	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<class UImage> IconImage;
+
+	// 아이콘 크기
+	UPROPERTY(EditAnywhere, Category = "Skill Card")
+	FVector2D IconSize = FVector2D(96.f, 96.f);
+
 	// 기본 모양의 카드 크기
 	UPROPERTY(EditAnywhere, Category = "Skill Card")
 	FVector2D DefaultCardSize = FVector2D(260.f, 340.f);

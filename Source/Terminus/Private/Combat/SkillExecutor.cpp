@@ -326,6 +326,24 @@ FSkillExecutor::FRecipe FSkillExecutor::GetRecipe(EActionKind Kind)
 	return R;
 }
 
+TArray<EStatusEffect> FSkillExecutor::GetAppliedStatuses(const FSkillRow& Skill)
+{
+	TArray<EStatusEffect> Out;
+	const FRecipe Recipe = GetRecipe(Skill.ActionKind);
+	for (const EStatusEffect Type : { Skill.StatusEffect, Recipe.ExtraStatus, Recipe.BaseStatus })
+	{
+		if (Type != EStatusEffect::None && Type != EStatusEffect::SelfDamage) Out.AddUnique(Type);
+	}
+	// 퓨전은 셋 중 하나로 바뀜 -> 후보도 같이 보여 줌
+	if (Out.Contains(EStatusEffect::Fusion))
+	{
+		Out.AddUnique(EStatusEffect::Poison);
+		Out.AddUnique(EStatusEffect::Lava);
+		Out.AddUnique(EStatusEffect::Ice);
+	}
+	return Out;
+}
+
 int32 FSkillExecutor::GetEffectiveStat(const UCombatStatsComponent* Who, EScalingStat Stat)
 {
 	const FCharacterStats& Base = Who->GetStats();

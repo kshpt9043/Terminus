@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
 
@@ -301,6 +301,14 @@ public:
 
 	UFUNCTION(Server, Reliable)
 	void Server_DebugWinCombat();
+
+	// [테스트] 콘솔에서 DebugStatus Ice 2 2 -> 내 구역 몬스터 전부에 상태 (수치 / 지속)
+	//   상태 이름은 EStatusEffect 값 (Ice / Poison / Brave / Mark / Fear ...), 지속 -1 = 계속
+	UFUNCTION(Exec)
+	void DebugStatus(FName Type, int32 Value = 1, int32 Duration = 2);
+
+	UFUNCTION(Server, Reliable)
+	void Server_DebugStatus(FName Type, int32 Value, int32 Duration);
 
 	// [테스트] 콘솔에서 DebugLoseCombat -> 내 구역 플레이어 전부 쓰러뜨림 (전멸 / 구출 / 난입 확인용)
 	UFUNCTION(Exec)

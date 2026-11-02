@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "CoreMinimal.h"
 #include "Widgets/Common/TerminusUserWidget.h"
@@ -79,6 +79,7 @@ public:
 
 protected:
 	virtual void NativeOnInitialized() override;
+	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
 	virtual void NativeOnMouseEnter(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
 	virtual void NativeOnMouseLeave(const FPointerEvent& InMouseEvent) override;
 
@@ -163,7 +164,13 @@ private:
 	FVector2D OrigIconSize = FVector2D(32.f, 32.f);
 	FMargin OrigInnerPadding = FMargin(4.f);   // Background 안쪽 여백 (빈 칸은 이 값, 유물 / 스킬은 IconPadding)
 	FMargin OrigNamePadding = FMargin(0.f, 4.f, 0.f, 0.f);
+	FMargin OrigButtonPadding = FMargin(0.f);          // 버튼 스타일 / 내용 슬롯 여백 (유물 / 스킬은 0)
+	FMargin OrigButtonPressedPadding = FMargin(0.f);
+	FMargin OrigButtonSlotPadding = FMargin(0.f);
+	TEnumAsByte<EHorizontalAlignment> OrigIconHAlign = HAlign_Center;
+	bool bIconAlignSaved = false;
 	void ApplyKindLayout();                 // 유물 / 스킬에 따라 아이콘 맞춤, 이름 글자, 칸 크기
+	bool bBigIcon = false;                  // 유물 / 스킬: 아이콘을 칸에 맞게 키우는 중 (NativeTick 이 실제 자리에 맞춰 줄임)
 
 	void BuildDefaultLayout();
 	void ShowIcon(class UTexture2D* Texture, const FText& Name);

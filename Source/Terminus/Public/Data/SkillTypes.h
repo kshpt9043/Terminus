@@ -114,6 +114,12 @@ TERMINUS_API EStatusEffect GetStatusGroup(EStatusEffect Type);
 // 화면 표시 이름. "시스템 이름(테마 이름)", 둘이 같으면 시스템 이름만 (Enum_State 시트)
 TERMINUS_API FString GetStatusDisplayName(EStatusEffect Type);
 
+// 효과 설명 (Enum_State "효과" 열). 툴팁 / 스킬 설명의 상태이상 창
+TERMINUS_API FString GetStatusDescription(EStatusEffect Type);
+
+// 해로운 상태인지 (Enum_State "종류" 열이 디버프)
+TERMINUS_API bool IsStatusDebuff(EStatusEffect Type);
+
 // 실제 효과를 실행하는 로직 종류. 엑셀 Enum_Reference 시트 그대로 44개
 //
 // 44갈래 스위치 짜면 안 됨. 상태 종류는 StatusEffect 컬럼이, 대상은 TargetType 이 이미 말해줌

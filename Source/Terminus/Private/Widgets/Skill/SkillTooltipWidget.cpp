@@ -1,7 +1,10 @@
-#include "Widgets/Skill/SkillTooltipWidget.h"
+﻿#include "Widgets/Skill/SkillTooltipWidget.h"
 
 #include "Blueprint/WidgetTree.h"
 #include "Components/Border.h"
+#include "Combat/SkillExecutor.h"
+#include "Components/HorizontalBox.h"
+#include "Components/HorizontalBoxSlot.h"
 #include "Components/Image.h"
 #include "Components/SizeBox.h"
 #include "Components/TextBlock.h"
@@ -19,6 +22,34 @@ void USkillTooltipWidget::NativeOnInitialized()
 	if (!WidgetTree->RootWidget)
 	{
 		BuildDefaultLayout();
+	}
+	if (!StatusPanel)
+	{
+		BuildStatusPanel();
+	}
+}
+
+void USkillTooltipWidget::BuildStatusPanel()
+{
+	UWidget* OldRoot = WidgetTree->RootWidget;
+	if (!OldRoot) return;
+
+	UHorizontalBox* Row = WidgetTree->ConstructWidget<UHorizontalBox>();
+	WidgetTree->RootWidget = Row;
+	if (UHorizontalBoxSlot* S = Row->AddChildToHorizontalBox(OldRoot)) S->SetVerticalAlignment(VAlign_Top);
+
+	StatusPanel = WidgetTree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("StatusPanel"));
+	StatusPanel->SetBrush(TerminusUI::MakeBoxBrush(TerminusUI::Color::Board, TerminusUI::Color::Line));
+	StatusPanel->SetPadding(FMargin(14.f, 12.f));
+	StatusPanel->SetVisibility(ESlateVisibility::Collapsed);
+	StatusText = TerminusUI::MakeText(WidgetTree, TEXT("StatusText"), TEXT(""), 14, TerminusUI::Color::TextBody, ETextJustify::Left);
+	StatusText->SetAutoWrapText(false);
+	StatusText->SetWrapTextAt(240.f);
+	StatusPanel->SetContent(StatusText);
+	if (UHorizontalBoxSlot* S = Row->AddChildToHorizontalBox(StatusPanel))
+	{
+		S->SetVerticalAlignment(VAlign_Top);
+		S->SetPadding(FMargin(6.f, 0.f, 0.f, 0.f));
 	}
 }
 
@@ -91,5 +122,20 @@ void USkillTooltipWidget::SetSkill(const FSkillRow* InSkill)
 	{
 		// DT 설명 중 일부에 줄바꿈이 "\n" 글자 그대로 들어가 있어서 진짜 줄바꿈으로
 		DescText->SetText(FText::FromString(InSkill->Description_KR.ToString().Replace(TEXT("\\n"), TEXT("\n"))));
+	}
+
+	// 상태이상 창: "허약(얼음)\n수치만큼 공격 스텟이 하락한다." 를 상태마다
+	if (StatusPanel)
+	{
+		FString Lines;
+		for (const EStatusEffect Type : FSkillExecutor::GetAppliedStatuses(*InSkill))
+		{
+			const FString Desc = GetStatusDescription(Type);
+			if (Desc.IsEmpty()) continue;
+			if (!Lines.IsEmpty()) Lines += TEXT("\n\n");
+			Lines += FString::Printf(TEXT("[%s] %s\n%s"), IsStatusDebuff(Type) ? TEXT("해로움") : TEXT("이로움"), *GetStatusDisplayName(Type), *Desc);
+		}
+		if (StatusText) StatusText->SetText(FText::FromString(Lines));
+		StatusPanel->SetVisibility(Lines.IsEmpty() ? ESlateVisibility::Collapsed : ESlateVisibility::HitTestInvisible);
 	}
 }

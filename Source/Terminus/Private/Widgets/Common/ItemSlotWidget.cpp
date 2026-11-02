@@ -1,8 +1,9 @@
-#include "Widgets/Common/ItemSlotWidget.h"
+﻿#include "Widgets/Common/ItemSlotWidget.h"
 
 #include "Blueprint/WidgetTree.h"
 #include "Components/Border.h"
 #include "Components/Button.h"
+#include "Components/ButtonSlot.h"
 #include "Components/Image.h"
 #include "Components/Overlay.h"
 #include "Components/OverlaySlot.h"
@@ -50,6 +51,12 @@ void UItemSlotWidget::NativeOnInitialized()
 	if (Icon) OrigIconSize = Icon->GetBrush().GetImageSize();
 	if (Background) OrigInnerPadding = Background->GetPadding();
 	if (const UVerticalBoxSlot* S = NameText ? Cast<UVerticalBoxSlot>(NameText->Slot) : nullptr) OrigNamePadding = S->GetPadding();
+	if (SlotButton)
+	{
+		OrigButtonPadding = SlotButton->GetStyle().NormalPadding;
+		OrigButtonPressedPadding = SlotButton->GetStyle().PressedPadding;
+		if (const UButtonSlot* S = Cast<UButtonSlot>(SlotButton->GetContentSlot())) OrigButtonSlotPadding = S->GetPadding();
+	}
 
 	ApplyIconOnly();
 
@@ -137,6 +144,7 @@ void UItemSlotWidget::ApplyKindLayout()
 {
 	// 유물 / 스킬은 기획 아이콘이 있어서 아이콘을 칸에 맞게 크게, 이름은 작게 (11-01 스킬 아이콘 추가)
 	const bool bRelic = Kind == EItemSlotKind::Relic || Kind == EItemSlotKind::Skill;
+	bBigIcon = bRelic;
 
 	const bool bNameShown = NameText && NameText->GetVisibility() != ESlateVisibility::Collapsed;
 	if (NameText && OrigNameFontSize > 0.f)
@@ -169,6 +177,33 @@ void UItemSlotWidget::ApplyKindLayout()
 	{
 		if (!(S->GetPadding() == NamePadding)) S->SetPadding(NamePadding);
 	}
+	// 버튼 안쪽 여백도 (WBP_ItemSlot 은 버튼이 Frame 안에 있고 스타일 / 슬롯 여백이 있어서 아이콘 폭이 반쯤 깎였음)
+	FMargin ButtonPadding(0.f);
+	if (SlotButton)
+	{
+		const FMargin Normal = bRelic ? FMargin(0.f) : OrigButtonPadding;
+		const FMargin Pressed = bRelic ? FMargin(0.f) : OrigButtonPressedPadding;
+		const FMargin Content = bRelic ? FMargin(0.f) : OrigButtonSlotPadding;
+		FButtonStyle Style = SlotButton->GetStyle();
+		if (!(Style.NormalPadding == Normal) || !(Style.PressedPadding == Pressed))
+		{
+			Style.NormalPadding = Normal;
+			Style.PressedPadding = Pressed;
+			SlotButton->SetStyle(Style);
+		}
+		if (UButtonSlot* S = Cast<UButtonSlot>(SlotButton->GetContentSlot()); S && !(S->GetPadding() == Content))
+		{
+			S->SetPadding(Content);
+		}
+		ButtonPadding = Normal + Content;
+	}
+	// 아이콘 슬롯이 가로 Fill 이면 이름 폭만큼 늘어나 찌그러짐 -> 유물 / 스킬은 가운데
+	if (UVerticalBoxSlot* S = Icon ? Cast<UVerticalBoxSlot>(Icon->Slot) : nullptr)
+	{
+		if (!bIconAlignSaved) { OrigIconHAlign = S->GetHorizontalAlignment(); bIconAlignSaved = true; }
+		const EHorizontalAlignment Want = bRelic ? HAlign_Center : OrigIconHAlign.GetValue();
+		if (S->GetHorizontalAlignment() != Want) S->SetHorizontalAlignment(Want);
+	}
 
 	// 아이콘 크기: 유물 / 스킬은 칸에서 테두리 / 띠 / 여백 / 이름 자리를 뺀 만큼 정사각형으로 크게
 	if (Icon)
@@ -177,8 +212,8 @@ void UItemSlotWidget::ApplyKindLayout()
 		if (bRelic && !Size.IsZero())
 		{
 			const FMargin FramePad = Frame ? Frame->GetPadding() : FMargin(0.f);
-			const float W = Size.X - FramePad.Left - FramePad.Right - InnerPadding.Left - InnerPadding.Right;
-			const float H = Size.Y - FramePad.Top - FramePad.Bottom - InnerPadding.Top - InnerPadding.Bottom
+			const float W = Size.X - FramePad.Left - FramePad.Right - InnerPadding.Left - InnerPadding.Right - ButtonPadding.Left - ButtonPadding.Right;
+			const float H = Size.Y - FramePad.Top - FramePad.Bottom - InnerPadding.Top - InnerPadding.Bottom - ButtonPadding.Top - ButtonPadding.Bottom
 				- (bNameShown ? RelicNameReserve + NamePadding.Top : 0.f);
 			IconSize = FVector2D(FMath::Max(16.f, FMath::FloorToFloat(FMath::Min(W, H))));
 		}
@@ -189,6 +224,54 @@ void UItemSlotWidget::ApplyKindLayout()
 			Brush.ImageSize = IconSize;
 			Icon->SetBrush(Brush);
 		}
+	}
+}
+
+void UItemSlotWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
+{
+	Super::NativeTick(MyGeometry, InDeltaTime);
+
+	// 유물 / 스킬 아이콘을 실제로 그려진 칸에 맞춰 정사각형으로 (줄이기 + 키우기)
+	// SetSlotSize 값으로만 계산하면 쓰는 쪽 판 / WBP 여백이 달라 한쪽만 눌려 찌그러짐 (상점 WBP_ItemSlot)
+	// 아이콘 자기 크기는 첫 배치 때 잠깐 작게 잡히면 거기 묶여 버려서, 아이콘이 든 세로 줄을 담은 판(바탕 / 버튼) 크기를 기준으로 함
+	if (!bBigIcon || !Icon) return;
+
+	// 테마(ApplyTheme, NativeConstruct)가 버튼 스타일을 다시 입히면 여백이 되살아남 -> 다시 맞춤
+	if (SlotButton && !(SlotButton->GetStyle().NormalPadding == FMargin(0.f))) ApplyKindLayout();
+
+	UWidget* Column = Icon->GetParent();
+	while (Column && !Column->IsA<UVerticalBox>()) Column = Column->GetParent();
+	UWidget* Holder = Column ? Column->GetParent() : nullptr;
+	if (!Holder) return;
+
+	FMargin Pad(0.f);
+	if (const UBorder* Border = Cast<UBorder>(Holder)) Pad = Border->GetPadding();
+	else if (const UButton* Button = Cast<UButton>(Holder))
+	{
+		Pad = Button->GetStyle().NormalPadding;
+		if (const UButtonSlot* S = Cast<UButtonSlot>(Button->GetContentSlot())) Pad = Pad + S->GetPadding();
+	}
+
+	const FVector2D HolderSize = Holder->GetCachedGeometry().GetLocalSize();
+	if (HolderSize.X < 1.f || HolderSize.Y < 1.f) return;
+
+	const bool bNameShown = NameText && NameText->GetVisibility() != ESlateVisibility::Collapsed;
+	float NameSpace = 0.f;
+	if (bNameShown)
+	{
+		const UVerticalBoxSlot* S = Cast<UVerticalBoxSlot>(NameText->Slot);
+		NameSpace = RelicNameReserve + (S ? S->GetPadding().Top + S->GetPadding().Bottom : 0.f);
+	}
+
+	const float W = HolderSize.X - Pad.Left - Pad.Right;
+	const float H = HolderSize.Y - Pad.Top - Pad.Bottom - NameSpace;
+	const float Edge = FMath::FloorToFloat(FMath::Min(W, H));
+	const FVector2D Cur = Icon->GetBrush().GetImageSize();
+	if (Edge >= 8.f && FMath::Abs(Edge - Cur.X) >= 1.f)
+	{
+		FSlateBrush Brush = Icon->GetBrush();
+		Brush.ImageSize = FVector2D(Edge);
+		Icon->SetBrush(Brush);
 	}
 }
 
