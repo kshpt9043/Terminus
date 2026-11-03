@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
 
@@ -89,7 +89,8 @@ public:
 	void ClearShield();
 
 	// Duration -1 = 전투 끝까지 (사이클이 지나도 안 줄어듦)
-	// 같은 그룹(GetStatusGroup)이 이미 걸려 있으면 그걸 덮어씀 (이름만 다른 같은 효과는 하나만)
+	// 같은 상태(그룹)를 또 걸면 덮어쓰지 않고 따로 쌓임 (11-03 피드백): 걸 때마다 항목 하나, 수치 / 남은 사이클은 항목마다 따로
+	// 효과는 살아 있는 항목 수치의 합. 예) 중독 2(2사이클) + 2(1사이클) + 1(3사이클) -> 5 / 3 / 1
 	void ApplyStatus(EStatusEffect Type, int32 Value, int32 Duration);
 	void RemoveStatus(EStatusEffect Type);
 
@@ -102,8 +103,12 @@ public:
 	// 죽은 상태에서 체력을 되돌림 (부활 유물). Ratio = 최대 체력 대비
 	void Revive(float HealthRatio);
 
+	// 같은 그룹 항목 수치의 합
 	UFUNCTION(BlueprintPure, Category = "Terminus|Combat")
 	int32 GetStatusValue(EStatusEffect Type) const;
+
+	// 화면용: 같은 그룹을 한 칸으로 합침 (수치 합, 남은 사이클은 가장 긴 것, 이름은 마지막에 걸린 것)
+	TArray<FStatusInstance> GetDisplayStatuses() const;
 
 	// 수치가 0 인 상태(급소 / 공포 / 불굴)도 있어서 걸려 있는지는 따로 봄
 	// 둘 다 그룹 기준: HasStatus(Ice) 는 허약(침수)도 참

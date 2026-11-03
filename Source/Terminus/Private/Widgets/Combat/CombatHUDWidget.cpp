@@ -844,7 +844,7 @@ void UCombatHUDWidget::UpdateTags()
 					const float Width = State.Shield > 0 ? FMath::Clamp(90.f * State.Shield / MaxHealth, 2.f, 90.f) : 0.f;
 					ShieldFill->SetDesiredSizeOverride(FVector2D(Width, 4.f));
 				}
-				RefreshStatusIcons(Tag, State.Statuses);
+				RefreshStatusIcons(Tag, Stats->GetDisplayStatuses());
 				Place(Box, -4.f);
 			}
 		}
@@ -1162,6 +1162,7 @@ void UCombatHUDWidget::RefreshOrbs(UPanelWidget* Box, FIntPoint& Shown, int32 Cu
 
 void UCombatHUDWidget::RefreshMonsterCard(FBattlerTag& Tag, const UDungeonCombatComponent* Combat)
 {
+	// 11-03 피드백: 이름 / 체력 / 상태만. 공격 방어 스텟과 다음 행동은 안 보여 줌
 	const ATerminusMonster* Monster = Cast<ATerminusMonster>(Tag.Battler.Get());
 	const UCombatStatsComponent* Stats = Monster ? Monster->GetCombatStats() : nullptr;
 	if (!Stats) return;
@@ -1173,42 +1174,17 @@ void UCombatHUDWidget::RefreshMonsterCard(FBattlerTag& Tag, const UDungeonCombat
 	}
 	if (UTextBlock* Sub = Tag.CardSub.Get())
 	{
-		FString Line;
-		if (Row)
-		{
-			Line = StaticEnum<EMonsterCategory>()->GetDisplayNameTextByValue(static_cast<int64>(Row->MonsterCategory)).ToString();
-			if (!Row->Theme_KR.IsEmpty()) Line += TEXT(" · ") + Row->Theme_KR.ToString();
-		}
-		TerminusUI::SetTextIfChanged(Sub, Line);
+		Sub->SetVisibility(ESlateVisibility::Collapsed);
 	}
 
 	const FCombatState& State = Stats->GetCombatState();
 	FString Body = FString::Printf(TEXT("체력 %d/%d"), State.Health, Stats->GetStats().MaxHealth);
 	if (State.Shield > 0) Body += FString::Printf(TEXT("   보호막 %d"), State.Shield);
-	Body += FString::Printf(TEXT("\n공격 %d   방어 %d"),
-		FSkillExecutor::GetEffectiveStat(Stats, EScalingStat::ATK), FSkillExecutor::GetEffectiveStat(Stats, EScalingStat::DEF));
 
-	// 다음 행동: 스킬 이름 + (공격이면 지금 수치) + 설명
-	if (const FMonsterIntent* Intent = Combat ? Combat->FindIntent(Monster) : nullptr)
-	{
-		if (const FSkillRow* Skill = UTerminusDataSettings::FindSkillRow(Intent->SkillRow))
-		{
-			Body += FString::Printf(TEXT("\n\n다음 행동: %s"), *Skill->DisplayName_KR.ToString());
-			if (Intent->Kind == EMonsterIntentKind::Attack)
-			{
-				const int32 Amount = LiveIntentAmount(*Intent, Stats);
-				Body += Intent->HitCount > 1 ? FString::Printf(TEXT(" (피해 %dx%d)"), Amount, Intent->HitCount) : FString::Printf(TEXT(" (피해 %d)"), Amount);
-			}
-			const FString Desc = Skill->Description_KR.ToString().Replace(TEXT("\\n"), TEXT("\n"));
-			if (!Desc.IsEmpty()) Body += TEXT("\n") + Desc;
-		}
-	}
-
-	// 상태이상
+	// 상태이상 (같은 상태가 쌓였으면 한 줄로 합쳐서)
 	bool bHeader = false;
-	for (const FStatusInstance& Status : State.Statuses)
+	for (const FStatusInstance& Status : Stats->GetDisplayStatuses())
 	{
-		if (Status.Type == EStatusEffect::None) continue;
 		if (!bHeader) { Body += TEXT("\n\n상태"); bHeader = true; }
 		Body += TEXT("\n· ") + GetStatusDisplayName(Status.Type);
 		if (Status.Value > 0) Body += FString::Printf(TEXT(" %d"), Status.Value);

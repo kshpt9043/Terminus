@@ -317,14 +317,56 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(FTerminusDamageRulesTest, "Terminus.Combat.Dama
 
 bool FTerminusDamageRulesTest::RunTest(const FString& Parameters)
 {
-	// 같은 그룹은 하나만: 얼음 다음 침수 -> 침수 하나
+	// 같은 그룹은 쌓임 + 화면엔 한 칸: 얼음 1 다음 침수 3 -> 허약 4, 표시 이름은 나중 것(침수)
 	{
 		UCombatStatsComponent* S = MakeBattler();
 		S->ApplyStatus(EStatusEffect::Ice, 1, 2);
 		S->ApplyStatus(EStatusEffect::Flooding, 3, 2);
-		TestEqual(TEXT("그룹: 항목 하나"), S->GetCombatState().Statuses.Num(), 1);
-		TestEqual(TEXT("그룹: 얼음으로 물어도 침수 수치"), S->GetStatusValue(EStatusEffect::Ice), 3);
-		TestEqual(TEXT("그룹: 표시 이름"), GetStatusDisplayName(S->GetCombatState().Statuses[0].Type), FString(TEXT("허약(침수)")));
+		TestEqual(TEXT("그룹: 얼음으로 물어도 합"), S->GetStatusValue(EStatusEffect::Ice), 4);
+		const TArray<FStatusInstance> Shown = S->GetDisplayStatuses();
+		if (TestEqual(TEXT("그룹: 화면엔 한 칸"), Shown.Num(), 1))
+		{
+			TestEqual(TEXT("그룹: 표시 수치"), Shown[0].Value, 4);
+			TestEqual(TEXT("그룹: 표시 이름"), GetStatusDisplayName(Shown[0].Type), FString(TEXT("허약(침수)")));
+		}
+	}
+
+	// 중독 쌓임 (11-03 피드백 예시): 2(2사이클) + 2(1사이클) + 1(3사이클) -> 턴마다 5 / 3 / 1
+	{
+		UCombatStatsComponent* S = MakeBattler();
+		S->ApplyStatus(EStatusEffect::Poison, 2, 2);
+		S->ApplyStatus(EStatusEffect::Poison, 2, 1);
+		S->ApplyStatus(EStatusEffect::Poison, 1, 3);
+		const TArray<FStatusInstance> Shown = S->GetDisplayStatuses();
+		if (TestEqual(TEXT("중독: 화면엔 한 칸"), Shown.Num(), 1))
+		{
+			TestEqual(TEXT("중독: 표시 수치"), Shown[0].Value, 5);
+			TestEqual(TEXT("중독: 표시 남은 사이클 = 가장 긴 것"), Shown[0].Duration, 3);
+		}
+		for (const int32 Expected : { 5, 3, 1 })
+		{
+			const int32 Before = Health(S);
+			S->OnTurnEnd();
+			TestEqual(FString::Printf(TEXT("중독: 이번 턴 %d"), Expected), Before - Health(S), Expected);
+			S->OnCycleEnd();
+		}
+		TestFalse(TEXT("중독: 다 풀림"), S->HasStatus(EStatusEffect::Poison));
+	}
+
+	// 은형보 두 번 -> 민첩이 더해짐 (11-03 피드백: 덮어써서 안 오르던 문제)
+	{
+		FSkillRow Skill;
+		Skill.ActionKind = EActionKind::EvasionSelf;
+		Skill.TargetType = ETargetType::Self;
+		Skill.ScalingStat = EScalingStat::DEF;
+		Skill.StatusEffect = EStatusEffect::Evasion;
+		Skill.StatusValue = 1;
+		Skill.StatusDuration = 3;
+		UCombatStatsComponent* Caster = MakeBattler(100, 0, 2);
+		const int32 Base = Caster->GetEvasion();
+		FSkillExecutor::Execute(Skill, Caster, { Caster });
+		FSkillExecutor::Execute(Skill, Caster, { Caster });
+		TestEqual(TEXT("은형보 2번: 회피 +(1+2)x2"), Caster->GetEvasion() - Base, 6);
 	}
 
 	// 불굴(정령화): 한 대 1 고정

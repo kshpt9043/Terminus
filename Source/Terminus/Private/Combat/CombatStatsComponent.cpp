@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 
 #include "Combat/CombatStatsComponent.h"
@@ -325,24 +325,13 @@ void UCombatStatsComponent::ApplyStatus(EStatusEffect Type, int32 Value, int32 D
 	}
 	
 	
-	// 같은 그룹이 이미 걸려 있나 찾기. 찾기만 하고 만들진 않음
-	// 배열 안 진짜 항목의 포인터라 여기다 바로 쓰면 원본이 바뀜. 없으면 nullptr 라서 else 에서 직접 Add
-	// 그룹이 같으면 이름(Type)도 새 걸로 바꿈 -> 화면에 최근에 걸린 테마 이름이 보임
-	FStatusInstance* Existing = FindStatus(Type);
-	if (Existing)
-	{
-		Existing->Type = Type;
-		Existing->Value = Value;
-		Existing->Duration = Duration;
-	}
-	else
-	{
-		FStatusInstance NewStatus;
-		NewStatus.Type = Type;
-		NewStatus.Value = Value;
-		NewStatus.Duration = Duration;
-		State.Statuses.Add(NewStatus);
-	}
+	// 걸 때마다 뒤에 하나씩 쌓음 (큐). 수치 / 남은 사이클은 항목마다 따로 줄고, 효과는 합으로 계산
+	// 화면은 GetDisplayStatuses 가 같은 그룹을 한 칸으로 합쳐 보여 줌
+	FStatusInstance NewStatus;
+	NewStatus.Type = Type;
+	NewStatus.Value = Value;
+	NewStatus.Duration = Duration;
+	State.Statuses.Add(NewStatus);
 	
 	NotifyStateChanged();
 }
@@ -406,8 +395,34 @@ bool UCombatStatsComponent::HasStatus(EStatusEffect Type) const
 
 int32 UCombatStatsComponent::GetStatusValue(EStatusEffect Type) const
 {
-	const FStatusInstance* Existing = FindStatus(Type);
-	return Existing ? Existing->Value : 0;
+	// 같은 그룹 항목이 여러 개 쌓여 있으면 전부 더함
+	const EStatusEffect Group = GetStatusGroup(Type);
+	int32 Total = 0;
+	for (const FStatusInstance& S : State.Statuses)
+	{
+		if (GetStatusGroup(S.Type) == Group) Total += S.Value;
+	}
+	return Total;
+}
+
+TArray<FStatusInstance> UCombatStatsComponent::GetDisplayStatuses() const
+{
+	TArray<FStatusInstance> Out;
+	for (const FStatusInstance& S : State.Statuses)
+	{
+		if (S.Type == EStatusEffect::None) continue;
+		const EStatusEffect Group = GetStatusGroup(S.Type);
+		FStatusInstance* Merged = Out.FindByPredicate([Group](const FStatusInstance& M) { return GetStatusGroup(M.Type) == Group; });
+		if (!Merged)
+		{
+			Out.Add(S);
+			continue;
+		}
+		Merged->Type = S.Type;   // 나중에 걸린 테마 이름
+		Merged->Value += S.Value;
+		Merged->Duration = (Merged->Duration < 0 || S.Duration < 0) ? -1 : FMath::Max(Merged->Duration, S.Duration);
+	}
+	return Out;
 }
 
 FStatusInstance* UCombatStatsComponent::FindStatus(EStatusEffect Type)
