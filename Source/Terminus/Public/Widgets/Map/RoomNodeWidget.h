@@ -100,6 +100,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Room")
 	void SetupRoomNode(const FRoomNode& InRoomData, const TMap<ERoomType, UTexture2D*>& IconMap);
 
+	// 고를 수 있을 때의 버튼 모양 (못 고를 땐 호버 / 눌림을 평소 모양으로)
+	FButtonStyle SelectableStyle;
+	bool bStyleSaved = false;
+
 	// 방 종류 설명 (마우스를 올리면 뜨는 툴팁)
 	static FString DescribeRoomType(ERoomType Type);
 

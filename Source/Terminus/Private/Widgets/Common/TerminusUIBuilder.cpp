@@ -375,6 +375,46 @@ namespace TerminusUI
 			Text->SetText(FText::FromString(Value));
 		}
 	}
+	void SetGameTooltip(UWidget* Target, UWidgetTree* Tree, const FString& Text)
+	{
+		if (!Target || !Tree) return;
+		if (Text.IsEmpty())
+		{
+			Target->SetToolTip(nullptr);
+			return;
+		}
+
+		FString Title, Body;
+		if (!Text.Split(TEXT("\n"), &Title, &Body))
+		{
+			Body = Text;   // 한 줄이면 본문만
+		}
+		Body.TrimStartAndEndInline();
+
+		UBorder* Card = Tree->ConstructWidget<UBorder>();
+		Card->SetBrush(MakeBoxBrush(Hex(TEXT("17141C"), 0.96f), Hex(TEXT("C9A55A"), 0.6f), 0.f, 1.f));
+		Card->SetPadding(FMargin(14.f, 10.f));
+		UVerticalBox* Column = Tree->ConstructWidget<UVerticalBox>();
+		Card->SetContent(Column);
+		if (!Title.IsEmpty())
+		{
+			UTextBlock* TitleText = MakeText(Tree, NAME_None, Title, 15, Color::Gold, ETextJustify::Left);
+			SetBold(TitleText);
+			Column->AddChildToVerticalBox(TitleText);
+		}
+		if (!Body.IsEmpty())
+		{
+			UTextBlock* BodyText = MakeText(Tree, NAME_None, Body, 13, Color::TextBody, ETextJustify::Left);
+			BodyText->SetAutoWrapText(false);
+			BodyText->SetWrapTextAt(300.f);
+			if (UVerticalBoxSlot* S = Column->AddChildToVerticalBox(BodyText))
+			{
+				S->SetPadding(FMargin(0.f, Title.IsEmpty() ? 0.f : 6.f, 0.f, 0.f));
+			}
+		}
+		Target->SetToolTip(Card);
+	}
+
 	UItemPickPanelWidget* AttachFloatingPickPanel(UWidgetTree* Tree, TSubclassOf<UItemPickPanelWidget> Class, UWidget*& OutHost)
 	{
 		OutHost = nullptr;

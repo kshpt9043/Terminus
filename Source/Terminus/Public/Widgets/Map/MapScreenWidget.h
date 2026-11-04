@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "CoreMinimal.h"
 #include "Widgets/Common/TerminusUserWidget.h"
@@ -36,6 +36,12 @@ protected:
 	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
 
 	UPROPERTY(meta = (BindWidget)) TObjectPtr<UMapCanvasWidget> MapCanvas;
+
+	// 지도 칸 폭 (WBP 슬롯 값보다 작으면 이 값으로). 열 간격 280 x 3 + 여백 기준
+	UPROPERTY(EditAnywhere, Category = "Map")
+	float MapCanvasWidth = 1240.f;
+
+	FString ShownQuestTip;   // 퀘스트 툴팁을 같은 내용이면 다시 안 만듦
 	UPROPERTY(meta = (BindWidget)) TObjectPtr<UMapTopBarWidget> MapTopBar;
 
 	// 보유 유물 줄. 전투 HUD 와 같은 자리(오른쪽 아래). WBP 에 없으면 루트가 캔버스일 때 C++ 이 만듦

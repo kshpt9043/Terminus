@@ -1,5 +1,7 @@
 ﻿#include "Widgets/Map/MapScreenWidget.h"
 #include "Game/TerminusQuests.h"
+#include "Data/EventQuestTypes.h"
+#include "Data/TerminusDataSettings.h"
 
 #include "Player/TerminusPlayerController.h"
 #include "Widgets/Map/MapCanvasWidget.h"
@@ -18,6 +20,19 @@
 void UMapScreenWidget::NativeOnInitialized()
 {
 	Super::NativeOnInitialized();
+
+	// 지도 칸 폭: WBP 는 780 고정이라 열 간격을 넓히면 오른쪽 방이 잘림 -> 넓혀 줌 (11-04 피드백: 양 옆 빈 공간)
+	if (UCanvasPanelSlot* MapSlot = MapCanvas ? Cast<UCanvasPanelSlot>(MapCanvas->Slot) : nullptr)
+	{
+		FMargin Offsets = MapSlot->GetOffsets();
+		Offsets.Right = FMath::Max(Offsets.Right, MapCanvasWidth);
+		MapSlot->SetOffsets(Offsets);
+	}
+	// 안내 줄(퀘스트) 툴팁이 뜨게: 감싼 상자가 마우스를 통과시키면 안의 글도 못 받음
+	if (HintText && HintText->GetParent())
+	{
+		HintText->GetParent()->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
+	}
 
 	if (!RelicBar)
 	{
@@ -117,9 +132,13 @@ void UMapScreenWidget::RefreshHint()
 	{
 		const FName QuestRow = LocalPS ? LocalPS->GetRunState().ActiveQuest.Quest : NAME_None;
 		const FString QuestTip = QuestRow.IsNone() ? FString() : TerminusQuests::DescribeOffer(QuestRow);
-		if (HintText->GetToolTipText().ToString() != QuestTip)
+		if (ShownQuestTip != QuestTip)
 		{
-			HintText->SetToolTipText(FText::FromString(QuestTip));
+			ShownQuestTip = QuestTip;
+			// 첫 줄 = 의뢰 이름 (금색 제목)
+			const FQuestRow* ActiveQuestRow = UTerminusDataSettings::FindQuestRow(QuestRow);
+			TerminusUI::SetGameTooltip(HintText, WidgetTree, QuestTip.IsEmpty() ? FString()
+				: FString::Printf(TEXT("%s\n%s"), ActiveQuestRow ? *ActiveQuestRow->QuestName.ToString() : TEXT("의뢰"), *QuestTip));
 		}
 		HintText->SetVisibility(QuestTip.IsEmpty() ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Visible);
 	}

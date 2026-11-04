@@ -52,7 +52,7 @@ void URoomNodeWidget::SetupRoomNode(const FRoomNode& InRoomData, const TMap<ERoo
 			Tip += FString::Printf(TEXT("\n\n[%s]\n%s"), *Quest->QuestName.ToString(), *Quest->QuestDesc.ToString());
 		}
 	}
-	RoomButton->SetToolTipText(FText::FromString(Tip));
+	TerminusUI::SetGameTooltip(RoomButton, WidgetTree, Tip);
 
 	// 2. 보스는 아이콘 / 동그라미를 크게 (아이콘 상자 가운데 기준이라 선 위치는 그대로)
 	const float Size = bIsBoss ? BossIconSize : (bSpecial ? IconSize * 1.25f : IconSize);
@@ -97,10 +97,23 @@ void URoomNodeWidget::SetRoomSelectable(bool bSelectable)
 	if (AppliedSelectable.IsSet() && AppliedSelectable.GetValue() == bSelectable) return;
 	AppliedSelectable = bSelectable;
 
-	// 마우스만 통과시켜서 호버 효과 / 클릭이 안 생기게 함
+	// 못 고르는 방도 마우스는 받아야 방 설명 툴팁이 뜸 (11-04 피드백) -> 버튼은 늘 보이게 두고
+	// 호버 / 눌림 모양을 평소 모양으로 바꿔 효과를 없애고, 클릭은 OnButtonClicked 에서 막음
 	// (SetIsEnabled(false) 를 쓰면 Slate 가 비활성 효과로 회색 처리해 버림)
+	if (!bStyleSaved)
+	{
+		SelectableStyle = RoomButton->GetStyle();
+		bStyleSaved = true;
+	}
+	FButtonStyle Style = SelectableStyle;
+	if (!bSelectable)
+	{
+		Style.Hovered = Style.Normal;
+		Style.Pressed = Style.Normal;
+	}
+	RoomButton->SetStyle(Style);
 	RoomButton->SetIsEnabled(true);
-	RoomButton->SetVisibility(bSelectable ? ESlateVisibility::Visible : ESlateVisibility::HitTestInvisible);
+	RoomButton->SetVisibility(ESlateVisibility::Visible);
 }
 
 void URoomNodeWidget::SetVisualState(ERoomNodeState NewState)
@@ -196,6 +209,8 @@ void URoomNodeWidget::NativeConstruct()
 
 void URoomNodeWidget::OnButtonClicked()
 {
+	if (!AppliedSelectable.Get(false)) return;   // 못 고르는 방 (툴팁 때문에 마우스만 받는 중)
+
 	// 버튼 클릭 시 델리게이트 브로드캐스트
 	OnRoomNodeClicked.Broadcast(RoomId);
 }

@@ -104,6 +104,10 @@ namespace TerminusUI
 
 	// WBP 에 고르기 판(ItemPickPanel)이 없을 때: 루트를 겹침 판으로 감싸 화면 가운데에 판을 붙임
 	// OutHost = 판을 감싼 바탕 (처음엔 숨김). 판을 띄우고 닫을 때 같이 보이고 숨길 것
+	// 게임 모양 툴팁 (어두운 판 + 금색 테두리, 첫 줄은 금색 제목 / 나머지는 본문). 기본 SetToolTipText 대신
+	// Text 가 비면 툴팁을 뗌. 첫 줄만 있으면 제목 없이 본문만
+	TERMINUS_API void SetGameTooltip(UWidget* Target, UWidgetTree* Tree, const FString& Text);
+
 	TERMINUS_API UItemPickPanelWidget* AttachFloatingPickPanel(UWidgetTree* Tree, TSubclassOf<UItemPickPanelWidget> Class, UWidget*& OutHost);
 
 	// 둥근 판 브러시 (바탕 + 테두리)

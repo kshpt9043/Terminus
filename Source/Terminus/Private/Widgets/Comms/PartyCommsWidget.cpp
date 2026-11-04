@@ -1,4 +1,4 @@
-#include "Widgets/Comms/PartyCommsWidget.h"
+﻿#include "Widgets/Comms/PartyCommsWidget.h"
 
 #include "Blueprint/WidgetLayoutLibrary.h"
 #include "Blueprint/WidgetTree.h"
@@ -133,7 +133,7 @@ void UPartyCommsWidget::BuildLayout()
 	NudgeLabel = MakeCommsText(WidgetTree, FontSize + 2, TerminusUI::Color::TextBody);
 	TerminusUI::SetBold(NudgeLabel);
 	NudgeButton->SetContent(NudgeLabel);
-	NudgeButton->SetToolTipText(NSLOCTEXT("PartyComms", "NudgeTip", "아직 턴을 끝내지 않은 동료에게 알림을 보냅니다"));
+	TerminusUI::SetGameTooltip(NudgeButton, WidgetTree, TEXT("재촉하기\n아직 턴을 끝내지 않은 동료에게 알림을 보냅니다."));
 	NudgeButton->OnClicked.AddDynamic(this, &UPartyCommsWidget::HandleNudgeClicked);
 	if (UCanvasPanelSlot* NudgeSlot = Root->AddChildToCanvas(NudgeButton))
 	{

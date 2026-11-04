@@ -1256,7 +1256,7 @@ void UCombatHUDWidget::RefreshStatusIcons(FBattlerTag& Tag, const TArray<FStatus
 		if (Status.Duration > 0) Tip += FString::Printf(TEXT(" · 남은 %d사이클"), Status.Duration);
 		const FString Desc = GetStatusDescription(Status.Type);
 		if (!Desc.IsEmpty()) Tip += TEXT("\n") + Desc;
-		Item->SetToolTipText(FText::FromString(Tip));
+		TerminusUI::SetGameTooltip(Item, WidgetTree, Tip);
 		Item->SetVisibility(ESlateVisibility::Visible);
 		Wrap->AddChild(Item);
 	}
