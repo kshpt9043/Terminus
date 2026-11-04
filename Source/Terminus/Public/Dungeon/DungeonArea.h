@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
@@ -105,7 +105,7 @@ public:
 
 	// 픽업 스킬 강화 비용 = 이 값 x 다음 단계 (+1 = 20, +2 = 40, +3 = 60. 임시)
 	UPROPERTY(EditAnywhere, Category = "Dungeon Area|Shop", meta = (ClampMin = "0"))
-	int32 ShopUpgradeCostPerLevel = 20;
+	int32 ShopUpgradeCostPerLevel = 50;
 
 	// 디버그: 다음 이벤트 방이 고를 이벤트 (PC DebugForceEvent). None 이면 무작위. 서버만
 	static FName DebugForcedEvent;

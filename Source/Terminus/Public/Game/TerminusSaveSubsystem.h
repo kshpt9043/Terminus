@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "CoreMinimal.h"
 #include "GameFramework/SaveGame.h"
@@ -93,6 +93,10 @@ public:
 	// 이번 런에 나온 이벤트 (한 런 한 번 이벤트용)
 	UPROPERTY()
 	TArray<FName> SeenEvents;
+
+	// 런 시드 (이벤트 방 고정용). 0 = 예전 세이브
+	UPROPERTY()
+	int32 RunSeed = 0;
 
 	UPROPERTY()
 	TArray<FRunSavePlayer> Players;

@@ -346,11 +346,33 @@ bool FTerminusDamageRulesTest::RunTest(const FString& Parameters)
 		for (const int32 Expected : { 5, 3, 1 })
 		{
 			const int32 Before = Health(S);
+			S->OnTurnStart();
+			TestEqual(FString::Printf(TEXT("중독: 이번 턴 시작 %d"), Expected), Before - Health(S), Expected);
 			S->OnTurnEnd();
-			TestEqual(FString::Printf(TEXT("중독: 이번 턴 %d"), Expected), Before - Health(S), Expected);
-			S->OnCycleEnd();
 		}
 		TestFalse(TEXT("중독: 다 풀림"), S->HasStatus(EStatusEffect::Poison));
+	}
+
+	// 자기 턴에 자기에게 건 1사이클 상태는 그 턴 끝에 안 사라지고 다음 자기 턴 끝까지 (11-04 피드백: 몬스터 강철)
+	{
+		UCombatStatsComponent* S = MakeBattler();
+		S->OnTurnStart();
+		S->ApplyStatus(EStatusEffect::Metal, 0, 1);
+		S->OnTurnEnd();
+		TestTrue(TEXT("강철: 건 턴 끝엔 남음"), S->HasStatus(EStatusEffect::Indomitable));
+		S->OnTurnStart();
+		S->OnTurnEnd();
+		TestFalse(TEXT("강철: 다음 자기 턴 끝에 풀림"), S->HasStatus(EStatusEffect::Indomitable));
+	}
+
+	// 남이 건 1사이클 상태(자기 턴 밖)는 다음 자기 턴 끝에 풀림 -> 그 턴엔 효과가 있음
+	{
+		UCombatStatsComponent* S = MakeBattler();
+		S->ApplyStatus(EStatusEffect::Ice, 1, 1);
+		S->OnTurnStart();
+		TestTrue(TEXT("허약: 자기 턴 동안 걸려 있음"), S->HasStatus(EStatusEffect::Ice));
+		S->OnTurnEnd();
+		TestFalse(TEXT("허약: 자기 턴 끝에 풀림"), S->HasStatus(EStatusEffect::Ice));
 	}
 
 	// 은형보 두 번 -> 민첩이 더해짐 (11-03 피드백: 덮어써서 안 오르던 문제)

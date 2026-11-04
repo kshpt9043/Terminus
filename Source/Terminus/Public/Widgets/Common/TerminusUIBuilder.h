@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "CoreMinimal.h"
 #include "Fonts/SlateFontInfo.h"
@@ -22,6 +22,8 @@ class UWidgetTree;
  *
  * 스타일 가이드 보드 기준: 글꼴 Noto Sans KR, 글자 크기 40 / 22 / 17 / 16 / 13, 판 / 육각 버튼 / 금 구분선
  */
+class UItemPickPanelWidget;
+
 namespace TerminusUI
 {
 	// 글자 크기 단계 (스타일 가이드 02)
@@ -99,6 +101,10 @@ namespace TerminusUI
 
 	// 가운데 판 (배경색 + 안쪽 여백). 6px 둥근 모서리 + 1px 테두리(#3A3F4A)
 	TERMINUS_API UBorder* MakePanel(UWidgetTree* Tree, const FName& Name, const FLinearColor& Color, const FMargin& Padding);
+
+	// WBP 에 고르기 판(ItemPickPanel)이 없을 때: 루트를 겹침 판으로 감싸 화면 가운데에 판을 붙임
+	// OutHost = 판을 감싼 바탕 (처음엔 숨김). 판을 띄우고 닫을 때 같이 보이고 숨길 것
+	TERMINUS_API UItemPickPanelWidget* AttachFloatingPickPanel(UWidgetTree* Tree, TSubclassOf<UItemPickPanelWidget> Class, UWidget*& OutHost);
 
 	// 둥근 판 브러시 (바탕 + 테두리)
 	TERMINUS_API FSlateBrush MakeBoxBrush(const FLinearColor& Fill, const FLinearColor& Outline, float Radius = 6.f, float OutlineWidth = 1.f);

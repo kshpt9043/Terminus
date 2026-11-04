@@ -1,4 +1,4 @@
-#include "Widgets/Map/MapScreenWidget.h"
+﻿#include "Widgets/Map/MapScreenWidget.h"
 #include "Game/TerminusQuests.h"
 
 #include "Player/TerminusPlayerController.h"
@@ -112,6 +112,18 @@ void UMapScreenWidget::RefreshHint()
 	}
 	TerminusUI::SetTextIfChanged(HintText, Hint);
 
+	// 진행 중 퀘스트가 있으면 안내 줄에 마우스를 올려 의뢰 설명을 볼 수 있게 (11-04 피드백)
+	if (HintText)
+	{
+		const FName QuestRow = LocalPS ? LocalPS->GetRunState().ActiveQuest.Quest : NAME_None;
+		const FString QuestTip = QuestRow.IsNone() ? FString() : TerminusQuests::DescribeOffer(QuestRow);
+		if (HintText->GetToolTipText().ToString() != QuestTip)
+		{
+			HintText->SetToolTipText(FText::FromString(QuestTip));
+		}
+		HintText->SetVisibility(QuestTip.IsEmpty() ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Visible);
+	}
+
 	if (HintSubText)
 	{
 		if (!CachedMapManager.IsValid())
@@ -128,7 +140,7 @@ void UMapScreenWidget::RefreshHint()
 		{
 			Sub += FString::Printf(TEXT(" · %d / %d명 선택"), Chosen, Total);
 		}
-		Sub += TEXT(" · 마우스 휠로 지도 이동");
+		Sub += TEXT(" · 마우스 휠 / 스크롤바 / 오른쪽 끌기로 지도 이동");
 		TerminusUI::SetTextIfChanged(HintSubText, Sub);
 	}
 }

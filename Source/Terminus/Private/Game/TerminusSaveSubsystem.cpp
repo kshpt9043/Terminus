@@ -1,4 +1,4 @@
-#include "Game/TerminusSaveSubsystem.h"
+﻿#include "Game/TerminusSaveSubsystem.h"
 
 #include "Character/TerminusBattler.h"
 #include "Combat/CombatStatsComponent.h"
@@ -147,6 +147,7 @@ bool UTerminusSaveSubsystem::SaveCurrentRun(UWorld* World)
 	Save->Theme = MapMgr && MapMgr->FloorTheme ? FSoftObjectPath(MapMgr->FloorTheme.Get()) : Run->GetThemePath();
 	Save->SeenGuardians = Run->GetSeenGuardians();
 	Save->SeenEvents = Run->GetSeenEvents();
+	Save->RunSeed = Run->GetRunSeed();
 
 	// 플레이어. 순서가 매번 같게 PlayerId 순
 	TArray<ATerminusPlayerState*> Players;

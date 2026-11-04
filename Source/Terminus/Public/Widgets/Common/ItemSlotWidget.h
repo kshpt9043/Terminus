@@ -6,6 +6,7 @@
 #include "ItemSlotWidget.generated.h"
 
 class UBorder;
+struct FSkillRow;
 class UButton;
 class UImage;
 class USizeBox;
@@ -48,7 +49,8 @@ class TERMINUS_API UItemSlotWidget : public UTerminusUserWidget
 
 public:
 	void SetEmpty();
-	void SetSkill(FName SkillRow);
+	// Upgraded = 강화 단계를 더한 복사본 (전투 칸 / 상점 강화 카드). 툴팁 수치와 설명이 그 값으로
+	void SetSkill(FName SkillRow, const FSkillRow* Upgraded = nullptr);
 	void SetRelic(FName RelicRow);
 
 	// 선택 / 대상 고르는 중 강조
@@ -170,7 +172,9 @@ private:
 	TEnumAsByte<EHorizontalAlignment> OrigIconHAlign = HAlign_Center;
 	bool bIconAlignSaved = false;
 	void ApplyKindLayout();                 // 유물 / 스킬에 따라 아이콘 맞춤, 이름 글자, 칸 크기
-	bool bBigIcon = false;                  // 유물 / 스킬: 아이콘을 칸에 맞게 키우는 중 (NativeTick 이 실제 자리에 맞춰 줄임)
+	bool bBigIcon = false;
+	int32 ShownSkillBase = 0;               // 같은 스킬이라도 강화 수치가 바뀌면 툴팁을 다시 채움
+	int32 ShownSkillStatus = 0;                  // 유물 / 스킬: 아이콘을 칸에 맞게 키우는 중 (NativeTick 이 실제 자리에 맞춰 줄임)
 
 	void BuildDefaultLayout();
 	void ShowIcon(class UTexture2D* Texture, const FText& Name);

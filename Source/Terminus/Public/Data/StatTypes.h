@@ -75,6 +75,9 @@ struct FStatusInstance
 
 	UPROPERTY(BlueprintReadOnly)
 	int32 Duration = 0;
+
+	// 주인의 자기 턴 중에 걸림 -> 그 턴 끝에는 안 줄어듦 (몬스터가 자기 턴에 건 강철 1사이클이 바로 사라지던 문제)
+	bool bSkipNextTick = false;
 };
 
 /**

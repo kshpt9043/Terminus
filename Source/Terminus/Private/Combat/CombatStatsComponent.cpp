@@ -331,6 +331,7 @@ void UCombatStatsComponent::ApplyStatus(EStatusEffect Type, int32 Value, int32 D
 	NewStatus.Type = Type;
 	NewStatus.Value = Value;
 	NewStatus.Duration = Duration;
+	NewStatus.bSkipNextTick = bOwnTurn;
 	State.Statuses.Add(NewStatus);
 	
 	NotifyStateChanged();
@@ -359,6 +360,7 @@ void UCombatStatsComponent::ClearCombatEffects()
 
 	State.Statuses.Reset();
 	State.Shield = 0;
+	bOwnTurn = false;
 	NotifyStateChanged();
 }
 
@@ -438,20 +440,31 @@ const FStatusInstance* UCombatStatsComponent::FindStatus(EStatusEffect Type) con
 	return State.Statuses.FindByPredicate([Group](const FStatusInstance& S) { return GetStatusGroup(S.Type) == Group; });
 }
 
-void UCombatStatsComponent::OnTurnEnd()
+void UCombatStatsComponent::OnTurnStart()
 {
 	if (!HasAuth())
 	{
 		return;
 	}
+	bOwnTurn = true;
 
-	// 독 걸려있으면 턴 끝날때마다 대미지.
+	// 중독: 자기 턴 시작 때 쌓인 수치 합만큼 (11-04 피드백: 예전엔 턴 끝)
 	const int32 Poison = GetStatusValue(EStatusEffect::Poison);
 	if (Poison > 0)
 	{
 		ApplyDamage(Poison);
 	}
 	// ApplyDamage에 끝났음을 알리는 델리게이트 있어서 여기선 안부름
+}
+
+void UCombatStatsComponent::OnTurnEnd()
+{
+	if (!HasAuth())
+	{
+		return;
+	}
+	bOwnTurn = false;
+	OnCycleEnd();
 }
 
 void UCombatStatsComponent::OnCycleEnd()
@@ -468,6 +481,11 @@ void UCombatStatsComponent::OnCycleEnd()
 	// 지속 효과 전부 1씩 깎기, &로 해야 원본을 건듬. 음수(-1)는 전투 끝까지라 안 깎음
 	for (FStatusInstance& S : State.Statuses)
 	{
+		if (S.bSkipNextTick)
+		{
+			S.bSkipNextTick = false;   // 이번 자기 턴에 걸린 것 -> 다음 자기 턴 끝부터 줄어듦
+			continue;
+		}
 		if (S.Duration > 0)
 		{
 			S.Duration -= 1;

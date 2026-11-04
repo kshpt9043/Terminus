@@ -86,6 +86,10 @@ Q_M_007,중층 강행군 1,중층의 한 층에서 몬스터 방에 4번 이상 
 Q_M_008,중층 강행군 2,중층의 한 층에서 몬스터 방에 5번 이상 입장하세요.,황실,중층,5,False,None,EnterRoomInSingleFloor,MonsterRoom,5,None,None,0,GiveCurrency,Gold,750
 Q_M_009,중층 완전 소탕,중층의 한 층에서 몬스터 방에 6번 이상 입장하세요.,황실,중층,4,False,None,EnterRoomInSingleFloor,MonsterRoom,6,None,None,0,GiveCurrency,Gold,1100
 Q_M_010,중층 정예병 격파,중층의 한 층에서 가디언 방에 2번 이상 입장하세요.,황실,중층,4,False,None,EnterRoomInSingleFloor,GuardianRoom,2,None,None,0,GiveCurrency,DungeonGold,350
+Q_M_011,권갑의 한계 돌파,중층의 가디언 몬스터 3마리를 처치하여 투기를 증명하고 파쇄의 권갑을 천파의 신권으로 각성시키세요.,모험가 길드,중층,4,False,None,KillMonster,Guardian,3,None,None,0,GiveRelic,RLC_Fighter_002,1
+Q_M_012,마도 엔진 출력 개조,중층의 가디언 몬스터 3마리를 처치하고 고출력 코어를 회수하여 마도 엔진을 과충전 마도 엔진으로 개조하세요.,마탑,중층,4,False,None,KillMonster,Guardian,3,None,None,0,GiveRelic,RLC_Engineer_002,1
+Q_M_013,성물의 축성 의식,중층의 가디언 몬스터 3마리를 정화하여 신성력을 입증하고 빛의 석상을 자애로운 빛의 석상으로 축성하세요.,테르미누스,중층,4,False,None,KillMonster,Guardian,3,None,None,0,GiveRelic,RLC_Paladin_002,1
+Q_M_014,무영 비전 전수,중층의 가디언 몬스터 3마리를 암살하여 실력을 증명하고 체술 교본을 무영 체술 비전서로 완성하세요.,모험가 길드,중층,4,False,None,KillMonster,Guardian,3,None,None,0,GiveRelic,RLC_Assassin_002,1
 Q_D_001,심층 재화 회수,심층에서 유통되는 던전 재화를 800개 모으세요.,황실,심층,5,False,None,EarnCurrency,DungeonGold,800,None,None,0,GiveCurrency,Gold,800
 Q_D_002,심층 가디언 토벌 1,심층의 가디언 몬스터 2마리를 처치하세요.,황실,심층,5,False,None,KillMonster,Guardian,2,None,None,0,GiveCurrency,Gold,900
 Q_D_003,심층 가디언 토벌 2,심층의 가디언 몬스터 3마리를 처치하세요.,황실,심층,5,False,None,KillMonster,Guardian,3,None,None,0,GiveCurrency,Gold,1400

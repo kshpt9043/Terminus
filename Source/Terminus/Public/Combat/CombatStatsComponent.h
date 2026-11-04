@@ -127,9 +127,12 @@ public:
 	void SetShieldBonusPercent(int32 Percent) { ShieldBonusPercent = FMath::Max(0, Percent); }
 	int32 GetShieldBonusPercent() const { return ShieldBonusPercent; }
 
-	// 자기 턴 끝
+	// 상태이상은 각자 자기 턴 기준 (11-04 피드백). 1사이클 = 주인의 자기 턴 하나
+	// 자기 턴 시작: 중독 피해
+	void OnTurnStart();
+	// 자기 턴 끝: 상태이상 남은 사이클 1 감소 (OnCycleEnd). 이번 자기 턴에 걸린 건 안 줄임
 	void OnTurnEnd();
-	// 모두 턴 끝 = 사이클 하나 끝
+	// 남은 사이클 1 감소 + 다 된 것 지움
 	void OnCycleEnd();
 
 protected:
@@ -152,6 +155,7 @@ private:
 	bool HasAuth() const;
 
 	bool bEvasionReduction = false;
+	bool bOwnTurn = false;   // OnTurnStart ~ OnTurnEnd 사이 (이때 걸린 상태는 이번 턴 끝에 안 줄어듦)
 	int32 ShieldBonusPercent = 0;
 
 	FStatusInstance* FindStatus(EStatusEffect Type);

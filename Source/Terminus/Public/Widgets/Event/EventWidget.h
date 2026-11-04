@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "CoreMinimal.h"
 #include "Widgets/Common/TerminusUserWidget.h"
@@ -53,6 +53,9 @@ protected:
 
 	// 칸 고르기 (강화 스킬 칸 / 내 유물). 공통 패널
 	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UItemPickPanelWidget> PickPanel;
+
+	// WBP 에 PickPanel 이 없어서 C++ 이 붙인 판의 바탕 (유물 칸이 가득 찬 채 이벤트 유물을 고르면 멈추던 문제)
+	UPROPERTY() TObjectPtr<UWidget> PickHost;
 
 	UPROPERTY(EditAnywhere, Category = "Event")
 	FVector2D CardSize = FVector2D(260.f, 340.f);

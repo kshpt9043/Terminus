@@ -1,4 +1,4 @@
-#include "Widgets/Shop/ShopWidget.h"
+﻿#include "Widgets/Shop/ShopWidget.h"
 
 #include "Blueprint/WidgetTree.h"
 #include "Components/Border.h"
@@ -66,6 +66,12 @@ void UShopWidget::NativeOnInitialized()
 	if (!WidgetTree->RootWidget || !RelicBuyBox)
 	{
 		BuildDefaultLayout();
+	}
+	if (!ReplacePanel)
+	{
+		UWidget* Host = nullptr;
+		ReplacePanel = TerminusUI::AttachFloatingPickPanel(WidgetTree, UTerminusUISettings::Pick(PickPanelClass, &UTerminusUISettings::ItemPickPanel), Host);
+		ReplaceHost = Host;
 	}
 
 	if (ReplacePanel)
@@ -136,6 +142,7 @@ void UShopWidget::SetShopState(const FShopState& InState)
 	State = InState;
 	PendingSkillIndex = INDEX_NONE;
 	if (ReplacePanel) ReplacePanel->Hide();
+	if (ReplaceHost) ReplaceHost->SetVisibility(ESlateVisibility::Collapsed);
 
 	// 내 상태(재화 / 유물 / 스킬 / 강화)가 복제로 바뀌면 다시 그림
 	ATerminusPlayerState* PS = GetOwningPlayer() ? GetOwningPlayer()->GetPlayerState<ATerminusPlayerState>() : nullptr;
@@ -179,7 +186,7 @@ FString UShopWidget::MakeStateKey() const
 	return Key;
 }
 
-void UShopWidget::AddCard(UPanelWidget* Box, bool bRelic, FName Row, const FString& Caption, const FString& ButtonLabel, bool bEnabled, EShopAction Action, int32 Index, bool bUnaffordable)
+void UShopWidget::AddCard(UPanelWidget* Box, bool bRelic, FName Row, const FString& Caption, const FString& ButtonLabel, bool bEnabled, EShopAction Action, int32 Index, bool bUnaffordable, int32 UpgradeLevel)
 {
 	if (!Box) return;
 
@@ -188,7 +195,20 @@ void UShopWidget::AddCard(UPanelWidget* Box, bool bRelic, FName Row, const FStri
 
 	Card->SetSlotClass(SlotClass);
 	Card->SetItem(bRelic, Row, SlotSize);
-	if (UItemSlotWidget* ItemSlot = Card->GetItemSlot()) ItemSlot->SetIconOnly(bIconOnlySlots);
+	if (UItemSlotWidget* ItemSlot = Card->GetItemSlot())
+	{
+		ItemSlot->SetIconOnly(bIconOnlySlots);
+		// 강화 카드: 툴팁 수치도 지금 단계만큼 (BaseValue +단계)
+		if (!bRelic && UpgradeLevel > 0)
+		{
+			if (const FSkillRow* Skill = UTerminusDataSettings::FindSkillRow(Row))
+			{
+				FSkillRow Upgraded = *Skill;
+				Upgraded.BaseValue += UpgradeLevel;
+				ItemSlot->SetSkill(Row, &Upgraded);
+			}
+		}
+	}
 	Card->SetCaption(Caption);
 	Card->SetAction(ButtonLabel, bEnabled, bEnabled ? ShopBuyColor : TerminusUI::Color::ButtonIdle);
 	if (bUnaffordable) Card->SetActionLabelColor(TerminusUI::Color::Alert);   // 재화 부족 = 비용 경고색
@@ -250,18 +270,24 @@ void UShopWidget::Rebuild()
 	if (UpgradeBox)
 	{
 		UpgradeBox->ClearChildren();
+		int32 Shown = 0;
 		for (const FName& Skill : Run.EnhanceSkills)
 		{
+			// 특수 스킬은 강화가 없음 -> 안 띄움
+			const FSkillRow* Row = UTerminusDataSettings::FindSkillRow(Skill);
+			if (!Row || !ATerminusPlayerState::IsUpgradableSkill(*Row)) continue;
+			++Shown;
+
 			const int32 Level = PS ? PS->GetPickupSkillLevel(Skill) : 0;
 			const bool bMax = Level >= ATerminusPlayerState::MaxPickupSkillLevel;
 			const int32 Cost = State.UpgradeCostPerLevel * (Level + 1);
 			AddCard(UpgradeBox, false, Skill, FString::Printf(TEXT("+%d"), Level),
 				bMax ? FString(TEXT(" 최대 ")) : FString::Printf(TEXT(" 강화 %d "), Cost),
-				!bMax && Currency >= Cost, EShopAction::Upgrade, INDEX_NONE, !bMax && Currency < Cost);
+				!bMax && Currency >= Cost, EShopAction::Upgrade, INDEX_NONE, !bMax && Currency < Cost, Level);
 		}
-		if (Run.EnhanceSkills.Num() == 0)
+		if (Shown == 0)
 		{
-			UpgradeBox->AddChild(TerminusUI::MakeText(WidgetTree, NAME_None, TEXT("장착한 픽업 스킬이 없습니다."), 13, TerminusUI::Color::TextDim));
+			UpgradeBox->AddChild(TerminusUI::MakeText(WidgetTree, NAME_None, TEXT("강화할 수 있는 픽업 스킬(공격 / 방어)이 없습니다."), 13, TerminusUI::Color::TextDim));
 		}
 	}
 
@@ -319,6 +345,7 @@ void UShopWidget::ShowReplace()
 {
 	if (ReplacePanel)
 	{
+		if (ReplaceHost) ReplaceHost->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
 		ReplacePanel->ShowEnhanceSkills(FText::FromString(TEXT("강화 스킬 칸이 가득 찼습니다. 바꿀 스킬을 고르세요.")));
 	}
 }

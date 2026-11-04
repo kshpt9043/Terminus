@@ -1001,7 +1001,18 @@ void UCombatHUDWidget::UpdatePanels()
 
 			const FSkillRow* Skill = LocalPS->GetCombatSkill(SkillSlot->GetSlotIndex());
 			const bool bAffordable = Skill && State.Energy >= MyStats->GetEffectiveEnergyCost(Skill->EnergyCost) && State.SkillEnergy >= Skill->SkillEnergyCost;   // 과욕이면 +1
-			SkillSlot->SetSkill(LocalPS->GetCombatSkillRow(SkillSlot->GetSlotIndex()));
+			// 강화 단계(훈련소 / 상점)를 더한 수치로 툴팁
+			const FName SlotRow = LocalPS->GetCombatSkillRow(SkillSlot->GetSlotIndex());
+			if (const FSkillRow* SlotSkill = SlotRow.IsNone() ? nullptr : UTerminusDataSettings::FindSkillRow(SlotRow))
+			{
+				FSkillRow Upgraded = *SlotSkill;
+				LocalPS->ApplyBasicSkillUpgrade(SkillSlot->GetSlotIndex(), Upgraded);
+				SkillSlot->SetSkill(SlotRow, &Upgraded);
+			}
+			else
+			{
+				SkillSlot->SetSkill(SlotRow);
+			}
 			SkillSlot->SetUsable(Skill && bMyTurn && bAffordable);
 			const bool bTargeting = PendingSkillIndex == SkillSlot->GetSlotIndex();
 			SkillSlot->SetSelected(bTargeting);   // 대상 고르는 중인 칸 강조

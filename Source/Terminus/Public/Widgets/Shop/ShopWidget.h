@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "CoreMinimal.h"
 #include "Widgets/Common/TerminusUserWidget.h"
@@ -62,6 +62,9 @@ protected:
 	// 픽업 스킬을 살 때 강화 칸이 꽉 찼으면 바꿀 칸 고르기
 	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UItemPickPanelWidget> ReplacePanel;
 
+	// WBP 에 ReplacePanel 이 없어서 C++ 이 붙인 판의 바탕
+	UPROPERTY() TObjectPtr<UWidget> ReplaceHost;
+
 	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UButton> LeaveButton;
 
 	UPROPERTY(EditAnywhere, Category = "Shop")
@@ -92,7 +95,7 @@ private:
 	void BuildDefaultLayout();
 	void Rebuild();
 	FString MakeStateKey() const;
-	void AddCard(UPanelWidget* Box, bool bRelic, FName Row, const FString& Caption, const FString& ButtonLabel, bool bEnabled, EShopAction Action, int32 Index, bool bUnaffordable = false);
+	void AddCard(UPanelWidget* Box, bool bRelic, FName Row, const FString& Caption, const FString& ButtonLabel, bool bEnabled, EShopAction Action, int32 Index, bool bUnaffordable = false, int32 UpgradeLevel = 0);
 	void ShowReplace();
 
 	void HandleReplacePicked(UItemSlotWidget* ClickedSlot);

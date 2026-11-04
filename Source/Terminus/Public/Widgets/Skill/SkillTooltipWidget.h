@@ -20,7 +20,8 @@ class TERMINUS_API USkillTooltipWidget : public UTerminusUserWidget
 	GENERATED_BODY()
 
 public:
-	void SetSkill(const FSkillRow* InSkill);
+	// Original = 강화 전 DT 행. InSkill 과 BaseValue 가 다르면 설명의 "(5+공격)" 같은 숫자를 강화된 값으로 바꿔 보여 줌
+	void SetSkill(const FSkillRow* InSkill, const FSkillRow* Original = nullptr);
 
 protected:
 	virtual void NativeOnInitialized() override;

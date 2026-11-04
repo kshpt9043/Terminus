@@ -1,4 +1,4 @@
-#include "Game/TerminusQuests.h"
+﻿#include "Game/TerminusQuests.h"
 
 #include "Data/TerminusDataSettings.h"
 #include "Dungeon/DungeonThemeData.h"
@@ -80,7 +80,7 @@ namespace
 				TArray<FName> Candidates;
 				for (const FName& Skill : PS->GetRunState().EnhanceSkills)
 				{
-					if (PS->GetPickupSkillLevel(Skill) < ATerminusPlayerState::MaxPickupSkillLevel) Candidates.AddUnique(Skill);
+					if (PS->CanUpgradePickupSkill(Skill)) Candidates.AddUnique(Skill);
 				}
 				if (Candidates.Num() == 0)
 				{

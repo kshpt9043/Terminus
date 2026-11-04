@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "CoreMinimal.h"
 #include "Map/MapManager.h"
@@ -74,7 +74,7 @@ struct FShopState
 	UPROPERTY(BlueprintReadOnly) TArray<bool> SkillBought;
 
 	// 픽업 스킬 강화 비용 = UpgradeCostPerLevel x (다음 단계)
-	UPROPERTY(BlueprintReadOnly) int32 UpgradeCostPerLevel = 20;
+	UPROPERTY(BlueprintReadOnly) int32 UpgradeCostPerLevel = 50;
 
 	// 마지막 행동 결과 ("구매: 은빛 방패" / "던전 재화가 부족합니다")
 	UPROPERTY(BlueprintReadOnly) FText Message;

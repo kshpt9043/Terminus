@@ -338,11 +338,12 @@ void UItemSlotWidget::SetEmpty()
 	ApplyButtonEnabled();
 }
 
-void UItemSlotWidget::SetSkill(FName SkillRow)
+void UItemSlotWidget::SetSkill(FName SkillRow, const FSkillRow* Upgraded)
 {
-	if (bShownOnce && Kind == EItemSlotKind::Skill && ItemRow == SkillRow) return;
-
 	const FSkillRow* Skill = SkillRow.IsNone() ? nullptr : UTerminusDataSettings::FindSkillRow(SkillRow);
+	const FSkillRow* Shown = Upgraded ? Upgraded : Skill;
+	if (bShownOnce && Kind == EItemSlotKind::Skill && ItemRow == SkillRow && Shown
+		&& Shown->BaseValue == ShownSkillBase && Shown->StatusValue == ShownSkillStatus) return;
 	if (!Skill)
 	{
 		SetEmpty();
@@ -364,7 +365,9 @@ void UItemSlotWidget::SetSkill(FName SkillRow)
 	}
 	if (SkillTooltip)
 	{
-		SkillTooltip->SetSkill(Skill);
+		SkillTooltip->SetSkill(Shown, Skill);
+		ShownSkillBase = Shown->BaseValue;
+		ShownSkillStatus = Shown->StatusValue;
 		SetToolTip(SkillTooltip);
 	}
 

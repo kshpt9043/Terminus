@@ -1,4 +1,4 @@
-#include "Dungeon/DungeonCombatComponent.h"
+﻿#include "Dungeon/DungeonCombatComponent.h"
 
 #include "Character/TerminusBattler.h"
 #include "Character/TerminusMonster.h"
@@ -288,6 +288,7 @@ void UDungeonCombatComponent::BeginBetrayerTurn()
 	{
 		Stats->ClearShield();
 		Stats->RefillEnergy();
+		Stats->OnTurnStart();   // 중독
 		if (const int32 Vitality = Stats->GetStatusValue(EStatusEffect::Vitality); Vitality > 0)
 		{
 			Stats->AddEnergy(Vitality, true);
@@ -747,12 +748,15 @@ void UDungeonCombatComponent::StartCycle()
 		if (CurrentRoomType == ERoomType::BOSS)     FireRelicsForAll(ERelicTrigger::OnBossBattleStart, true, true);
 	}
 
-	// 플레이어 턴 시작: 활력(턴 시작 에너지 +수치) 다음 턴 시작 유물
+	// 플레이어 턴 시작: 중독 피해, 활력(턴 시작 에너지 +수치), 턴 시작 유물
 	for (const TWeakObjectPtr<ATerminusPlayerState>& PS : Players)
 	{
 		if (IsBetrayal() && PS.Get() == Betrayer) continue;
 		UCombatStatsComponent* Stats = GetStats(PS.Get());
 		if (!Stats || Stats->IsDead()) continue;
+
+		Stats->OnTurnStart();
+		if (Stats->IsDead()) continue;
 
 		if (const int32 Vitality = Stats->GetStatusValue(EStatusEffect::Vitality); Vitality > 0)
 		{
@@ -900,7 +904,7 @@ void UDungeonCombatComponent::HandleEndTurn(ATerminusPlayerState* PS)
 
 	EndedTurn.Add(PS);
 
-	// 자기 턴 끝: 중독 피해, 남은 에너지 버림
+	// 자기 턴 끝: 상태이상 남은 사이클 감소, 남은 에너지 버림
 	if (UCombatStatsComponent* Stats = GetStats(PS))
 	{
 		Stats->OnTurnEnd();
@@ -986,6 +990,15 @@ void UDungeonCombatComponent::RunNextMonsterAction()
 
 		// 몬스터 보호막은 "다음 자기 턴이 돌아올 때까지" -> 행동 직전에 버림
 		Stats->ClearShield();
+		Stats->OnTurnStart();   // 중독
+		HideDeadMonsters();
+		if (CheckCombatEnd()) return;
+		if (Stats->IsDead())
+		{
+			// 중독으로 죽었으면 행동 없이 다음 몬스터 (한 마리씩 간격)
+			GetWorld()->GetTimerManager().SetTimer(StepTimer, this, &UDungeonCombatComponent::RunNextMonsterAction, MonsterActionInterval, false);
+			return;
+		}
 		FireRelics(FindHolder(Stats), ERelicTrigger::OnTurnStart);
 		if (Stats->IsDead()) continue;
 
@@ -1003,6 +1016,13 @@ void UDungeonCombatComponent::RunNextMonsterAction()
 			UE_LOG(LogDungeonCombat, Log, TEXT("[Combat]   몬스터 %d -> %s"), NextMonsterIndex - 1, *Skill->DisplayName_KR.ToString());
 		}
 
+		// 이 몬스터의 자기 턴 끝: 상태이상 남은 사이클 감소 (이번 행동에서 자기에게 건 강철 등은 다음 자기 턴까지 남음)
+		if (!Stats->IsDead())
+		{
+			Stats->OnTurnEnd();
+			FireRelics(FindHolder(Stats), ERelicTrigger::OnTurnEnd);
+		}
+
 		HideDeadMonsters();
 		if (CheckCombatEnd()) return;
 
@@ -1016,17 +1036,7 @@ void UDungeonCombatComponent::RunNextMonsterAction()
 
 void UDungeonCombatComponent::FinishCycle()
 {
-	// 몬스터 턴 끝: 몬스터 중독 피해
-	for (UCombatStatsComponent* Stats : GetAliveMonsterStats())
-	{
-		Stats->OnTurnEnd();
-		FireRelics(FindHolder(Stats), ERelicTrigger::OnTurnEnd);
-	}
-
-	// 사이클 끝: 모두의 상태이상 지속시간 1 감소
-	for (UCombatStatsComponent* Stats : GetAliveMonsterStats()) Stats->OnCycleEnd();
-	for (UCombatStatsComponent* Stats : GetAlivePlayerStats())  Stats->OnCycleEnd();
-
+	// 상태이상 시간은 각자 자기 턴 끝에 줄어듦 (HandleEndTurn / RunNextMonsterAction). 여기선 다음 사이클로만
 	HideDeadMonsters();
 	if (CheckCombatEnd()) return;
 
@@ -1609,9 +1619,9 @@ void UDungeonCombatComponent::HandleStatsDamaged(UCombatStatsComponent* Self, in
 
 	FireRelics(Victim, ERelicTrigger::OnTakeDamage, HealthLost);
 
-	// 때린 쪽 (상대편일 때만 '타격')
+	// 때린 쪽 (상대편일 때만 '타격'). 광역 보조 피해는 타격으로 안 침 (엑셀 v1.3: 보호막 중복 획득 차단)
 	const int32 Attacker = FindHolder(Instigator);
-	if (Attacker != INDEX_NONE && Holders[Attacker].bMonster != Holders[Victim].bMonster)
+	if (Attacker != INDEX_NONE && Holders[Attacker].bMonster != Holders[Victim].bMonster && !FSkillExecutor::IsSecondaryHit())
 	{
 		FireRelics(Attacker, ERelicTrigger::OnHitEnemy, HealthLost);
 	}

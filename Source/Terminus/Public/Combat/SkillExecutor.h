@@ -32,7 +32,12 @@ public:
 	// 이 스킬이 거는 상태 전부 (StatusEffect 칸 + 조합 스킬이 같이 거는 것). 스킬 툴팁의 상태이상 설명 창
 	static TArray<EStatusEffect> GetAppliedStatuses(const FSkillRow& Skill);
 
+	// 지금 들어가는 피해가 광역 보조 피해(SecondaryValue)인가. 타격 시(OnHitEnemy) 유물은 주 공격에만 (11-04 엑셀 v1.3)
+	static bool IsSecondaryHit() { return bSecondaryHit; }
+
 private:
+	static bool bSecondaryHit;
+
 	// 수치를 뭘로 쓰는지
 	enum class EValueUse : uint8
 	{

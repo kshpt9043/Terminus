@@ -94,7 +94,7 @@ void USkillTooltipWidget::BuildDefaultLayout()
 	Column->AddChildToVerticalBox(DescText);
 }
 
-void USkillTooltipWidget::SetSkill(const FSkillRow* InSkill)
+void USkillTooltipWidget::SetSkill(const FSkillRow* InSkill, const FSkillRow* Original)
 {
 	if (!InSkill) return;
 
@@ -121,7 +121,19 @@ void USkillTooltipWidget::SetSkill(const FSkillRow* InSkill)
 	if (DescText)
 	{
 		// DT 설명 중 일부에 줄바꿈이 "\n" 글자 그대로 들어가 있어서 진짜 줄바꿈으로
-		DescText->SetText(FText::FromString(InSkill->Description_KR.ToString().Replace(TEXT("\\n"), TEXT("\n"))));
+		FString Desc = InSkill->Description_KR.ToString().Replace(TEXT("\\n"), TEXT("\n"));
+		// 강화로 BaseValue 가 오르면 설명의 "(5+공격)" -> "(6+공격)" (11-04 피드백: 텍스트 수치도 바뀌게)
+		if (Original && Original->BaseValue != InSkill->BaseValue)
+		{
+			Desc = Desc.Replace(*FString::Printf(TEXT("(%d+"), Original->BaseValue), *FString::Printf(TEXT("(%d+"), InSkill->BaseValue));
+			Desc = Desc.Replace(*FString::Printf(TEXT("(%d)"), Original->BaseValue), *FString::Printf(TEXT("(%d)"), InSkill->BaseValue));
+		}
+		// 훈련소 강화가 상태 수치에 붙은 기본 특수 스킬은 문구 대신 줄을 덧붙임
+		if (Original && Original->StatusValue != InSkill->StatusValue)
+		{
+			Desc += FString::Printf(TEXT("\n(강화: 상태 수치 +%d)"), InSkill->StatusValue - Original->StatusValue);
+		}
+		DescText->SetText(FText::FromString(Desc));
 	}
 
 	// 상태이상 창: "허약(얼음)\n수치만큼 공격 스텟이 하락한다." 를 상태마다

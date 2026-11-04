@@ -1,4 +1,4 @@
-#include "Widgets/Event/EventWidget.h"
+﻿#include "Widgets/Event/EventWidget.h"
 
 #include "Blueprint/WidgetTree.h"
 #include "Components/Border.h"
@@ -27,6 +27,12 @@ void UEventWidget::NativeOnInitialized()
 	if (!WidgetTree->RootWidget || !CardBox)
 	{
 		BuildDefaultLayout();
+	}
+	if (!PickPanel)
+	{
+		UWidget* Host = nullptr;
+		PickPanel = TerminusUI::AttachFloatingPickPanel(WidgetTree, UTerminusUISettings::Pick(PickPanelClass, &UTerminusUISettings::ItemPickPanel), Host);
+		PickHost = Host;
 	}
 
 	if (PickPanel)
@@ -171,7 +177,14 @@ void UEventWidget::HandleCardClicked(int32 Index)
 
 void UEventWidget::ShowPick(const FEventOption& Option, bool bSkillSlot)
 {
-	if (!PickPanel) return;
+	if (!PickPanel)
+	{
+		// 고를 판이 없으면 카드를 다시 보여 줌 (안 그러면 아무것도 못 누르고 멈춤)
+		PendingIndex = INDEX_NONE;
+		SetMessage(TEXT("칸이 가득 차서 받을 수 없습니다."));
+		return;
+	}
+	if (PickHost) PickHost->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
 
 	if (!bSkillSlot)
 	{
@@ -203,6 +216,7 @@ void UEventWidget::HandlePickCancel()
 {
 	PendingIndex = INDEX_NONE;
 	if (PickPanel) PickPanel->Hide();
+	if (PickHost) PickHost->SetVisibility(ESlateVisibility::Collapsed);
 	RebuildCards();
 }
 
@@ -211,6 +225,7 @@ void UEventWidget::Send(int32 Index, int32 ReplaceSlot, FName RelicRow)
 	bChosen = true;
 	PendingIndex = INDEX_NONE;
 	if (PickPanel) PickPanel->Hide();
+	if (PickHost) PickHost->SetVisibility(ESlateVisibility::Collapsed);
 	SetMessage(TEXT("..."));
 	RebuildCards();
 

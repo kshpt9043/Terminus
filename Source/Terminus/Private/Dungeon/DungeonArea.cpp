@@ -1,4 +1,5 @@
-#include "Dungeon/DungeonArea.h"
+﻿#include "Dungeon/DungeonArea.h"
+#include "Misc/ScopeExit.h"
 
 #include "Camera/CameraComponent.h"
 #include "Components/ChildActorComponent.h"
@@ -528,7 +529,7 @@ namespace
 			const FSkillRow* Skill = UTerminusDataSettings::FindSkillRow(Row);
 			if (!Skill) continue;
 			if (bAttackOnly && Skill->SkillType != ESkillType::Attack) continue;
-			if (bUpgradableOnly && PS->GetPickupSkillLevel(Row) >= ATerminusPlayerState::MaxPickupSkillLevel) continue;
+			if (bUpgradableOnly && !PS->CanUpgradePickupSkill(Row)) continue;
 			Result.AddUnique(Row);
 		}
 		return Result;
@@ -739,6 +740,13 @@ void ADungeonArea::BeginEvent()
 	EventChosen.Reset();
 	EventGuardianHealth = 0.f;
 	EventGuardianBonus.Reset();
+
+	// 이벤트 고르기 / 선택지 수치 / 무작위 유물을 (런 시드, 층, 방 번호)로 고정
+	// -> 나갔다가 이어하기로 다시 들어와도 같은 이벤트 (끝에서 난수를 다시 섞음)
+	const UTerminusRunSubsystem* SeedRun = GetGameInstance() ? GetGameInstance()->GetSubsystem<UTerminusRunSubsystem>() : nullptr;
+	if (SeedRun) FMath::RandInit(SeedRun->GetRoomSeed(EventCurrentFloor(this), Room.RoomId));
+	ON_SCOPE_EXIT { if (SeedRun) FMath::RandInit(static_cast<int32>(FPlatformTime::Cycles())); };
+
 	CurrentEvent = PickEventRow();
 
 	const FEventRow* Event = CurrentEvent.IsNone() ? nullptr : UTerminusDataSettings::FindEventRow(CurrentEvent);
@@ -1477,6 +1485,12 @@ void ADungeonArea::HandleShopUpgradeSkill(ATerminusPlayerState* PS, FName SkillR
 		|| (Skill->OwnerClass != MyOwner && Skill->OwnerClass != ESkillOwner::Shared))
 	{
 		SendShop(PS, TEXT("이 상점에서는 지금 계층의 내 직업 / 공용 스킬만 강화할 수 있습니다."));
+		return;
+	}
+
+	if (!ATerminusPlayerState::IsUpgradableSkill(*Skill))
+	{
+		SendShop(PS, TEXT("특수 스킬은 강화할 수 없습니다."));
 		return;
 	}
 

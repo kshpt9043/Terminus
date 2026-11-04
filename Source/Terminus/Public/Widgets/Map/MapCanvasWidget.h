@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
 
@@ -46,7 +46,7 @@ public:
 
 	// 열 사이 간격(px). 아이콘이 실제로 보이는 크기(RoomIconVisibleSize)보다 넉넉히 커야 옆 방과 안 붙음
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map Settings", meta = (ClampMin = "50.0"))
-	float ColumnSpacing = 150.0f;
+	float ColumnSpacing = 280.0f;   // 11-04 피드백: 양 옆이 너무 비어서 150 -> 280 (종이도 같이 넓어짐)
 
 	// 줄(레벨) 사이 간격(px). 아이콘 보이는 크기 + 점선이 보일 틈. 좁으면 위아래 방이 붙어서 줄 구분이 안 됨
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map Settings", meta = (ClampMin = "50.0"))

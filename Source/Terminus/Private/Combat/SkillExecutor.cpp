@@ -1,6 +1,8 @@
 ﻿#include "Combat/SkillExecutor.h"
 #include "Combat/CombatStatsComponent.h"
 
+bool FSkillExecutor::bSecondaryHit = false;
+
 void FSkillExecutor::Execute(const FSkillRow& Skill,
 							 UCombatStatsComponent* Caster,
 							 const TArray<UCombatStatsComponent*>& Targets,
@@ -61,6 +63,7 @@ void FSkillExecutor::Execute(const FSkillRow& Skill,
 	if (Recipe.bAoeDamage)
 	{
 		const int32 Aoe = Skill.SecondaryValue + GetEffectiveStat(Caster, EScalingStat::ATK);
+		TGuardValue<bool> SecondaryGuard(bSecondaryHit, true);   // 이 피해로는 타격 시 유물이 안 걸림
 		for (UCombatStatsComponent* O : AllOpponents)
 		{
 			if (O && !O->IsDead())

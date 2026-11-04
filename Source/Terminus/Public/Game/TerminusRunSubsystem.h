@@ -50,6 +50,11 @@ public:
 	const TArray<FName>& GetSeenEvents() const { return SeenEvents; }
 	void AddSeenEvent(FName Row) { SeenEvents.AddUnique(Row); }
 
+	// 런 시드. 새 런마다 하나, 세이브에 같이 남음 -> 이벤트 방은 (시드, 층, 방 번호)로 굴려서 이어하기를 해도 같은 이벤트 (11-04 피드백)
+	int32 GetRunSeed() const { return RunSeed; }
+	// 층 + 방마다 고정된 시드
+	int32 GetRoomSeed(int32 InFloor, int32 RoomId) const { return HashCombine(HashCombine(GetTypeHash(RunSeed), GetTypeHash(InFloor)), GetTypeHash(RoomId)); }
+
 	// 방(던전) 이름. 처음 주점을 열 때(싱글은 시작할 때) 정한 이름이 런 끝까지 유지됨
 	// 주점 목록 / 재합류 대기 / 세이브 목록 / 이어하기로 연 주점에 모두 이 이름
 	const FString& GetRoomName() const { return RoomName; }
@@ -71,6 +76,7 @@ public:
 private:
 	int32 PartySize = 0;
 	int32 Floor = 0;
+	int32 RunSeed = 0;
 	FSoftObjectPath ThemePath;
 	FString SaveSlot;
 	FString RoomName;

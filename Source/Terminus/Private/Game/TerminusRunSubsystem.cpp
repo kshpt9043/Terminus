@@ -10,6 +10,7 @@ void UTerminusRunSubsystem::BeginNewRun(int32 InPartySize)
 	Rooms.Reset();
 	SeenGuardians.Reset();
 	SeenEvents.Reset();
+	RunSeed = FMath::Rand() ^ static_cast<int32>(FPlatformTime::Cycles());
 	SaveSlot = UTerminusSaveSubsystem::MakeNewSlotName();
 
 	// 이름은 주점을 열 때(싱글은 시작할 때) 이미 정해짐. 혹시 비었으면 랜덤
@@ -50,6 +51,8 @@ void UTerminusRunSubsystem::BeginLoadedRun(const UTerminusRunSave& Save)
 	Rooms = Save.Rooms;
 	SeenGuardians = Save.SeenGuardians;
 	SeenEvents = Save.SeenEvents;
+	// 시드가 없는 예전 세이브는 새로 (다음 저장부터 고정)
+	RunSeed = Save.RunSeed != 0 ? Save.RunSeed : (FMath::Rand() ^ static_cast<int32>(FPlatformTime::Cycles()));
 	SaveSlot = Save.Summary.SlotName;
 	RoomName = Save.Summary.RoomName.IsEmpty() ? MakeRandomRoomName() : Save.Summary.RoomName;
 

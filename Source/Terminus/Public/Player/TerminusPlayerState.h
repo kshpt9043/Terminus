@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
 
@@ -92,12 +92,17 @@ public:
 	// BeginRun 때 고른 직업의 강화를 런 스텟 / 기본 스킬 단계에 넣음
 	void SetReportedUpgrades(const TArray<FClassUpgrades>& InUpgrades) { ReportedUpgrades = InUpgrades; }
 
-	// 스킬 강화 단계를 더함. 기본 스킬(0~2 칸)은 훈련소 강화, 강화 스킬 칸(3~)은 픽업 스킬 강화 (상점)
-	// BaseValue 가 있으면 BaseValue, 없으면 StatusValue
+	// 스킬 강화 단계를 더함. 기본 스킬(0~2 칸)은 훈련소 강화(BaseValue 가 있으면 BaseValue, 없으면 StatusValue)
+	// 강화 스킬 칸(3~)은 픽업 스킬 강화 (상점): 공격 / 방어 스킬만 단계당 BaseValue +1 (특수는 강화 없음)
 	void ApplyBasicSkillUpgrade(int32 SlotIndex, FSkillRow& InOutSkill) const;
 
-	// [픽업 스킬 강화] 최대 단계 (기획 스킬 강화: 최대 +3)
-	static constexpr int32 MaxPickupSkillLevel = 3;
+	// [픽업 스킬 강화] 최대 단계. 비용 50 / 100 / 150 / 200 / 250 (11-04 피드백) 이라 5단계
+	static constexpr int32 MaxPickupSkillLevel = 5;
+
+	// 픽업 스킬 강화 대상인가: 공격 / 방어만 (특수는 강화가 안 뜸)
+	static bool IsUpgradableSkill(const FSkillRow& Skill);
+	// 지금 한 단계 더 올릴 수 있나 (공격 / 방어 + 최대 단계 아님)
+	bool CanUpgradePickupSkill(FName SkillRow) const;
 
 	int32 GetPickupSkillLevel(FName SkillRow) const;
 

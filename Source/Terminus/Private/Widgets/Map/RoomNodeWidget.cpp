@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 
 #include "Widgets/Map/RoomNodeWidget.h"
@@ -10,6 +10,9 @@
 #include "Components/Image.h"
 #include "Components/SizeBox.h"
 #include "Widgets/Common/TerminusUIBuilder.h"
+#include "Data/EventQuestTypes.h"
+#include "Data/TerminusDataSettings.h"
+#include "Player/TerminusPlayerState.h"
 #include "Widgets/TerminusUIColors.h"
 
 void URoomNodeWidget::SetupRoomNode(const FRoomNode& InRoomData, const TMap<ERoomType, UTexture2D*>& IconMap)
@@ -33,10 +36,23 @@ void URoomNodeWidget::SetupRoomNode(const FRoomNode& InRoomData, const TMap<ERoo
 		}
 	}
 
-	// 퀘스트 특수 방: 금색 + 조금 크게 + 툴팁 (안 그러면 일반 가디언 방과 구분이 안 됨)
+	// 퀘스트 특수 방: 금색 + 조금 크게 (안 그러면 일반 가디언 방과 구분이 안 됨)
 	const bool bSpecial = !InRoomData.SpecialRoom.IsNone();
 	RoomButton->SetColorAndOpacity(bSpecial ? TerminusUI::Color::Gold : FLinearColor::White);
-	RoomButton->SetToolTipText(bSpecial ? FText::FromString(TEXT("퀘스트 특수 방")) : FText::GetEmpty());
+
+	// 마우스를 올리면 어떤 방인지 (11-04 피드백). 퀘스트 특수 방은 진행 중인 의뢰 설명까지
+	FString Tip = DescribeRoomType(InRoomData.Type);
+	if (bSpecial)
+	{
+		Tip = TEXT("퀘스트 특수 방\n진행 중인 의뢰의 목표 몬스터가 나옵니다.");
+		const ATerminusPlayerState* LocalPS = GetOwningPlayer() ? GetOwningPlayer()->GetPlayerState<ATerminusPlayerState>() : nullptr;
+		const FName QuestRow = LocalPS ? LocalPS->GetRunState().ActiveQuest.Quest : NAME_None;
+		if (const FQuestRow* Quest = QuestRow.IsNone() ? nullptr : UTerminusDataSettings::FindQuestRow(QuestRow))
+		{
+			Tip += FString::Printf(TEXT("\n\n[%s]\n%s"), *Quest->QuestName.ToString(), *Quest->QuestDesc.ToString());
+		}
+	}
+	RoomButton->SetToolTipText(FText::FromString(Tip));
 
 	// 2. 보스는 아이콘 / 동그라미를 크게 (아이콘 상자 가운데 기준이라 선 위치는 그대로)
 	const float Size = bIsBoss ? BossIconSize : (bSpecial ? IconSize * 1.25f : IconSize);
@@ -45,9 +61,32 @@ void URoomNodeWidget::SetupRoomNode(const FRoomNode& InRoomData, const TMap<ERoo
 		IconBox->SetWidthOverride(Size);
 		IconBox->SetHeightOverride(Size);
 	}
-	if (VisitedMark) VisitedMark->SetDesiredSizeOverride(FVector2D(Size, Size));
+	// SetDesiredSizeOverride 는 아직 안 그려진 위젯엔 안 남아서(5.8) 브러시 크기로
+	auto SetImageSize = [](UImage* Image, float Edge)
+	{
+		if (!Image) return;
+		FSlateBrush Brush = Image->GetBrush();
+		Brush.ImageSize = FVector2D(Edge, Edge);
+		Image->SetBrush(Brush);
+	};
+	SetImageSize(VisitedMark, Size);
 	// 동그라미 그림은 상자의 81% 가 고리 -> 아이콘보다 사방 12px 크게 (시안: inset -12)
-	if (CurrentRing) CurrentRing->SetDesiredSizeOverride(FVector2D(Size * 1.7f, Size * 1.7f));
+	SetImageSize(CurrentRing, Size * 1.7f);
+}
+
+FString URoomNodeWidget::DescribeRoomType(ERoomType Type)
+{
+	switch (Type)
+	{
+	case ERoomType::MONSTER:  return TEXT("몬스터 방\n일반 몬스터와 싸웁니다. 이기면 던전 재화와 픽업 스킬 보상.");
+	case ERoomType::GUARDIAN: return TEXT("가디언 방\n강한 가디언 몬스터와 싸웁니다. 이기면 유물 보상.");
+	case ERoomType::BOSS:     return TEXT("보스 방\n이 층의 보스와 싸웁니다. 이기면 다음 층으로.");
+	case ERoomType::BREAK:    return TEXT("휴식 방\n체력을 회복하거나 주변을 탐색합니다.");
+	case ERoomType::STORE:    return TEXT("상점\n던전 재화로 유물과 스킬을 사고, 픽업 스킬을 강화합니다.");
+	case ERoomType::EVENT:    return TEXT("이벤트 방\n무작위 사건. 고르는 선택지에 따라 보상이나 대가가 있습니다.");
+	case ERoomType::QUEST:    return TEXT("의뢰 방\n세력의 의뢰(퀘스트)를 하나 고릅니다.");
+	default:                  return FString();
+	}
 }
 
 void URoomNodeWidget::SetRoomSelectable(bool bSelectable)
@@ -74,9 +113,11 @@ void URoomNodeWidget::SetVisualState(ERoomNodeState NewState)
 		if (Widget) Widget->SetVisibility(bShow ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Hidden);
 	};
 
+	// 지나간 방도 X 대신 동그라미 (11-04 피드백). 지금 방은 진하게, 지나간 방은 조금 흐리게
 	Show(GlowImage, NewState == ERoomNodeState::Available);
-	Show(VisitedMark, NewState == ERoomNodeState::Visited);
-	Show(CurrentRing, NewState == ERoomNodeState::Current);
+	Show(VisitedMark, false);
+	Show(CurrentRing, NewState == ERoomNodeState::Current || NewState == ERoomNodeState::Visited);
+	if (CurrentRing) CurrentRing->SetRenderOpacity(NewState == ERoomNodeState::Visited ? 0.6f : 1.f);
 
 	if (RoomButton)
 	{

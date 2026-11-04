@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
 
@@ -99,6 +99,9 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Room")
 	void SetupRoomNode(const FRoomNode& InRoomData, const TMap<ERoomType, UTexture2D*>& IconMap);
+
+	// 방 종류 설명 (마우스를 올리면 뜨는 툴팁)
+	static FString DescribeRoomType(ERoomType Type);
 
 	// 누를 수 있는 방인가. 못 누르는 방은 호버 효과 / 클릭만 막힘 (모양은 SetVisualState)
 	void SetRoomSelectable(bool bSelectable);

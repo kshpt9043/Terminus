@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 
 #include "Player/TerminusPlayerState.h"
@@ -239,10 +239,18 @@ void ATerminusPlayerState::ApplyBasicSkillUpgrade(int32 SlotIndex, FSkillRow& In
 	if (SlotIndex < 0) return;
 
 	// 0~2 기본 스킬 = 훈련소 단계, 3~ 강화 스킬 칸 = 상점 픽업 스킬 단계
-	const int32 Level = SlotIndex < NumBasicSkills
+	const bool bBasic = SlotIndex < NumBasicSkills;
+	const int32 Level = bBasic
 		? (RunState.BasicSkillLevels.IsValidIndex(SlotIndex) ? RunState.BasicSkillLevels[SlotIndex] : 0)
 		: GetPickupSkillLevel(GetCombatSkillRow(SlotIndex));
 	if (Level <= 0) return;
+
+	// 픽업 스킬: 공격 / 방어만 BaseValue +단계 (특수는 강화 없음)
+	if (!bBasic)
+	{
+		if (IsUpgradableSkill(InOutSkill)) InOutSkill.BaseValue += Level;
+		return;
+	}
 
 	if (InOutSkill.BaseValue != 0)
 	{
@@ -260,9 +268,20 @@ int32 ATerminusPlayerState::GetPickupSkillLevel(FName SkillRow) const
 	return Entry ? Entry->Level : 0;
 }
 
+bool ATerminusPlayerState::IsUpgradableSkill(const FSkillRow& Skill)
+{
+	return Skill.SkillType == ESkillType::Attack || Skill.SkillType == ESkillType::Defense;
+}
+
+bool ATerminusPlayerState::CanUpgradePickupSkill(FName SkillRow) const
+{
+	const FSkillRow* Skill = SkillRow.IsNone() ? nullptr : UTerminusDataSettings::FindSkillRow(SkillRow);
+	return Skill && IsUpgradableSkill(*Skill) && GetPickupSkillLevel(SkillRow) < MaxPickupSkillLevel;
+}
+
 bool ATerminusPlayerState::UpgradePickupSkill(FName SkillRow)
 {
-	if (!HasAuthority() || SkillRow.IsNone()) return false;
+	if (!HasAuthority() || !CanUpgradePickupSkill(SkillRow)) return false;
 
 	FSkillLevelEntry* Entry = RunState.PickupSkillLevels.FindByPredicate([SkillRow](const FSkillLevelEntry& E) { return E.Skill == SkillRow; });
 	if (!Entry)
@@ -594,7 +613,7 @@ void ATerminusPlayerState::ApplyRelicMetaEffect(const FRelicRow& Relic)
 			TArray<FName> Candidates;
 			for (const FName& Skill : RunState.EnhanceSkills)
 			{
-				if (GetPickupSkillLevel(Skill) < MaxPickupSkillLevel) Candidates.AddUnique(Skill);
+				if (CanUpgradePickupSkill(Skill)) Candidates.AddUnique(Skill);
 			}
 			if (Candidates.Num() == 0) break;
 			UpgradePickupSkill(Candidates[FMath::RandRange(0, Candidates.Num() - 1)]);

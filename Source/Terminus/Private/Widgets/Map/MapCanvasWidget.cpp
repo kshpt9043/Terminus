@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 
 #include "Widgets/Map/MapCanvasWidget.h"
@@ -10,6 +10,8 @@
 #include "Components/ScrollBox.h"
 #include "Components/ScrollBoxSlot.h"
 #include "Components/OverlaySlot.h"
+#include "Components/Overlay.h"
+#include "Components/Image.h"
 #include "GameFramework/GameStateBase.h"
 #include "Player/TerminusPlayerController.h"
 #include "TimerManager.h"
@@ -31,6 +33,15 @@ void UMapCanvasWidget::NativeConstruct()
         {
             OverlaySlot->SetHorizontalAlignment(HAlign_Center);
         }
+    }
+
+    // 스크롤바를 보이게 + 오른쪽 버튼 끌기로도 지도 이동 (11-04 피드백: 지도 움직이기 편하게)
+    if (ScrollBox)
+    {
+        ScrollBox->SetScrollBarVisibility(ESlateVisibility::Visible);
+        ScrollBox->SetAlwaysShowScrollbar(true);
+        ScrollBox->SetScrollbarThickness(FVector2D(10.f, 10.f));
+        ScrollBox->SetAllowRightClickDragScrolling(true);
     }
 
     // MapManager / PlayerState 바인딩. 클라에선 둘 다 복제가 위젯 생성보다 늦을 수 있어서
@@ -404,6 +415,21 @@ void UMapCanvasWidget::BuildMapUI(const TArray<FRoomNode>& MapData)
     CachedMapData = MapData;
 
     ComputeLayout(MapData);
+
+    // 종이 배경(캔버스 옆 이미지)을 지도 폭에 맞춤. WBP 는 780 고정이라 열 간격을 넓히면 방이 종이 밖으로 나감
+    if (UOverlay* Holder = Cast<UOverlay>(MapCanvasPanel->GetParent()))
+    {
+        for (UWidget* Child : Holder->GetAllChildren())
+        {
+            if (UImage* Paper = Cast<UImage>(Child))
+            {
+                FSlateBrush Brush = Paper->GetBrush();
+                Brush.ImageSize.X = FMath::Max(Brush.ImageSize.X, MapContentSize.X + 40.f);
+                Paper->SetBrush(Brush);
+                break;
+            }
+        }
+    }
 
     // ------------------------------------------------------------------
     // 연결선 레이어: 캔버스 첫 자식(맨 뒤), 지도 전체 크기로 (0,0) 에.

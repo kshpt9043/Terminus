@@ -1,4 +1,8 @@
-#include "Widgets/Common/TerminusUIBuilder.h"
+﻿#include "Widgets/Common/TerminusUIBuilder.h"
+#include "Widgets/Common/ItemSlotWidget.h"
+#include "Widgets/Common/ItemPickPanelWidget.h"
+#include "Components/Overlay.h"
+#include "Components/OverlaySlot.h"
 
 #include "Blueprint/UserWidget.h"
 #include "Blueprint/WidgetTree.h"
@@ -370,5 +374,31 @@ namespace TerminusUI
 		{
 			Text->SetText(FText::FromString(Value));
 		}
+	}
+	UItemPickPanelWidget* AttachFloatingPickPanel(UWidgetTree* Tree, TSubclassOf<UItemPickPanelWidget> Class, UWidget*& OutHost)
+	{
+		OutHost = nullptr;
+		UWidget* OldRoot = Tree ? Tree->RootWidget : nullptr;
+		if (!OldRoot || !Class) return nullptr;
+
+		UOverlay* Root = Tree->ConstructWidget<UOverlay>(UOverlay::StaticClass(), TEXT("PickOverlayRoot"));
+		Tree->RootWidget = Root;
+		if (UOverlaySlot* S = Root->AddChildToOverlay(OldRoot))
+		{
+			S->SetHorizontalAlignment(HAlign_Fill);
+			S->SetVerticalAlignment(VAlign_Fill);
+		}
+
+		UBorder* Host = MakePanel(Tree, TEXT("PickHost"), Color::Board, FMargin(28.f, 22.f));
+		UItemPickPanelWidget* Panel = Tree->ConstructWidget<UItemPickPanelWidget>(Class, TEXT("PickPanel"));
+		Host->SetContent(Panel);
+		Host->SetVisibility(ESlateVisibility::Collapsed);
+		if (UOverlaySlot* S = Root->AddChildToOverlay(Host))
+		{
+			S->SetHorizontalAlignment(HAlign_Center);
+			S->SetVerticalAlignment(VAlign_Center);
+		}
+		OutHost = Host;
+		return Panel;
 	}
 }
