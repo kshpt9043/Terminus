@@ -1,0 +1,11 @@
+{
+  "name": "slime_fusion",
+  "object": "https://backblaze.pixellab.ai/file/pixellab-characters/objects/a0e72fb6-30d5-48e6-8038-473d53fadd5f/958ac257-57d7-4955-a6b3-69353877e905",
+  "idle": "ea5fa699-f7f6-4b1e-965d-d05f3992b54c",
+  "attack": "dce4addc-8b59-4aa5-905e-1c50e3a5b295",
+  "hit": "8f8e0cb8-fdd3-4910-b91e-d4959a3206d8",
+  "death": "9ebfd376-7f26-49ff-8c5e-5c71c37944fe",
+  "attack_extra_lean": true,
+  "dark_tint": [40, 40, 50],
+  "glow_color": [255, 240, 210]
+}

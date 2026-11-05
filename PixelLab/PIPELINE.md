@@ -159,6 +159,14 @@ python -I PixelLab/tools/recolor_monster.py slime_blue slime_heal 120
 - **몸 색도 바꾸기**: `decor_overlay.py <후보> <원본> <새이름> body=95,0.5,0.75` (에이션트: 이끼·돌과 어울리는 올리브). 후보 png 는 오른쪽을 보는 원본(생성본)을 줄 것.
 - **방어 동작이 칼 팔까지 같이 움직일 때** (장군): 프롬프트로는 안 고쳐진다. 기본 이미지에서 방패 든 자세 한 장을 inpaint 로 만들고, `custom_start_frame` + `end_frame` 으로 사이만 생성한 뒤 `_build.json` 에 `"defend_mode": "raise"` (올리기 → 유지 → 거꾸로 내리기). 사라지는 장식(갑옷띠)은 `"defend_keep": [x0,y0,x1,y1]` 로 기본 이미지에서 다시 그림.
 
+보스(128px, 2026-11-05):
+
+- **긴 base64 를 도구 인자에 붙여 넣지 말 것.** 4~10KB 이미지가 전달 중에 한 글자씩 깨져 두 번 실패했다. `get_upload_url` 로 올리고 `upload:<id>` 를 넘긴다. `animate_object` 의 끝 프레임은 base64 만 받으므로, 끝 프레임을 지정할 땐 **`animate_image(first_frame_url, last_frame_url)`** 를 쓰고 결과를 `_build.json` 의 `attack_local` / `defend_local` 폴더로 넣는다.
+- **생성본 질감이 지저분할 때**(소용돌이 줄무늬·반짝이 점, "slop 같다"): `tools/clean_body.py <이름> slime_big_blue per_frame` — 몸 명암을 펴고 큰 기본 슬라임 팔레트로 같은 비율이 되게 다시 칠함. build_slime 다음에 돌린다.
+- **검 궤도가 뒤로 휘둘러질 때**: 들어 올리는 앞부분만 쓰고, "앞으로 내려친 자세"를 inpaint 로 그려서 머리 위 → 내려친 자세, 내려친 자세 → 기본 자세를 각각 보간. 앞쪽 흰 호는 직접 그림 (`slime_king/_fix_attack.py`).
+- **inpaint 로 팔을 그리면 사람 손(손가락)이 나온다.** 프롬프트에 "stubby round jelly arm nub, no fingers" 를 넣고, 손이 보이는 보간 프레임은 빼는 게 낫다(다시 보간하면 동작이 망가졌다).
+- 여러 색 몸(퓨전)은 방어 때 섞는 진한 색·스페셜 빛 색을 `_build.json` 의 `dark_tint` / `glow_color` 로 바꾼다.
+
 색 + 이펙트는 색을 바꾼 **다음에** `tools/add_slime_fx.py` (결과 폴더를 그 자리에서 고침 → 다시 돌릴 땐 recolor 부터):
 
 ```

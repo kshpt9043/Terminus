@@ -1,0 +1,13 @@
+{
+  "name": "slime_king",
+  "object": "https://backblaze.pixellab.ai/file/pixellab-characters/objects/a0e72fb6-30d5-48e6-8038-473d53fadd5f/6a27e8ef-70ce-44f0-a91b-0a0f7f790c21",
+  "idle": "2f3deb0b-b07d-4a32-bb89-cbb75ec13a06",
+  "attack": "cc569f4f-7ef8-4313-8ba1-f1a5f8f91947",
+  "attack_mode": "raw",
+  "hit": "03fbac07-8d5e-46e4-bb24-6375db59381e",
+  "special": "9c6934d5-c3bd-4297-b639-b4a531c285ff",
+  "death": "e19c6db8-47cb-442b-a0e5-ea5effb3c41d",
+  "defend_local": "_pixellab_src/defend_raise",
+  "defend_mode": "raise",
+  "attack_local": "_pixellab_src/attack_fixed"
+}

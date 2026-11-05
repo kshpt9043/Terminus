@@ -18,6 +18,10 @@
     (장군: 기본 자세 + 방패 든 자세를 end_frame 으로 줘서 사이만 생성. 칼 팔/몸이 같이 움직이는 걸 막음)
   "idle_eyes": [x0, y0, x1, y1] (왼쪽을 보는 기준) 대기 생성본이 눈을 자꾸 감을 때, 기본 이미지의 뜬 눈을 이 칸째로
     프레임마다 몸 움직임에 맞춰 옮겨 붙임 (장군: "눈 너무 깜빡거림")
+  "attack_local": "<폴더>" (이름 폴더 기준, attack_mode raw 일 때) 공격 생성본 대신 이 폴더의 frame_N.png(오른쪽을 봄)를 씀
+    (킹: 생성본 검이 뒤로 휘둘러져서, 생성본 앞부분 + 앞으로 내려친 자세까지 보간 + 복귀 보간으로 다시 조립)
+  "defend_local": "<폴더>" (이름 폴더 기준) 방어 생성본 대신 이 폴더의 frame_N.png(오른쪽을 봄)를 씀.
+    animate_object 에 끝 프레임을 못 넘길 때 animate_image(업로드 URL)로 만든 것 (킹: 칼 꽂기)
   "defend_keep": [x0, y0, x1, y1] (왼쪽을 보는 기준) 이 칸 안의 기본 이미지 장식(갑옷띠 등)을 방어 프레임에 다시 그림.
     방패 든 자세에서 갑옷이 사라지는 걸 막음. 지금 프레임이 몸 색인 곳에만 그려서 방패는 앞에 남음
   "attack_mode": "raw" 이면 공격 생성본을 그대로 씀 (몸통박치기가 아닌 검 휘두르기 등)
@@ -140,6 +144,10 @@ def build_attack(raw, base, scale, extra_lean=False):
     return lunge[:peak + 1] + ret + [base]
 
 
+DARK_TINT = (10, 40, 150)     # 방어 때 섞는 진한 색 (파랑). _build.json "dark_tint" 로 바꿈
+GLOW_COLOR = (170, 230, 255)  # 스페셜 점프 최고점 빛 색. _build.json "glow_color" 로 바꿈
+
+
 def scale_body(im, sx=1.0, sy=1.0, up=0, glow=0.0, dark=0.0):
     """바닥 중앙 기준 늘이기/누르기, 위로 띄우기, 밝게(glow) / 진하게(dark)"""
     x0, y0, x1, y1 = im.getbbox()
@@ -149,10 +157,10 @@ def scale_body(im, sx=1.0, sy=1.0, up=0, glow=0.0, dark=0.0):
     a = body.getchannel("A")
     rgb = body.convert("RGB")
     if dark:
-        deep = Image.new("RGB", rgb.size, (10, 40, 150)).point(lambda v: min(255, v + 40))
+        deep = Image.new("RGB", rgb.size, DARK_TINT).point(lambda v: min(255, v + 40))
         rgb = Image.blend(rgb, ImageChops.multiply(rgb, deep), dark)
     if glow:
-        rgb = Image.blend(rgb, Image.new("RGB", rgb.size, (170, 230, 255)), glow)
+        rgb = Image.blend(rgb, Image.new("RGB", rgb.size, GLOW_COLOR), glow)
     body = Image.merge("RGBA", (*rgb.split(), a))
     out = Image.new("RGBA", im.size, (0, 0, 0, 0))
     out.alpha_composite(body, ((x0 + x1) // 2 - w // 2, y1 - h - up))
@@ -259,6 +267,9 @@ def save_anim(out_dir, name, anim, frames):
 def main():
     cfg = json.load(open(sys.argv[1], encoding="utf-8"))
     name, obj = cfg["name"], cfg["object"]
+    global DARK_TINT, GLOW_COLOR
+    DARK_TINT = tuple(cfg.get("dark_tint", DARK_TINT))      # 여러 색 몸(퓨전)은 무채색으로
+    GLOW_COLOR = tuple(cfg.get("glow_color", GLOW_COLOR))
     out_dir = os.path.join(ROOT, name)
     os.makedirs(out_dir, exist_ok=True)
 
@@ -286,11 +297,19 @@ def main():
     if cfg.get("idle_eyes"):
         idle = paste_eyes(idle, base, cfg["idle_eyes"])
     save_anim(out_dir, name, "idle", idle)
+    if cfg.get("attack_local"):
+        d = os.path.join(out_dir, cfg["attack_local"])
+        n = len([p for p in os.listdir(d) if p.startswith("frame_")])
+        raw["attack"] = [Image.open(os.path.join(d, f"frame_{i}.png")).convert("RGBA") for i in range(n)]
     if cfg.get("attack_mode") == "raw":
         save_anim(out_dir, name, "attack", [L(f) for f in raw["attack"]])
     else:
         save_anim(out_dir, name, "attack", build_attack(raw["attack"], base, scale, cfg.get("attack_extra_lean", False)))
     save_anim(out_dir, name, "hit", build_hit([L(f) for f in raw["hit"][:9]]))
+    if cfg.get("defend_local"):
+        d = os.path.join(out_dir, cfg["defend_local"])
+        n = len([p for p in os.listdir(d) if p.startswith("frame_")])
+        raw["defend"] = [Image.open(os.path.join(d, f"frame_{i}.png")).convert("RGBA") for i in range(n)]
     if cfg.get("defend_mode") == "raise":
         up = [L(f) for f in raw["defend"]]
         if cfg.get("defend_keep"):
