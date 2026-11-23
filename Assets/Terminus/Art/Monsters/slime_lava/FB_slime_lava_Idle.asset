@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4bb7c2439dcbc314d8145c8026b2b559, type: 3}
+  m_Name: FB_slime_lava_Idle
+  m_EditorClassIdentifier: Terminus.Art::Terminus.Art.SpriteFlipbook
+  Frames:
+  - {fileID: 21300000, guid: fb6c8d29b1cb193419cec1f9b7548ee8, type: 3}
+  - {fileID: 21300000, guid: bc9bb52544e6ad14283f49f023a62908, type: 3}
+  - {fileID: 21300000, guid: 4e1911c7cb5c5e54fa1c9839ac577ead, type: 3}
+  - {fileID: 21300000, guid: 6310a0fc32378e1438e17c11d35f76e5, type: 3}
+  - {fileID: 21300000, guid: 9d0de4ccd4e2747478420da449f72a9f, type: 3}
+  - {fileID: 21300000, guid: 6d9df022617615a4798b577626da93d6, type: 3}
+  - {fileID: 21300000, guid: b604c341f9d98c447817c591cc8f5b65, type: 3}
+  - {fileID: 21300000, guid: 99944893113b84e44be7484785c32d9d, type: 3}
+  - {fileID: 21300000, guid: 49726c2d7298dda4780c15ed2680c9a2, type: 3}
+  FramesPerSecond: 10

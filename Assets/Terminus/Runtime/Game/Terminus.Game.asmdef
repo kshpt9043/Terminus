@@ -1,0 +1,19 @@
+{
+    "name": "Terminus.Game",
+    "rootNamespace": "Terminus",
+    "references": [
+        "Terminus.Core",
+        "Terminus.Art",
+        "Unity.Netcode.Runtime",
+        "Unity.InputSystem"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

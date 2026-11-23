@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 237707ce0cc534140beab690ed5c94d0, type: 3}
+  m_Name: slime_ancient
+  m_EditorClassIdentifier: Terminus.Art::Terminus.Art.MonsterVisualSet
+  Idle: {fileID: 11400000, guid: ad5e97c95de848844ba61ab1a86d6441, type: 2}
+  Attack: {fileID: 11400000, guid: 74e82a8401944494b844a404dd8421f2, type: 2}
+  Hit: {fileID: 11400000, guid: 46b286c3b8b6b454d970c4da3bc8c51f, type: 2}
+  Defend: {fileID: 11400000, guid: 8f4aed0f0237bfd4aaacc12dca1c3a2d, type: 2}
+  Special: {fileID: 11400000, guid: 81572b3e14c7cd04cb8b9b4a369ea700, type: 2}
+  Death: {fileID: 11400000, guid: 98a744ba878a1e04a8712757f6357e4b, type: 2}
+  FacesLeft: 1

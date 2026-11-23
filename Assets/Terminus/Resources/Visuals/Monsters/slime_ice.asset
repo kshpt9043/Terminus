@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 237707ce0cc534140beab690ed5c94d0, type: 3}
+  m_Name: slime_ice
+  m_EditorClassIdentifier: Terminus.Art::Terminus.Art.MonsterVisualSet
+  Idle: {fileID: 11400000, guid: 17e9489291b84bf41a793821a7293746, type: 2}
+  Attack: {fileID: 11400000, guid: 5cc66d2cf6124224a9e600e1827210ce, type: 2}
+  Hit: {fileID: 11400000, guid: 45e0e61feac903d4eac415b209c6cfe6, type: 2}
+  Defend: {fileID: 11400000, guid: 75cd72606a1e5614c9cdb45ff2156737, type: 2}
+  Special: {fileID: 11400000, guid: 25de7ef29fee5b8449df42e44e51818f, type: 2}
+  Death: {fileID: 11400000, guid: b8983b8bb60cb8648b5f68653ef2533b, type: 2}
+  FacesLeft: 1

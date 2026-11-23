@@ -1,0 +1,17 @@
+{
+    "name": "Terminus.UI",
+    "rootNamespace": "Terminus.UI",
+    "references": [
+        "Terminus.Core",
+        "Terminus.Art"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 237707ce0cc534140beab690ed5c94d0, type: 3}
+  m_Name: slime_king
+  m_EditorClassIdentifier: Terminus.Art::Terminus.Art.MonsterVisualSet
+  Idle: {fileID: 11400000, guid: 059a970e3885a4c43bbf5f22dd21b864, type: 2}
+  Attack: {fileID: 11400000, guid: f2245971e4e84ec49a1454ffdb1e3b2c, type: 2}
+  Hit: {fileID: 11400000, guid: 4a6a5d57cd6caa64283735d18a6c0ac8, type: 2}
+  Defend: {fileID: 11400000, guid: 8220be7b23016e1499e5a4914d556607, type: 2}
+  Special: {fileID: 11400000, guid: f6471b1076ec9c14c8ee6e8f9de7c5b2, type: 2}
+  Death: {fileID: 11400000, guid: 16ec756c5371967479928e5d057eb079, type: 2}
+  FacesLeft: 1

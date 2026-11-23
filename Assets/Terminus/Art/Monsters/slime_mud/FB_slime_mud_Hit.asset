@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4bb7c2439dcbc314d8145c8026b2b559, type: 3}
+  m_Name: FB_slime_mud_Hit
+  m_EditorClassIdentifier: Terminus.Art::Terminus.Art.SpriteFlipbook
+  Frames:
+  - {fileID: 21300000, guid: ac760fbba59f2d34db90a7abd0aca84d, type: 3}
+  - {fileID: 21300000, guid: 1183c052d67158441b5ef75c217c6090, type: 3}
+  - {fileID: 21300000, guid: 5ba65a9b5afd64748bc086d92b9b6feb, type: 3}
+  - {fileID: 21300000, guid: 29960992d0f1ea74db20047c031961b5, type: 3}
+  - {fileID: 21300000, guid: d7642716d1ebf0742ba9f04beb9e7cd4, type: 3}
+  - {fileID: 21300000, guid: 757151e415b330d4794d3887045a56fe, type: 3}
+  - {fileID: 21300000, guid: ce93cddbc2f649d448d0ad8eddc89334, type: 3}
+  - {fileID: 21300000, guid: 9552a9fb7c8b8514980c729d28079b0a, type: 3}
+  - {fileID: 21300000, guid: 24d6b2f136eb29247a2c826a3b32a465, type: 3}
+  - {fileID: 21300000, guid: efbd35c56bf148d4dae9a0f01f0a34a4, type: 3}
+  FramesPerSecond: 10

@@ -1,0 +1,151 @@
+/*
+ * Terminus UI 테마 (언리얼 Widgets/TerminusUIColors.h + Common/TerminusUIBuilder 이식)
+ * 스타일 가이드 보드(1920x1080) 팔레트. "이 값만 사용"
+ * 여러 화면이 같이 쓰는 색 / 글자 / 버튼만 여기. 화면 하나에서만 쓰는 건 그 화면 USS 에
+ */
+
+:root {
+    /* 배경 / 판 */
+    --t-inset: #111317;        /* 칸 안쪽 / 빈 칸 */
+    --t-board: #1B1E25;        /* 기본 판 / 툴팁 */
+    --t-section: #23272E;      /* 섹션 */
+    --t-card: #262A32;         /* 칸 / 카드 */
+    --t-disabled: #2E333D;     /* 비활성 / 호버 바탕 */
+    --t-line: #3A3F4A;         /* 테두리 */
+
+    /* 글자 */
+    --t-text-body: #ECE3CF;    /* 본문 */
+    --t-text-sub: #C9C1AE;     /* 부제목 */
+    --t-text-aux: #A79F8E;     /* 보조 */
+    --t-text-faint: #8D8778;   /* 흐림 */
+
+    /* 금 / 상태 */
+    --t-gold-hover: #E6C47A;   /* 호버 / 선택 글자 */
+    --t-gold: #C9A45C;         /* 기본 금 (제목 / 구분선) */
+    --t-gold-pressed: #A8894A; /* 눌림 / 어두운 금 */
+    --t-ready: #6FB380;        /* 준비 / 선택됨 */
+    --t-alert: #C23B33;        /* 경고 / 심층 */
+
+    /* 버튼 바탕 (육각 플레이트 안쪽색) */
+    --t-primary-fill: #A8322C;   /* 주 행동 */
+    --t-secondary-fill: #3F7F86; /* 보조 행동 */
+    --t-currency-fill: #A88100;  /* 재화 / 구매 */
+
+    /* 배경 */
+    --t-dim: rgba(0, 0, 0, 0.7);
+    --t-dim-strong: rgba(0, 0, 0, 0.8);
+    --t-window: rgba(17, 19, 23, 0.98);
+
+    /* 던전 지도 화면 (지도 시안 전용. 종이 / 먹 / 파티 판) */
+    --map-outside-paper: #0E0E10;
+    --map-top-bar: #313131;
+    --map-plate: #23202A;
+    --map-party-plate: #3A253D;
+    --map-party-edge: #24162A;
+    --map-chip-fill: #5A4A5C;
+    --map-health: #FF1A4C;
+    --map-health-back: #1A1218;
+    --map-text: #E8DFCB;
+    --map-text-sub: #A89F8C;
+    --map-ink-taken: #2E2B27;
+    --map-ink-default: rgba(179, 173, 166, 0.6);
+    --map-lantern: #FFEDA0;
+    --map-red-ink: #C8352E;
+    --map-blue-torch: #5B8BD9;
+    --map-green-mana: #7BC46A;
+
+    /* 글자 크기 단계 (스타일 가이드 02) */
+    --t-size-title: 40px;     /* 화면 제목 900 */
+    --t-size-section: 22px;   /* 섹션 제목 700 */
+    --t-size-subtitle: 17px;  /* 부제목 500 */
+    --t-size-body: 16px;      /* 본문 400 */
+    --t-size-aux: 13px;       /* 보조 400 */
+
+    -unity-font-definition: url("project://database/Assets/Terminus/UI/Fonts/NotoSansKR-Regular.ttf");
+    color: var(--t-text-body);
+    font-size: var(--t-size-body);
+}
+
+/* ---------------------------------------------------------------- 글자 */
+
+.t-title {
+    font-size: var(--t-size-title);
+    color: var(--t-gold);
+    -unity-font-definition: url("project://database/Assets/Terminus/UI/Fonts/NotoSansKR-Bold.ttf");
+    -unity-text-align: middle-center;
+    letter-spacing: 4px;
+}
+
+.t-section { font-size: var(--t-size-section); -unity-font-definition: url("project://database/Assets/Terminus/UI/Fonts/NotoSansKR-Bold.ttf"); }
+.t-subtitle { font-size: var(--t-size-subtitle); color: var(--t-text-sub); }
+.t-body { font-size: var(--t-size-body); color: var(--t-text-body); }
+.t-aux { font-size: var(--t-size-aux); color: var(--t-text-aux); }
+.t-faint { color: var(--t-text-faint); }
+.t-bold { -unity-font-definition: url("project://database/Assets/Terminus/UI/Fonts/NotoSansKR-Bold.ttf"); }
+.t-warning { color: var(--t-alert); }
+.t-gold { color: var(--t-gold); }
+.t-wrap { white-space: normal; }
+
+/* 월드 위에 뜨는 글자처럼 배경 없이 읽혀야 할 때 */
+.t-shadow { text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.85); }
+
+/* ---------------------------------------------------------------- 판 */
+
+.t-dim { position: absolute; left: 0; top: 0; right: 0; bottom: 0; background-color: var(--t-dim); }
+
+.t-panel {
+    background-color: var(--t-board);
+    border-color: var(--t-line);
+    border-width: 1px;
+    border-radius: 6px;
+    padding: 24px;
+}
+
+.t-window { background-color: var(--t-window); }
+.t-card { background-color: var(--t-card); border-radius: 6px; }
+.t-inset { background-color: var(--t-inset); border-radius: 4px; }
+
+/* 금 구분선 */
+.t-divider { height: 1px; background-color: var(--t-gold); opacity: 0.6; margin: 12px 0; }
+
+/* ---------------------------------------------------------------- 버튼 */
+
+/* 보조 / 작은 버튼 (스타일 가이드 03 "보조 · 비활성": 6px 둥근 판, 호버 금 테두리) */
+.t-button {
+    background-color: var(--t-card);
+    border-color: var(--t-line);
+    border-width: 1px;
+    border-radius: 6px;
+    color: var(--t-text-body);
+    font-size: var(--t-size-body);
+    padding: 6px 16px;
+    margin: 0;
+    transition-duration: 0.08s;
+}
+.t-button:hover { border-color: var(--t-gold); color: var(--t-gold-hover); background-color: var(--t-disabled); }
+.t-button:active { border-color: var(--t-gold-pressed); color: var(--t-gold-pressed); }
+.t-button:disabled { background-color: var(--t-disabled); color: var(--t-text-faint); border-color: var(--t-line); }
+
+/* 육각 플레이트 버튼 (280x56). 육각 그림이 들어오기 전까지 둥근 판으로 */
+.t-hex {
+    width: 280px;
+    height: 56px;
+    border-radius: 18px;
+    border-width: 2px;
+    border-color: var(--t-gold-pressed);
+    color: var(--t-text-body);
+    font-size: var(--t-size-subtitle);
+    -unity-font-definition: url("project://database/Assets/Terminus/UI/Fonts/NotoSansKR-Bold.ttf");
+    -unity-text-align: middle-center;
+    transition-duration: 0.08s;
+}
+.t-hex:hover { border-color: var(--t-gold-hover); color: var(--t-gold-hover); }
+.t-hex:active { border-color: var(--t-gold-pressed); scale: 0.98 0.98; }
+.t-hex:disabled { background-color: var(--t-disabled); color: var(--t-text-faint); border-color: var(--t-line); }
+.t-hex--primary { background-color: var(--t-primary-fill); }
+.t-hex--secondary { background-color: var(--t-secondary-fill); }
+.t-hex--currency { background-color: var(--t-currency-fill); }
+
+/* ---------------------------------------------------------------- 레이어 (UIRoot 가 만듦) */
+
+.t-layer { position: absolute; left: 0; top: 0; right: 0; bottom: 0; }

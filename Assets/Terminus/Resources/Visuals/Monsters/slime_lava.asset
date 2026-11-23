@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 237707ce0cc534140beab690ed5c94d0, type: 3}
+  m_Name: slime_lava
+  m_EditorClassIdentifier: Terminus.Art::Terminus.Art.MonsterVisualSet
+  Idle: {fileID: 11400000, guid: 1bcdc31bd2fd04a468be61e22926887f, type: 2}
+  Attack: {fileID: 11400000, guid: aca5e4aa716b76e489173f06174deeb5, type: 2}
+  Hit: {fileID: 11400000, guid: eb0914702b586ce41928e8f1fd1868f5, type: 2}
+  Defend: {fileID: 11400000, guid: 408a1d53e0746904a92ddf0aae4ec975, type: 2}
+  Special: {fileID: 11400000, guid: 50486f7da4339e24796841116b20e63d, type: 2}
+  Death: {fileID: 11400000, guid: 9621fb1393360c84fbd508d4b5c8673f, type: 2}
+  FacesLeft: 1

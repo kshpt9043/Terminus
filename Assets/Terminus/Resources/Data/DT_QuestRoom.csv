@@ -1,0 +1,13 @@
+﻿RowName,Theme,Floor,SpawnMonster,SpawnValue,Depth
+Room_AncientSlime,슬라임 왕국,2,M_SLI_G03,1,5
+Room_AcidShrine,슬라임 왕국,1,M_SLI_G02,1,7
+Room_MagmaGolem,용암 지대,2,M_LAV_G01,1,5
+Room_AshAltar,용암 지대,1,M_LAV_G03,1,7
+Room_LizardRitual,리자드의 늪,4,M_LIZ_G04,1,5
+Room_AssassinDen,리자드의 늪,3,M_LIZ_G02,1,7
+Room_ElementalAltar,정령계,6,M_ELM_G01,1,5
+Room_StormCore,정령계,5,M_ELM_G03,1,7
+Room_Ifrit,정령계,6,M_ELM_B01,1,12
+Room_Naiad,정령계,6,M_ELM_B02,1,12
+Room_Sylphid,정령계,6,M_ELM_B03,1,12
+Room_Oread,정령계,6,M_ELM_B04,1,12

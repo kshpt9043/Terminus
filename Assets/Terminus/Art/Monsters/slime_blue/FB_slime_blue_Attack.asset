@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4bb7c2439dcbc314d8145c8026b2b559, type: 3}
+  m_Name: FB_slime_blue_Attack
+  m_EditorClassIdentifier: Terminus.Art::Terminus.Art.SpriteFlipbook
+  Frames:
+  - {fileID: 21300000, guid: 474363590ca9bbb4e8db1df193c9af9e, type: 3}
+  - {fileID: 21300000, guid: f6549bbb894f5f743b4b4dc80cb4c9a6, type: 3}
+  - {fileID: 21300000, guid: 78d6151d97ecb0a419e0d519256f20a3, type: 3}
+  - {fileID: 21300000, guid: 1041f1a1f15a01a48a24c6cad9ad6e07, type: 3}
+  - {fileID: 21300000, guid: de35d984039e5704cad32106af028cf3, type: 3}
+  - {fileID: 21300000, guid: 6b7b88eda83b0a54b8218feded5f40c1, type: 3}
+  - {fileID: 21300000, guid: 502ecd3289154cc49bb73eb501d845bc, type: 3}
+  - {fileID: 21300000, guid: 47b8444ac5029e34b9eca31503babc55, type: 3}
+  - {fileID: 21300000, guid: 9de13e2e85f562d4e9416ff3a5842b38, type: 3}
+  - {fileID: 21300000, guid: d4ec7b44be2295244a4a5759a27cc651, type: 3}
+  FramesPerSecond: 10

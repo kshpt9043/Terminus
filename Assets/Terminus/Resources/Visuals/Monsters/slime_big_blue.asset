@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 237707ce0cc534140beab690ed5c94d0, type: 3}
+  m_Name: slime_big_blue
+  m_EditorClassIdentifier: Terminus.Art::Terminus.Art.MonsterVisualSet
+  Idle: {fileID: 11400000, guid: d568142f1ca2a8747bf35999de40a1d4, type: 2}
+  Attack: {fileID: 11400000, guid: 235d3e7901fb74149b8cd7cb93ec5191, type: 2}
+  Hit: {fileID: 11400000, guid: 5111615ccaa753040add8d30aaff4b06, type: 2}
+  Defend: {fileID: 11400000, guid: 3bb7a593f0f19fd4b9fd62c073f77dda, type: 2}
+  Special: {fileID: 11400000, guid: fb933603632101e4b9811046899920ed, type: 2}
+  Death: {fileID: 11400000, guid: 77cef0b581e01b94a8c4e0315409360d, type: 2}
+  FacesLeft: 1

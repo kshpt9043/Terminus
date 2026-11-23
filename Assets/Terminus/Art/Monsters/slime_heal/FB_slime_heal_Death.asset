@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4bb7c2439dcbc314d8145c8026b2b559, type: 3}
+  m_Name: FB_slime_heal_Death
+  m_EditorClassIdentifier: Terminus.Art::Terminus.Art.SpriteFlipbook
+  Frames:
+  - {fileID: 21300000, guid: 458d0d603c09c69419fa7871423d3442, type: 3}
+  - {fileID: 21300000, guid: f87e07e27b6e1a1439379101c04ad3ad, type: 3}
+  - {fileID: 21300000, guid: 2c666cf14785548428da3b9fd13181c5, type: 3}
+  - {fileID: 21300000, guid: 819a30e2ccfe956459c173adee8a10bf, type: 3}
+  - {fileID: 21300000, guid: 359f6e9391e028e4dab44b928a07db49, type: 3}
+  - {fileID: 21300000, guid: fb33bcdc104ccd845b4765bd79f3bf7b, type: 3}
+  - {fileID: 21300000, guid: 1318b7af6c07f5f438ec186791e755e4, type: 3}
+  - {fileID: 21300000, guid: 6dbf7d597f679554e96fabc4df0b68b8, type: 3}
+  - {fileID: 21300000, guid: 23b8130fb23c7b040961d9bcc1f4d438, type: 3}
+  - {fileID: 21300000, guid: 01cbf179d0b201741aea48802f36da12, type: 3}
+  - {fileID: 21300000, guid: 3e75f0488e66171408c37aae6016a018, type: 3}
+  - {fileID: 21300000, guid: d6df7d3922d05284eaf4987d086055c6, type: 3}
+  - {fileID: 21300000, guid: a9f3201bf867b1142a768c1fbd0081ef, type: 3}
+  FramesPerSecond: 10

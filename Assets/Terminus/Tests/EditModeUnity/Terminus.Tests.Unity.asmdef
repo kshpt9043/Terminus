@@ -1,0 +1,26 @@
+{
+    "name": "Terminus.Tests.Unity",
+    "rootNamespace": "Terminus.Tests",
+    "references": [
+        "Terminus.Core",
+        "Terminus.Art",
+        "Terminus.Game",
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

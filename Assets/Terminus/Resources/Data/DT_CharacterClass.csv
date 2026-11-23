@@ -1,0 +1,7 @@
+﻿RowName,Class,DisplayName,Description,PassiveText,Illustration,Faction,BaseStats.MaxHealth,BaseStats.Attack,BaseStats.Defense,BaseStats.Evasion,BaseStats.MaxEnergy,BaseStats.MaxSkillEnergy,BaseStats.StartSkillEnergy,BaseStats.EnhanceSlots,BaseStats.MaxRelics,AnimInstanceClass
+Fighter,Fighter,무도가,무도가 설명,무도가 패시브 설명,AICON-Red,AdventurersGuild,70,0,0,0,3,2,0,3,6,ABP_Monk
+Engineer,Engineer,마도 공학자,마도공학자 설명,마도공학자 패시브,AICON-Green,MageTower,60,0,0,0,3,2,0,3,6,ABP_Engineer
+Paladin,Paladin,성기사,,,,Religion,70,0,0,0,3,2,0,3,6,ABP_Paladin
+Assassin,Assassin,암살자,,"체술: 회피를 4 획득한다.
+회피: 상대의 공격을 회피 수치만큼 감소시킨 뒤 데미지를 적용한다.
+보호막이 있으면 보호막에 감소된 이후의 데미지만큼 체술이 적용된다.",,Empire,55,0,0,4,3,2,0,3,6,ABP_Assassin

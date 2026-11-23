@@ -1,0 +1,20 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4bb7c2439dcbc314d8145c8026b2b559, type: 3}
+  m_Name: FB_Paladin_Idle
+  m_EditorClassIdentifier: Terminus.Art::Terminus.Art.SpriteFlipbook
+  Frames:
+  - {fileID: 21300000, guid: d28d49930169bcf4dbf8563ede923012, type: 3}
+  - {fileID: 21300000, guid: e6b39737de44df94a882d97fe467664f, type: 3}
+  - {fileID: 21300000, guid: f008b2103e8002e48a402c794cf28241, type: 3}
+  - {fileID: 21300000, guid: 4475c7346d22e294faae1b8962df4d2e, type: 3}
+  FramesPerSecond: 10
