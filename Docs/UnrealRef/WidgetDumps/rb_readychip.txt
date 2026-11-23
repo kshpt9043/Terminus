@@ -1,0 +1,2 @@
+/Game/KSH/Widgets/RoundBlocks/RB_ReadyChip.RB_ReadyChip
+[0] Border Border_23  Background:(TintColor=(SpecifiedColor=(R=0.158961,G=0.450786,B=0.215861,A=1.000000)),DrawAs=RoundedBox,OutlineSettings=(CornerRadii=(X=0.000000,Y=0.000000,Z=0.000000,W=0.080000),RoundingType=FixedRadius))

@@ -1,0 +1,2 @@
+/Game/KSH/Widgets/RoundBlocks/RB_Passive.RB_Passive
+[0] Border Border_23  Background:(TintColor=(SpecifiedColor=(R=0.584078,G=0.371238,B=0.107023,A=1.000000)),DrawAs=RoundedBox,OutlineSettings=(CornerRadii=(X=0.000000,Y=0.000000,Z=0.000000,W=0.080000),Color=(SpecifiedColor=(R=0.584078,G=0.371238,B=0.107023,A=1.000000)),Width=1.000000,RoundingType=FixedRadius))

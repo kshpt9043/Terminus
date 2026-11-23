@@ -14,8 +14,24 @@ namespace Terminus.Art.EditorTools
         // 64px 몬스터 = 1 유닛. 보스(128px)는 2 유닛
         public const float PixelsPerUnit = 64f;
 
+        // 언리얼 UI 텍스처 (육각 버튼 판 / 지도 종이 / 전투 띠 / 배경). 픽셀아트가 아니라 부드러운 필터
+        public const string UiTextureRoot = "Assets/Terminus/Resources/UI/Textures/";
+
         void OnPreprocessTexture()
         {
+            if (assetPath.StartsWith(UiTextureRoot))
+            {
+                var ui = (TextureImporter)assetImporter;
+                ui.textureType = TextureImporterType.Sprite;
+                ui.spriteImportMode = SpriteImportMode.Single;
+                ui.filterMode = FilterMode.Bilinear;
+                ui.textureCompression = TextureImporterCompression.Uncompressed;
+                ui.mipmapEnabled = false;
+                ui.alphaIsTransparency = true;
+                ui.wrapMode = TextureWrapMode.Clamp;
+                ui.npotScale = TextureImporterNPOTScale.None;
+                return;
+            }
             if (!assetPath.StartsWith(ArtRoot) && !assetPath.StartsWith(IconRoot)) return;
 
             var importer = (TextureImporter)assetImporter;

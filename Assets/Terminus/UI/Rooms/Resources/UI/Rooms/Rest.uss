@@ -1,0 +1,27 @@
+/*
+ * 휴식터 (언리얼 URestWidget + WBP_RestWidget). 클래스 접두사 rest-
+ * WBP 는 고정 좌표 (기준 1920x1080, 왼쪽 위 기준)
+ */
+
+/* [4] TitleText (485, 213) */
+.rest-title {
+    position: absolute;
+    left: 485px;
+    top: 213px;
+}
+
+/* [3] MessageText (484, 364). WBP 는 줄바꿈 없이 그대로 (글 안의 줄바꿈만) */
+.rest-message {
+    position: absolute;
+    left: 484px;
+    top: 364px;
+}
+
+/* [2] OptionBox (506.4, 592) 내용 크기. 선택지 520x74 이상, 아래 12 */
+.rest-options {
+    position: absolute;
+    left: 506px;
+    top: 592px;
+    flex-direction: column;
+    align-items: flex-start;
+}

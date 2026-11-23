@@ -5,7 +5,9 @@
         "Terminus.Core",
         "Terminus.Art",
         "Terminus.Game",
-        "Unity.Netcode.Runtime"
+        "Unity.Netcode.Runtime",
+        "Unity.InputSystem",
+        "UnityEngine.UI"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

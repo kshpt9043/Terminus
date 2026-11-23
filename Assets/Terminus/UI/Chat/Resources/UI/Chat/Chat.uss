@@ -1,0 +1,48 @@
+/*
+ * 채팅창 (언리얼 UChatWidget / WBP_Chat). 코드에서 ChatView 가 붙임. 클래스 접두사 ct-
+ * 배치 / 상태 색은 코드가 넣고, 여기는 입력칸 기본 모양 지우기 / 스크롤바 숨기기만
+ */
+
+/* 입력칸: 바탕 / 테두리 없이 글자만 (WBP InputBox: DrawAs NoDrawType, 글자 14 #ECE3CF) */
+.ct-input {
+    flex-grow: 1;
+    margin: 0;
+    padding: 0;
+}
+.ct-input > .unity-base-text-field__input,
+.ct-input .unity-text-field__input {
+    background-color: rgba(0, 0, 0, 0);
+    border-width: 0;
+    padding: 0;
+    margin: 0;
+    color: #ECE3CF;
+    font-size: 14px;
+    -unity-font-definition: url("project://database/Assets/Terminus/UI/Fonts/NotoSansKR-Regular.ttf");
+    --unity-cursor-color: #ECE3CF;
+    --unity-selection-color: rgba(201, 164, 92, 0.45);
+}
+.ct-input:focus > .unity-base-text-field__input,
+.ct-input:hover > .unity-base-text-field__input {
+    background-color: rgba(0, 0, 0, 0);
+    border-width: 0;
+}
+
+/* 메시지 목록: 스크롤바 없음 (WBP ScrollBarVisibility Collapsed) */
+.ct-list .unity-scroller {
+    display: none;
+}
+.ct-list > .unity-scroll-view__content-viewport > .unity-scroll-view__content-container {
+    justify-content: flex-end;
+}
+
+.ct-line-text {
+    margin: 0;
+    padding: 0;
+    white-space: nowrap;
+}
+.ct-line-fill {
+    flex-grow: 1;
+    flex-shrink: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}

@@ -72,6 +72,7 @@ namespace Terminus.Game
 
             _session.FillExtraInfo = FillPlayerInfo;
             _session.MemberLeft += OnMemberLeft;
+            BuildRift();
 
             StartFirstFloor();
 
@@ -99,7 +100,9 @@ namespace Terminus.Game
             {
                 _session.FillExtraInfo = null;
                 _session.MemberLeft -= OnMemberLeft;
+                _session.MemberJoinedMidRun -= OnMemberJoinedMidRun;
             }
+            NetworkRoot.CanRejoinMidRun = null;
         }
 
         // ------------------------------------------------------------ 준비
@@ -383,21 +386,24 @@ namespace Terminus.Game
                 MapFloor = _floor.CurrentFloor,
                 MapTheme = _floor.FloorTheme != null ? _floor.FloorTheme.Id : "",
             };
+            // 세이브의 플레이어 아이디는 온라인 아이디 (연결 번호는 다시 들어오면 바뀜). 이어하기 / 이공간이 이걸로 사람을 맞춤
             foreach (var p in _players.Values)
             {
-                if (p.bConnected) req.Players.Add(RunSavePlayer.FromLive(p.Id.ToString(), p.Name, p.RunState, p.Battler.State.Health));
-                else req.DepartedPlayers.Add(RunSavePlayer.FromDeparted(p.Id.ToString(), p.Name, p.RunState));
+                var onlineId = _session.Find(p.Id)?.OnlineId ?? "";
+                if (p.bConnected) req.Players.Add(RunSavePlayer.FromLive(onlineId, p.Name, p.RunState, p.Battler.State.Health));
+                else req.DepartedPlayers.Add(RunSavePlayer.FromDeparted(onlineId, p.Name, p.RunState));
+            }
+            // 나가서 이공간에서 기다리는 사람 (배틀러가 없어 _players 에 없음)
+            if (_rift != null)
+            {
+                foreach (var d in _rift.DepartedPlayers)
+                {
+                    req.DepartedPlayers.Add(RunSavePlayer.FromDeparted(d.PlayerId, d.PlayerName, d.RunState));
+                }
             }
             if (_session.Saves.SaveCurrentRun(_session.Run, req)) _session.SystemChat("자동 저장했습니다.");
         }
 
-        void OnMemberLeft(ServerSession.Member member)
-        {
-            if (!_players.TryGetValue(member.ClientId, out var p)) return;
-            p.bConnected = false;
-            _areas.HandlePlayerLeft(p);
-            _floor.RequestPlayerCountRefresh?.Invoke();
-        }
 
         // ------------------------------------------------------------ 스냅샷
 
@@ -449,6 +455,7 @@ namespace Terminus.Game
                     info.bBetrayal = combat.IsBetrayal();
                     info.BetrayerId = combat.Betrayer != null ? combat.Betrayer.Id : 0;
                     info.bBetrayerTurn = combat.IsBetrayerTurn();
+                    info.bBetrayerWon = combat.DidBetrayerWin();
                     foreach (var m in combat.Monsters)
                     {
                         var visual = GameData.FindMonsterVisualRow(m.RowName);

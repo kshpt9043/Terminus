@@ -1,0 +1,2 @@
+/Game/JSY/Widget/Map/WBP_RoomTopBar.WBP_RoomTopBar
+[0] VerticalBox RoomTopBarPlaceholder

@@ -1,0 +1,93 @@
+/*
+ * 던전 지도 화면 (언리얼 WBP_MapScreen / WBP_MapCanvasWidget / WBP_RoomNodeWidget / WBP_MapTopBar / WBP_ProfilCard /
+ * WBP_FloorTitle / WBP_FloorVote / WBP_Spectate / WBP_Rift). 코드에서 DungeonStyle.Use(element) 로 붙음
+ * 배치 / 크기는 코드가 넣고, 여기는 상태(호버 / 눌림) 와 반복되는 꾸밈만. 클래스 접두사 dm-
+ * 덤프 색은 선형 -> sRGB 로 바꾼 값 (주석에 원래 선형 값)
+ */
+
+.dm-fill {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+}
+
+/* ================================================================ 방 아이콘 (WBP_RoomNodeWidget RoomButton)
+ * 버튼 브러시 = 방 종류 아이콘. 틴트: 보통 흰색 / 호버 (1, 0.93, 0.72) / 눌림 (0.8, 0.74, 0.62)
+ * 못 고르는 방은 호버 / 눌림 효과 없음 (SetRoomSelectable). 퀘스트 특수 방은 금색 틴트
+ */
+.dm-room__icon {
+    -unity-background-image-tint-color: rgb(255, 255, 255);
+}
+.dm-room--selectable .dm-room__icon:hover { -unity-background-image-tint-color: #FFF7DD; }
+.dm-room--selectable .dm-room__icon:active { -unity-background-image-tint-color: #E7DFCE; }
+.dm-room--special .dm-room__icon { -unity-background-image-tint-color: #C9A45C; }
+.dm-room--special.dm-room--selectable .dm-room__icon:hover { -unity-background-image-tint-color: #C99F50; }
+.dm-room--special.dm-room--selectable .dm-room__icon:active { -unity-background-image-tint-color: #B6904B; }
+
+/* ================================================================ 지도 스크롤 (스크롤바 10px, 늘 보임) */
+.dm-map-scroll .unity-scroller--vertical {
+    width: 10px;
+    background-color: rgba(0, 0, 0, 0);
+    border-width: 0;
+}
+.dm-map-scroll .unity-scroller--vertical .unity-base-slider__tracker {
+    background-color: rgba(0, 0, 0, 0.25);
+    border-width: 0;
+}
+.dm-map-scroll .unity-scroller--vertical .unity-base-slider__dragger {
+    background-color: rgba(232, 223, 203, 0.35);
+    border-width: 0;
+    border-radius: 5px;
+    width: 10px;
+    left: 0;
+}
+.dm-map-scroll .unity-scroller--vertical .unity-base-slider__dragger:hover {
+    background-color: rgba(232, 223, 203, 0.55);
+}
+.dm-map-scroll .unity-scroller__low-button,
+.dm-map-scroll .unity-scroller__high-button {
+    display: none;
+}
+.dm-map-scroll .unity-scroller--vertical .unity-base-slider__drag-container {
+    margin: 0;
+}
+
+/* ================================================================ 상단바 나가기 버튼 (WBP_MapTopBar ExitButton)
+ * 보통 (0.016807, 0.014444, 0.023153) #23202A / 호버 (0.042311, 0.0185, 0.046665) #3A253D + 테두리 #5A4A5C
+ * 눌림 #1A1816. 안쪽 14 / 6 (눌리면 7 / 5)
+ */
+.dm-exit {
+    margin: 0 0 0 12px;
+    padding: 6px 14px 6px 14px;
+    background-color: #23202A;
+    border-width: 1px;
+    border-color: #1A1816;
+    border-radius: 0;
+    color: #E8DFCB;
+    font-size: 14px;
+    -unity-text-align: middle-center;
+    transition-duration: 0s;
+}
+.dm-exit:hover { background-color: #3A253D; border-color: #5A4A5C; color: #E8DFCB; }
+.dm-exit:active { background-color: #1A1816; border-color: #1A1816; padding-top: 7px; padding-bottom: 5px; }
+
+/* ================================================================ 이공간 나가기 버튼 (WBP_Rift LeaveButton)
+ * 보통 #262A32 + 테두리 #3A3F4A / 호버 #2E333D + 금 테두리 / 눌림 #23272E + #A8894A. 모서리 6, 안쪽 24 / 10 + 글자 12 / 4
+ */
+.dm-rift-leave {
+    margin: 32px 0 0 0;
+    padding: 14px 36px 14px 36px;
+    background-color: #262A32;
+    border-width: 1px;
+    border-color: #3A3F4A;
+    border-radius: 6px;
+    color: #ECE3CF;
+    font-size: 16px;
+    -unity-text-align: middle-center;
+    align-self: center;
+    transition-duration: 0s;
+}
+.dm-rift-leave:hover { background-color: #2E333D; border-color: #C9A45C; color: #ECE3CF; }
+.dm-rift-leave:active { background-color: #23272E; border-color: #A8894A; padding-top: 15px; padding-bottom: 13px; }

@@ -1,0 +1,349 @@
+/*
+ * 전투 HUD (언리얼 UCombatHUDWidget + WBP_CombatUI). 코드: Runtime/UI/Combat/CombatHud*.cs (CombatLooks.Use 로 붙음)
+ * 배치 = WBP_CombatUI 덤프 (기준 1920x1080). 색은 덤프의 선형 색을 sRGB 로 바꾼 값
+ * 클래스 접두사 ch-
+ */
+
+.ch-root { position: absolute; left: 0; top: 0; right: 0; bottom: 0; }
+.ch-fill { position: absolute; left: 0; top: 0; right: 0; bottom: 0; }
+
+/* ================================================================ [1] RoomPlate (왼쪽 위 28, 24) */
+.ch-roomplate {
+    position: absolute;
+    left: 28px;
+    top: 24px;
+    padding: 10px 18px 10px 18px;
+    background-color: rgba(26, 24, 32, 0.82);   /* (0.010330, 0.009134, 0.014444, 0.82) */
+    border-width: 1px;
+    border-color: #3A3542;                       /* (0.042311, 0.035601, 0.054480) */
+    border-radius: 2px;
+}
+
+/* ================================================================ [3] PhaseBand (위 가운데 760x64, 위 20) */
+.ch-phaseband {
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    width: 760px;
+    height: 64px;
+    translate: -50% 0;
+    align-items: center;
+    justify-content: center;
+}
+.ch-phaseband__fill {
+    position: absolute;
+    left: 0; top: 0; right: 0; bottom: 0;
+    background-image: resource("UI/Textures/UI/Textures/Combat/T_Combat_BandFill");
+    -unity-background-scale-mode: stretch-to-fill;
+    -unity-background-image-tint-color: rgba(64, 50, 18, 0.88);
+}
+.ch-phaseband__line {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background-image: resource("UI/Textures/UI/Textures/Combat/T_Combat_BandLine");
+    -unity-background-scale-mode: stretch-to-fill;
+    -unity-background-image-tint-color: #FFD978;
+}
+.ch-phaseband__line--top { top: 0; }
+.ch-phaseband__line--bottom { bottom: 0; }
+.ch-phasetext { letter-spacing: 4px; }   /* LetterSpacing 140 (1/1000 em) x 28 */
+
+/* ================================================================ [8] SkillPanel (왼쪽 아래 28, -28) */
+.ch-skillpanel {
+    position: absolute;
+    left: 28px;
+    bottom: 28px;
+    padding: 14px;
+    background-color: rgba(23, 21, 29, 0.84);   /* (0.008568, 0.007499, 0.012286, 0.84) */
+    border-width: 1px;
+    border-color: #3A3542;
+    border-radius: 2px;
+}
+.ch-skillrow { flex-direction: row; align-items: center; }
+.ch-skillrow--second { margin-top: 12px; }
+
+.ch-energycol {
+    width: 84px;
+    margin-right: 12px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+/* WrapBox: 폭 84, 칸 사이 4, 위아래 6. 구슬 27px 에 -4.5 여백 = 18px 자리 */
+.ch-orbs {
+    width: 84px;
+    margin-top: 6px;
+    margin-bottom: 6px;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+.ch-orb {
+    width: 27px;
+    height: 27px;
+    margin: -2.5px;
+    -unity-background-scale-mode: scale-to-fit;
+}
+.ch-skillbox { flex-direction: row; align-items: center; }
+
+/* 스킬 칸 장식 (칸을 감싼 겹침 판 위) */
+.ch-slotholder { position: relative; }
+.ch-slot__pips {
+    position: absolute;
+    left: 8px;
+    top: 8px;
+    flex-direction: row;
+}
+.ch-slot__pip {
+    width: 6px;
+    height: 6px;
+    rotate: 45deg;
+}
+.ch-slot__cost {
+    position: absolute;
+    right: -8px;
+    top: -8px;
+    width: 24px;
+    height: 24px;
+    border-radius: 12px;
+    border-width: 2px;
+    border-color: #0E0D12;
+    align-items: center;
+    justify-content: center;
+}
+.ch-slot__costtext { -unity-text-align: middle-center; }
+.ch-slot__upgrade {
+    position: absolute;
+    right: 5px;
+    top: 44px;
+    padding: 0 4px 0 4px;
+    background-color: #C9A45C;
+}
+
+/* ================================================================ [24] HintPlate (아래 가운데, -40) */
+.ch-hintplate {
+    position: absolute;
+    left: 50%;
+    bottom: 40px;
+    translate: -50% 0;
+    padding: 8px 20px 8px 20px;
+    background-color: rgba(10, 9, 14, 0.7);      /* (0.003035, 0.002732, 0.004391, 0.7) */
+}
+
+/* ================================================================ 유물 줄 (언리얼 C++ 이 -28, -176 에) */
+.ch-relicbar {
+    position: absolute;
+    right: 28px;
+    bottom: 176px;
+}
+
+/* ================================================================ [26] RightColumn (오른쪽 아래 -28, -28) */
+.ch-rightcolumn {
+    position: absolute;
+    right: 28px;
+    bottom: 28px;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+/* [27] EndTurnSize 260x76, 위아래 10 / [28] EndTurnButton: T_EndTurn_* (520x152 = 2배), 양 끝 0.0643 늘이지 않음 */
+.ch-endturn {
+    width: 260px;
+    height: 76px;
+    margin: 10px 0 10px 0;
+    padding: 0 24px 0 20px;
+    flex-direction: row;
+    align-items: center;
+    border-width: 0;
+    border-radius: 0;
+    background-color: rgba(0, 0, 0, 0);
+    background-image: resource("UI/Textures/UI/Textures/Combat/T_EndTurn_Normal");
+    -unity-background-image-tint-color: rgb(255, 255, 255);
+    -unity-slice-left: 33;
+    -unity-slice-right: 33;
+    -unity-slice-top: 0;
+    -unity-slice-bottom: 0;
+    -unity-slice-scale: 0.5px;
+    transition-duration: 0s;
+}
+.ch-endturn:hover {
+    background-color: rgba(0, 0, 0, 0);
+    background-image: resource("UI/Textures/UI/Textures/Combat/T_EndTurn_Hover");
+}
+.ch-endturn:active {
+    background-color: rgba(0, 0, 0, 0);
+    background-image: resource("UI/Textures/UI/Textures/Combat/T_EndTurn_Normal");
+    padding-top: 2px;
+}
+.ch-endturn:disabled {
+    background-color: rgba(0, 0, 0, 0);
+    background-image: resource("UI/Textures/UI/Textures/Combat/T_EndTurn_Disabled");
+    padding-top: 0;
+    opacity: 1;
+}
+.ch-endturn__seal {
+    width: 46px;
+    height: 46px;
+    margin-right: 18px;
+    flex-shrink: 0;
+    -unity-background-scale-mode: scale-to-fit;
+    background-image: resource("UI/Textures/UI/Textures/Combat/T_EndTurn_Seal");
+}
+.ch-endturn__label {
+    flex-grow: 1;
+    letter-spacing: 3px;   /* LetterSpacing 120 x 26 */
+}
+
+/* [32] StatusPlate */
+.ch-statusplate {
+    padding: 6px 12px 6px 12px;
+    background-color: rgba(10, 9, 14, 0.7);
+}
+.ch-statusrow { flex-direction: row; align-items: center; }
+
+/* 테스트 버튼 (개발 빌드) */
+.ch-debugrow {
+    position: absolute;
+    right: 28px;
+    top: 24px;
+}
+.ch-debugrow > Button { margin-left: 6px; }
+
+/* ================================================================ 따라다니는 표시 (TagLayer) */
+
+/* 발밑: 위 가운데 정렬 */
+.ch-tag-health {
+    position: absolute;
+    width: 150px;
+    translate: -50% 0;
+    flex-direction: column;
+    align-items: center;
+}
+.ch-tag-shieldtrack {
+    width: 90px;
+    height: 4px;
+    flex-direction: row;
+}
+.ch-tag-shieldfill {
+    width: 0;
+    height: 4px;
+    background-color: #8FA4B8;
+}
+.ch-tag-bar {
+    position: relative;
+    width: 90px;
+    height: 7px;
+    margin-top: 1px;
+    background-color: #120F16;
+    border-width: 1px;
+    border-color: #000000;
+}
+.ch-tag-bar__chip {
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    background-color: #FF9A3A;
+}
+.ch-tag-bar__fill {
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+}
+.ch-tag-numbers {
+    margin-top: 3px;
+    flex-direction: row;
+    justify-content: center;
+}
+.ch-tag-statuses {
+    width: 150px;
+    margin-top: 4px;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+.ch-status {
+    margin: 2px 3px 2px 3px;
+    flex-direction: row;
+    align-items: center;
+}
+.ch-status__cell {
+    width: 16px;
+    height: 16px;
+    background-color: #16131C;
+    align-items: center;
+    justify-content: center;
+}
+.ch-status__letter { -unity-text-align: middle-center; }
+
+/* 머리 위: 아래 가운데 정렬 */
+.ch-tag-head {
+    position: absolute;
+    translate: -50% -100%;
+    flex-direction: column;
+    align-items: center;
+}
+.ch-tag-comms {
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 6px;
+}
+.ch-tag-intent {
+    flex-direction: row;
+    align-items: center;
+    padding: 4px 9px 4px 9px;
+    background-color: rgba(10, 9, 14, 0.75);
+    border-width: 1px;
+    border-color: rgba(232, 223, 203, 0.18);
+}
+.ch-tag-intent__icon {
+    width: 28px;
+    height: 28px;
+    -unity-background-scale-mode: scale-to-fit;
+}
+.ch-tag-intent__number {
+    margin-left: 6px;
+    -unity-text-outline-width: 2px;
+    -unity-text-outline-color: #000000;
+}
+.ch-tag-ready {
+    padding: 2px 8px 2px 8px;
+    background-color: rgba(22, 40, 22, 0.85);    /* 선형 (0.008, 0.021, 0.008, 0.85) */
+    border-width: 1px;
+    border-color: #5FC45A;
+}
+
+/* 대상 선택 칸: 캐릭터 둘레 금 테두리 2px, 마우스 올리면 밝은 금 3px. 속은 비움 */
+.ch-target {
+    position: absolute;
+    border-width: 2px;
+    border-color: #FFEDA0;
+    background-color: rgba(255, 237, 160, 0.06);
+}
+.ch-target:hover,
+.ch-target--hot {
+    border-width: 3px;
+    border-color: #FFF6D0;
+    background-color: rgba(255, 246, 208, 0.14);
+}
+.ch-target:active { background-color: rgba(255, 246, 208, 0.2); }
+
+.ch-tag-hoverarea {
+    position: absolute;
+    background-color: rgba(0, 0, 0, 0);
+}
+
+/* 몬스터 정보 카드 (툴팁) */
+.ch-card {
+    max-width: 320px;
+    padding: 12px 14px 12px 14px;
+    background-color: rgba(23, 20, 28, 0.96);
+    border-width: 1px;
+    border-color: rgba(201, 165, 90, 0.6);
+}
+.ch-card__body {
+    margin-top: 8px;
+    max-width: 280px;
+}
+
+/* 드래그 중 커서를 따라다니는 스킬 이름 */
+.ch-dragghost { position: absolute; }

@@ -1,0 +1,61 @@
+/*
+ * 상점 (언리얼 UShopWidget + WBP_ShopWidget). 클래스 접두사 shop-
+ */
+
+/* [2] LeaveButton: 앵커 (0.244531, 0.375) ~ (0.340625, 0.645833), 오프셋 0 = 그 영역을 채움
+ * Normal #262A32 / 테두리 #3A3F4A / 모서리 6, Hovered #2E333D + 금 테두리, Pressed #23272E + 어두운 금. 여백 24 / 10 */
+.shop-leave {
+    position: absolute;
+    left: 24.4531%;
+    top: 37.5%;
+    right: 65.9375%;
+    bottom: 35.4167%;
+    margin: 0;
+    padding: 10px 24px 10px 24px;
+    background-color: #262A32;
+    border-width: 1px;
+    border-color: #3A3F4A;
+    border-radius: 6px;
+    color: #ECE3CF;
+    font-size: 16px;
+    -unity-font-definition: url("project://database/Assets/Terminus/UI/Fonts/NotoSansKR-Regular.ttf");
+    -unity-text-align: middle-center;
+    transition-duration: 0s;
+}
+.shop-leave:hover {
+    background-color: #2E333D;
+    border-color: #C9A45C;
+    color: #ECE3CF;
+}
+.shop-leave:active {
+    background-color: #23272E;
+    border-color: #A8894A;
+    padding-top: 11px;
+    padding-bottom: 9px;
+}
+
+/* [4] VerticalBox_0: 앵커 가운데, 왼쪽 -220, 정렬 (0, 0.5), 내용 크기 */
+.shop-column {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    translate: -220px -50%;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+/* 랩 박스 (진열 칸) */
+.shop-box {
+    max-width: 1100px;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: flex-start;
+}
+.shop-card {
+    margin-right: 10px;
+    margin-bottom: 8px;
+}
+.shop-empty {
+    margin-top: 4px;
+    margin-bottom: 8px;
+}

@@ -1,0 +1,52 @@
+/*
+ * 유물 컴포넌트 (언리얼 Widgets/Relic/*). UiStyle.Use(element, "Relic")
+ */
+
+/* ================================================================ 유물 툴팁 (RelicTooltipWidget = WBP_RelicTooltip)
+ * 최대 폭 280, 판 #1B1E25 + 1px #3A3F4A, 6px 둥근 모서리, 안쪽 12 / 10
+ */
+.tc-relictip {
+    max-width: 280px;
+    flex-direction: column;
+    background-color: var(--t-board);
+    border-width: 1px;
+    border-color: var(--t-line);
+    border-radius: 6px;
+    padding: 10px 12px 10px 12px;
+}
+.tc-relictip__icon { width: 48px; height: 48px; margin-bottom: 6px; align-self: flex-start; flex-shrink: 0; }
+.tc-relictip__desc { margin-top: 8px; }
+
+/* ================================================================ 보유 유물 줄 (RelicBarWidget = WBP_RelicBar)
+ * "유물 N" (13, #A89F8C, 오른쪽) 아래 판 #23202A + 1px #14121A, 안쪽 8
+ */
+.tc-relicbar { flex-direction: column; align-items: flex-end; }
+.tc-relicbar__count { margin-bottom: 8px; align-self: flex-end; }
+.tc-relicbar__tray {
+    align-self: flex-end;
+    padding: 8px;
+    background-color: rgb(35, 32, 42);
+    border-width: 1px;
+    border-color: rgb(20, 18, 26);
+}
+.tc-relicbar__box { flex-direction: row; align-items: center; }
+
+/* ================================================================ 시작 유물 고르기 (StartRelicPickWidget = WBP_StartRelicPick)
+ * 검정 80% 바탕 + 가운데 창 (WBP 640x600. 6열 x 108 칸이 648 이라 656 으로 넓힘)
+ */
+.tc-startrelic {
+    position: absolute;
+    left: 0; top: 0; right: 0; bottom: 0;
+    background-color: rgba(0, 0, 0, 0.8);
+    align-items: center;
+    justify-content: center;
+}
+.tc-startrelic__window { width: 656px; height: 600px; flex-direction: column; }
+.tc-startrelic__title { align-self: center; }
+.tc-startrelic__mode { margin-top: 6px; align-self: center; }
+.tc-startrelic__count { margin-top: 8px; margin-bottom: 16px; align-self: center; }
+.tc-startrelic__scroll { flex-grow: 1; flex-shrink: 1; }
+.tc-startrelic__grid { flex-direction: column; align-self: center; }
+.tc-startrelic__row { flex-direction: row; }
+.tc-startrelic__cell { align-items: center; justify-content: center; flex-shrink: 0; }
+.tc-startrelic__start { margin-top: 16px; align-self: center; flex-shrink: 0; }

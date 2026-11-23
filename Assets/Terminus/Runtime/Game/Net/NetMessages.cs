@@ -161,6 +161,7 @@ namespace Terminus.Game.Net
         public bool bBetrayal;
         public ulong BetrayerId;
         public bool bBetrayerTurn;
+        public bool bBetrayerWon;        // 배신 전투 결과 (끝난 뒤에만 의미 있음)
     }
 
     [Serializable]

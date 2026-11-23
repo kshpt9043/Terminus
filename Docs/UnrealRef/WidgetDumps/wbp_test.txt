@@ -1,0 +1,3 @@
+/Game/KSH/Widgets/WBP_Test.WBP_Test
+[0] CanvasPanel CanvasPanel_16
+  [1] HorizontalBox HorizontalBox_0  Slot:/Script/UMG.CanvasPanelSlot'/Game/KSH/Widgets/WBP_Test.WBP_Test:WidgetTree.CanvasPanel_16.CanvasPanelSlot_1'  slot:(LayoutData:(Offsets=(Left=484.000000,Top=260.000000,Bottom=40.000000)))

@@ -1,0 +1,150 @@
+/*
+ * 메뉴 화면 공용 + 메인 메뉴 / 방 목록 (언리얼 WBP_MainMenu / WBP_RoomList / WBP_RoomEntry, KSH 디자인)
+ * 코드에서 MenuStyle.Use(element, "Menu"). 레이아웃은 C# 인라인, 여기는 상태(호버 / 눌림 / 비활성)와 반복되는 모양만
+ * 색: 덤프의 선형 TintColor 를 sRGB 로 바꾼 값. 팔레트에 있으면 --t-* 변수
+ */
+
+.tm-fill { position: absolute; left: 0; top: 0; right: 0; bottom: 0; }
+
+/* ================================================================ T_UI_Btn_Hex 판 버튼 (144x84, Brush Margin 좌우 0.2 = 29px)
+ * WBP: DrawAs=Box, 글자 본문색 + 굵게, 눌리면 글자 3px 아래 (PressedPadding Top=3)
+ */
+.tm-plate {
+    margin: 0;
+    padding: 0 12px 0 12px;
+    border-width: 0;
+    border-radius: 0;
+    background-color: rgba(0, 0, 0, 0);
+    background-image: resource("UI/Textures/KSH/Asset/T_UI_Btn_Hex");
+    -unity-slice-left: 29;
+    -unity-slice-right: 29;
+    -unity-slice-top: 0;
+    -unity-slice-bottom: 0;
+    color: var(--t-text-body);
+    -unity-font-definition: url("project://database/Assets/Terminus/UI/Fonts/NotoSansKR-Bold.ttf");
+    -unity-text-align: middle-center;
+    white-space: nowrap;
+    text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.6);
+    transition-duration: 0s;
+}
+.tm-plate:hover { background-color: rgba(0, 0, 0, 0); color: var(--t-text-body); }
+.tm-plate:active { padding-top: 3px; }
+
+/* 빨강 (Btn_Dungeon / ReadyButton / 확인): 0.391573,0.031896,0.025187 / 호버 0.53948,.. / 눌림 0.270498,.. */
+.tm-plate--red { -unity-background-image-tint-color: #A8322C; }
+.tm-plate--red:hover { -unity-background-image-tint-color: #C23B33; }
+.tm-plate--red:active { -unity-background-image-tint-color: #8E2A25; }
+
+/* 호박 (Btn_Continue): 0.391573,0.219094,0 / 호버 0.515625,0.288504,0 / 눌림 0.21875,0.122396,0 */
+.tm-plate--amber { -unity-background-image-tint-color: #A88100; }
+.tm-plate--amber:hover { -unity-background-image-tint-color: #BE9200; }
+.tm-plate--amber:active { -unity-background-image-tint-color: #816200; }
+
+/* 청록 (Btn_Tavern / StartButton / 주점 열기): 0.049707,0.212231,0.238398 / 호버 0.068478,.. / 눌림 0.033105,.. */
+.tm-plate--teal { -unity-background-image-tint-color: #3F7F86; }
+.tm-plate--teal:hover { -unity-background-image-tint-color: #4A929A; }
+.tm-plate--teal:active { -unity-background-image-tint-color: #336A70; }
+
+/* 회색 (주점 '준비 취소' = 언리얼 CancelStyle) */
+.tm-plate--gray { -unity-background-image-tint-color: #3A3F4A; }
+.tm-plate--gray:hover { -unity-background-image-tint-color: #454B57; }
+.tm-plate--gray:active { -unity-background-image-tint-color: #2E333D; }
+
+/* 비활성: 0.016807,0.020289,0.027321 (종류와 상관없이. 뒤에 둬서 이김) */
+.tm-plate:disabled,
+.tm-plate--red:disabled,
+.tm-plate--amber:disabled,
+.tm-plate--teal:disabled,
+.tm-plate--gray:disabled {
+    -unity-background-image-tint-color: #23272E;
+    color: var(--t-text-faint);
+    padding-top: 0;
+}
+
+/* ================================================================ 글자 버튼 (DrawAs=NoDrawType) */
+.tm-textbtn {
+    margin: 0;
+    padding: 0 8px 0 8px;
+    border-width: 0;
+    background-color: rgba(0, 0, 0, 0);
+    -unity-font-definition: url("project://database/Assets/Terminus/UI/Fonts/NotoSansKR-Bold.ttf");
+    -unity-text-align: middle-center;
+    white-space: nowrap;
+    transition-duration: 0s;
+}
+.tm-textbtn:hover { background-color: rgba(0, 0, 0, 0); }
+.tm-textbtn:active { background-color: rgba(0, 0, 0, 0); padding-top: 1px; }
+.tm-textbtn:disabled { opacity: 0.45; }
+/* 게임 종료: 기본 흐림, 호버 금 (MainMenuWidget TextDim / TextGold) */
+.tm-textbtn--hover-gold { color: var(--t-text-faint); }
+.tm-textbtn--hover-gold:hover { color: var(--t-gold-hover); }
+
+/* ================================================================ 입력칸 (EditableTextBox. 언리얼 PaintInputText 처럼 글자는 밝게) */
+.tm-input { margin: 0; }
+.tm-input > .unity-base-text-field__input {
+    min-height: 40px;
+    padding: 6px 12px 6px 12px;
+    background-color: var(--t-inset);
+    border-width: 1px;
+    border-color: var(--t-line);
+    border-radius: 4px;
+    color: var(--t-text-body);
+    font-size: 16px;
+    -unity-font-definition: url("project://database/Assets/Terminus/UI/Fonts/NotoSansKR-Regular.ttf");
+    -unity-text-align: middle-left;
+}
+.tm-input:hover > .unity-base-text-field__input { border-color: var(--t-gold-pressed); }
+.tm-input:focus > .unity-base-text-field__input { border-color: var(--t-gold); }
+.tm-input .unity-base-text-field__input--placeholder { color: var(--t-text-faint); }
+
+/* ================================================================ 체크 칸 */
+.tm-check { margin: 0; }
+.tm-check .unity-toggle__checkmark {
+    width: 20px;
+    height: 20px;
+    background-color: var(--t-inset);
+    border-color: var(--t-line);
+    border-width: 1px;
+    border-radius: 3px;
+    -unity-background-image-tint-color: var(--t-gold-hover);
+}
+.tm-check:hover .unity-toggle__checkmark { border-color: var(--t-gold); }
+.tm-check .unity-toggle__text { margin-left: 8px; }
+.tm-check:disabled { opacity: 0.5; }
+
+/* ================================================================ 방 목록 한 줄 (WBP_RoomEntry JoinButton)
+ * 판 0.010960,0.012983,0.018500 + 2px 테두리 0.027321,0.033105,0.046665 / 호버 테두리 0.584078,0.371238,0.107023
+ * 눌림 0.008023,.. / 비활성 0.006995,..
+ */
+.tm-room-entry {
+    flex-direction: row;
+    align-items: center;
+    margin: 0 0 8px 0;
+    padding: 14px 24px 14px 24px;
+    min-height: 64px;
+    background-color: #1B1E25;
+    border-width: 2px;
+    border-color: #2E333D;
+    border-radius: 4px;
+    transition-duration: 0s;
+}
+.tm-room-entry:hover { background-color: #1B1E25; border-color: var(--t-gold); }
+.tm-room-entry:active { background-color: #16181E; }
+.tm-room-entry:disabled { background-color: #14161A; border-color: #2E333D; opacity: 0.6; }
+
+/* 잠김 표시 (Border LockMark: 흰 바탕 + 아주 어두운 글자) */
+.tm-lock {
+    margin-right: 12px;
+    padding: 2px 8px 2px 8px;
+    background-color: var(--t-text-sub);
+    border-radius: 3px;
+    color: #12191A;
+    font-size: 12px;
+    -unity-font-definition: url("project://database/Assets/Terminus/UI/Fonts/NotoSansKR-Bold.ttf");
+}
+
+/* 스크롤 막대 어둡게 */
+.tm-scroll .unity-scroller--vertical { width: 10px; }
+.tm-scroll .unity-scroller__slider .unity-base-slider__dragger { background-color: var(--t-line); border-width: 0; border-radius: 4px; }
+.tm-scroll .unity-scroller__slider .unity-base-slider__tracker { background-color: rgba(0, 0, 0, 0.25); border-width: 0; }
+.tm-scroll .unity-repeat-button { display: none; }

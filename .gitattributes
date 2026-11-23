@@ -22,3 +22,6 @@
 *.ttf  filter=lfs diff=lfs merge=lfs -text
 *.otf  filter=lfs diff=lfs merge=lfs -text
 *.xlsx filter=lfs diff=lfs merge=lfs -text
+
+# 배치 파일은 CRLF 그대로 (cmd 가 LF 배치를 잘못 읽을 때가 있음)
+*.bat text eol=crlf

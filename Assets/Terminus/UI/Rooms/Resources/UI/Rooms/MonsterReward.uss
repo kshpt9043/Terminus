@@ -1,0 +1,43 @@
+/*
+ * 방 클리어 보상 (언리얼 UMonsterRewardWidget + WBP_MonsterReward). 클래스 접두사 mr-
+ */
+
+/* [1] RewardDim: 검정 0.75 화면 전체 */
+.mr-dim {
+    position: absolute;
+    left: 0; top: 0; right: 0; bottom: 0;
+    background-color: rgba(0, 0, 0, 0.75);
+}
+
+/* [2] ContentBox: 가운데 (앵커 0.5 / 정렬 0.5), 내용 크기 */
+.mr-content {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    translate: -50% -50%;
+    flex-direction: column;
+    align-items: center;
+}
+
+.mr-currency { margin-top: 10px; }
+
+/* [5] SectionsRow (위 24): 스킬 | 유물 */
+.mr-sections {
+    margin-top: 24px;
+    flex-direction: row;
+    align-items: flex-start;
+}
+.mr-section {
+    padding: 0 20px 0 20px;
+    flex-direction: column;
+    align-items: center;
+}
+.mr-cardbox {
+    margin-top: 10px;
+    flex-direction: row;
+    align-items: center;
+}
+
+.mr-replace { margin-top: 24px; }
+.mr-result { margin-top: 24px; }
+.mr-next { margin-top: 24px; }

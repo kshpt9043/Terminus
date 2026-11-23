@@ -1,0 +1,5 @@
+/Game/JSY/Widget/Relic/WBP_RelicBar.WBP_RelicBar
+[0] VerticalBox VerticalBox_0
+  [1] TextBlock CountText  Text:NSLOCTEXT("", "8C6D516F438BBE1AD816B1B5A9AADE75", "유물 0")  ColorAndOpacity:(SpecifiedColor=(R=0.391572,G=0.346704,B=0.262251,A=1.000000))  Font:(Size=13.000000)  Slot:/Script/UMG.VerticalBoxSlot'/Game/JSY/Widget/Relic/WBP_RelicBar.WBP_RelicBar:WidgetTree.VerticalBox_0.VerticalBoxSlot_1'  slot:(Padding:(Bottom=8.000000), HorizontalAlignment:HAlign_Right)
+  [2] Border RelicTray  Padding:(Left=8.000000,Top=8.000000,Right=8.000000,Bottom=8.000000)  Background:(TintColor=(SpecifiedColor=(R=0.016807,G=0.014444,B=0.023153,A=1.000000)),DrawAs=RoundedBox,OutlineSettings=(Color=(SpecifiedColor=(R=0.006995,G=0.006049,B=0.010330,A=1.000000)),Width=1.000000,RoundingType=FixedRadius))  Slot:/Script/UMG.VerticalBoxSlot'/Game/JSY/Widget/Relic/WBP_RelicBar.WBP_RelicBar:WidgetTree.VerticalBox_0.VerticalBoxSlot_0'  slot:(HorizontalAlignment:HAlign_Right)
+    [3] HorizontalBox RelicBox  Slot:/Script/UMG.BorderSlot'/Game/JSY/Widget/Relic/WBP_RelicBar.WBP_RelicBar:WidgetTree.RelicTray.BorderSlot_0'

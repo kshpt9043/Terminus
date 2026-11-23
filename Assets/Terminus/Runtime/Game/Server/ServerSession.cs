@@ -16,13 +16,15 @@ using UnityEngine.SceneManagement;
 
 namespace Terminus.Game
 {
-    public sealed class ServerSession : MonoBehaviour
+    public sealed partial class ServerSession : MonoBehaviour
     {
         public sealed class Member
         {
             public ulong ClientId;
             public RunPlayer Run;
             public bool bConnected = true;
+            // 다시 들어왔을 때 같은 사람인지 (Steam 이면 SteamId). 이공간 재합류 / 세이브 이어하기
+            public string OnlineId = "";
         }
 
         public static ServerSession Instance { get; private set; }
@@ -40,6 +42,9 @@ namespace Terminus.Game
 
         /// <summary>던전이 나간 사람을 처리 (언리얼 Logout -> DungeonGameMode)</summary>
         public event Action<Member> MemberLeft;
+
+        /// <summary>런 진행 중에 누가 들어옴 (이공간 재합류 / 세이브 이어하기). 던전이 상태를 되살림 (언리얼 DungeonGameMode::PostLogin)</summary>
+        public event Action<Member> MemberJoinedMidRun;
 
         float _nextSync;
         string _lastPartyJson = "";
@@ -103,21 +108,37 @@ namespace Terminus.Game
         void OnClientConnected(ulong clientId)
         {
             if (_members.ContainsKey(clientId)) return;
-            var name = clientId == NetworkManager.ServerClientId && !string.IsNullOrWhiteSpace(NetworkRoot.LocalPlayerName)
-                ? NetworkRoot.LocalPlayerName
+            var payload = NetworkRoot.TakePayload(clientId);
+            var name = !string.IsNullOrWhiteSpace(payload.Name) ? payload.Name.Trim()
+                : clientId == NetworkManager.ServerClientId && !string.IsNullOrWhiteSpace(NetworkRoot.LocalPlayerName) ? NetworkRoot.LocalPlayerName
                 : "모험가 " + (_order.Count + 1);
-            var member = new Member { ClientId = clientId, Run = new RunPlayer(new System.Random(_rng.Next()), name) };
+            if (name.Length > 16) name = name.Substring(0, 16);
+
+            // 진행 중 재합류: 같은 사람의 예전 기록(나간 사람)은 치움. 상태는 던전이 이공간 기록에서 되살림
+            if (NetworkRoot.bRunStarted && !string.IsNullOrEmpty(payload.OnlineId))
+            {
+                foreach (var old in _members.Values.Where(m => !m.bConnected && m.OnlineId == payload.OnlineId).ToList())
+                {
+                    _members.Remove(old.ClientId);
+                    _order.Remove(old.ClientId);
+                }
+            }
+
+            var member = new Member { ClientId = clientId, OnlineId = payload.OnlineId ?? "", Run = new RunPlayer(new System.Random(_rng.Next()), name) };
             member.Run.SetHardMode(bHardMode);
             member.Run.Notice += text => NetBus.Notify(clientId, new ChatMsg { Text = text, bSystem = true });
             _members[clientId] = member;
             _order.Add(clientId);
-            SystemChat($"{name} 님이 들어왔습니다.");
+            if (NetworkRoot.bRunStarted) MemberJoinedMidRun?.Invoke(member);
+            else SystemChat($"{name} 님이 들어왔습니다.");
+            NetworkRoot.UpdateHostedRoom();
         }
 
         void OnClientDisconnected(ulong clientId)
         {
             if (!_members.TryGetValue(clientId, out var member)) return;
-            SystemChat($"{member.Run.PlayerName} 님이 나갔습니다.");
+            // 진행 중에 나가면 안내는 던전(이공간)이 함
+            if (!NetworkRoot.bRunStarted) SystemChat($"{member.Run.PlayerName} 님이 나갔습니다.");
 
             if (!NetworkRoot.bRunStarted)
             {
@@ -162,6 +183,7 @@ namespace Terminus.Game
             if (!IsHost(sender) || NetworkRoot.bRunStarted) return;
             bHardMode = req.bHardMode;
             foreach (var m in Members) m.Run.SetHardMode(bHardMode);
+            NetworkRoot.UpdateHostedRoom();
             SystemChat(bHardMode ? "하드 모드: 들고 간 창고 유물은 창고에서 사라집니다." : "하드 모드를 껐습니다.");
         }
 
@@ -193,6 +215,7 @@ namespace Terminus.Game
             }
 
             NetworkRoot.bRunStarted = true;
+            NetworkRoot.UpdateHostedRoom();
             SystemChat("던전으로 이동합니다...");
             NetworkRoot.ServerLoadScene(SceneNames.Dungeon);
         }

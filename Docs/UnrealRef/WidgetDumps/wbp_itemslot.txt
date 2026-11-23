@@ -1,0 +1,7 @@
+/Game/JSY/Widget/WBP_ItemSlot.WBP_ItemSlot
+[0] SizeBox SlotSizeBox
+  [1] Border Frame  Slot:/Script/UMG.SizeBoxSlot'/Game/JSY/Widget/WBP_ItemSlot.WBP_ItemSlot:WidgetTree.SlotSizeBox.SizeBoxSlot_0'
+    [2] Button SlotButton  Slot:/Script/UMG.BorderSlot'/Game/JSY/Widget/WBP_ItemSlot.WBP_ItemSlot:WidgetTree.Frame.BorderSlot_0'
+      [3] VerticalBox VerticalBox_0  Slot:/Script/UMG.ButtonSlot'/Game/JSY/Widget/WBP_ItemSlot.WBP_ItemSlot:WidgetTree.SlotButton.ButtonSlot_0'
+        [4] Image Icon  Slot:/Script/UMG.VerticalBoxSlot'/Game/JSY/Widget/WBP_ItemSlot.WBP_ItemSlot:WidgetTree.VerticalBox_0.VerticalBoxSlot_0'
+        [5] TextBlock NameText  Text:NSLOCTEXT("[C2511DEF2A4C35E40C510906909B297A]", "C93A514B4E2837F1757104A97E2C06EC", "아이템 이름")  ColorAndOpacity:(SpecifiedColor=(R=0.838799,G=0.768151,B=0.623960,A=1.000000))  Font:(TypefaceFontName="Regular",Size=12.000000)  AutoWrapText:True  Slot:/Script/UMG.VerticalBoxSlot'/Game/JSY/Widget/WBP_ItemSlot.WBP_ItemSlot:WidgetTree.VerticalBox_0.VerticalBoxSlot_1'

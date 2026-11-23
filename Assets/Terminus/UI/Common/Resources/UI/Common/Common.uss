@@ -1,0 +1,282 @@
+/*
+ * 공용 UI 컴포넌트 (언리얼 Widgets/Common/*). 코드에서 UiStyle.Use(element, "Common") 로 붙음
+ * 색 변수(--t-*)는 Theme/Terminus.uss (패널 테마) 에서 옴. 클래스 이름은 tc- (t- 테마 클래스와 안 겹치게)
+ * 텍스처: resource("UI/Textures/<언리얼 /Game 아래 경로>")
+ */
+
+.tc-text { margin: 0; padding: 0; }
+
+/* ================================================================ 육각 플레이트 버튼 (TerminusUIBuilder MakeHexButton)
+ * 280x56 텍스처(2배 560x112), 양 끝 18px 는 늘이지 않음 (Brush Margin 0.0643 = 36 / 560)
+ * 안쪽 여백 28 / 12, 눌리면 글자가 1px 내려감
+ */
+.tc-hex {
+    min-width: 280px;
+    min-height: 56px;
+    margin: 0;
+    padding: 12px 28px 12px 28px;
+    border-width: 0;
+    border-radius: 0;
+    background-color: rgba(0, 0, 0, 0);
+    -unity-background-image-tint-color: rgb(255, 255, 255);
+    -unity-slice-left: 36;
+    -unity-slice-right: 36;
+    -unity-slice-top: 0;
+    -unity-slice-bottom: 0;
+    -unity-slice-scale: 0.5px;
+    color: var(--t-text-body);
+    font-size: 17px;
+    -unity-font-definition: url("project://database/Assets/Terminus/UI/Fonts/NotoSansKR-Bold.ttf");
+    -unity-text-align: middle-center;
+    letter-spacing: 2px;
+    white-space: nowrap;
+    transition-duration: 0s;
+}
+.tc-hex:hover { background-color: rgba(0, 0, 0, 0); color: var(--t-text-body); }
+.tc-hex:active { background-color: rgba(0, 0, 0, 0); color: var(--t-text-sub); padding-top: 13px; padding-bottom: 11px; }
+
+.tc-hex--primary { background-image: resource("UI/Textures/UI/Textures/Common/T_UI_Hex_Primary_Normal"); }
+.tc-hex--primary:hover { background-image: resource("UI/Textures/UI/Textures/Common/T_UI_Hex_Primary_Hover"); }
+.tc-hex--primary:active { background-image: resource("UI/Textures/UI/Textures/Common/T_UI_Hex_Primary_Pressed"); }
+
+.tc-hex--secondary { background-image: resource("UI/Textures/UI/Textures/Common/T_UI_Hex_Secondary_Normal"); }
+.tc-hex--secondary:hover { background-image: resource("UI/Textures/UI/Textures/Common/T_UI_Hex_Secondary_Hover"); }
+.tc-hex--secondary:active { background-image: resource("UI/Textures/UI/Textures/Common/T_UI_Hex_Secondary_Pressed"); }
+
+.tc-hex--currency { background-image: resource("UI/Textures/UI/Textures/Common/T_UI_Hex_Gold_Normal"); }
+.tc-hex--currency:hover { background-image: resource("UI/Textures/UI/Textures/Common/T_UI_Hex_Gold_Hover"); }
+.tc-hex--currency:active { background-image: resource("UI/Textures/UI/Textures/Common/T_UI_Hex_Gold_Pressed"); }
+
+/* 비활성은 종류와 상관없이 한 장 (뒤에 둬서 이김) */
+.tc-hex--primary:disabled,
+.tc-hex--secondary:disabled,
+.tc-hex--currency:disabled {
+    background-image: resource("UI/Textures/UI/Textures/Common/T_UI_Hex_Disabled");
+    color: var(--t-text-faint);
+    padding-top: 12px;
+    padding-bottom: 12px;
+}
+
+/* ================================================================ 평평한 버튼 (MakeFlatButtonStyle / WBP 취소 버튼)
+ * 6px 둥근 판 + 1px 테두리. 호버 #2E333D + 금 테두리, 눌림 #23272E + 어두운 금, 안쪽 24 / 10
+ */
+.tc-flat {
+    margin: 0;
+    padding: 10px 24px 10px 24px;
+    background-color: var(--t-board);
+    border-width: 1px;
+    border-color: var(--t-line);
+    border-radius: 6px;
+    color: var(--t-text-body);
+    font-size: 16px;
+    -unity-text-align: middle-center;
+    white-space: nowrap;
+    transition-duration: 0s;
+}
+.tc-flat:hover { background-color: var(--t-disabled); border-color: var(--t-gold); color: var(--t-text-body); }
+.tc-flat:active { background-color: var(--t-section); border-color: var(--t-gold-pressed); color: var(--t-text-sub); padding-top: 11px; padding-bottom: 9px; }
+.tc-flat:disabled { background-color: var(--t-disabled); border-color: var(--t-line); color: var(--t-text-faint); }
+.tc-flat--card { background-color: var(--t-card); }
+
+/* ================================================================ 판 */
+
+.tc-dim {
+    position: absolute;
+    left: 0; top: 0; right: 0; bottom: 0;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--t-dim);
+}
+
+.tc-panel {
+    background-color: var(--t-board);
+    border-width: 1px;
+    border-color: var(--t-line);
+    border-radius: 6px;
+}
+
+/* 금 구분선 (T_UI_GoldDivider 256x4, 양 끝이 흐려짐). 카드 안 = 1px 어두운 금, 제목 아래 = 2px 금 */
+.tc-divider {
+    height: 1px;
+    align-self: stretch;
+    flex-shrink: 0;
+    background-image: resource("UI/Textures/UI/Textures/Common/T_UI_GoldDivider");
+    -unity-background-scale-mode: stretch-to-fill;
+    -unity-background-image-tint-color: var(--t-gold-pressed);
+}
+.tc-divider--title { height: 2px; -unity-background-image-tint-color: var(--t-gold); }
+
+/* ================================================================ 툴팁 (UiTooltip) */
+
+.tc-tooltip-host {
+    position: absolute;
+    left: 0;
+    top: 0;
+    display: none;
+}
+
+/* SetGameTooltip: 판 #17141C 96% + 테두리 #C9A55A 60%, 안쪽 14 / 10 */
+.tc-gametip {
+    background-color: rgba(23, 20, 28, 0.96);
+    border-width: 1px;
+    border-color: rgba(201, 165, 90, 0.6);
+    padding: 10px 14px 10px 14px;
+}
+.tc-gametip__body { max-width: 300px; }
+
+/* ================================================================ 스킬 / 유물 칸 (ItemSlotWidget = WBP_SkillSlot)
+ * 색(띠 / 테두리 / 바탕)은 상태 조합이라 코드가 넣음. 여기는 모양만
+ */
+.tc-slot { flex-shrink: 0; flex-grow: 0; }
+
+.tc-slot__frame {
+    flex-grow: 1;
+    border-width: 1px;
+    border-radius: 4px;
+    padding-top: 4px;   /* 위쪽 4px 띠 (테두리 두께는 따로) */
+    overflow: hidden;
+}
+
+.tc-slot__bg {
+    flex-grow: 1;
+    justify-content: center;
+    padding: 4px 0 4px 0;
+}
+
+.tc-slot__iconarea {
+    flex-grow: 1;
+    flex-shrink: 1;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.tc-slot__icon { flex-shrink: 0; width: 32px; height: 32px; }
+
+.tc-slot__icontext {
+    position: absolute;
+    left: 0; top: 0; right: 0; bottom: 0;
+    margin: 0;
+    padding: 0;
+    font-size: 15px;
+    color: var(--t-text-body);
+    -unity-text-align: middle-center;
+}
+
+.tc-slot__name {
+    flex-shrink: 0;
+    margin: 0;
+    padding: 0;
+    font-size: 10px;
+    color: var(--t-text-body);
+    -unity-text-align: upper-center;
+    white-space: normal;
+    overflow: hidden;
+}
+
+/* 못 쓰는 칸 (비용 부족 / 다른 직업 유물): 언리얼 비활성 버튼처럼 흐리게 */
+.tc-slot--unusable .tc-slot__icon,
+.tc-slot--unusable .tc-slot__icontext,
+.tc-slot--unusable .tc-slot__name { opacity: 0.4; }
+
+/* ================================================================ 아이템 카드 (ItemCardWidget = WBP_ItemCard) */
+
+.tc-itemcard { flex-direction: column; align-items: center; }
+.tc-itemcard__slot { align-self: center; }
+.tc-itemcard__caption { margin-top: 4px; align-self: center; -unity-text-align: upper-center; }
+.tc-itemcard__action { margin-top: 4px; align-self: center; font-size: 13px; }
+
+/* ================================================================ 고르기 패널 (ItemPickPanelWidget = WBP_ItemPickPanel) */
+
+.tc-pickpanel { flex-direction: column; align-items: center; }
+.tc-pickpanel__guide { align-self: center; -unity-text-align: upper-center; }
+.tc-pickpanel__slots { flex-direction: row; margin-top: 12px; align-self: center; }
+.tc-pickpanel__cancel { margin-top: 12px; align-self: center; }
+
+.tc-pickpanel-host {
+    position: absolute;
+    left: 0; top: 0; right: 0; bottom: 0;
+    align-items: center;
+    justify-content: center;
+}
+.tc-pickpanel-host__plate { flex-shrink: 0; }
+
+/* ================================================================ 선택지 카드 (ChoiceCardWidget = WBP_ChoiceCard)
+ * 판 #1B1E25 + 1px #3A3F4A, 6px 둥근 모서리. 호버 #2E333D + 어두운 금, 눌림 #23272E + 금
+ */
+.tc-choice {
+    flex-direction: column;
+    background-color: var(--t-board);
+    border-width: 1px;
+    border-color: var(--t-line);
+    border-radius: 6px;
+    padding: 20px;
+}
+.tc-choice:hover { background-color: var(--t-disabled); border-color: var(--t-gold-pressed); }
+.tc-choice:active { background-color: var(--t-section); border-color: var(--t-gold); }
+
+.tc-choice__title { white-space: normal; }
+.tc-choice__slot { margin-top: 8px; }
+.tc-choice__desc { margin-top: 0; }
+.tc-choice__footer { margin-top: 0; }
+
+.tc-choice--selected { border-width: 2px; border-color: var(--t-gold); }
+.tc-choice--selected:hover { border-color: var(--t-gold); }
+.tc-choice--highlight { border-width: 2px; border-color: var(--t-gold-hover); background-color: var(--t-disabled); }
+.tc-choice--highlight:hover { border-color: var(--t-gold-hover); }
+.tc-choice--danger { border-width: 2px; border-color: var(--t-alert); }
+.tc-choice--danger:hover { border-color: var(--t-alert); }
+.tc-choice--selected:active,
+.tc-choice--highlight:active,
+.tc-choice--danger:active { background-color: var(--t-section); border-color: var(--t-gold-pressed); }
+
+.tc-choice--disabled,
+.tc-choice--disabled:hover,
+.tc-choice--disabled:active { background-color: var(--t-disabled); border-color: var(--t-line); }
+.tc-choice--disabled > .tc-text { opacity: 0.5; }
+
+/* ================================================================ 확인 팝업 (ConfirmPopupWidget = WBP_ConfirmPopup)
+ * 뒤는 BackgroundBlur(2) 였음 -> 블러 대신 살짝 어둡게. 판 600x300 #2D2D2D, 안쪽 20
+ */
+.tc-popup {
+    position: absolute;
+    left: 0; top: 0; right: 0; bottom: 0;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(0, 0, 0, 0.35);
+}
+
+.tc-popup__box {
+    width: 600px;
+    height: 300px;
+    padding: 20px;
+    background-color: rgb(45, 45, 45);
+    flex-direction: column;
+}
+
+.tc-popup__title { font-size: 22px; }
+.tc-popup__message {
+    flex-grow: 1;
+    align-self: center;
+    -unity-text-align: middle-center;
+    max-width: 100%;
+}
+.tc-popup__buttons { align-self: flex-end; flex-direction: row; align-items: center; }
+.tc-popup__confirm { font-size: 17px; }
+.tc-popup__cancel { font-size: 16px; }
+
+/* ================================================================ 로딩 (LoadingScreenWidget = WBP_Loading / WBP_LoadingLight) */
+
+.tc-loading {
+    position: absolute;
+    left: 0; top: 0; right: 0; bottom: 0;
+    align-items: center;
+    justify-content: center;
+}
+.tc-loading--light { background-color: rgba(0, 0, 0, 0.7); }   /* 블러(6) 는 못 함 */
+
+.tc-loading__column { flex-direction: column; align-items: center; }
+.tc-loading__title { -unity-text-align: middle-center; }
+.tc-loading__throbber { margin-top: 24px; margin-bottom: 24px; }
+.tc-loading--light .tc-loading__throbber { margin-top: 0; margin-bottom: 0; }
+.tc-loading__message { -unity-text-align: middle-center; }

@@ -1,0 +1,31 @@
+/*
+ * 이벤트 / 퀘스트 방 (언리얼 UEventWidget + WBP_EventWidget). 클래스 접두사 ev-
+ * 전부 화면 가운데 기준 (앵커 0.5 / 0.5)
+ */
+
+/* [2] TitleText: 위 -356.5, 정렬 (0.5, 0) */
+.ev-title {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    translate: -50% -356px;
+}
+
+/* [3] MessageText: 위 -260.5, 정렬 (0.5, 0). WBP 는 내용 크기로 줄바꿈 없음 -> 긴 상황 설명이 화면을 넘지 않게 1700 에서 줄바꿈 (1100 이면 줄이 늘어 카드와 겹침) */
+.ev-message {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    max-width: 1700px;
+    translate: -50% -260px;
+}
+
+/* [4] CardBox: 가운데, 정렬 (0.5, 0.5) */
+.ev-cards {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    translate: -50% -50%;
+    flex-direction: row;
+    align-items: center;
+}

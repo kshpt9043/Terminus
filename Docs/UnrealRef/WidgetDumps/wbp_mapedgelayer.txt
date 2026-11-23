@@ -1,0 +1,2 @@
+/Game/JSY/Widget/Map/WBP_MapEdgeLayer.WBP_MapEdgeLayer
+[0] CanvasPanel EdgeLayerRoot  Visibility:HitTestInvisible

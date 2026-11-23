@@ -1,0 +1,11 @@
+/Game/KSH/Widgets/WBP_Lobby.WBP_Lobby
+[0] CanvasPanel CanvasPanel_20
+  [1] VerticalBox VerticalBox_23  Slot:/Script/UMG.CanvasPanelSlot'/Game/KSH/Widgets/WBP_Lobby.WBP_Lobby:WidgetTree.CanvasPanel_20.CanvasPanelSlot_0'  slot:(LayoutData:(Anchors=(Minimum=(X=0.500000,Y=0.500000),Maximum=(X=0.500000,Y=0.500000)),Alignment=(X=0.500000,Y=0.500000)), bAutoSize:True)
+    [2] Button Host  Slot:/Script/UMG.VerticalBoxSlot'/Game/KSH/Widgets/WBP_Lobby.WBP_Lobby:WidgetTree.VerticalBox_23.VerticalBoxSlot_0'
+      [3] TextBlock TextBlock_80  Text:NSLOCTEXT("[4C0FB100592CE073585FDB41BC4E91EB]", "A4DED9E8410EC1944EB376A72C76395B", "Host")  Slot:/Script/UMG.ButtonSlot'/Game/KSH/Widgets/WBP_Lobby.WBP_Lobby:WidgetTree.Host.ButtonSlot_0'
+    [4] Button Find  Slot:/Script/UMG.VerticalBoxSlot'/Game/KSH/Widgets/WBP_Lobby.WBP_Lobby:WidgetTree.VerticalBox_23.VerticalBoxSlot_1'
+      [5] TextBlock TextBlock_136  Text:NSLOCTEXT("[4C0FB100592CE073585FDB41BC4E91EB]", "C73314034517EBA29BE30882A6E5BD7A", "Find")  Slot:/Script/UMG.ButtonSlot'/Game/KSH/Widgets/WBP_Lobby.WBP_Lobby:WidgetTree.Find.ButtonSlot_0'
+    [6] Button Join  Slot:/Script/UMG.VerticalBoxSlot'/Game/KSH/Widgets/WBP_Lobby.WBP_Lobby:WidgetTree.VerticalBox_23.VerticalBoxSlot_3'
+      [7] TextBlock TextBlock  Text:NSLOCTEXT("[4C0FB100592CE073585FDB41BC4E91EB]", "323B7066402943E1E097849E35A30D51", "Join")  Slot:/Script/UMG.ButtonSlot'/Game/KSH/Widgets/WBP_Lobby.WBP_Lobby:WidgetTree.Join.ButtonSlot_0'
+  [8] TextBlock Txt_Status  Text:NSLOCTEXT("UMG", "TextBlockDefaultValue", "Text Block")  Slot:/Script/UMG.CanvasPanelSlot'/Game/KSH/Widgets/WBP_Lobby.WBP_Lobby:WidgetTree.CanvasPanel_20.CanvasPanelSlot_1'  slot:(LayoutData:(Offsets=(Left=1172.000000,Top=368.000000,Right=403.103973,Bottom=437.434479)))
+  [9] TextBlock DisconnectText  Text:NSLOCTEXT("UMG", "TextBlockDefaultValue", "Text Block")  Font:(Size=37.500000)  Slot:/Script/UMG.CanvasPanelSlot'/Game/KSH/Widgets/WBP_Lobby.WBP_Lobby:WidgetTree.CanvasPanel_20.CanvasPanelSlot_2'  Visibility:Collapsed  slot:(LayoutData:(Offsets=(Left=412.000000,Top=220.000000,Right=1103.952881,Bottom=578.538513)))

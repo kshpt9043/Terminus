@@ -1,0 +1,17 @@
+/*
+ * 방 패널 공용 (보상 / 휴식 / 이벤트 / 상점 / 구출). 코드: Runtime/UI/Rooms/*.cs (RoomLooks.Use 로 붙음)
+ * 화면마다 따로: MonsterReward.uss / Rest.uss / Event.uss / Shop.uss / Rescue.uss. 클래스 접두사 rp- (공용)
+ */
+
+/* 화면 하나 = 전체를 덮는 캔버스 (언리얼 위젯 루트 CanvasPanel) */
+.rp-root {
+    position: absolute;
+    left: 0; top: 0; right: 0; bottom: 0;
+}
+
+/* 화면 전체 그림 (Image 앵커 0~1, 2752x1536 을 늘려 채움) */
+.rp-fullimage {
+    position: absolute;
+    left: 0; top: 0; right: 0; bottom: 0;
+    -unity-background-scale-mode: stretch-to-fill;
+}

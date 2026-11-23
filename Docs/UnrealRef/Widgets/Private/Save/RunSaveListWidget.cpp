@@ -1,0 +1,220 @@
+#include "Widgets/Save/RunSaveListWidget.h"
+
+#include "Blueprint/WidgetTree.h"
+#include "Components/Border.h"
+#include "Components/Button.h"
+#include "Components/HorizontalBox.h"
+#include "Components/HorizontalBoxSlot.h"
+#include "Components/ScrollBox.h"
+#include "Components/ScrollBoxSlot.h"
+#include "Components/SizeBox.h"
+#include "Components/TextBlock.h"
+#include "Components/VerticalBox.h"
+#include "Components/VerticalBoxSlot.h"
+#include "Game/TerminusSaveSubsystem.h"
+#include "Widgets/Common/ConfirmPopupWidget.h"
+#include "Widgets/Common/EscapeStackSubsystem.h"
+#include "Widgets/Save/RunSaveEntryWidget.h"
+#include "Widgets/Common/TerminusUIBuilder.h"
+#include "Widgets/TerminusUIColors.h"
+#include "Widgets/TerminusUILayers.h"
+#include "Widgets/TerminusUISettings.h"
+
+// =====================================================================
+// 초기화 / 배치
+// =====================================================================
+
+void URunSaveListWidget::NativeOnInitialized()
+{
+	Super::NativeOnInitialized();
+
+	if (!WidgetTree->RootWidget || !EntryBox)
+	{
+		BuildDefaultLayout();
+	}
+
+	if (CloseButton) CloseButton->OnClicked.AddDynamic(this, &URunSaveListWidget::HandleClose);
+
+	SetVisibility(ESlateVisibility::Collapsed);
+}
+
+void URunSaveListWidget::NativeDestruct()
+{
+	if (UEscapeStackSubsystem* Escape = UEscapeStackSubsystem::Get(this))
+	{
+		Escape->Remove(this);
+	}
+
+	Super::NativeDestruct();
+}
+
+void URunSaveListWidget::BuildDefaultLayout()
+{
+	// 화면 전체 어둡게 + 가운데 창
+	UBorder* Dim = TerminusUI::MakeDimRoot(WidgetTree, TEXT("SaveListDim"), TerminusUI::Color::Dim);
+
+	USizeBox* WindowSize = WidgetTree->ConstructWidget<USizeBox>();
+	WindowSize->SetWidthOverride(760.f);
+	WindowSize->SetHeightOverride(600.f);
+	Dim->SetContent(WindowSize);
+
+	UBorder* Window = TerminusUI::MakePanel(WidgetTree, NAME_None, TerminusUI::Color::Board, FMargin(20.f));
+	WindowSize->SetContent(Window);
+
+	UVerticalBox* Column = WidgetTree->ConstructWidget<UVerticalBox>();
+	Window->SetContent(Column);
+
+	// 위: 제목 / 닫기
+	UHorizontalBox* Top = WidgetTree->ConstructWidget<UHorizontalBox>();
+	if (UVerticalBoxSlot* S = Column->AddChildToVerticalBox(Top)) S->SetPadding(FMargin(0.f, 0.f, 0.f, 14.f));
+
+	UTextBlock* Title = TerminusUI::MakeText(WidgetTree, TEXT("TitleText"), TEXT("이어하기"), TerminusUI::FontSize::Section, TerminusUI::Color::Gold, ETextJustify::Left);
+	TerminusUI::SetBold(Title);
+	if (UHorizontalBoxSlot* S = Top->AddChildToHorizontalBox(Title))
+	{
+		S->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+		S->SetVerticalAlignment(VAlign_Center);
+	}
+
+	CloseButton = TerminusUI::MakeButton(WidgetTree, TEXT("CloseButton"), TEXT("닫기"), TerminusUI::FontSize::Body);
+	if (UHorizontalBoxSlot* S = Top->AddChildToHorizontalBox(CloseButton)) S->SetVerticalAlignment(VAlign_Center);
+
+	StatusText = TerminusUI::MakeText(WidgetTree, TEXT("StatusText"), FString(), TerminusUI::FontSize::Aux, TerminusUI::Color::Warning, ETextJustify::Left);
+	if (UVerticalBoxSlot* S = Column->AddChildToVerticalBox(StatusText)) S->SetPadding(FMargin(0.f, 0.f, 0.f, 8.f));
+
+	EmptyText = TerminusUI::MakeText(WidgetTree, TEXT("EmptyText"), TEXT("저장된 진행이 없습니다. 던전에서 방을 끝내면 자동으로 저장됩니다."), TerminusUI::FontSize::Body, TerminusUI::Color::TextDim, ETextJustify::Left);
+	EmptyText->SetAutoWrapText(true);
+	Column->AddChildToVerticalBox(EmptyText);
+
+	UScrollBox* Scroll = WidgetTree->ConstructWidget<UScrollBox>(UScrollBox::StaticClass(), TEXT("EntryBox"));
+	EntryBox = Scroll;
+	if (UVerticalBoxSlot* S = Column->AddChildToVerticalBox(Scroll)) S->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+}
+
+// =====================================================================
+// 열기 / 닫기 / 갱신
+// =====================================================================
+
+void URunSaveListWidget::Open(const FString& InTavernMapPath)
+{
+	TavernMapPath = InTavernMapPath;
+	bLoading = false;
+	SetStatus(FText::GetEmpty());
+	SetVisibility(ESlateVisibility::Visible);
+	Refresh();
+
+	if (UEscapeStackSubsystem* Escape = UEscapeStackSubsystem::Get(this))
+	{
+		Escape->Push(this, FSimpleDelegate::CreateUObject(this, &URunSaveListWidget::Close));
+	}
+}
+
+void URunSaveListWidget::Close()
+{
+	SetVisibility(ESlateVisibility::Collapsed);
+
+	if (UEscapeStackSubsystem* Escape = UEscapeStackSubsystem::Get(this))
+	{
+		Escape->Remove(this);
+	}
+}
+
+void URunSaveListWidget::HandleClose()
+{
+	Close();
+}
+
+void URunSaveListWidget::Refresh()
+{
+	UTerminusSaveSubsystem* Save = UTerminusSaveSubsystem::Get(this);
+	// 싱글(하나) + 멀티
+	const TArray<FRunSaveSummary> Saves = Save ? Save->GetRunSaves() : TArray<FRunSaveSummary>();
+
+	if (EmptyText) EmptyText->SetVisibility(Saves.Num() == 0 ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Collapsed);
+	if (!EntryBox) return;
+
+	EntryBox->ClearChildren();
+	const TSubclassOf<URunSaveEntryWidget> Class = UTerminusUISettings::Pick(EntryClass, &UTerminusUISettings::SaveEntry);
+
+	for (const FRunSaveSummary& Summary : Saves)
+	{
+		URunSaveEntryWidget* Entry = CreateWidget<URunSaveEntryWidget>(this, Class);
+		if (!Entry) continue;
+
+		Entry->Setup(Summary);
+		Entry->OnLoadClicked.BindUObject(this, &URunSaveListWidget::HandleLoad);
+		Entry->OnDeleteClicked.BindUObject(this, &URunSaveListWidget::HandleDelete);
+
+		UPanelSlot* PanelSlot = EntryBox->AddChild(Entry);
+		if (UScrollBoxSlot* ScrollSlot = Cast<UScrollBoxSlot>(PanelSlot))
+		{
+			ScrollSlot->SetPadding(FMargin(0.f, 0.f, 0.f, 8.f));
+		}
+		else if (UVerticalBoxSlot* VSlot = Cast<UVerticalBoxSlot>(PanelSlot))
+		{
+			VSlot->SetPadding(FMargin(0.f, 0.f, 0.f, 8.f));
+		}
+	}
+}
+
+void URunSaveListWidget::SetStatus(const FText& Text)
+{
+	if (!StatusText) return;
+
+	StatusText->SetText(Text);
+	StatusText->SetVisibility(Text.IsEmpty() ? ESlateVisibility::Collapsed : ESlateVisibility::HitTestInvisible);
+}
+
+// =====================================================================
+// 불러오기 / 삭제
+// =====================================================================
+
+void URunSaveListWidget::HandleLoad(const FString& SlotName)
+{
+	if (bLoading) return;
+
+	UTerminusSaveSubsystem* Save = UTerminusSaveSubsystem::Get(this);
+	if (!Save) return;
+
+	FText Error;
+	if (!Save->ContinueRun(this, SlotName, TavernMapPath, DungeonMapPath, Error))
+	{
+		SetStatus(Error);
+		Refresh();
+		return;
+	}
+
+	// 주점으로 넘어가는 중. 멀티는 세션 생성이 비동기라 실패하면 메인 메뉴가 팝업을 띄움
+	bLoading = true;
+	SetStatus(FText::FromString(TEXT("불러오는 중...")));
+	Close();
+}
+
+void URunSaveListWidget::HandleDelete(const FString& SlotName)
+{
+	PendingDeleteSlot = SlotName;
+
+	const TSubclassOf<UConfirmPopupWidget> Class = UTerminusUISettings::Pick(PopupClass, &UTerminusUISettings::ConfirmPopup);
+	UConfirmPopupWidget* Popup = CreateWidget<UConfirmPopupWidget>(GetOwningPlayer(), Class);
+	if (!Popup)
+	{
+		HandleDeleteConfirmed();
+		return;
+	}
+
+	Popup->Setup(FText::FromString(TEXT("세이브 삭제")),
+		FText::FromString(TEXT("이 진행을 삭제할까요? 되돌릴 수 없습니다.")),
+		FText::FromString(TEXT("삭제")), FText::FromString(TEXT("취소")));
+	Popup->OnConfirmedNative.BindUObject(this, &URunSaveListWidget::HandleDeleteConfirmed);
+	Popup->AddToViewport(TerminusUI::Layer::Popup);
+}
+
+void URunSaveListWidget::HandleDeleteConfirmed()
+{
+	if (UTerminusSaveSubsystem* Save = UTerminusSaveSubsystem::Get(this))
+	{
+		Save->DeleteRunSave(PendingDeleteSlot);
+	}
+	PendingDeleteSlot.Reset();
+	Refresh();
+}

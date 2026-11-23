@@ -16,6 +16,15 @@ namespace Terminus.Game.Net
 
         static string TypeKey<T>() => typeof(T).Name;
 
+        // 에디터는 도메인 리로드를 꺼 둠(EnterPlayModeOptions) -> static 처리기가 Play 마다 쌓여 알림이 두 번씩 옴
+        // 가장 먼저(SubsystemRegistration) 비우고, 각 화면이 BeforeSceneLoad 이후에 다시 붙임
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetForPlay()
+        {
+            ServerHandlers.Clear();
+            ClientHandlers.Clear();
+        }
+
         // ------------------------------------------------------------ 서버
 
         /// <summary>[서버] 요청 처리기 등록. 같은 타입은 하나만 (나중 것이 이김)</summary>

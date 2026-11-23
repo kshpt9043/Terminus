@@ -70,11 +70,11 @@ Tools/CoreBuild/     유니티 밖 빌드 (Core/Terminus.Core.csproj, Tests/Term
 | Dungeon 전투 | Dungeon/DungeonCombatComponent, Character/* 규칙 | 완료 (`DungeonCombat`, `IAreaCombat` 구현) |
 | Dungeon 구역 / 방 | Dungeon/DungeonArea, AreaSet, AreaSubsystem, ThemeData, GameMode 이공간 | 완료 (휴식 / 상점 / 이벤트 / 퀘스트 방 / 구출 / 이공간) |
 | Game (씬 / 서버 / NGO 래퍼) | Game/*GameMode, Player/*, Map/Dungeon 액터 | 1차 완료 (아래 "게임 쪽 구조") |
-| 네트워크 | Online/SessionSubsystem (Steam), Player/*(RPC), Comms, Chat | Unity Transport(IP) 로 방장/참가/채팅 완료. Steam · 핑/퀵챗 대기 |
-| UI | Widgets/* (약 40화면) | 기능 화면 (메뉴 / 주점 / 지도 / 전투 HUD / 방 패널 / 정산). 언리얼 위젯 그대로 옮기기는 대기 |
+| 네트워크 | Online/SessionSubsystem (Steam), Player/*(RPC), Comms, Chat | 완료: IP(Unity Transport) + Steam(Facepunch 트랜스포트, 로비 방 목록 / 비밀번호 / 진행 중 재합류), 핑 / 퀵챗 / 전투 계획 공유. Steam 실제 2인은 미확인 (PC 두 대 필요) |
+| UI | Widgets/* (약 40화면) | 완료: 언리얼 WBP 그대로 (메뉴 / 주점 / 지도 / 전투 HUD / 보상 / 휴식 / 상점 / 이벤트 / 구출 / 정산 / 채팅 / 핑). 기능 화면은 지움 |
 | 아트 | PixelLab 몬스터, 아이콘, 폰트, 직업 임시 그림 | 완료 |
 
-테스트: Core 308개 (dotnet net48) + 유니티 에셋 연결 4개 = 유니티 Test Runner 312개 전부 통과 (2026-11-23)
+테스트: 유니티 Test Runner 320개 전부 통과 (Core + Comms + 에셋 연결, 2026-11-23)
 
 ## 게임 쪽 구조 (2026-11-23)
 
@@ -92,8 +92,14 @@ Tools/CoreBuild/     유니티 밖 빌드 (Core/Terminus.Core.csproj, Tests/Term
 - 혼자: `MainMenu` 씬 Play → 혼자 시작. 또는 `Dungeon` 씬을 바로 Play
 - 멀티 (에디터 하나로): Multiplayer Play Mode 시나리오 `Scenes/Dev/TwoPlayers.asset` (메인 + 복제 1) 를 활성으로 두고 Play.
   메인 에디터에서 방 만들기. 복제 플레이어는 `DevAutoGuest`(에디터 전용)가 자동 손님으로 참가 / 준비 / 방장 방 따라가기 / 턴 종료
-- 멀티 (빌드 여러 개): `Terminus.exe -profile p2` 처럼 프로필을 나눠 띄우고 IP 로 참가
+- 빌드 실행 (언리얼 Run-Standalone.bat 자리): 프로젝트 루트 `Run-Standalone.bat` — 그냥 = Steam, `nosteam` = IP, `2` = 같은 PC 에 IP 모드 2개(프로필 p1/p2),
+  `build` = 에디터가 꺼져 있으면 배치 빌드 후 실행 (에디터가 열려 있으면 메뉴 `Terminus/Build/Windows`). 결과물 `Builds/Windows/Terminus.exe`, 로그 `Logs/standalone*.log`
+- Steam 2인은 PC 두 대 / 계정 두 개 (Steam 클라이언트 하나 = 계정 하나). 개발용 AppID 480
 - 2026-11-23 확인: 혼자 한 바퀴 (주점 → 퀘스트 방 → 전투 → 보상 → 지도), 2인 (참가 → 준비 → 출발 → 파티 분리 동시 전투 → 전멸 → 구출 투표 시간 초과 → 지도)
+- 2026-11-23 정식 UI 확인: 혼자 (퀘스트 / 전투 / 보상 / 휴식 / 상점 / 이벤트 / 가디언 / 보스 / 전멸 → 정산 → 메인), MPPM 2인 (주점 → 퀘스트 → 전투 → 보상 → 지도),
+  빌드 `Run-Standalone.bat 2` 로 창 두 개 (방 열기 → 127.0.0.1 참가 → 준비 → 출발 → 지도)
+- 에디터는 도메인 리로드를 꺼 둠 → static 은 Play 마다 `RuntimeInitializeOnLoadMethod(SubsystemRegistration)` 에서 되돌릴 것 (NetBus 처리기는 NetBus 가 비움)
+- 에디터 Game 뷰가 16:9 가 아니면 (예 932x712) 기준 1920x1080 고정 좌표 화면이 오른쪽으로 넘쳐 보임. 빌드 1280x720 에서는 정상
 
 ## 다음 단계 (게임 쪽)
 
@@ -102,7 +108,7 @@ Core 는 서버에서 도는 순수 로직이고, 각 모듈 보고의 "언리�
   `IAreaNotifier`(휴식 / 상점 / 이벤트 / 구출 / 이공간 화면), `DungeonCombat.StateChanged / MonsterSpawned / MonsterActing / RoomRewardOffered`, `RunPlayer.RunStateChanged / Notice`
 - 매 프레임: `DungeonTimers.Tick(serverTime)`, 구역마다 `DungeonCombat.Tick(serverTime)`, `FloorProgression.Tick(serverTime)`
 - 저장: `ISaveStorage` (파일) + `ISaveSerializer` (JsonUtility)
-- 남은 것: Steam(Facepunch 트랜스포트 + 로비 방 목록 / 초대), 핑·퀵챗·전투 계획 공유(Comms), 이어하기 / 이공간 재접속, 거점·창고 화면, 언리얼 위젯 그대로의 정식 UI, 로딩 화면, 플레이어 직업 정식 그림
+- 남은 것: Steam 실제 2인 확인 (PC 두 대), 이어하기 / 이공간 재접속 실제 확인, 플레이어 직업 정식 그림 (지금은 언리얼과 같은 임시 그림: 머리 위 흰 네모 1~4개는 그림 안의 프레임 번호 표시)
 - 몬스터 그림: 슬라임 왕국 13마리만 있음. 나머지 54마리는 픽셀랩 세션이 작업 중 (일반 64 / 가디언 96 / 보스 128px)
 
 ### 각 모듈 보고에서 나온 "언리얼 그대로 옮긴 의심스러운 동작" (기획 확인용)
@@ -112,3 +118,22 @@ Core 는 서버에서 도는 순수 로직이고, 각 모듈 보고의 "언리�
 - 던전 전투: 전투 끝 부활이 피해 경로를 타서 체술 암살자는 1 이 아니라 1+회피 로 일어남 / 몬스터의 OnSkillUsed 유물(RLC_Monster_LIZ03, SIL03)은 안 터짐 / 보상 선택이 거절돼도 다시 고를 기회 없음 / 사원소의 성배는 회복마다 +16 까지 연쇄
 - 구역: 이벤트 대가를 툴팁 대괄호 글자에서 읽음 (CH_CMN_011_B, 012_B 는 대가 열과 다름) / 상점 강화는 지금 계층 스킬만 / 구출·난입하면 원래 방이 지나온 길에 안 남음
 - 몬스터 기획 메모만 있고 코드 없음: 에이션트 슬라임 부활 때 공격·방어 누적 변동, 홉고블린 대주술사·알파 다이어울프 동반 스폰
+
+## 정식 UI 이식 규칙 (언리얼 위젯 그대로)
+
+언리얼 위젯은 두 겹이다: C++ 클래스(`Docs/UnrealRef/Widgets/`)가 로직 + 기본 레이아웃(`BuildDefaultLayout`), 그 위에 WBP(UMG 디자이너)가
+`BindWidgetOptional` 로 같은 이름의 위젯을 갖고 있으면 WBP 디자인이 쓰인다. WBP 디자인은 MCP 로 꺼낸 트리 덤프 `Docs/UnrealRef/WidgetDumps/WBP_*.txt`
+(위젯 종류 / 이름 / 앵커 / 오프셋 / 크기 / 색 / 글꼴 / 텍스처 경로가 다 있음). 어느 WBP 를 쓰는지는 언리얼 `Config/DefaultGame.ini` 의 TerminusUISettings
+(예: Shop = WBP_ShopWidget, CombatHUD = WBP_CombatUI, ItemSlot = WBP_SkillSlot).
+
+- **레이아웃 = WBP 덤프 우선**, 덤프에 없는 부분(코드가 채우는 목록 / 카드 / 툴팁)은 C++ `BuildDefaultLayout` / `Refresh` 를 따른다.
+- **UI Toolkit, 코드로 VisualElement 를 만든다** (UXML 안 씀). 화면마다 USS 하나 (`Assets/Terminus/UI/Screens/<화면>.uss`), 공통 변수 / 클래스는 `UI/Theme/Terminus.uss`.
+  언리얼 CanvasPanel 앵커(0~1) / 오프셋은 position:absolute + left/top/right/bottom 퍼센트 / px 로 그대로 옮긴다 (기준 해상도 1920x1080, PanelSettings 가 맞춰 줌).
+- **색**: 덤프의 SpecifiedColor 는 선형(linear) 값이다 → sRGB 로 바꿔서 쓴다 (c^(1/2.2) 근사 말고 정확히: c<=0.0031308 ? 12.92c : 1.055c^(1/2.4)-0.055). 팔레트에 같은 색이 있으면 USS 변수를 쓴다.
+- **글꼴**: Noto Sans KR (Regular / Bold). TypefaceFontName=Bold 면 `.t-bold`.
+- **텍스처**: 언리얼 경로 `/Game/X/Y/T_Z` → `Resources/UI/Textures/X/Y/T_Z.png` (스프라이트, 부드러운 필터). `UiTextures.Load("UI/Textures/Map/T_Map_Paper")` 처럼 Resources 로.
+  Brush 의 DrawAs=Box / Margin 이 있으면 USS `-unity-slice-left/right/top/bottom` (9-slice).
+- **데이터 / 행동**: 화면은 `ClientState`(스냅샷) 를 읽고 `NetBus.Request(new XxxReq{...})` 로 서버에 요청, `NetBus.On<XxxMsg>` 로 알림을 받는다.
+  언리얼 PC 의 Client_* / Server_* 이름은 `Game/Net/NetMessages.cs` 에 대응. 없는 메시지가 필요하면 **자기 partial 파일**에 추가 (아래 소유권).
+- **레이어**: `UIRoot.Instance.Show(UILayer.X, element)` (언리얼 AddToViewport ZOrder = `UILayer`).
+- 화면은 지금의 기능 화면(`UI/Screens/*Screen.cs`, `DungeonPanels.cs`)을 대체한다. 대체가 끝나면 기능 화면은 지운다.

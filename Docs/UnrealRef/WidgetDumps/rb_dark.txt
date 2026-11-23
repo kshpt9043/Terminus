@@ -1,0 +1,2 @@
+/Game/KSH/Widgets/RoundBlocks/RB_Dark.RB_Dark
+[0] Border Border_23  Background:(TintColor=(SpecifiedColor=(R=0.010960,G=0.012983,B=0.018500,A=1.000000)),DrawAs=RoundedBox,OutlineSettings=(Color=(SpecifiedColor=(R=0.042311,G=0.049707,B=0.068478,A=1.000000)),Width=1.500000,RoundingType=FixedRadius))

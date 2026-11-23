@@ -1,0 +1,61 @@
+/*
+ * 구출 투표 (언리얼 URescueWidget + WBP_Rescue). 클래스 접두사 rescue-
+ */
+
+/* [1] RescueDim: 검정 0.7 */
+.rescue-dim {
+    position: absolute;
+    left: 0; top: 0; right: 0; bottom: 0;
+    background-color: rgba(0, 0, 0, 0.7);
+}
+
+/* [2] RescuePanel: 가운데, 여백 30 / 24, (0.010960, 0.012983, 0.018500) = #1B1E25, 테두리 #3A3F4A, 모서리 6 */
+.rescue-panel {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    translate: -50% -50%;
+    padding: 24px 30px 24px 30px;
+    background-color: #1B1E25;
+    border-width: 1px;
+    border-color: #3A3F4A;
+    border-radius: 6px;
+    flex-direction: column;
+    align-items: stretch;
+}
+
+.rescue-message { margin-top: 10px; }
+.rescue-timer { margin-top: 6px; }
+.rescue-options { margin-top: 22px; flex-direction: column; }
+
+/* 선택지 버튼: Normal #262A32 / 테두리 #3A3F4A, Hovered #2E333D + 어두운 금, Pressed #23272E + 금, 여백 20 */
+.rescue-option {
+    margin: 0;
+    padding: 20px;
+    background-color: #262A32;
+    border-width: 1px;
+    border-color: #3A3F4A;
+    border-radius: 6px;
+    transition-duration: 0s;
+}
+.rescue-option:hover {
+    background-color: #2E333D;
+    border-color: #A8894A;
+}
+.rescue-option:active {
+    background-color: #23272E;
+    border-color: #C9A45C;
+}
+.rescue-option:disabled {
+    background-color: #2E333D;
+    border-color: #3A3F4A;
+}
+.rescue-option--first { margin-bottom: 12px; }
+
+/* SizeBox 520 폭 / 최소 74 */
+.rescue-option__inside {
+    width: 520px;
+    min-height: 74px;
+}
+.rescue-option__title { padding: 6px 14px 0 14px; }
+.rescue-option__desc { padding: 2px 14px 6px 14px; }

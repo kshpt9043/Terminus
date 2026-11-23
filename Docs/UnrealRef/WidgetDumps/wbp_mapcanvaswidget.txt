@@ -1,0 +1,5 @@
+/Game/JSY/Widget/WBP_MapCanvasWidget.WBP_MapCanvasWidget
+[0] ScrollBox ScrollBox  ScrollBarVisibility:Collapsed
+  [1] Overlay Overlay_0  Slot:/Script/UMG.ScrollBoxSlot'/Game/JSY/Widget/WBP_MapCanvasWidget.WBP_MapCanvasWidget:WidgetTree.ScrollBox.ScrollBoxSlot_0'  slot:(Size:(SizeRule=Fill))
+    [2] Image Image_77  Brush:(ImageType=FullColor,ImageSize=(X=780.000000,Y=1200.000000),ResourceObject="/Script/Engine.Texture2D'/Game/UI/Textures/Map/T_Map_Paper.T_Map_Paper'")  Slot:/Script/UMG.OverlaySlot'/Game/JSY/Widget/WBP_MapCanvasWidget.WBP_MapCanvasWidget:WidgetTree.Overlay_0.OverlaySlot_1'  slot:(HorizontalAlignment:HAlign_Center, VerticalAlignment:VAlign_Fill)
+    [3] CanvasPanel MapCanvasPanel  Slot:/Script/UMG.OverlaySlot'/Game/JSY/Widget/WBP_MapCanvasWidget.WBP_MapCanvasWidget:WidgetTree.Overlay_0.OverlaySlot_2'  slot:(HorizontalAlignment:HAlign_Center, VerticalAlignment:VAlign_Fill)

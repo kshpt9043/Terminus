@@ -1,0 +1,74 @@
+/*
+ * 스킬 컴포넌트 (언리얼 Widgets/Skill/*). UiStyle.Use(element, "Skill")
+ */
+
+/* ================================================================ 스킬 툴팁 (SkillTooltipWidget = WBP_SkillTooltip)
+ * [본 판 320 | 상태이상 창] 가로 줄. 판 #1B1E25 + 1px #3A3F4A, 6px 둥근 모서리, 안쪽 16
+ */
+.tc-skilltip { flex-direction: row; align-items: flex-start; }
+
+.tc-skilltip__main {
+    width: 320px;
+    flex-shrink: 0;
+    flex-direction: column;
+    background-color: var(--t-board);
+    border-width: 1px;
+    border-color: var(--t-line);
+    border-radius: 6px;
+    padding: 16px;
+}
+
+.tc-skilltip__desc { margin-top: 16px; margin-bottom: 16px; }
+.tc-skilltip__row { flex-direction: row; align-items: center; }
+
+/* 상태이상 창 (C++ BuildStatusPanel: 안쪽 14 / 12, 왼쪽 6 띄움, 240 에서 줄바꿈) */
+.tc-skilltip__status {
+    margin-left: 6px;
+    flex-shrink: 0;
+    background-color: var(--t-board);
+    border-width: 1px;
+    border-color: var(--t-line);
+    border-radius: 6px;
+    padding: 12px 14px 12px 14px;
+}
+.tc-skilltip__statustext { max-width: 240px; }
+
+/* ================================================================ 스킬 카드 (SkillCardWidget = WBP_SkillCard 300x400)
+ * 버튼 여백 20 + 줄 여백 8 = 안쪽 28. 호버 #2E333D + 어두운 금, 눌림 #23272E + 금
+ */
+.tc-skillcard {
+    flex-shrink: 0;
+    flex-direction: column;
+    background-color: var(--t-board);
+    border-width: 1px;
+    border-color: var(--t-line);
+    border-radius: 6px;
+    padding: 28px;
+}
+.tc-skillcard:hover { background-color: var(--t-disabled); border-color: var(--t-gold-pressed); }
+.tc-skillcard:active { background-color: var(--t-section); border-color: var(--t-gold); }
+.tc-skillcard--selected,
+.tc-skillcard--selected:hover { border-width: 2px; border-color: var(--t-gold); }
+.tc-skillcard--disabled,
+.tc-skillcard--disabled:hover,
+.tc-skillcard--disabled:active { background-color: var(--t-disabled); border-color: var(--t-line); opacity: 0.6; }
+
+.tc-skillcard__name { flex-shrink: 0; align-self: stretch; }
+.tc-skillcard__iconarea { flex-grow: 1; flex-basis: 0; align-items: center; justify-content: center; }
+.tc-skillcard__icon { flex-shrink: 0; }
+.tc-skillcard__desc { flex-grow: 1; flex-basis: 0; overflow: hidden; }
+.tc-skillcard__row { flex-shrink: 0; flex-direction: row; align-items: center; }
+
+/* ================================================================ 시작 강화 스킬 고르기 (StartSkillPickWidget = WBP_StartSkillPick)
+ * 바탕 Image (선형 0.03125 = #313131). 제목 위 144, 안내 위 892, 카드 줄은 화면 가운데
+ */
+.tc-startskill {
+    position: absolute;
+    left: 0; top: 0; right: 0; bottom: 0;
+    background-color: rgb(49, 49, 49);
+    align-items: center;
+    justify-content: center;
+}
+.tc-startskill__title { position: absolute; top: 144px; left: 0; right: 0; }
+.tc-startskill__cards { flex-direction: row; align-items: center; }
+.tc-startskill__message { position: absolute; top: 892px; left: 0; right: 0; }

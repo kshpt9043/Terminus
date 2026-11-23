@@ -1,0 +1,186 @@
+﻿#pragma once
+
+#include "CoreMinimal.h"
+#include "Widgets/Common/TerminusUserWidget.h"
+#include "Widgets/TerminusUIColors.h"
+#include "ItemSlotWidget.generated.h"
+
+class UBorder;
+struct FSkillRow;
+class UButton;
+class UImage;
+class USizeBox;
+class UTextBlock;
+class USkillTooltipWidget;
+class URelicTooltipWidget;
+class UItemSlotWidget;
+
+DECLARE_DELEGATE_OneParam(FOnItemSlotClicked, UItemSlotWidget* /*Slot*/);
+
+// 칸에 든 것
+UENUM()
+enum class EItemSlotKind : uint8
+{
+	Empty,
+	Skill,
+	Relic
+};
+
+/**
+ * 스킬 / 유물 칸 공용 위젯. 전투 HUD 스킬 칸, 창고 격자, 보유 유물 줄이 모두 이걸 씀
+ *
+ *  - 아이콘 (없으면 이름 앞 두 글자) + 이름 (SetShowName 으로 숨길 수 있음)
+ *  - 유물 / 스킬: 아이콘을 칸에 맞는 정사각형으로 크게, 이름은 작게. 이름이 보이면 칸을 RelicNamedMinSize 이상으로 키움
+ *  - 판 #262A32 + 1px #3A3F4A 테두리, 위쪽 4px 띠 색: 유물은 등급, 스킬은 공격 / 방어 / 특수
+ *    호버면 #A8894A 테두리 + #2E333D 바탕, 선택(SetSelected)이면 강조 색 2px 테두리
+ *  - 마우스를 올리면 툴팁 (스킬 = 스킬 툴팁 위젯, 유물 = 유물 툴팁 위젯). 둘 다 WBP 로 바꿀 수 있음
+ *  - 아이콘만 모드(SetIconOnly / bIconOnly): 이름 / 테두리 / 배경을 숨기고 아이콘만. 정보는 툴팁으로 (상점)
+ *  - SetUsable(false) 면 버튼이 꺼짐 (전투에서 비용 부족 등). 빈 칸은 항상 꺼짐
+ *  - SlotIndex 는 쓰는 쪽이 정하는 번호 (전투 스킬 칸 번호 등). 눌리면 OnSlotClicked(this)
+ *
+ * 같은 내용을 다시 넣으면 그리지 않음 (전투 HUD 가 매 틱 부르므로)
+ *
+ * WBP 로 꾸미려면 이 클래스를 부모로 WBP 를 만들고 아래 이름으로 위젯을 둘 것 (전부 선택 사항)
+ */
+UCLASS()
+class TERMINUS_API UItemSlotWidget : public UTerminusUserWidget
+{
+	GENERATED_BODY()
+
+public:
+	void SetEmpty();
+	// Upgraded = 강화 단계를 더한 복사본 (전투 칸 / 상점 강화 카드). 툴팁 수치와 설명이 그 값으로
+	void SetSkill(FName SkillRow, const FSkillRow* Upgraded = nullptr);
+	void SetRelic(FName RelicRow);
+
+	// 선택 / 대상 고르는 중 강조
+	void SetSelected(bool bSelected);
+
+	// 누를 수 있는지 (빈 칸은 무시하고 항상 꺼짐)
+	void SetUsable(bool bUsable);
+
+	// 이름 줄 보이기 (유물 줄처럼 아이콘만 보여줄 때 false)
+	void SetShowName(bool bShow);
+
+	// 칸 크기 바꾸기 (기본 모양의 SlotSizeBox 또는 WBP 의 SlotSizeBox)
+	void SetSlotSize(FVector2D Size);
+
+	// 아이콘만 보이기 (이름 / 테두리 / 배경 숨김, 선택 강조는 보임). 정보는 툴팁으로
+	void SetIconOnly(bool bInIconOnly);
+
+	void SetSlotIndex(int32 InIndex) { SlotIndex = InIndex; }
+	int32 GetSlotIndex() const { return SlotIndex; }
+
+	EItemSlotKind GetKind() const { return Kind; }
+	FName GetItemRow() const { return ItemRow; }
+
+	// 칸 버튼을 누르고 있는 중인지 (전투 HUD 의 스킬 드래그용). 버튼이 없으면 false
+	bool IsPressed() const;
+
+	FOnItemSlotClicked OnSlotClicked;
+
+protected:
+	virtual void NativeOnInitialized() override;
+	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
+	virtual void NativeOnMouseEnter(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
+	virtual void NativeOnMouseLeave(const FPointerEvent& InMouseEvent) override;
+
+	// 칸 크기를 정하는 상자 (보통 루트)
+	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<USizeBox> SlotSizeBox;
+
+	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UButton> SlotButton;
+
+	// 테두리 + 위쪽 등급 / 종류 색 띠
+	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UBorder> Frame;
+
+	// 아이콘 뒤 어두운 판 (아이콘만 모드면 투명)
+	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UBorder> Background;
+
+	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UImage> Icon;
+
+	// 아이콘이 없을 때 대신 보이는 이름 앞 두 글자
+	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UTextBlock> IconText;
+
+	UPROPERTY(meta = (BindWidgetOptional)) TObjectPtr<UTextBlock> NameText;
+
+	// 스킬 칸 툴팁. 비워 두면 프로젝트 설정(Terminus UI) -> C++ 기본 스킬 툴팁
+	UPROPERTY(EditAnywhere, Category = "Item Slot")
+	TSubclassOf<USkillTooltipWidget> SkillTooltipClass;
+
+	// 유물 칸 툴팁. 비워 두면 프로젝트 설정(Terminus UI) -> C++ 기본 유물 툴팁
+	UPROPERTY(EditAnywhere, Category = "Item Slot")
+	TSubclassOf<URelicTooltipWidget> RelicTooltipClass;
+
+	// 처음부터 아이콘만 보이기 (상점용 칸 WBP 면 켜 두면 됨)
+	UPROPERTY(EditAnywhere, Category = "Item Slot")
+	bool bIconOnly = false;
+
+	UPROPERTY(EditAnywhere, Category = "Item Slot")
+	FVector2D DefaultSlotSize = FVector2D(84.f, 104.f);
+
+	// 이름이 보이는 유물 칸의 최소 크기 (아이콘이 이름에 밀려 작아지지 않게)
+	UPROPERTY(EditAnywhere, Category = "Item Slot")
+	FVector2D RelicNamedMinSize = FVector2D(100.f, 128.f);
+
+	// 이름이 보일 때 아이콘 아래에 남겨 둘 이름 자리 (작은 글씨 두 줄, 이름 위 여백은 따로)
+	UPROPERTY(EditAnywhere, Category = "Item Slot")
+	float RelicNameReserve = 28.f;
+
+	// 유물 / 스킬 칸 안쪽 여백 (아이콘이 칸을 거의 채우게). 위쪽 색 띠(Frame 위 여백)는 그대로
+	UPROPERTY(EditAnywhere, Category = "Item Slot")
+	float IconPadding = 1.f;
+
+	// 유물 / 스킬 이름 글자 크기
+	UPROPERTY(EditAnywhere, Category = "Item Slot")
+	int32 RelicNameFontSize = 10;
+
+	UPROPERTY(EditAnywhere, Category = "Item Slot")
+	FLinearColor EmptyColor = TerminusUI::Color::Inset;
+
+	UPROPERTY(EditAnywhere, Category = "Item Slot")
+	FLinearColor SelectedColor = TerminusUI::Color::GoldBase;
+
+private:
+	EItemSlotKind Kind = EItemSlotKind::Empty;
+	FName ItemRow;
+	FLinearColor ItemColor = FLinearColor::Gray;
+	int32 SlotIndex = INDEX_NONE;
+
+	bool bShownOnce = false;
+	bool bSelectedState = false;
+	bool bUsableState = true;
+	bool bHoveredState = false;
+
+	UPROPERTY()
+	TObjectPtr<USkillTooltipWidget> SkillTooltip;
+
+	UPROPERTY()
+	TObjectPtr<URelicTooltipWidget> RelicTooltip;
+
+	bool bShowNameWanted = true;            // SetShowName 으로 받은 값 (아이콘만 모드가 꺼지면 되돌림)
+	FLinearColor BackgroundColor = TerminusUI::Color::Card;
+	void ApplyIconOnly();
+
+	FVector2D RequestedSize = FVector2D::ZeroVector;   // 쓰는 쪽이 정한 칸 크기 (SetSlotSize / WBP 값)
+	float OrigNameFontSize = 0.f;
+	FVector2D OrigIconSize = FVector2D(32.f, 32.f);
+	FMargin OrigInnerPadding = FMargin(4.f);   // Background 안쪽 여백 (빈 칸은 이 값, 유물 / 스킬은 IconPadding)
+	FMargin OrigNamePadding = FMargin(0.f, 4.f, 0.f, 0.f);
+	FMargin OrigButtonPadding = FMargin(0.f);          // 버튼 스타일 / 내용 슬롯 여백 (유물 / 스킬은 0)
+	FMargin OrigButtonPressedPadding = FMargin(0.f);
+	FMargin OrigButtonSlotPadding = FMargin(0.f);
+	TEnumAsByte<EHorizontalAlignment> OrigIconHAlign = HAlign_Center;
+	bool bIconAlignSaved = false;
+	void ApplyKindLayout();                 // 유물 / 스킬에 따라 아이콘 맞춤, 이름 글자, 칸 크기
+	bool bBigIcon = false;
+	int32 ShownSkillBase = 0;               // 같은 스킬이라도 강화 수치가 바뀌면 툴팁을 다시 채움
+	int32 ShownSkillStatus = 0;                  // 유물 / 스킬: 아이콘을 칸에 맞게 키우는 중 (NativeTick 이 실제 자리에 맞춰 줄임)
+
+	void BuildDefaultLayout();
+	void ShowIcon(class UTexture2D* Texture, const FText& Name);
+	void ApplyFrameColor();
+	void ApplyButtonEnabled();
+
+	UFUNCTION()
+	void HandleClicked();
+};

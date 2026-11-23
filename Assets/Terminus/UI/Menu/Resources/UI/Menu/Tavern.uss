@@ -1,0 +1,98 @@
+/*
+ * 주점 (언리얼 WBP_TavernWidget / WBP_ClassButton / WBP_PlayerSlot, KSH 디자인). MenuStyle.Use(element, "Tavern")
+ * 레이아웃은 C# (TavernView.cs), 여기는 버튼 상태와 반복 모양
+ */
+
+/* ================================================================ 직업 버튼 (WBP_ClassButton ClickArea 96x96)
+ * 판 0.019382,0.023153,0.031896 + 3px 검정 40% / 호버 0.027321,.. + 3px 0.266356,0.242281,0.187821 / 눌림 0.013702,.. / 비활성 0.010960,..
+ */
+.tm-classbtn {
+    width: 96px;
+    height: 96px;
+    margin: 0;
+    padding: 0;
+    background-color: #262A32;
+    border-width: 3px;
+    border-color: rgba(0, 0, 0, 0.4);
+    border-radius: 0;
+    transition-duration: 0s;
+}
+.tm-classbtn:hover { background-color: #2E333D; border-color: #8D8778; }
+.tm-classbtn:active { background-color: #1F232B; border-color: rgba(0, 0, 0, 0.4); }
+.tm-classbtn:disabled { background-color: #1B1E25; border-color: rgba(0, 0, 0, 0.4); opacity: 1; }
+
+/* 선택 표시 (T_UI_SelectGlow 128x128, Margin 0.25 = 32px) */
+.tm-classglow {
+    position: absolute;
+    left: 0; top: 0; right: 0; bottom: 0;
+    background-image: resource("UI/Textures/KSH/Asset/T_UI_SelectGlow");
+    -unity-slice-left: 32;
+    -unity-slice-right: 32;
+    -unity-slice-top: 32;
+    -unity-slice-bottom: 32;
+}
+
+/* ================================================================ 친구 초대 (T_UI_Dashed 32x32, DrawAs=Border, Margin 0.25 = 8px)
+ * 틴트 0.584078,0.371238,0.107023 / 호버 0.791298,.. / 눌림 0.391573,0.250158,0.068478 / 비활성 0.042311,..
+ */
+.tm-invite {
+    margin: 0;
+    padding: 0;
+    border-width: 0;
+    background-color: rgba(0, 0, 0, 0);
+    background-image: resource("UI/Textures/KSH/Asset/T_UI_Dashed");
+    -unity-slice-left: 8;
+    -unity-slice-right: 8;
+    -unity-slice-top: 8;
+    -unity-slice-bottom: 8;
+    -unity-background-image-tint-color: var(--t-gold);
+    color: var(--t-gold-hover);
+    font-size: 14px;
+    -unity-font-definition: url("project://database/Assets/Terminus/UI/Fonts/NotoSansKR-Bold.ttf");
+    -unity-text-align: middle-center;
+    transition-duration: 0s;
+}
+.tm-invite:hover { background-color: rgba(0, 0, 0, 0); -unity-background-image-tint-color: var(--t-gold-hover); }
+.tm-invite:active { background-color: rgba(0, 0, 0, 0); -unity-background-image-tint-color: var(--t-gold-pressed); }
+.tm-invite:disabled { -unity-background-image-tint-color: var(--t-line); color: var(--t-text-faint); }
+
+/* ================================================================ 플레이어 칸 (WBP_PlayerSlot 317x82) */
+.tm-slot-frame {
+    position: absolute;
+    left: 8px; top: 8px; right: 8px; bottom: 8px;
+    justify-content: center;
+    align-items: center;
+    padding: 0 21px 0 21px;
+    background-color: #1B1E25;
+    border-width: 2px;
+    border-color: #2E333D;
+    border-radius: 4px;
+}
+.tm-slot-mine {
+    position: absolute;
+    left: 11px; top: 4px; right: 11px; bottom: 4px;
+    border-width: 2px;
+    border-color: var(--t-gold);
+    border-radius: 4px;
+}
+.tm-slot-empty {
+    position: absolute;
+    left: 4px; top: 2px; right: 4px; bottom: 2px;
+    justify-content: center;
+    align-items: center;
+    background-image: resource("UI/Textures/KSH/Asset/T_UI_Dashed");
+    -unity-slice-left: 8;
+    -unity-slice-right: 8;
+    -unity-slice-top: 8;
+    -unity-slice-bottom: 8;
+    -unity-background-image-tint-color: var(--t-line);
+}
+
+/* 패시브 틀 (Border PassiveFrame: 금 8% 바탕 + 1px 금) */
+.tm-passive {
+    padding: 12px 14px 12px 14px;
+    background-color: rgba(201, 164, 92, 0.08);
+    border-width: 1px;
+    border-color: var(--t-gold);
+    border-radius: 4px;
+}

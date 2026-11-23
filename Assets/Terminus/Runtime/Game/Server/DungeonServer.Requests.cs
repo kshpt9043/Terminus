@@ -37,6 +37,7 @@ namespace Terminus.Game
 
             NetBus.OnRequest<DebugWinCombatReq>((id, r) => WithCombat(id, (c, p) => c.DebugKillAllMonsters()));
             NetBus.OnRequest<DebugLoseCombatReq>((id, r) => WithCombat(id, (c, p) => c.DebugKillAllPlayers()));
+            RegisterCombatPlanRequests();
         }
 
         void With(ulong clientId, System.Action<DungeonPlayer> action)
@@ -58,7 +59,7 @@ namespace Terminus.Game
             if (!_players.TryGetValue(clientId, out var p) || !p.bConnected) return;
 
             var connected = _players.Values.Where(x => x.bConnected).ToList();
-            bool hasDeparted = _players.Values.Any(x => !x.bConnected);
+            bool hasDeparted = _rift.HasDepartedPlayers;
             var req = new RoomSelectRequest
             {
                 RoomId = r.RoomId,
@@ -84,7 +85,7 @@ namespace Terminus.Game
             }
             else if (result.Outcome == RoomSelectOutcome.Selected)
             {
-                var departed = _players.Values.Where(x => !x.bConnected).Select(x => x.Name).ToList();
+                var departed = _rift.GetDepartedNames();
                 var ready = RoomSelectionRules.CheckAllPlayersReady(connected.Select(x => x.RunState.SelectedRoomId).ToList(), departed, out var notice);
                 if (ready == PartyReadyResult.Start) _areas.EnterSelectedRooms(connected, _floor.Rooms, _floor.FloorTheme);
                 else if (ready == PartyReadyResult.WaitingForDeparted && !string.IsNullOrEmpty(notice)) _session.SystemChat(notice);

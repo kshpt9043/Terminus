@@ -1,0 +1,2 @@
+/Game/KSH/Widgets/RoundBlocks/RB_ClassPlate.RB_ClassPlate
+[0] Border Border_23  Background:(TintColor=(SpecifiedColor=(R=0.019382,G=0.023153,B=0.031896,A=1.000000)),DrawAs=RoundedBox,OutlineSettings=(CornerRadii=(X=0.000000,Y=0.000000,Z=0.000000,W=0.400000),Width=3.000000,RoundingType=FixedRadius))
