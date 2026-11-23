@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 237707ce0cc534140beab690ed5c94d0, type: 3}
+  m_Name: lava_lava_crab
+  m_EditorClassIdentifier: Terminus.Art::Terminus.Art.MonsterVisualSet
+  Idle: {fileID: 11400000, guid: 28e9b98d6a2d84a4a8fc124e7bfba557, type: 2}
+  Attack: {fileID: 11400000, guid: d9bfdc7f48f32514fa481a244339f37a, type: 2}
+  Hit: {fileID: 11400000, guid: 359d6bb0cfe16ec4991d2df5f0b361b9, type: 2}
+  Defend: {fileID: 11400000, guid: e9b38eefd9e2de641945c91318055c98, type: 2}
+  Special: {fileID: 11400000, guid: d63e3ac15c777d3428154f9b37a8d357, type: 2}
+  Death: {fileID: 11400000, guid: 8f8f9c3da79925342abf9f9b354e0b10, type: 2}
+  FacesLeft: 1

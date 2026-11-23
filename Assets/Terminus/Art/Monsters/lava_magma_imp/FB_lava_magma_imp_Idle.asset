@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4bb7c2439dcbc314d8145c8026b2b559, type: 3}
+  m_Name: FB_lava_magma_imp_Idle
+  m_EditorClassIdentifier: Terminus.Art::Terminus.Art.SpriteFlipbook
+  Frames:
+  - {fileID: 21300000, guid: 18ab85193566a8a4f811aba6d71d04d7, type: 3}
+  - {fileID: 21300000, guid: f805957bd89dba443ab15d6af56eb8a2, type: 3}
+  - {fileID: 21300000, guid: 82e804c5e6f673d4383f140d59a011bd, type: 3}
+  - {fileID: 21300000, guid: 262608af47817d646943d8421418a995, type: 3}
+  - {fileID: 21300000, guid: 9816091d410385945b97b21580f17b5f, type: 3}
+  - {fileID: 21300000, guid: 5f22a9dbfaf91b8408f7edc348570269, type: 3}
+  - {fileID: 21300000, guid: ad098489293454d46b973ce7e8629b8a, type: 3}
+  - {fileID: 21300000, guid: 1f878e86858168a4c8b841e32c848112, type: 3}
+  - {fileID: 21300000, guid: 81ce244d683e5c845b9510169936cc75, type: 3}
+  FramesPerSecond: 10

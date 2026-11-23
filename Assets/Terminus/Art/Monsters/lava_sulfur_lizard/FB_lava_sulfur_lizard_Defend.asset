@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4bb7c2439dcbc314d8145c8026b2b559, type: 3}
+  m_Name: FB_lava_sulfur_lizard_Defend
+  m_EditorClassIdentifier: Terminus.Art::Terminus.Art.SpriteFlipbook
+  Frames:
+  - {fileID: 21300000, guid: 988c1b87b8aff0140af8d436f32c0052, type: 3}
+  - {fileID: 21300000, guid: a6fd93c1599484745b496c4663f5e76e, type: 3}
+  - {fileID: 21300000, guid: 088c55d718c3c6440b0f7812ce82b4aa, type: 3}
+  - {fileID: 21300000, guid: d1e74caa9e0f64545bba7152c4e3a8d2, type: 3}
+  - {fileID: 21300000, guid: 7b8fe7795239067478ceb03cf217754e, type: 3}
+  - {fileID: 21300000, guid: 6aaee1483d39a7e4ea5a7f2fda963346, type: 3}
+  - {fileID: 21300000, guid: 19868390deaaf6d4cb67035ac053964f, type: 3}
+  - {fileID: 21300000, guid: 62a5205538a2a314a8c80c36ba3f0881, type: 3}
+  - {fileID: 21300000, guid: 81753d1df3657014f9d081896598a82d, type: 3}
+  - {fileID: 21300000, guid: a87258d7291ddaf4f975284bc7200201, type: 3}
+  - {fileID: 21300000, guid: 0fb76bededdb4464f9882bbdabec1c88, type: 3}
+  FramesPerSecond: 10

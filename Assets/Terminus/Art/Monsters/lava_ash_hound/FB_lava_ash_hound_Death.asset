@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4bb7c2439dcbc314d8145c8026b2b559, type: 3}
+  m_Name: FB_lava_ash_hound_Death
+  m_EditorClassIdentifier: Terminus.Art::Terminus.Art.SpriteFlipbook
+  Frames:
+  - {fileID: 21300000, guid: c4b922e8816c86740b7d383d55b3e845, type: 3}
+  - {fileID: 21300000, guid: a61ddd619d9d7674a80e7796afa9dc4c, type: 3}
+  - {fileID: 21300000, guid: 9dbac7d134d02ac40a1a1efe628f2b71, type: 3}
+  - {fileID: 21300000, guid: c1804b8f5f5c02d48886bce0ce9d2b79, type: 3}
+  - {fileID: 21300000, guid: 37c55b092c090a249aa2550c4abaff5f, type: 3}
+  - {fileID: 21300000, guid: ceddeef7855be324bbdab211b01af5c3, type: 3}
+  - {fileID: 21300000, guid: 43b950873d9a76a418d997e236d360fa, type: 3}
+  - {fileID: 21300000, guid: 69aab5c4b6baef9469d5211cde3aef3a, type: 3}
+  - {fileID: 21300000, guid: e7f31ca4a13b5004c9c60bf904cf1d62, type: 3}
+  - {fileID: 21300000, guid: 77f5c2c88fe54ac42af0e2619d53b3ca, type: 3}
+  - {fileID: 21300000, guid: 7f4cee70015a4d5498d6954e6e425eb4, type: 3}
+  - {fileID: 21300000, guid: e7f986694ab12a44c82949cfb727d95d, type: 3}
+  - {fileID: 21300000, guid: 04ef3bd7ae0a1be45a7a992434ceb20e, type: 3}
+  - {fileID: 21300000, guid: 630546e451d82694790c00f8fdca8aa3, type: 3}
+  - {fileID: 21300000, guid: e67fff1589b73be4ca6bc810b32ee0a3, type: 3}
+  FramesPerSecond: 10

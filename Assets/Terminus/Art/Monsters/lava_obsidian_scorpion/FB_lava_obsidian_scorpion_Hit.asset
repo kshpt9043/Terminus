@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4bb7c2439dcbc314d8145c8026b2b559, type: 3}
+  m_Name: FB_lava_obsidian_scorpion_Hit
+  m_EditorClassIdentifier: Terminus.Art::Terminus.Art.SpriteFlipbook
+  Frames:
+  - {fileID: 21300000, guid: 7ea189c427308924cb68d6e36b9d48b7, type: 3}
+  - {fileID: 21300000, guid: e4b7927e2fe7c354e9a44052669ddfd4, type: 3}
+  - {fileID: 21300000, guid: 73799c4666f6edb48be6b89102238bad, type: 3}
+  - {fileID: 21300000, guid: 385a90af3536d154f927ae2d88192714, type: 3}
+  - {fileID: 21300000, guid: a0d980a22c82f734fb84fa0bf7cd320b, type: 3}
+  - {fileID: 21300000, guid: 5c487845a225b274c97e0d18bc5ba1bc, type: 3}
+  - {fileID: 21300000, guid: 93c7af20309b7d641b9221e5968e17d7, type: 3}
+  - {fileID: 21300000, guid: e611f9105242583478b57a46dd4fec31, type: 3}
+  - {fileID: 21300000, guid: cdb96700e7f3ee24abbbc84debd35a58, type: 3}
+  FramesPerSecond: 10

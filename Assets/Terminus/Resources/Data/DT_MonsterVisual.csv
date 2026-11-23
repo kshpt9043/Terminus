@@ -12,3 +12,12 @@ mon_ancientslime,/Game/KSH/Characters/Monster/Sprites/SlimeAncient/FB_SlimeAncie
 mon_slimegeneral,/Game/KSH/Characters/Monster/Sprites/SlimeGeneral/FB_SlimeGeneral_Idle.FB_SlimeGeneral_Idle,/Game/KSH/Characters/Monster/Sprites/SlimeGeneral/FB_SlimeGeneral_Attack.FB_SlimeGeneral_Attack,/Game/KSH/Characters/Monster/Sprites/SlimeGeneral/FB_SlimeGeneral_Hit.FB_SlimeGeneral_Hit,/Game/KSH/Characters/Monster/Sprites/SlimeGeneral/FB_SlimeGeneral_Defend.FB_SlimeGeneral_Defend,/Game/KSH/Characters/Monster/Sprites/SlimeGeneral/FB_SlimeGeneral_Special.FB_SlimeGeneral_Special,/Game/KSH/Characters/Monster/Sprites/SlimeGeneral/FB_SlimeGeneral_Death.FB_SlimeGeneral_Death,PixelLab/slime_general
 mon_fusionslime,,,,,,,PixelLab/slime_fusion
 mon_slimeking,,,,,,,PixelLab/slime_king
+mon_magma_imp,,,,,,,PixelLab/lava_magma_imp
+mon_ash_hound,,,,,,,PixelLab/lava_ash_hound
+mon_basalt_turtle,,,,,,,PixelLab/lava_basalt_turtle
+mon_cinder_bat,,,,,,,PixelLab/lava_cinder_bat
+mon_sulfur_lizard,,,,,,,PixelLab/lava_sulfur_lizard
+mon_obsidian_scorpion,,,,,,,PixelLab/lava_obsidian_scorpion
+mon_lava_crab,,,,,,,PixelLab/lava_lava_crab
+mon_magma_golem,,,,,,,PixelLab/lava_magma_golem
+mon_pyro_wyrm,,,,,,,PixelLab/lava_pyro_wyrm

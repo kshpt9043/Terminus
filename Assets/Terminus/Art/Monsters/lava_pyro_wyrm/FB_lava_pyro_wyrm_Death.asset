@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4bb7c2439dcbc314d8145c8026b2b559, type: 3}
+  m_Name: FB_lava_pyro_wyrm_Death
+  m_EditorClassIdentifier: Terminus.Art::Terminus.Art.SpriteFlipbook
+  Frames:
+  - {fileID: 21300000, guid: a70fe8d707c40f241bb473ca67732b3c, type: 3}
+  - {fileID: 21300000, guid: bba636395f4629041a8631683209b63a, type: 3}
+  - {fileID: 21300000, guid: 5a7ff3801ad3a9f47b7989d3ae0611f1, type: 3}
+  - {fileID: 21300000, guid: 917cb553b6e0bf8489d57078e94759cf, type: 3}
+  - {fileID: 21300000, guid: 95a30402502b2444c87372115223a97d, type: 3}
+  - {fileID: 21300000, guid: 6abfc2fb33e6c7a438292977f57648eb, type: 3}
+  - {fileID: 21300000, guid: 2146da20e0eb26a499439e0ca2a3e1fe, type: 3}
+  - {fileID: 21300000, guid: 236c1464c2d00f64a87c1182e7060617, type: 3}
+  - {fileID: 21300000, guid: 057c9c2d7c45ce347b465228f306af25, type: 3}
+  - {fileID: 21300000, guid: be0827f87519266428fac86c9668a609, type: 3}
+  - {fileID: 21300000, guid: af003fc75f6378d42b7b045bfb531723, type: 3}
+  - {fileID: 21300000, guid: a0f9d1c92a54225468cd0e074c3dc049, type: 3}
+  - {fileID: 21300000, guid: 1f835073fb2af514eb98e861bb3b29f4, type: 3}
+  - {fileID: 21300000, guid: b54c53c1ead679344a4b4cb61a68d9b4, type: 3}
+  - {fileID: 21300000, guid: 41cb4fce8accb924e926ef715b6ea044, type: 3}
+  FramesPerSecond: 10

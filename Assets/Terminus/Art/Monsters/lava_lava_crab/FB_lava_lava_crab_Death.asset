@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4bb7c2439dcbc314d8145c8026b2b559, type: 3}
+  m_Name: FB_lava_lava_crab_Death
+  m_EditorClassIdentifier: Terminus.Art::Terminus.Art.SpriteFlipbook
+  Frames:
+  - {fileID: 21300000, guid: ac21211b4f6270744b3d9fbbae776de2, type: 3}
+  - {fileID: 21300000, guid: b4b0c405437729747852c8f63d24cf73, type: 3}
+  - {fileID: 21300000, guid: d9556ecd6b57aa1418d75040eba2e041, type: 3}
+  - {fileID: 21300000, guid: bdee4b11824cd0240b7dcb59bb4b0201, type: 3}
+  - {fileID: 21300000, guid: 13ea34ff3903ee1409f619b409ca4503, type: 3}
+  - {fileID: 21300000, guid: b91b80f5323bd65429b54eb8189b678e, type: 3}
+  - {fileID: 21300000, guid: 61351cd44a1fee5489f714dfaf773d8d, type: 3}
+  - {fileID: 21300000, guid: 7335e9371d150c34191a1cb96d90f3c9, type: 3}
+  - {fileID: 21300000, guid: 36b43fe10f2737c4c8c95185efa056c8, type: 3}
+  - {fileID: 21300000, guid: 9494ec435757e7543be92141b41837d8, type: 3}
+  - {fileID: 21300000, guid: bd4f08fc487108e4cb806ee1a298eb38, type: 3}
+  - {fileID: 21300000, guid: 81dfc66b0f814fd4b9bb5439e7dc84f9, type: 3}
+  - {fileID: 21300000, guid: 93c15d784e3b04543861603ea93e3e75, type: 3}
+  - {fileID: 21300000, guid: ed654dcc07825df40990a2101d1ac261, type: 3}
+  - {fileID: 21300000, guid: 9721a5f32dff0cb48b7d0c8e92e51a06, type: 3}
+  FramesPerSecond: 10

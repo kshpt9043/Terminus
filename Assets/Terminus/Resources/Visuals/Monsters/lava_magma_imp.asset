@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 237707ce0cc534140beab690ed5c94d0, type: 3}
+  m_Name: lava_magma_imp
+  m_EditorClassIdentifier: Terminus.Art::Terminus.Art.MonsterVisualSet
+  Idle: {fileID: 11400000, guid: c4cf956e9fbdb654eabc9015489b0239, type: 2}
+  Attack: {fileID: 11400000, guid: 431f170f9b6b6264dad34f502594bceb, type: 2}
+  Hit: {fileID: 11400000, guid: 40d5806f9b320d34987ab0af5011cf8b, type: 2}
+  Defend: {fileID: 11400000, guid: a8f11c4e8a8d54d43bf69eb514bf66d7, type: 2}
+  Special: {fileID: 11400000, guid: 028bffad8c6ce5e4d918b7c4f8e9a956, type: 2}
+  Death: {fileID: 11400000, guid: ba71b8b38e3924943bd6dee745a3333b, type: 2}
+  FacesLeft: 1

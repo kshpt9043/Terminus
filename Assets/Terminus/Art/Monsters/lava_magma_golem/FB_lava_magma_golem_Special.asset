@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4bb7c2439dcbc314d8145c8026b2b559, type: 3}
+  m_Name: FB_lava_magma_golem_Special
+  m_EditorClassIdentifier: Terminus.Art::Terminus.Art.SpriteFlipbook
+  Frames:
+  - {fileID: 21300000, guid: 7ff2188fe8affcc47ba1ae859cfa02e7, type: 3}
+  - {fileID: 21300000, guid: 27b276cc54b8b3a449509a4ed79c332c, type: 3}
+  - {fileID: 21300000, guid: d33a9623bde81174987261c73c7cfd1e, type: 3}
+  - {fileID: 21300000, guid: eb1b74919b249ca4195b8b79577aa46a, type: 3}
+  - {fileID: 21300000, guid: bcff6e8047cd50e43b3aa9c5e13c315d, type: 3}
+  - {fileID: 21300000, guid: a4f7146fe61562e418cd15a9c9b27010, type: 3}
+  - {fileID: 21300000, guid: 1e171481e2051f3469ef291352ba308e, type: 3}
+  - {fileID: 21300000, guid: ca925e30635349c41a49c0ba1bccaf8b, type: 3}
+  - {fileID: 21300000, guid: c7da894901b4b2442ab88f1f57d48a68, type: 3}
+  - {fileID: 21300000, guid: 300029999b88d7245b6767d4b4a83787, type: 3}
+  - {fileID: 21300000, guid: 0839135852fda46478ac198d424f1aba, type: 3}
+  FramesPerSecond: 10

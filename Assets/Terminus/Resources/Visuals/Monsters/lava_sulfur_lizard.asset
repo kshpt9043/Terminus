@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 237707ce0cc534140beab690ed5c94d0, type: 3}
+  m_Name: lava_sulfur_lizard
+  m_EditorClassIdentifier: Terminus.Art::Terminus.Art.MonsterVisualSet
+  Idle: {fileID: 11400000, guid: 3d60fbd8928fbb049ac2c4ce1c582e20, type: 2}
+  Attack: {fileID: 11400000, guid: 4ddc4cfe114b36744a3380ffe16d1c5e, type: 2}
+  Hit: {fileID: 11400000, guid: bd24f5ac25a5d984ca94616b8000013c, type: 2}
+  Defend: {fileID: 11400000, guid: 64e1a1b9a5a5cfb4bb0d2eacd1ebddc5, type: 2}
+  Special: {fileID: 11400000, guid: 610593fcc1eb82642847fea553d4c9a4, type: 2}
+  Death: {fileID: 11400000, guid: 4d450af3754fc5d4ab38ca8e7829bec7, type: 2}
+  FacesLeft: 1

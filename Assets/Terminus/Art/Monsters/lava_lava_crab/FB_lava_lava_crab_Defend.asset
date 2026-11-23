@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4bb7c2439dcbc314d8145c8026b2b559, type: 3}
+  m_Name: FB_lava_lava_crab_Defend
+  m_EditorClassIdentifier: Terminus.Art::Terminus.Art.SpriteFlipbook
+  Frames:
+  - {fileID: 21300000, guid: fb7f08842b2d103438cead386c575353, type: 3}
+  - {fileID: 21300000, guid: 00c787fa0e0990441a74c2c23e5b6ba8, type: 3}
+  - {fileID: 21300000, guid: d0115654eed4bcc49a3b377d652ac03d, type: 3}
+  - {fileID: 21300000, guid: 6a98c61236d2d2d40a47727f96a0414f, type: 3}
+  - {fileID: 21300000, guid: 29da6d141c27f544c81da7f6c595852f, type: 3}
+  - {fileID: 21300000, guid: 5bd119765e295a145983c7c8124cc69b, type: 3}
+  - {fileID: 21300000, guid: 05298d0c0d221d04dba8c44fafb03682, type: 3}
+  - {fileID: 21300000, guid: 378d13dd4444e8e48b1451dc95e185de, type: 3}
+  - {fileID: 21300000, guid: 4e26427cdeabc7b459ad585b944ec144, type: 3}
+  - {fileID: 21300000, guid: 59fffa32e908927428ad5ff6a913e0c2, type: 3}
+  - {fileID: 21300000, guid: 18be5cef3fdd2e6499b9d0a16bddd4e8, type: 3}
+  FramesPerSecond: 10

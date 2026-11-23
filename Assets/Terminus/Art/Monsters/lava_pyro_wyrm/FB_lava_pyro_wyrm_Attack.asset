@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4bb7c2439dcbc314d8145c8026b2b559, type: 3}
+  m_Name: FB_lava_pyro_wyrm_Attack
+  m_EditorClassIdentifier: Terminus.Art::Terminus.Art.SpriteFlipbook
+  Frames:
+  - {fileID: 21300000, guid: f0b3d66b508ea054c9398e92f6c72a52, type: 3}
+  - {fileID: 21300000, guid: 93e4c78da1ff57e4cb9192c1954ec1f4, type: 3}
+  - {fileID: 21300000, guid: 4f0a052e802c18840a3a97fda16cd6c0, type: 3}
+  - {fileID: 21300000, guid: 86a56b2a71f9f95498402d88c6e7190b, type: 3}
+  - {fileID: 21300000, guid: c04aa99f0dfae23469318bee0f502a53, type: 3}
+  - {fileID: 21300000, guid: 0947afeaf86eaed4a88d53bb087f0713, type: 3}
+  - {fileID: 21300000, guid: 6c7941d9ca54b5c40929f23be1158329, type: 3}
+  - {fileID: 21300000, guid: 176a55c6dbd16e247bae2ea810e64398, type: 3}
+  - {fileID: 21300000, guid: 0877f079a64da4248b768a1cfa0a1f87, type: 3}
+  FramesPerSecond: 10

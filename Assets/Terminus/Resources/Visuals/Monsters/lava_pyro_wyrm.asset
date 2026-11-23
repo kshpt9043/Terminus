@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 237707ce0cc534140beab690ed5c94d0, type: 3}
+  m_Name: lava_pyro_wyrm
+  m_EditorClassIdentifier: Terminus.Art::Terminus.Art.MonsterVisualSet
+  Idle: {fileID: 11400000, guid: 6452c27dd73fb3a48ba751a1d4be4012, type: 2}
+  Attack: {fileID: 11400000, guid: afbfe14e7fa3c5a478eee259332f6119, type: 2}
+  Hit: {fileID: 11400000, guid: b3e22ddc651cf0e4b843e7761519eda9, type: 2}
+  Defend: {fileID: 11400000, guid: ba036ef6ef6a29f46adc74997bb9c1bf, type: 2}
+  Special: {fileID: 11400000, guid: 8318df243d04bf048abd390f93ac5f9e, type: 2}
+  Death: {fileID: 11400000, guid: 4e13af71e9c7e9440a3a81d23db08a69, type: 2}
+  FacesLeft: 1

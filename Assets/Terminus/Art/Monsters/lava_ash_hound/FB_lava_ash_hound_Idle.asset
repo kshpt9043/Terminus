@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4bb7c2439dcbc314d8145c8026b2b559, type: 3}
+  m_Name: FB_lava_ash_hound_Idle
+  m_EditorClassIdentifier: Terminus.Art::Terminus.Art.SpriteFlipbook
+  Frames:
+  - {fileID: 21300000, guid: 06732e3c8056f174c97ae546ae3c8e63, type: 3}
+  - {fileID: 21300000, guid: 66ed1ce32486bd644a3bb19711f8a5be, type: 3}
+  - {fileID: 21300000, guid: f80c0ffe3abdb464aa5402686b108d26, type: 3}
+  - {fileID: 21300000, guid: 4eb4749b75aa753429a25684dd60fe06, type: 3}
+  - {fileID: 21300000, guid: 7ad0e8c78549c6d47b8c4a03d1c21172, type: 3}
+  - {fileID: 21300000, guid: 797136b7dcca3044395b45b257b811a3, type: 3}
+  - {fileID: 21300000, guid: 69dc2eb7e785a214996db730d964c65c, type: 3}
+  - {fileID: 21300000, guid: f226f8c25b9851945a31fa7abd03b56e, type: 3}
+  - {fileID: 21300000, guid: 728c93cb3e764a446936c231b04101a1, type: 3}
+  FramesPerSecond: 10
