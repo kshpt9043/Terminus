@@ -434,7 +434,13 @@ namespace Terminus.UI.Chat
                 block.pickingMode = PickingMode.Ignore;
                 block.style.marginRight = rightPad;
                 block.style.flexShrink = 0;
-                if (fill) block.AddToClassList("ct-line-fill");
+                if (fill)
+                {
+                    // 남은 폭에 맞춰 줄고 넘치면 … (언리얼 Fill + Ellipsis). 인라인 flexShrink 0 이 USS 를 이기므로 여기서 직접
+                    block.AddToClassList("ct-line-fill");
+                    block.style.flexShrink = 1;
+                    block.style.minWidth = 0;
+                }
                 line.Add(block);
                 return block;
             }

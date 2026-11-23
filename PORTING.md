@@ -98,6 +98,7 @@ Tools/CoreBuild/     유니티 밖 빌드 (Core/Terminus.Core.csproj, Tests/Term
 - 2026-11-23 확인: 혼자 한 바퀴 (주점 → 퀘스트 방 → 전투 → 보상 → 지도), 2인 (참가 → 준비 → 출발 → 파티 분리 동시 전투 → 전멸 → 구출 투표 시간 초과 → 지도)
 - 2026-11-23 정식 UI 확인: 혼자 (퀘스트 / 전투 / 보상 / 휴식 / 상점 / 이벤트 / 가디언 / 보스 / 전멸 → 정산 → 메인), MPPM 2인 (주점 → 퀘스트 → 전투 → 보상 → 지도),
   빌드 `Run-Standalone.bat 2` 로 창 두 개 (방 열기 → 127.0.0.1 참가 → 준비 → 출발 → 지도)
+- 2026-11-23 이어하기 확인: 혼자 (성기사 / 방 3개 / 체력 39 / 스킬 / 유물 / 퀘스트 / 지도 그대로 → 다음 전투도 체력 39), MPPM 2인 (방장이 세이브를 열면 손님이 이공간으로 재합류 → 두 사람 상태 그대로 → 같이 다음 방, 같은 슬롯에 자동 저장)
 - 에디터는 도메인 리로드를 꺼 둠 → static 은 Play 마다 `RuntimeInitializeOnLoadMethod(SubsystemRegistration)` 에서 되돌릴 것 (NetBus 처리기는 NetBus 가 비움)
 - 에디터 Game 뷰가 16:9 가 아니면 (예 932x712) 기준 1920x1080 고정 좌표 화면이 오른쪽으로 넘쳐 보임. 빌드 1280x720 에서는 정상
 
@@ -108,7 +109,7 @@ Core 는 서버에서 도는 순수 로직이고, 각 모듈 보고의 "언리�
   `IAreaNotifier`(휴식 / 상점 / 이벤트 / 구출 / 이공간 화면), `DungeonCombat.StateChanged / MonsterSpawned / MonsterActing / RoomRewardOffered`, `RunPlayer.RunStateChanged / Notice`
 - 매 프레임: `DungeonTimers.Tick(serverTime)`, 구역마다 `DungeonCombat.Tick(serverTime)`, `FloorProgression.Tick(serverTime)`
 - 저장: `ISaveStorage` (파일) + `ISaveSerializer` (JsonUtility)
-- 남은 것: Steam 실제 2인 확인 (PC 두 대), 이어하기 / 이공간 재접속 실제 확인, 플레이어 직업 정식 그림 (지금은 언리얼과 같은 임시 그림: 머리 위 흰 네모 1~4개는 그림 안의 프레임 번호 표시)
+- 남은 것: Steam 실제 2인 확인 (PC 두 대), 플레이어 직업 정식 그림 (지금은 언리얼과 같은 임시 그림: 머리 위 흰 네모 1~4개는 그림 안의 프레임 번호 표시)
 - 몬스터 그림: 슬라임 왕국 13마리만 있음. 나머지 54마리는 픽셀랩 세션이 작업 중 (일반 64 / 가디언 96 / 보스 128px)
 
 ### 각 모듈 보고에서 나온 "언리얼 그대로 옮긴 의심스러운 동작" (기획 확인용)

@@ -27,6 +27,7 @@ namespace Terminus.Game.Client
         static void Init()
         {
             _hooked = false;
+            Reset();   // 에디터는 도메인 리로드를 꺼 둠 -> 지난 Play 의 스냅샷 / 채팅 기록이 남지 않게
             Hook();
         }
 
