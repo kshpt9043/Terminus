@@ -3,7 +3,8 @@
     "rootNamespace": "Terminus.EditorTools",
     "references": [
         "Terminus.Core",
-        "Terminus.Game"
+        "Terminus.Game",
+        "Unity.Netcode.Runtime"
     ],
     "includePlatforms": [
         "Editor"

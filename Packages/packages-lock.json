@@ -171,6 +171,12 @@
       "source": "builtin",
       "dependencies": {}
     },
+    "com.unity.multiplayer.playmode": {
+      "version": "3.0.0",
+      "depth": 0,
+      "source": "builtin",
+      "dependencies": {}
+    },
     "com.unity.netcode.gameobjects": {
       "version": "2.14.0",
       "depth": 0,

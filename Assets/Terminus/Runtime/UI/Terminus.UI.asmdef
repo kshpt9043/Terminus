@@ -3,7 +3,9 @@
     "rootNamespace": "Terminus.UI",
     "references": [
         "Terminus.Core",
-        "Terminus.Art"
+        "Terminus.Art",
+        "Terminus.Game",
+        "Unity.Netcode.Runtime"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

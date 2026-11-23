@@ -69,12 +69,31 @@ Tools/CoreBuild/     유니티 밖 빌드 (Core/Terminus.Core.csproj, Tests/Term
 | Run / Save | Game/TerminusQuests, ProfileSubsystem, SaveSubsystem, SaveCrypto, RunSubsystem, PlayerState 규칙 | 완료 |
 | Dungeon 전투 | Dungeon/DungeonCombatComponent, Character/* 규칙 | 완료 (`DungeonCombat`, `IAreaCombat` 구현) |
 | Dungeon 구역 / 방 | Dungeon/DungeonArea, AreaSet, AreaSubsystem, ThemeData, GameMode 이공간 | 완료 (휴식 / 상점 / 이벤트 / 퀘스트 방 / 구출 / 이공간) |
-| Game (씬 / 액터 / NGO 래퍼) | Character/*, Game/*GameMode, Player/* | 대기 |
-| 네트워크 | Online/SessionSubsystem (Steam), Player/*(RPC), Comms, Chat | 대기 |
-| UI | Widgets/* (약 40화면) | 기반만 (테마 / 레이어 UIRoot) |
+| Game (씬 / 서버 / NGO 래퍼) | Game/*GameMode, Player/*, Map/Dungeon 액터 | 1차 완료 (아래 "게임 쪽 구조") |
+| 네트워크 | Online/SessionSubsystem (Steam), Player/*(RPC), Comms, Chat | Unity Transport(IP) 로 방장/참가/채팅 완료. Steam · 핑/퀵챗 대기 |
+| UI | Widgets/* (약 40화면) | 기능 화면 (메뉴 / 주점 / 지도 / 전투 HUD / 방 패널 / 정산). 언리얼 위젯 그대로 옮기기는 대기 |
 | 아트 | PixelLab 몬스터, 아이콘, 폰트, 직업 임시 그림 | 완료 |
 
 테스트: Core 308개 (dotnet net48) + 유니티 에셋 연결 4개 = 유니티 Test Runner 312개 전부 통과 (2026-11-23)
+
+## 게임 쪽 구조 (2026-11-23)
+
+- 씬: `Scenes/MainMenu` → (방장이 방을 열면) `Tavern` → (전원 준비 후 출발) `Dungeon`. 서버가 NetworkSceneManager 로 전환.
+  던전 / 주점 씬을 에디터에서 바로 Play 하면 혼자 방장으로 그 자리에서 시작 (언리얼 PIE 던전 직행)
+- 네트워크: `Game/Net` — NetworkManager 를 코드로 생성 (`NetworkRoot`), 플레이어 프리팹 하나(`TerminusPlayer`)에
+  범용 통로 3개 (요청 / 개인 알림 / 전체 알림). 메시지는 `NetMessages.cs` 의 [Serializable] 클래스를 JSON 으로 (`NetBus`)
+  언리얼 Server_* = `XxxReq`, Client_* = `XxxMsg`. 서버는 요청 보낸 연결로 플레이어를 정함
+- 서버: `ServerSession`(판 전체, 씬 넘어 유지: 사람마다 RunPlayer, 주점 요청, 파티 스냅샷) + `DungeonServer`(지도 / 구역 / 전투 Core 를 돌리고 스냅샷 0.1초마다 바뀌면 전송)
+- 클라: `ClientState`(받은 스냅샷) → `UI/Screens`(UI Toolkit, 코드로 그림) + `AreaView`(무대 스프라이트)
+- 저장: `FileSaveStorage`(persistentDataPath/Saves) + `JsonSaveSerializer`, 프로필은 각자 컴퓨터 (`LocalProfile`)
+- 에셋 만들기: 메뉴 `Terminus/Setup/Build Project Assets` (플레이어 프리팹, UI 패널 설정, 씬 3개, 빌드 씬 목록)
+
+### 테스트하는 법
+- 혼자: `MainMenu` 씬 Play → 혼자 시작. 또는 `Dungeon` 씬을 바로 Play
+- 멀티 (에디터 하나로): Multiplayer Play Mode 시나리오 `Scenes/Dev/TwoPlayers.asset` (메인 + 복제 1) 를 활성으로 두고 Play.
+  메인 에디터에서 방 만들기. 복제 플레이어는 `DevAutoGuest`(에디터 전용)가 자동 손님으로 참가 / 준비 / 방장 방 따라가기 / 턴 종료
+- 멀티 (빌드 여러 개): `Terminus.exe -profile p2` 처럼 프로필을 나눠 띄우고 IP 로 참가
+- 2026-11-23 확인: 혼자 한 바퀴 (주점 → 퀘스트 방 → 전투 → 보상 → 지도), 2인 (참가 → 준비 → 출발 → 파티 분리 동시 전투 → 전멸 → 구출 투표 시간 초과 → 지도)
 
 ## 다음 단계 (게임 쪽)
 
@@ -83,7 +102,7 @@ Core 는 서버에서 도는 순수 로직이고, 각 모듈 보고의 "언리�
   `IAreaNotifier`(휴식 / 상점 / 이벤트 / 구출 / 이공간 화면), `DungeonCombat.StateChanged / MonsterSpawned / MonsterActing / RoomRewardOffered`, `RunPlayer.RunStateChanged / Notice`
 - 매 프레임: `DungeonTimers.Tick(serverTime)`, 구역마다 `DungeonCombat.Tick(serverTime)`, `FloorProgression.Tick(serverTime)`
 - 저장: `ISaveStorage` (파일) + `ISaveSerializer` (JsonUtility)
-- 네트워크: NGO + Unity Transport (개발 / Multiplayer Play Mode) / Facepunch Transport (Steam). 플레이어 Id = NGO ClientId
+- 남은 것: Steam(Facepunch 트랜스포트 + 로비 방 목록 / 초대), 핑·퀵챗·전투 계획 공유(Comms), 이어하기 / 이공간 재접속, 거점·창고 화면, 언리얼 위젯 그대로의 정식 UI, 로딩 화면, 플레이어 직업 정식 그림
 - 몬스터 그림: 슬라임 왕국 13마리만 있음. 나머지 54마리는 픽셀랩 세션이 작업 중 (일반 64 / 가디언 96 / 보스 128px)
 
 ### 각 모듈 보고에서 나온 "언리얼 그대로 옮긴 의심스러운 동작" (기획 확인용)

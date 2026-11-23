@@ -149,3 +149,14 @@
 /* ---------------------------------------------------------------- 레이어 (UIRoot 가 만듦) */
 
 .t-layer { position: absolute; left: 0; top: 0; right: 0; bottom: 0; }
+
+/* ---------------------------------------------------------------- 입력칸 (기본 테마는 밝은 칸이라 글자가 안 보임) */
+
+.unity-base-text-field__input {
+    background-color: var(--t-inset);
+    color: var(--t-text-body);
+    border-color: var(--t-line);
+    -unity-font-definition: url("project://database/Assets/Terminus/UI/Fonts/NotoSansKR-Regular.ttf");
+}
+.unity-base-field__label { color: var(--t-text-sub); min-width: 120px; }
+.unity-toggle__checkmark { background-color: var(--t-inset); border-color: var(--t-line); }
