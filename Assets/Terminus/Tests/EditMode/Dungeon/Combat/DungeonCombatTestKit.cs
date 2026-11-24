@@ -35,6 +35,8 @@ namespace Terminus.Tests
                 Settings.MonsterHealthRandom = new CombatFloatRange(0f, 0f);
                 Settings.MonsterStatRandomMax = 0;
             }
+            // 다타는 한꺼번에 (타격 간격은 DungeonCombatSkillTests.MultiHit_* 에서 따로 봄)
+            Settings.HitInterval = 0f;
             Combat = new DungeonCombat(Settings, Host, new Random(seed));
             Combat.MonsterSpawned += m => Spawned.Add(m);
             Combat.MonsterRemoved += m => Removed.Add(m);

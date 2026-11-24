@@ -223,6 +223,9 @@ namespace Terminus.UI.Combat
             _debugRow.AddToClassList("ch-debugrow");
             _debugRow.Add(UiStyle.FlatButton("승리(테스트)", () => NetBus.Request(new DebugWinCombatReq()), UiStyle.Aux));
             _debugRow.Add(UiStyle.FlatButton("패배(테스트)", () => NetBus.Request(new DebugLoseCombatReq()), UiStyle.Aux));
+            // 4번 칸 강화 스킬을 직업 스킬 전체에서 돌리고 에너지를 채움 (스킬 이펙트 시험)
+            _debugRow.Add(UiStyle.FlatButton("◀ 스킬(테스트)", () => NetBus.Request(new DebugCycleSkillReq { Step = -1 }), UiStyle.Aux));
+            _debugRow.Add(UiStyle.FlatButton("스킬 ▶(테스트)", () => NetBus.Request(new DebugCycleSkillReq { Step = 1 }), UiStyle.Aux));
             UiStyle.SetShown(_debugRow, false);
             _content.Add(_debugRow);
 

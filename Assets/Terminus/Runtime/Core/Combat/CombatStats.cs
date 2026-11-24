@@ -304,6 +304,19 @@ namespace Terminus.Combat
             NotifyStateChanged();
         }
 
+        // [테스트] 에너지 / 스킬 에너지 가득 (스킬 이펙트를 계속 시험하려고)
+        public void DebugRefillAll()
+        {
+            if (!HasAuthority)
+            {
+                return;
+            }
+
+            State.Energy = Stats.MaxEnergy;
+            State.SkillEnergy = Stats.MaxSkillEnergy;
+            NotifyStateChanged();
+        }
+
         public void RefillEnergy()
         {
             if (!HasAuthority)

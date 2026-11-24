@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4bb7c2439dcbc314d8145c8026b2b559, type: 3}
+  m_Name: AssassinSmoke
+  m_EditorClassIdentifier: Terminus.Art::Terminus.Art.SpriteFlipbook
+  Frames:
+  - {fileID: 21300000, guid: c217ec888761e8b438e802a1748cc0c6, type: 3}
+  - {fileID: 21300000, guid: 7a601376e53023241a981b360cc9d2d5, type: 3}
+  - {fileID: 21300000, guid: 104de3d0a82d39f43b1094244e4c99c5, type: 3}
+  - {fileID: 21300000, guid: 3774782432844f346b733fb32d7cc8e7, type: 3}
+  - {fileID: 21300000, guid: c6063d79b7bb8e249bdfa0c0c36758c0, type: 3}
+  - {fileID: 21300000, guid: 79db3317d7df33f43a4f799f7f54c23b, type: 3}
+  - {fileID: 21300000, guid: 2d9cb8e8b8d74534589bff219af0499f, type: 3}
+  - {fileID: 21300000, guid: 08e40785d861c46499c449cb3b0365ea, type: 3}
+  - {fileID: 21300000, guid: 266cfc95d8335274ea276fcb16809d13, type: 3}
+  - {fileID: 21300000, guid: ee98d8eddcd739f42a262363c0acd7a7, type: 3}
+  - {fileID: 21300000, guid: 10700c5c6cfcae6468207d97d76f4713, type: 3}
+  - {fileID: 21300000, guid: d46ff3d9df74b4b40a0d41b497fabbf0, type: 3}
+  - {fileID: 21300000, guid: b15f4127f7bb0004b9283f23bc78ee41, type: 3}
+  - {fileID: 21300000, guid: 4182859cd6588ef4182531d371e5d3b9, type: 3}
+  - {fileID: 21300000, guid: 624da4a2ce029a640be9bba9ed33b8b5, type: 3}
+  - {fileID: 21300000, guid: 699308d54f3617d418b14974135ce655, type: 3}
+  - {fileID: 21300000, guid: 2f6f0c9eac58eb9448a8af0bf5a8c3d9, type: 3}
+  - {fileID: 21300000, guid: ce41108d55ff0ec4fa91628c1183dd0d, type: 3}
+  - {fileID: 21300000, guid: a50ece4260ca4e8478ccc0b681dbc0cf, type: 3}
+  FramesPerSecond: 12

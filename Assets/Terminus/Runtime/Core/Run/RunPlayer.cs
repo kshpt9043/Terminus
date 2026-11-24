@@ -216,6 +216,14 @@ namespace Terminus.Run
 
         public bool HasChosenStartSkill => _runState.bStartSkillChosen;
 
+        // [테스트] 강화 스킬 칸 첫 자리를 이 스킬로 (스킬 이펙트 시험)
+        public void DebugSetEnhanceSkill(string skillRow)
+        {
+            _runState.EnhanceSkills.Clear();
+            _runState.EnhanceSkills.Add(skillRow);
+            Changed();
+        }
+
         // [테스트] 시작 강화 스킬 고르기를 안 한 상태로 되돌림
         public void ResetStartSkill()
         {

@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4bb7c2439dcbc314d8145c8026b2b559, type: 3}
+  m_Name: EngineerShield
+  m_EditorClassIdentifier: Terminus.Art::Terminus.Art.SpriteFlipbook
+  Frames:
+  - {fileID: 21300000, guid: 0f3e208819df7b7498d73c6aeab99c61, type: 3}
+  - {fileID: 21300000, guid: 4ff4aa87f5e83364ab62c50e492afddf, type: 3}
+  - {fileID: 21300000, guid: 819383a184f2c2241b96e578bca4de9e, type: 3}
+  - {fileID: 21300000, guid: a5c91b4399ea398478fc1639267b3b16, type: 3}
+  - {fileID: 21300000, guid: 6cd975d88968dfc438fd122fd3826d6e, type: 3}
+  - {fileID: 21300000, guid: 299eb3ff8850907429b3c1fc17684a25, type: 3}
+  - {fileID: 21300000, guid: f80d135857b17fe43ab9d064357913d5, type: 3}
+  - {fileID: 21300000, guid: aba80d1884e14544ca531c39845f3c62, type: 3}
+  - {fileID: 21300000, guid: 098c688fc237075468387054328157f7, type: 3}
+  - {fileID: 21300000, guid: a2312466741a30e47804bf3e604c1b06, type: 3}
+  - {fileID: 21300000, guid: 0b4908d5644f92c49bd380d793d2f367, type: 3}
+  FramesPerSecond: 12

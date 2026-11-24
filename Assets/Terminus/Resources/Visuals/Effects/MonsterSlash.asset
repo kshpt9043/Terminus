@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4bb7c2439dcbc314d8145c8026b2b559, type: 3}
+  m_Name: MonsterSlash
+  m_EditorClassIdentifier: Terminus.Art::Terminus.Art.SpriteFlipbook
+  Frames:
+  - {fileID: 21300000, guid: 9bae3a879ab622a4fa7638df9ea55fef, type: 3}
+  - {fileID: 21300000, guid: 04401fa050d6fde42a95acdad310acd7, type: 3}
+  - {fileID: 21300000, guid: 632dec2bc3339c541be27805b1d7784e, type: 3}
+  - {fileID: 21300000, guid: 95b70cc6ebf746f43aeb0dd6e81d8672, type: 3}
+  - {fileID: 21300000, guid: ce0e31c2d8bd2b643a66c07d339f3022, type: 3}
+  - {fileID: 21300000, guid: 682869a1709cc9a468d203898d7f0b12, type: 3}
+  - {fileID: 21300000, guid: 395edf64dad80ba43a286052b9ff5242, type: 3}
+  - {fileID: 21300000, guid: 79f92eb2273f9a74d8159fccaaf7215b, type: 3}
+  - {fileID: 21300000, guid: 0ccd04408e793584f963ee2ca467a30d, type: 3}
+  FramesPerSecond: 12

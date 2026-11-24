@@ -208,13 +208,66 @@ namespace Terminus.Game.Client
         const float EffectScale = 0.8f;      // 캐릭터 배율 대비 (플레이 확인 후 0.8)
         static readonly Dictionary<string, SpriteFlipbook> _effects = new Dictionary<string, SpriteFlipbook>();
 
-        // 스킬 -> 이펙트 이름 (Resources/Visuals/Effects/<이름>). 없으면 null
-        // shortcut: 파이터 공격만 연결됨, 다른 묶음은 이펙트를 만들 때 여기에 추가
+        // 자기 몸에 거는 이펙트 (발밑 기준, 상태이상 배율, 적 쪽을 봄). 나머지는 맞는 대상 가운데
+        static readonly HashSet<string> SelfEffects = new HashSet<string> { "FighterGuard", "EngineerShield", "PaladinShield", "AssassinSmoke", "MonsterHarden", "Heal" };
+
+        // 몬스터 공격: 둔기 -> 충격, 발톱 / 이빨 -> 할퀴기, 칼날 -> 검 베기, 나머지 -> 충격 (설명 낱말로, 앞 묶음이 먼저)
+        static readonly string[] BluntWords = { "철퇴", "통나무" };
+        static readonly string[] ClawWords = { "발톱", "할퀴", "앞발", "물어", "물기", "갈퀴", "송곳니", "쪼", "독침" };
+        static readonly string[] SlashWords = { "검", "베", "칼", "단검", "단도", "낫", "참격", "창", "찔", "휘둘", "기습", "암기" };
+
+        static bool HasAny(string text, string[] words)
+        {
+            foreach (var w in words)
+                if (text.Contains(w)) return true;
+            return false;
+        }
+
+        // 스킬 -> 이펙트 이름 (Resources/Visuals/Effects/<이름>). 없으면 null (상태이상만 거는 스킬은 상태 아이콘이 대신함)
         static string EffectNameFor(SkillRow skill)
         {
             if (skill == null) return null;
-            if (skill.OwnerClass == SkillOwner.Fighter && skill.SkillType == SkillType.Attack) return "FistKi";
+            var kind = skill.ActionKind.ToString();
+            if (kind.StartsWith("Hit"))
+            {
+                switch (skill.OwnerClass)
+                {
+                    case SkillOwner.Fighter: return "FistKi";
+                    case SkillOwner.Engineer: return "EngineerBlast";
+                    case SkillOwner.Paladin: return "PaladinSlash";
+                    case SkillOwner.Assassin: return "AssassinStab";
+                    case SkillOwner.Monster:
+                        var d = skill.Description_KR;
+                        if (HasAny(d, BluntWords)) return "MonsterImpact";
+                        if (HasAny(d, ClawWords)) return "MonsterClaw";
+                        if (HasAny(d, SlashWords)) return "MonsterSlash";
+                        return "MonsterImpact";
+                    default: return "ArcaneWave";
+                }
+            }
+            // 보호막 + 적 전체 독 같은 스킬은 대상이 적이라 방어 이펙트 없이 (중독 아이콘만)
+            if (skill.TargetType == TargetType.AllEnemies || skill.TargetType == TargetType.SingleEnemy) return null;
+            if (kind.Contains("Heal")) return "Heal";
+            if (kind.Contains("Shield"))
+            {
+                switch (skill.OwnerClass)
+                {
+                    case SkillOwner.Fighter: return "FighterGuard";
+                    case SkillOwner.Engineer: return "EngineerShield";
+                    case SkillOwner.Paladin: return "PaladinShield";
+                    case SkillOwner.Assassin: return "AssassinSmoke";
+                    case SkillOwner.Monster: return "MonsterHarden";
+                }
+            }
             return null;
+        }
+
+        /// <summary>스킬이 타격마다 재생하는 이펙트의 길이(초). 이펙트가 없으면 0 (서버가 다타 간격으로 씀)</summary>
+        public static float EffectSeconds(string skillRow)
+        {
+            var name = EffectNameFor(GameData.FindSkillRow(skillRow));
+            var fb = name != null ? LoadEffect(name) : null;
+            return fb != null ? fb.Duration : 0f;
         }
 
         static SpriteFlipbook LoadEffect(string name)
@@ -230,10 +283,19 @@ namespace Terminus.Game.Client
             var name = !string.IsNullOrEmpty(msg.Effect) ? msg.Effect : EffectNameFor(GameData.FindSkillRow(msg.SkillRow));
             var fb = name != null ? LoadEffect(name) : null;
             if (fb == null) return;
+            bool self = SelfEffects.Contains(name);
             foreach (var id in msg.MonsterIds)
-                if (TryGetMonsterBounds(id, out var b)) SpawnEffect(fb, b.center, ActorScale * EffectScale, FacesLeft(b.center));
+                if (_monsters.TryGetValue(id, out var a)) SpawnOn(fb, a, self);
             foreach (var id in msg.PlayerIds)
-                if (TryGetPlayerBounds(id, out var b)) SpawnEffect(fb, b.center, ActorScale * EffectScale, FacesLeft(b.center));
+                if (_players.TryGetValue(id, out var a)) SpawnOn(fb, a, self);
+        }
+
+        void SpawnOn(SpriteFlipbook fb, Actor a, bool self)
+        {
+            if (!GetBounds(a, out var b)) return;
+            bool left = FacesLeft(b.center);
+            if (self) SpawnEffect(fb, a.Root.transform.position, StatusEffectScale, !left);   // 방패는 적 쪽으로
+            else SpawnEffect(fb, b.center, ActorScale * EffectScale, left);
         }
 
         // 상태이상 이펙트는 pixelfx 기본 인형(38px) 기준으로 그려짐 -> 우리 그림(64px x ActorScale)에 맞춤

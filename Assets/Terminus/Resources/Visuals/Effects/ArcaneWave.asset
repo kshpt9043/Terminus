@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4bb7c2439dcbc314d8145c8026b2b559, type: 3}
+  m_Name: ArcaneWave
+  m_EditorClassIdentifier: Terminus.Art::Terminus.Art.SpriteFlipbook
+  Frames:
+  - {fileID: 21300000, guid: fcaa4c860d18de945813dcb62efbf130, type: 3}
+  - {fileID: 21300000, guid: f12fa985b46a81246afd3f6d77b0676b, type: 3}
+  - {fileID: 21300000, guid: 3052627130c53af4eba183460a815363, type: 3}
+  - {fileID: 21300000, guid: 5d8c81bff6c72a642bc00a507c828dd1, type: 3}
+  - {fileID: 21300000, guid: 81752593f41b9fb4f84b28c46e7dc834, type: 3}
+  - {fileID: 21300000, guid: 87aad670343208e419163f9ae2f13008, type: 3}
+  - {fileID: 21300000, guid: 34cc003520f763d458e315b5a7641287, type: 3}
+  - {fileID: 21300000, guid: cffb5465c518b294d977e2225715db15, type: 3}
+  - {fileID: 21300000, guid: 199a5171b909a7c4683183adc6b4e359, type: 3}
+  - {fileID: 21300000, guid: 3b548c2c41af9a94bba4c2673888745f, type: 3}
+  - {fileID: 21300000, guid: bd0973bf2d5bd984b83dba67fd787a40, type: 3}
+  - {fileID: 21300000, guid: c1759c64c86c26447b1541e99a090761, type: 3}
+  - {fileID: 21300000, guid: eb1ac0e723c19544389ad61dfbd70165, type: 3}
+  - {fileID: 21300000, guid: 4535f13d357e5514889f824dbe74d2a8, type: 3}
+  FramesPerSecond: 12

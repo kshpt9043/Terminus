@@ -179,6 +179,7 @@ namespace Terminus.Game
                 combat.MonsterActing += (m, kind) => NetBus.Broadcast(new MonsterActingMsg { AreaIndex = areaIndex, MonsterId = m.Id, Kind = kind.ToString() });
                 combat.SkillUsed += (row, monsterIds, playerIds) => NetBus.Broadcast(new SkillUsedMsg { AreaIndex = areaIndex, SkillRow = row, MonsterIds = monsterIds, PlayerIds = playerIds });
                 combat.CounterHit += (monsterIds, playerIds) => NetBus.Broadcast(new SkillUsedMsg { AreaIndex = areaIndex, Effect = "CounterHit", MonsterIds = monsterIds, PlayerIds = playerIds });
+                combat.HitIntervalFor = Terminus.Game.Client.AreaView.EffectSeconds;   // 다타: 이펙트가 끝나고 다음 타격
                 _combats.Add(combat);
                 _combatHosts.Add(host);
                 _areas.RegisterArea(new DungeonArea(i, combat, NetworkRoot.MaxPartySize, MonsterSlots));

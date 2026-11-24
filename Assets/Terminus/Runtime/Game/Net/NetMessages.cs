@@ -48,6 +48,8 @@ namespace Terminus.Game.Net
     // 테스트 (언리얼 Server_Debug*)
     [Serializable] public sealed class DebugWinCombatReq { }
     [Serializable] public sealed class DebugLoseCombatReq { }
+    // 강화 스킬 칸을 장착 가능한 스킬 다음 / 이전 것으로 + 에너지 가득 (스킬 이펙트 시험)
+    [Serializable] public sealed class DebugCycleSkillReq { public int Step = 1; }
 
     // ================================================================ 개인 알림 (언리얼 Client_*)
 

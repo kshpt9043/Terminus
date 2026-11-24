@@ -207,6 +207,65 @@ namespace Terminus.Tests
         }
 
         [Test]
+        public void MultiHit_OneHitPerInterval()
+        {
+            var kit = new DungeonCombatKit(11);
+            kit.Settings.HitInterval = 0.5f;
+            var p = DungeonCombatPlayers.Make(1);
+            kit.StartForced(RoomType.MONSTER, new[] { "mon_slime", "mon_slime" }, p);
+            var m1 = kit.Combat.Monsters[1];
+            int effects = 0;
+            kit.Combat.SkillUsed += (r, m, pl) => ++effects;
+
+            // 기본 공격 = 3 x 2타: 첫 타는 바로, 둘째 타는 0.5초 뒤 (그 사이엔 다른 요청 안 받음)
+            kit.Combat.HandleUseSkill(p, 0, 1);
+            Assert.AreEqual(SlimeHp - 3, Hp(m1));
+            Assert.AreEqual(1, effects);
+            Assert.IsTrue(kit.Combat.IsResolvingHits);
+            kit.Combat.HandleEndTurn(p);
+            Assert.IsFalse(kit.Combat.HasEndedTurn(p));
+
+            kit.Combat.Tick(0.4);
+            Assert.AreEqual(SlimeHp - 3, Hp(m1));
+            kit.Combat.Tick(0.5);
+            Assert.AreEqual(SlimeHp - 6, Hp(m1));
+            Assert.AreEqual(2, effects);
+            Assert.IsFalse(kit.Combat.IsResolvingHits);
+        }
+
+        [Test]
+        public void MultiHit_UsesEffectLength()
+        {
+            var kit = new DungeonCombatKit(11);
+            kit.Settings.HitInterval = 0.5f;
+            var p = DungeonCombatPlayers.Make(1);
+            kit.StartForced(RoomType.MONSTER, new[] { "mon_slime", "mon_slime" }, p);
+            var m1 = kit.Combat.Monsters[1];
+            kit.Combat.HitIntervalFor = row => 1.0f;   // 이펙트 1초
+
+            kit.Combat.HandleUseSkill(p, 0, 1);
+            kit.Combat.Tick(0.6);
+            Assert.AreEqual(SlimeHp - 3, Hp(m1), "기본 간격(0.5)이 아니라 이펙트 길이(1.0)를 기다림");
+            kit.Combat.Tick(1.0);
+            Assert.AreEqual(SlimeHp - 6, Hp(m1));
+        }
+
+        [Test]
+        public void DebugCycleSkill_EquipsNextClassSkillAndRefills()
+        {
+            var kit = StartFighter(out var p);
+            kit.Combat.HandleUseSkill(p, 0, 0);   // 에너지 1 씀
+            var first = kit.Combat.DebugCycleSkill(p, 1);
+            var second = kit.Combat.DebugCycleSkill(p, 1);
+            Assert.AreNotEqual("", first);
+            Assert.AreNotEqual(first, second);
+            Assert.AreEqual(second, p.Run.GetCombatSkillRow(3));
+            Assert.IsTrue(Terminus.Run.ProfileService.IsEquippableSkill(second, p.Run.CharacterClass));
+            Assert.AreEqual(p.Battler.Stats.MaxEnergy, p.Battler.State.Energy);
+            Assert.AreEqual(first, kit.Combat.DebugCycleSkill(p, -1));
+        }
+
+        [Test]
         public void CounterHit_ReportsAttacker()
         {
             var kit = StartFighter(out var p);

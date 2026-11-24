@@ -133,6 +133,20 @@ namespace Terminus.Dungeon
         double _stepTime = 0;
         double _now = 0;
 
+        // 다타 공격의 남은 타격 (HitInterval 마다 하나). 남아 있는 동안은 다음 행동 / 단계가 기다림
+        readonly Queue<Action> _hits = new Queue<Action>();
+        double _hitTime = 0;
+        float _hitInterval = 0;
+
+        /// <summary>
+        /// 스킬 행 -> 타격 간격(초). 게임 쪽이 그 스킬 이펙트의 길이를 넣어 줌 (이펙트가 끝나고 다음 타격).
+        /// 없거나 0 이하를 주면 Settings.HitInterval. Settings.HitInterval 이 0 이면 언제나 한꺼번에 (테스트)
+        /// </summary>
+        public Func<string, float> HitIntervalFor;
+
+        /// <summary>다타 공격이 아직 들어가는 중 (스킬 / 턴 종료 요청을 안 받음)</summary>
+        public bool IsResolvingHits => _hits.Count > 0;
+
         // =====================================================================
         // [조회] 클라 HUD 가 씀
         // =====================================================================
@@ -187,12 +201,31 @@ namespace Terminus.Dungeon
         public void Tick(double now)
         {
             _now = now;
+            if (_hits.Count > 0 && _now >= _hitTime)
+            {
+                _hitTime = _now + _hitInterval;
+                _hits.Dequeue()();
+            }
+            if (_hits.Count > 0) return;
             for (int guard = 0; guard < 64 && _step != CombatStep.None && _now >= _stepTime; ++guard)
             {
                 var step = _step;
                 _step = CombatStep.None;
                 RunStep(step);
             }
+        }
+
+        // 첫 단계는 지금, 나머지는 타격 간격마다 (Settings.HitInterval 0 이면 전부 지금)
+        void Resolve(List<Action> steps, string skillRow)
+        {
+            float custom = _settings.HitInterval > 0f && HitIntervalFor != null ? HitIntervalFor(skillRow) : 0f;
+            _hitInterval = custom > 0f ? custom : _settings.HitInterval;
+            for (int i = 0; i < steps.Count; ++i)
+            {
+                if (i == 0 || _settings.HitInterval <= 0f) steps[i]();
+                else _hits.Enqueue(steps[i]);
+            }
+            if (_hits.Count > 0) _hitTime = _now + _hitInterval;
         }
 
         void SetTimer(CombatStep step, float delay)
@@ -204,6 +237,7 @@ namespace Terminus.Dungeon
         void ClearTimer()
         {
             _step = CombatStep.None;
+            _hits.Clear();
         }
 
         void RunStep(CombatStep step)
@@ -560,6 +594,7 @@ namespace Terminus.Dungeon
         {
             if (!IsTurnOf(p) || _endedTurn.Contains(p)) return;
             if (!_players.Contains(p)) return;
+            if (IsResolvingHits) return;
 
             var caster = GetStats(p);
             if (caster == null || caster.IsDead() || p.Run == null) return;
@@ -644,15 +679,27 @@ namespace Terminus.Dungeon
 
             // 광역 추가 피해(마도 캐논 등)가 맞을 상대 편 전체
             var opponents = IsBetrayal() ? GetBetrayalSideStats(p != _betrayer) : GetAliveMonsterStats();
-            RaiseSkillUsed(p.Run.GetCombatSkillRow(skillIndex), targets);
-            SkillExecutor.Execute(skill, caster, targets, opponents, _rng);
-            FireRelics(FindHolder(caster), RelicTrigger.OnSkillUsed, 0, p.Run.GetCombatSkillRow(skillIndex), skill);
-
+            var row = p.Run.GetCombatSkillRow(skillIndex);
             LogInfo?.Invoke($"[Combat] {p.Name} -> {skill.DisplayName_KR}");
 
-            HideDeadMonsters();
-            CheckCombatEnd();
-            NotifyChanged();
+            // 타격마다: 이펙트 알림 -> 피해 -> 죽음 / 끝 확인. 스킬 사용 유물은 마지막 타격 뒤
+            var plan = SkillExecutor.Plan(skill, caster, targets, opponents, _rng);
+            var steps = new List<Action>();
+            for (int i = 0; i < plan.Count; ++i)
+            {
+                var hit = plan[i];
+                bool last = i == plan.Count - 1;
+                steps.Add(() =>
+                {
+                    RaiseSkillUsed(row, targets.FindAll(t => !t.IsDead()));
+                    hit();
+                    if (last) FireRelics(FindHolder(caster), RelicTrigger.OnSkillUsed, 0, row, skill);
+                    HideDeadMonsters();
+                    CheckCombatEnd();
+                    NotifyChanged();
+                });
+            }
+            Resolve(steps, row);
         }
 
         void RaiseSkillUsed(string skillRow, List<CombatStats> targets)
@@ -685,6 +732,7 @@ namespace Terminus.Dungeon
         public void HandleEndTurn(DungeonPlayer p)
         {
             if (!IsTurnOf(p) || !_players.Contains(p) || _endedTurn.Contains(p)) return;
+            if (IsResolvingHits) return;
 
             _endedTurn.Add(p);
 
@@ -738,6 +786,29 @@ namespace Terminus.Dungeon
             HideDeadMonsters();
             CheckCombatEnd();
             NotifyChanged();
+        }
+
+        /// <summary>
+        /// [테스트] 이 플레이어가 장착할 수 있는 스킬을 DT_Skill 순서대로 돌려 강화 스킬 칸(4번 칸)에 넣고 에너지를 채움.
+        /// step 1 = 다음, -1 = 이전. 바꾼 스킬 행 이름 (없으면 "")
+        /// </summary>
+        public string DebugCycleSkill(DungeonPlayer p, int step)
+        {
+            if (!IsInCombat() || p?.Run == null || !_players.Contains(p)) return "";
+
+            var rows = new List<string>();
+            foreach (var row in GameData.Skills.RowNames)
+                if (Terminus.Run.ProfileService.IsEquippableSkill(row, p.Run.CharacterClass)) rows.Add(row);
+            if (rows.Count == 0) return "";
+
+            var current = p.Run.GetCombatSkillRow(3);
+            int i = rows.IndexOf(current);
+            int next = i < 0 ? 0 : ((i + step) % rows.Count + rows.Count) % rows.Count;
+            p.Run.DebugSetEnhanceSkill(rows[next]);
+            GetStats(p)?.DebugRefillAll();
+            LogInfo?.Invoke($"[Debug] {p.Name} 강화 스킬 -> {rows[next]} ({next + 1}/{rows.Count})");
+            NotifyChanged();
+            return rows[next];
         }
 
         /// <summary>[테스트] 이 구역 플레이어 전부 쓰러뜨림 -> 패배 (PC 의 DebugLoseCombat)</summary>
@@ -795,33 +866,53 @@ namespace Terminus.Dungeon
 
                 var intent = FindIntent(monster);
                 var skill = intent != null ? GameData.FindSkillRow(intent.SkillRow) : null;
-                if (skill != null)
+                if (skill == null)
                 {
-                    var targets = ResolveTargets(skill.TargetType, stats, GetAlivePlayerStats(), GetAliveMonsterStats());
-
-                    MonsterActing?.Invoke(monster, intent.Kind);
-                    RaiseSkillUsed(intent.SkillRow, targets);
-
-                    SkillExecutor.Execute(skill, stats, targets, GetAlivePlayerStats(), _rng);
-                    LogInfo?.Invoke($"[Combat]   몬스터 {_nextMonsterIndex - 1} -> {skill.DisplayName_KR}");
+                    FinishMonsterAction(stats);
+                    return;
                 }
 
-                // 이 몬스터의 자기 턴 끝: 상태이상 남은 사이클 감소 (이번 행동에서 자기에게 건 강철 등은 다음 자기 턴까지 남음)
-                if (!stats.IsDead())
+                var targets = ResolveTargets(skill.TargetType, stats, GetAlivePlayerStats(), GetAliveMonsterStats());
+                MonsterActing?.Invoke(monster, intent.Kind);
+                LogInfo?.Invoke($"[Combat]   몬스터 {_nextMonsterIndex - 1} -> {skill.DisplayName_KR}");
+
+                // 타격마다 이펙트 알림 -> 피해. 턴 마무리는 마지막 타격 뒤
+                var plan = SkillExecutor.Plan(skill, stats, targets, GetAlivePlayerStats(), _rng);
+                var steps = new List<Action>();
+                for (int i = 0; i < plan.Count; ++i)
                 {
-                    stats.OnTurnEnd();
-                    FireRelics(FindHolder(stats), RelicTrigger.OnTurnEnd);
+                    var hit = plan[i];
+                    bool last = i == plan.Count - 1;
+                    steps.Add(() =>
+                    {
+                        RaiseSkillUsed(intent.SkillRow, targets.FindAll(t => !t.IsDead()));
+                        hit();
+                        if (last) FinishMonsterAction(stats);
+                        else HideDeadMonsters();
+                    });
                 }
-
-                HideDeadMonsters();
-                if (CheckCombatEnd()) return;
-
-                // 한 마리씩 간격을 두고
-                SetTimer(CombatStep.MonsterAction, _settings.MonsterActionInterval);
+                Resolve(steps, intent.SkillRow);
                 return;
             }
 
             FinishCycle();
+        }
+
+        // 몬스터 한 마리 행동 끝 (마지막 타격 뒤)
+        void FinishMonsterAction(CombatStats stats)
+        {
+            // 이 몬스터의 자기 턴 끝: 상태이상 남은 사이클 감소 (이번 행동에서 자기에게 건 강철 등은 다음 자기 턴까지 남음)
+            if (!stats.IsDead())
+            {
+                stats.OnTurnEnd();
+                FireRelics(FindHolder(stats), RelicTrigger.OnTurnEnd);
+            }
+
+            HideDeadMonsters();
+            if (CheckCombatEnd()) return;
+
+            // 한 마리씩 간격을 두고
+            SetTimer(CombatStep.MonsterAction, _settings.MonsterActionInterval);
         }
 
         void FinishCycle()

@@ -61,6 +61,9 @@ namespace Terminus.Dungeon
         // 몬스터 행동 사이 간격. 한꺼번에 하면 무슨 일이 일어났는지 안 보임
         public float MonsterActionInterval = 0.8f;
 
+        // 다타 공격의 타격 사이 간격 (타격마다 이펙트가 끝나고 다음 피해). 0 이면 한꺼번에
+        public float HitInterval = 0.75f;
+
         // 승리 / 패배 후 구역을 끝내기까지 대기
         public float CombatEndDelay = 1.5f;
 

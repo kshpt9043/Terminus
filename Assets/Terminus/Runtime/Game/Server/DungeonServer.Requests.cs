@@ -37,6 +37,7 @@ namespace Terminus.Game
 
             NetBus.OnRequest<DebugWinCombatReq>((id, r) => WithCombat(id, (c, p) => c.DebugKillAllMonsters()));
             NetBus.OnRequest<DebugLoseCombatReq>((id, r) => WithCombat(id, (c, p) => c.DebugKillAllPlayers()));
+            NetBus.OnRequest<DebugCycleSkillReq>((id, r) => WithCombat(id, (c, p) => c.DebugCycleSkill(p, r.Step)));
             RegisterCombatPlanRequests();
         }
 

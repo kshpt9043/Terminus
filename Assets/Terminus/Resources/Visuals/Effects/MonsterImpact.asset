@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4bb7c2439dcbc314d8145c8026b2b559, type: 3}
+  m_Name: MonsterImpact
+  m_EditorClassIdentifier: Terminus.Art::Terminus.Art.SpriteFlipbook
+  Frames:
+  - {fileID: 21300000, guid: e580768ee1354b549b404eb28eeebd70, type: 3}
+  - {fileID: 21300000, guid: a40adfe875af4614999a02afc8f30414, type: 3}
+  - {fileID: 21300000, guid: f07d3c48df427ef4f8a20acd730c35ce, type: 3}
+  - {fileID: 21300000, guid: 125896ccba491fd4b9b72aea499410a6, type: 3}
+  - {fileID: 21300000, guid: 3b12f1cdf9ca6984bafd84835d1c44be, type: 3}
+  - {fileID: 21300000, guid: bf83e73b5fb62f6458363fb9bb49b5f9, type: 3}
+  - {fileID: 21300000, guid: 7a68ff0271ce158419227e9c6680783d, type: 3}
+  - {fileID: 21300000, guid: 04519d1633e23a34ab3020910d5d484f, type: 3}
+  - {fileID: 21300000, guid: bcb3d22805fc54942b5de202093c1e20, type: 3}
+  - {fileID: 21300000, guid: 6af7f5be0c212314a8297861af4aaa83, type: 3}
+  - {fileID: 21300000, guid: dc5f8bc1e8858454a84613b87e1ec941, type: 3}
+  FramesPerSecond: 12

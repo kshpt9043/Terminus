@@ -26,9 +26,27 @@ namespace Terminus.Combat
                                    IReadOnlyList<CombatStats> opponents = null,
                                    Random rng = null)
         {
+            foreach (var step in Plan(skill, caster, targets, opponents, rng))
+            {
+                step();
+            }
+        }
+
+        /// <summary>
+        /// Execute 를 타격 단위로 나눈 것. 다타 공격은 타격마다 한 단계 (단계마다 대상 전원에게 한 대),
+        /// 보조 피해 / 흡혈 / 상태이상 / 반동은 마지막 단계 끝에. 공격이 아니면 한 단계.
+        /// 수치(최종 공격력 등)는 지금 정해짐. 서버는 단계 사이에 간격을 둬서 타격마다 이펙트와 피해를 보여 줌
+        /// </summary>
+        public static List<Action> Plan(SkillRow skill,
+                                        CombatStats caster,
+                                        IReadOnlyList<CombatStats> targets,
+                                        IReadOnlyList<CombatStats> opponents = null,
+                                        Random rng = null)
+        {
+            var steps = new List<Action>();
             if (caster == null)
             {
-                return;
+                return steps;
             }
             if (targets == null)
             {
@@ -56,33 +74,50 @@ namespace Terminus.Combat
 
             // ③ BaseValue 적용. 흡혈은 체력을 깎은 타격 수를 셈
             int drainHits = 0;
-            foreach (var r in receivers)
+            if (recipe.Use == ValueUse.Damage)
             {
-                if (r == null)
+                int hits = Math.Max(1, skill.HitCount);
+                for (int h = 0; h < hits; ++h)
                 {
-                    continue;
-                }
-
-                switch (recipe.Use)
-                {
-                    case ValueUse.Damage:
-                        for (int i = 0; i < Math.Max(1, skill.HitCount); ++i)
+                    bool first = h == 0, last = h == hits - 1;
+                    steps.Add(() =>
+                    {
+                        // 앞 타격의 반격으로 시전자가 쓰러졌으면 남은 타격은 안 들어감
+                        if (first || !caster.IsDead())
                         {
-                            if (r.ApplyDamage(amount, caster) > 0)   // 시전자 = 때린 쪽 (공포 / 반격 / 타격 판정)
+                            foreach (var r in receivers)
                             {
-                                ++drainHits;
+                                if (r != null && r.ApplyDamage(amount, caster) > 0)   // 시전자 = 때린 쪽 (공포 / 반격 / 타격 판정)
+                                {
+                                    ++drainHits;
+                                }
                             }
                         }
-                        break;
-                    case ValueUse.Shield:
-                        r.AddShield(amount);
-                        break;
-                    case ValueUse.Heal:
-                        r.Heal(amount);
-                        break;
+                        if (last)
+                        {
+                            After();
+                        }
+                    });
                 }
             }
+            else
+            {
+                steps.Add(() =>
+                {
+                    foreach (var r in receivers)
+                    {
+                        if (r == null) continue;
+                        if (recipe.Use == ValueUse.Shield) r.AddShield(amount);
+                        else if (recipe.Use == ValueUse.Heal) r.Heal(amount);
+                    }
+                    After();
+                });
+            }
+            return steps;
 
+            // ④ ~ ⑥ 타격이 다 끝난 뒤
+            void After()
+            {
             // ④ SecondaryValue: 광역 추가 피해는 공격, 시전자 보호막 / 회복은 방어 보정 ("(2+공격)", "(3+방어)")
             if (recipe.bAoeDamage)
             {
@@ -172,6 +207,7 @@ namespace Terminus.Combat
             if (skill.SelfDamage > 0)
             {
                 caster.ApplyDamage(skill.SelfDamage);
+            }
             }
         }
 

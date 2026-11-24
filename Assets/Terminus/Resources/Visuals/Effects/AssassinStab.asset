@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4bb7c2439dcbc314d8145c8026b2b559, type: 3}
+  m_Name: AssassinStab
+  m_EditorClassIdentifier: Terminus.Art::Terminus.Art.SpriteFlipbook
+  Frames:
+  - {fileID: 21300000, guid: 5729a6e712fbbfe4c8e97eb5aa226e07, type: 3}
+  - {fileID: 21300000, guid: 572d90051f1480541b827c30d83de9bf, type: 3}
+  - {fileID: 21300000, guid: 2f551013cdcae7647a25067a5a4786ff, type: 3}
+  - {fileID: 21300000, guid: b33663fc6bc519247824572c9bd9541a, type: 3}
+  - {fileID: 21300000, guid: e27a714cc7860b04b8f0d34f6850926c, type: 3}
+  - {fileID: 21300000, guid: b88cce5c518d312488374b85b15a62cb, type: 3}
+  - {fileID: 21300000, guid: b9c603321002e224694e7e942d98e487, type: 3}
+  - {fileID: 21300000, guid: 187c7966ed7dca04c80b96aeddc322ad, type: 3}
+  - {fileID: 21300000, guid: 0ed4428a14d02ed4aa03e0b891bb693a, type: 3}
+  - {fileID: 21300000, guid: e4a648732d5583d40a4772bb166f4b40, type: 3}
+  - {fileID: 21300000, guid: 522ee44d3fe22ec429bb68b97aa9b9d5, type: 3}
+  FramesPerSecond: 12
