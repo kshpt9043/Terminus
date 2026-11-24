@@ -13,7 +13,7 @@ namespace Terminus.Combat
     /// 플레이어랑 몬스터가 범용으로 쓰는 전투 상태.
     ///
     /// 피해 계산 순서 (ApplyDamage):
-    ///  공격자 공포 -25% -> 내 급소 +25% -> 보호막 대상 추가 피해(공격자 유물 %) -> 불굴 / 강철 1 고정 -> 철벽 수치만큼 감소
+    ///  공격자 공포 -25% -> 내 급소 +25% -> 보호막 대상 추가 피해(공격자 유물 %) -> 공격자 실명 1 고정 -> 불굴 / 강철 1 고정 -> 철벽 수치만큼 감소
     ///  -> 보호막 -> 체술(회피만큼 감소) -> 체력
     ///  -> 불사(체력 1 아래로 안 내려감) -> 흡수(깎인 만큼 % 회복) -> 반격(공격자에게 수치만큼)
     /// </summary>
@@ -116,7 +116,11 @@ namespace Terminus.Combat
                 amount = CombatMath.RoundToInt(amount * (100 + instigator._shieldBonusPercent) / 100f);
             }
 
-            // ② 불굴 그룹(불굴 / 강철 / 정령화 / 실명): 한 번에 받는 데미지 1 고정. 철벽: 수치만큼 줄어듦
+            // ② 공격자 실명: 한 번에 주는 데미지 1 고정. 불굴 그룹(불굴 / 강철 / 정령화): 한 번에 받는 데미지 1 고정. 철벽: 수치만큼 줄어듦
+            if (amount > 0 && instigator != null && instigator != this && instigator.HasStatus(StatusEffect.Blindness))
+            {
+                amount = 1;
+            }
             if (amount > 0 && HasStatus(StatusEffect.Indomitable))
             {
                 amount = 1;

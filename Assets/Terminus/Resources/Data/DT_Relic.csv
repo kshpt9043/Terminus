@@ -97,7 +97,7 @@ RLC_Deep_Q006,샐러맨더의 불꽃 정수,전투 시작 시 적 전체에게 2
 RLC_Deep_Q007,실프의 바람 정수,에너지를 소모할 때마다 보호막 7 획득,Deep,OnUseEnergy,ShieldSelf,Self,7,None,0,None,None,0,0,-1,Quest,-1,461,857,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Deep_Q007.T_Relic_RLC_Deep_Q007
 RLC_Deep_Q008,노움의 대지 정수,보호막 획득 시 보호막 4를 추가로 획득한다,Deep,OnGainShield,ShieldSelf,Self,4,None,0,None,None,0,0,-1,Quest,-1,365,677,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Deep_Q008.T_Relic_RLC_Deep_Q008
 RLC_Deep_Q009,정화된 어둠의 성유물,전투 시작 시 적 전체에게 2사이클 동안 공포 1 부여,Deep,OnBattleStart,StatusFearAll,AllEnemies,0,None,0,Fear,None,1,2,-1,Quest,-1,378,702,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Deep_Q009.T_Relic_RLC_Deep_Q009
-RLC_Deep_Q010,위스프의 빛무리 정수,전투 시작 시 1사이클 동안 불굴(실명)(받는 피해 1 고정) 획득,Deep,OnBattleStart,BlindnessSelf,Self,0,None,0,Blindness,None,1,1,-1,Quest,-1,349,649,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Deep_Q010.T_Relic_RLC_Deep_Q010
+RLC_Deep_Q010,위스프의 빛무리 정수,전투 시작 시 적 전체에게 1사이클 동안 실명(주는 피해 1 고정) 부여,Deep,OnBattleStart,StatusBlindnessAll,AllEnemies,0,None,0,Blindness,None,1,1,-1,Quest,-1,349,649,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Deep_Q010.T_Relic_RLC_Deep_Q010
 RLC_Deep_Q011,운디네의 맑은 영수,휴식터에 입장할 시 체력 20 추가 회복,Deep,OnRestStart,HealSelf,Self,20,None,0,None,None,0,0,-1,Quest,-1,419,779,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Deep_Q011.T_Relic_RLC_Deep_Q011
 RLC_Deep_Q012,선봉대장의 황금 훈장,전투 시작 시 아군 전체의 공격을 2 증가시킨다,Deep,OnBattleStart,BraveAll,AllAllies,0,None,0,Brave,None,2,-1,-1,Quest,-1,385,715,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Deep_Q012.T_Relic_RLC_Deep_Q012
 RLC_Deep_Q013,대마법사의 마도서,자신의 턴 시작 시 에너지 1 추가 획득,Deep,OnTurnStart,GainEnergy,Self,1,None,0,None,None,0,0,-1,Quest,-1,398,738,/Game/KSH/Asset/RelicIcon/T_Relic_RLC_Deep_Q013.T_Relic_RLC_Deep_Q013

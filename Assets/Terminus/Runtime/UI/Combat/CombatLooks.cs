@@ -100,7 +100,7 @@ namespace Terminus.UI.Combat
                 case StatusEffect.Flooding: letter = "침"; hex = "B07CD8"; break;
                 case StatusEffect.Contrarywind: letter = "풍"; hex = "B07CD8"; break;
                 case StatusEffect.Spirit: letter = "정"; hex = "FFD978"; break;
-                case StatusEffect.Blindness: letter = "실"; hex = "FFD978"; break;
+                case StatusEffect.Blindness: letter = "실"; hex = "B07CD8"; break;
                 default: letter = "?"; hex = "A89F8C"; break;
             }
             color = UiColor.Hex(hex);
@@ -203,6 +203,7 @@ namespace Terminus.UI.Combat
             {
                 amount = CombatMath.RoundToInt(amount * (100 + caster.GetShieldBonusPercent()) / 100f);
             }
+            if (caster != null && amount > 0 && caster.HasStatus(StatusEffect.Blindness)) amount = 1;
             if (target != null && amount > 0 && target.HasStatus(StatusEffect.Indomitable)) amount = 1;
             if (target != null) amount = Mathf.Max(0, amount - target.GetStatusValue(StatusEffect.IronWall));
             return amount;

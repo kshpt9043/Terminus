@@ -184,7 +184,12 @@ namespace Terminus.Comms
             {
                 amount = CombatMath.RoundToInt(amount * (100 + caster.GetShieldBonusPercent()) / 100f);
             }
-            // 불굴 그룹 (불굴 / 강철 / 정령화 / 실명)
+            // 공격자 실명: 주는 피해 1
+            if (caster != null && amount > 0 && caster.HasStatus(StatusEffect.Blindness))
+            {
+                amount = 1;
+            }
+            // 불굴 그룹 (불굴 / 강철 / 정령화)
             if (target != null && amount > 0 && target.HasStatus(StatusEffect.Indomitable))
             {
                 amount = 1;

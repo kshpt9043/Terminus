@@ -89,7 +89,7 @@ namespace Terminus.Data
         Flooding,        // 허약(침수)   = 얼음 그룹
         Contrarywind,    // 공포(역풍)   = 공포 그룹
         Spirit,          // 불굴(정령화) = 불굴 그룹
-        Blindness,       // 불굴(실명)   = 불굴 그룹
+        Blindness,       // 실명. 주는 데미지 1 고정 (디버프, 11-24 불굴 그룹에서 분리)
         SelfDamage,      // 반동 피해. 상태로 남지 않음
     }
 
@@ -183,7 +183,7 @@ namespace Terminus.Data
         HitAllEnemiesHealSelfIceAll,
         HitEnemyShieldMetal,
         HitAllEnemiesShieldMetal,
-        BlindnessSelf,
+        StatusBlindnessAll,
         SpiritSelf,
         StatusDark,
         StatusDarkAll,
@@ -216,7 +216,7 @@ namespace Terminus.Data
         EvasionSelfBraveSelf,
         EvasionSelfCounterSelf,
         HitEnemySingleAoePoison,
-        GainEnergyBlindnessSelf,
+        GainEnergyBlindnessAll,
         StatusMarkFearAll,
     }
 
@@ -301,8 +301,7 @@ namespace Terminus.Data
                 case StatusEffect.Flooding: return StatusEffect.Ice;
                 case StatusEffect.Solid: return StatusEffect.Protection;
                 case StatusEffect.Metal:
-                case StatusEffect.Spirit:
-                case StatusEffect.Blindness: return StatusEffect.Indomitable;
+                case StatusEffect.Spirit: return StatusEffect.Indomitable;
                 case StatusEffect.Contrarywind: return StatusEffect.Fear;
                 default: return type;
             }
@@ -339,7 +338,7 @@ namespace Terminus.Data
                 case StatusEffect.Flooding: return Name("허약", "침수");
                 case StatusEffect.Contrarywind: return Name("공포", "역풍");
                 case StatusEffect.Spirit: return Name("불굴", "정령화");
-                case StatusEffect.Blindness: return Name("불굴", "실명");
+                case StatusEffect.Blindness: return Name("실명", "실명");
                 case StatusEffect.SelfDamage: return Name("반동 피해", "반동 피해");
                 default: return "";
             }
@@ -359,6 +358,7 @@ namespace Terminus.Data
                 case StatusEffect.Ice: return "수치만큼 공격 스텟이 하락한다.";
                 case StatusEffect.Lava: return "수치만큼 방어 스텟이 하락한다.";
                 case StatusEffect.Indomitable: return "한 사이클 동안 받는 데미지가 1로 고정된다.";
+                case StatusEffect.Blindness: return "주는 데미지가 1로 고정된다.";
                 case StatusEffect.Acid: return "스킬 사용 시 에너지 소모량이 1 증가한다.";
                 case StatusEffect.Fear: return "주는 최종 데미지가 25% 감소한다.";
                 case StatusEffect.Fusion: return "중독, 허점(용암), 허약(얼음) 중 하나를 무작위로 건다.";
@@ -384,6 +384,7 @@ namespace Terminus.Data
                 case StatusEffect.Lava:
                 case StatusEffect.Acid:
                 case StatusEffect.Fear:
+                case StatusEffect.Blindness:
                 case StatusEffect.Fusion:
                 case StatusEffect.Reflux:
                 case StatusEffect.InternalInjury:

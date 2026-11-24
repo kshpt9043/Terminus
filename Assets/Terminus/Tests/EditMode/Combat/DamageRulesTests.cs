@@ -150,5 +150,39 @@ namespace Terminus.Tests
             s.AddShield(4);
             Assert.AreEqual(6, s.ApplyDamage(10), "반환: 보호막 뒤 6");
         }
+
+        // 실명 (11-24): 불굴 그룹이 아닌 디버프. 실명인 쪽이 주는 피해가 1, 받는 피해는 그대로
+        [Test]
+        public void Blindness_AttackerDealsOne_ReceivedUnchanged()
+        {
+            CombatStats blind = MakeBattler();
+            blind.ApplyStatus(StatusEffect.Blindness, 1, 1);
+            Assert.IsFalse(blind.HasStatus(StatusEffect.Indomitable), "실명: 불굴 그룹 아님");
+            Assert.IsTrue(StatusInfo.IsDebuff(StatusEffect.Blindness), "실명: 디버프");
+            Assert.AreEqual("실명", StatusInfo.GetDisplayName(StatusEffect.Blindness));
+
+            CombatStats t = MakeBattler();
+            t.ApplyDamage(10, blind);
+            Assert.AreEqual(99, Health(t), "실명: 주는 피해 1");
+            blind.ApplyDamage(10, t);
+            Assert.AreEqual(90, Health(blind), "실명: 받는 피해는 그대로");
+        }
+
+        // 무형은신결 (GainEnergyBlindnessAll): 에너지는 시전자, 실명은 상대 편 전체
+        [Test]
+        public void GainEnergyBlindnessAll_EnergyToCaster_BlindToOpponents()
+        {
+            CombatStats caster = MakeBattler();
+            CombatStats e1 = MakeBattler();
+            CombatStats e2 = MakeBattler();
+            var skill = new SkillRow
+            {
+                ActionKind = ActionKind.GainEnergyBlindnessAll, TargetType = TargetType.Self, BaseValue = 1,
+                StatusEffect = StatusEffect.Blindness, StatusValue = 1, StatusDuration = 1,
+            };
+            SkillExecutor.Execute(skill, caster, new[] { caster }, new[] { e1, e2 });
+            Assert.IsFalse(caster.HasStatus(StatusEffect.Blindness), "시전자는 실명 아님");
+            Assert.IsTrue(e1.HasStatus(StatusEffect.Blindness) && e2.HasStatus(StatusEffect.Blindness), "적 전체 실명");
+        }
     }
 }

@@ -419,8 +419,13 @@ namespace Terminus.Combat
                 case ActionKind.GainEnergyProtectSelf:
                 case ActionKind.GainEnergyIndomitableSelf:
                 case ActionKind.GainEnergyBraveSelf:
-                case ActionKind.GainEnergyBlindnessSelf:
                     r.bGainEnergy = true;
+                    break;
+
+                // 에너지는 시전자, 실명은 상대 편 전체 (무형은신결)
+                case ActionKind.GainEnergyBlindnessAll:
+                    r.bGainEnergy = true;
+                    r.StatusTo = StatusTo.Opponents;
                     break;
 
                 // 은신: (StatusValue + 방어) 만큼 민첩
