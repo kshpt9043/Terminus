@@ -13,6 +13,8 @@ namespace Terminus.Tests
         public void LoadData() => TestData.LoadGameData();
 
         static int Hp(DungeonMonster m) => DungeonCombatMonsters.Hp(m);
+        // 밸런스 수치가 바뀌어도 맞도록 데이터에서 읽음
+        static int SlimeHp => GameData.FindMonsterRow("mon_slime").BaseHP;
 
         DungeonCombatKit StartFighter(out DungeonPlayer p, params string[] monsters)
         {
@@ -31,8 +33,8 @@ namespace Terminus.Tests
 
             // 0 = 공격 (3 + 공격 0) x 2타, 적 1명 = Monsters 인덱스
             kit.Combat.HandleUseSkill(p, 0, 1);
-            Assert.AreEqual(25, Hp(m0));
-            Assert.AreEqual(25 - 6, Hp(m1));
+            Assert.AreEqual(SlimeHp, Hp(m0));
+            Assert.AreEqual(SlimeHp - 6, Hp(m1));
             Assert.AreEqual(2, p.Battler.State.Energy);
 
             // 1 = 방어 (6 + 방어 0)
@@ -47,7 +49,7 @@ namespace Terminus.Tests
 
             // 에너지 부족 -> 무시
             kit.Combat.HandleUseSkill(p, 0, 0);
-            Assert.AreEqual(25, Hp(m0));
+            Assert.AreEqual(SlimeHp, Hp(m0));
         }
 
         [Test]
@@ -186,7 +188,7 @@ namespace Terminus.Tests
             var outsider = DungeonCombatPlayers.Make(9);
             kit.Combat.HandleUseSkill(outsider, 0, 0);
             kit.Combat.HandleEndTurn(outsider);
-            Assert.AreEqual(25, Hp(kit.Combat.Monsters[0]));
+            Assert.AreEqual(SlimeHp, Hp(kit.Combat.Monsters[0]));
             Assert.IsFalse(kit.Combat.HasEndedTurn(outsider));
             Assert.AreEqual(3, outsider.Battler.State.Energy);
         }

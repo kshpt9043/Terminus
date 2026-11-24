@@ -203,8 +203,8 @@ namespace Terminus.Tests
             kit.Combat.HandleEndTurn(p1);
             Assert.AreEqual(CombatPhase.MonsterTurn, kit.Combat.Phase, "죽은 사람은 기다리지 않음");
             kit.Step();
-            // slime_strike = 5 + 공격(0 + 인원 2) -> 전체
-            Assert.AreEqual(hp1 - 7, DungeonCombatPlayers.Hp(p1));
+            // slime_strike = BaseValue + 공격(0 + 인원 2) -> 전체
+            Assert.AreEqual(hp1 - (GameData.FindSkillRow("slime_strike").BaseValue + 2), DungeonCombatPlayers.Hp(p1));
             Assert.AreEqual(0, DungeonCombatPlayers.Hp(p2));
         }
 

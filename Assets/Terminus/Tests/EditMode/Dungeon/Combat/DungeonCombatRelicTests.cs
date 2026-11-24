@@ -13,6 +13,8 @@ namespace Terminus.Tests
         public void LoadData() => TestData.LoadGameData();
 
         static int Hp(DungeonMonster m) => DungeonCombatMonsters.Hp(m);
+        // 밸런스 수치가 바뀌어도 맞도록 데이터에서 읽음
+        static int SlimeHp => GameData.FindMonsterRow("mon_slime").BaseHP;
 
         static DungeonCombatKit Start(RoomType type, string[] monsters, params DungeonPlayer[] players)
         {
@@ -35,7 +37,7 @@ namespace Terminus.Tests
             Assert.AreEqual(1, p.Battler.GetStatusValue(StatusEffect.Brave), "전사의 증표: 용기 1 (전투 끝까지)");
 
             kit.Combat.HandleUseSkill(p, 0, 0);
-            Assert.AreEqual(25 - 8, Hp(kit.Combat.Monsters[0]), "(3 + 용기 1) x 2타");
+            Assert.AreEqual(SlimeHp - 8, Hp(kit.Combat.Monsters[0]), "(3 + 용기 1) x 2타");
 
             kit.EndTurnAll();
             kit.RunMonsterTurn();
@@ -49,8 +51,8 @@ namespace Terminus.Tests
         {
             var p = DungeonCombatPlayers.Make(1, CharacterClass.Fighter, false, "RLC_Common_005");
             var kit = Start(RoomType.MONSTER, TwoSlimes, p);
-            Assert.AreEqual(20, Hp(kit.Combat.Monsters[0]), "유탄 발사기 5");
-            Assert.AreEqual(20, Hp(kit.Combat.Monsters[1]));
+            Assert.AreEqual(SlimeHp - 5, Hp(kit.Combat.Monsters[0]), "유탄 발사기 5");
+            Assert.AreEqual(SlimeHp - 5, Hp(kit.Combat.Monsters[1]));
 
             var kit2 = new DungeonCombatKit(21);
             kit2.Combat.SetNextSpawnHealthScale(0.1f);   // 체력 3
@@ -117,8 +119,8 @@ namespace Terminus.Tests
             var engineer = DungeonCombatPlayers.Make(2, CharacterClass.Engineer, false, "RLC_Common_004");
             kit = Start(RoomType.MONSTER, TwoSlimes, engineer);
             kit.Combat.HandleUseSkill(engineer, 0, 0);
-            Assert.AreEqual(25 - 5 - 2, Hp(kit.Combat.Monsters[0]), "주 대상: 5 + 광역 2");
-            Assert.AreEqual(25 - 2, Hp(kit.Combat.Monsters[1]));
+            Assert.AreEqual(SlimeHp - 5 - 2, Hp(kit.Combat.Monsters[0]), "주 대상: 5 + 광역 2");
+            Assert.AreEqual(SlimeHp - 2, Hp(kit.Combat.Monsters[1]));
             Assert.AreEqual(2, engineer.Battler.State.Shield, "광역 보조 피해는 타격으로 안 침");
         }
 
@@ -156,11 +158,11 @@ namespace Terminus.Tests
 
             kit.Combat.HandleUseSkill(p, 0, 0);
             Assert.IsFalse(p.Battler.HasStatus(StatusEffect.Evasion), "공격 스킬엔 안 걸림");
-            Assert.AreEqual(25, Hp(kit.Combat.Monsters[1]));
+            Assert.AreEqual(SlimeHp, Hp(kit.Combat.Monsters[1]));
 
             kit.Combat.HandleUseSkill(p, 2, -1);
             Assert.IsTrue(p.Battler.HasStatus(StatusEffect.Evasion), "질풍의 경갑: 특수 스킬 뒤 민첩");
-            Assert.AreEqual(25 - 3, Hp(kit.Combat.Monsters[1]), "비도 암기낭: 특수 스킬 뒤 적 전체 3");
+            Assert.AreEqual(SlimeHp - 3, Hp(kit.Combat.Monsters[1]), "비도 암기낭: 특수 스킬 뒤 적 전체 3");
         }
 
         [Test]
@@ -204,7 +206,7 @@ namespace Terminus.Tests
             m0.Stats.AddShield(10);
 
             kit.Combat.HandleUseSkill(p, 0, 0);
-            Assert.AreEqual(25, Hp(m0));
+            Assert.AreEqual(SlimeHp, Hp(m0));
             Assert.AreEqual(10 - 4 - 4, m0.Stats.State.Shield, "파쇄의 권갑: 보호막 대상 +20% (3 -> 4)");
             Assert.IsTrue(kit.Combat.Monsters[1].Stats.HasStatus(StatusEffect.Lava), "강철 너클: 보호막 대상을 치면 적 전체 용암");
         }

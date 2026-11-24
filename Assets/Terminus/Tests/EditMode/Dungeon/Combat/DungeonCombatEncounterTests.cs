@@ -1,6 +1,7 @@
 // 던전 전투: 몬스터 고르기 / 스폰 보정 (실제 DT_Monster 로)
 using System.Collections.Generic;
 using NUnit.Framework;
+using Terminus.Combat;
 using Terminus.Data;
 using Terminus.Dungeon;
 using Terminus.Map;
@@ -61,11 +62,16 @@ namespace Terminus.Tests
             foreach (var m in kit.Combat.Monsters) Assert.AreEqual(MonsterCategory.Normal, m.Row.MonsterCategory);
         }
 
+        // 밸런스 수치가 바뀌어도 맞도록 데이터에서 읽음
+        static int SlimeHp => GameData.FindMonsterRow("mon_slime").BaseHP;
+        static int KingHp => GameData.FindMonsterRow("mon_slimeking").BaseHP;
+
         [Test]
         public void PartyHealthAndStatBonus_ByPlayersInRoom()
         {
-            // mon_slime: HP 25, 공 0, 방 0. 랜덤 끔
-            int[] expectedHp = { 25, 43, 60, 80 };   // 25 x (1 + 0 / 0.7 / 1.4 / 2.2), 반올림 (42.5 -> 43)
+            // mon_slime: 공 0, 방 0. 랜덤 끔. 체력 = 기본 x (1 + 0 / 0.7 / 1.4 / 2.2), 반올림
+            float[] partyBonus = { 0f, 0.7f, 1.4f, 2.2f };
+            var expectedHp = System.Array.ConvertAll(partyBonus, b => CombatMath.RoundToInt(SlimeHp * (1f + b)));
             for (int party = 1; party <= 4; ++party)
             {
                 var kit = new DungeonCombatKit();
@@ -89,11 +95,11 @@ namespace Terminus.Tests
             kit.StartForced(RoomType.MONSTER, new[] { "mon_slime", "mon_slimeking" }, P(1));
 
             var slime = kit.Combat.Monsters[0];
-            Assert.AreEqual(33, slime.Stats.Stats.MaxHealth, "25 x 1.3 = 32.5 -> 33");
+            Assert.AreEqual(CombatMath.RoundToInt(SlimeHp * 1.3f), slime.Stats.Stats.MaxHealth, "기본 x 1.3");
             Assert.AreEqual(0 + 1 + 1, slime.Stats.Stats.Attack, "층 +1, 인원 +1");
 
             var king = kit.Combat.Monsters[1];
-            Assert.AreEqual(100, king.Stats.Stats.MaxHealth, "보스는 층 보정 없음");
+            Assert.AreEqual(KingHp, king.Stats.Stats.MaxHealth, "보스는 층 보정 없음");
             Assert.AreEqual(2 + 1, king.Stats.Stats.Attack, "보스는 인원 보정만");
             Assert.AreEqual(3 + 1, king.Stats.Stats.Defense);
         }
@@ -104,7 +110,7 @@ namespace Terminus.Tests
             var kit = new DungeonCombatKit();
             kit.Host.CurrentFloor = 3;
             kit.StartForced(RoomType.MONSTER, new[] { "mon_slime" }, P(1));
-            Assert.AreEqual(25, kit.Combat.Monsters[0].Stats.Stats.MaxHealth);
+            Assert.AreEqual(SlimeHp, kit.Combat.Monsters[0].Stats.Stats.MaxHealth);
         }
 
         [Test]
@@ -116,12 +122,12 @@ namespace Terminus.Tests
                 kit.StartForced(RoomType.MONSTER, new[] { "mon_slime", "mon_slimeking" }, P(1));
 
                 var slime = kit.Combat.Monsters[0];
-                Assert.That(slime.Stats.Stats.MaxHealth, Is.InRange(24, 28), "25 x (0.95 ~ 1.10)");
+                Assert.That(slime.Stats.Stats.MaxHealth, Is.InRange(CombatMath.RoundToInt(SlimeHp * 0.95f), CombatMath.RoundToInt(SlimeHp * 1.10f)), "기본 x (0.95 ~ 1.10)");
                 Assert.That(slime.Stats.Stats.Attack, Is.InRange(1, 3), "인원 +1, 랜덤 0~2");
                 Assert.That(slime.Stats.Stats.Defense, Is.InRange(1, 3));
 
                 var king = kit.Combat.Monsters[1];
-                Assert.That(king.Stats.Stats.MaxHealth, Is.InRange(95, 110), "보스도 체력 랜덤 (10-08)");
+                Assert.That(king.Stats.Stats.MaxHealth, Is.InRange(CombatMath.RoundToInt(KingHp * 0.95f), CombatMath.RoundToInt(KingHp * 1.10f)), "보스도 체력 랜덤 (10-08)");
                 Assert.AreEqual(3, king.Stats.Stats.Attack, "보스는 공방 랜덤 없음");
                 Assert.AreEqual(4, king.Stats.Stats.Defense);
             }
@@ -134,10 +140,10 @@ namespace Terminus.Tests
             var p = P(1);
             kit.Combat.SetNextSpawnHealthScale(0.7f);
             kit.StartForced(RoomType.GUARDIAN, new[] { "mon_slime" }, p);
-            Assert.AreEqual(18, kit.Combat.Monsters[0].Stats.Stats.MaxHealth, "25 x 0.7 = 17.5 -> 18");
+            Assert.AreEqual(CombatMath.RoundToInt(SlimeHp * 0.7f), kit.Combat.Monsters[0].Stats.Stats.MaxHealth, "기본 x 0.7");
 
             kit.StartForced(RoomType.GUARDIAN, new[] { "mon_slime" }, p);
-            Assert.AreEqual(25, kit.Combat.Monsters[0].Stats.Stats.MaxHealth);
+            Assert.AreEqual(SlimeHp, kit.Combat.Monsters[0].Stats.Stats.MaxHealth);
         }
 
         [Test]
