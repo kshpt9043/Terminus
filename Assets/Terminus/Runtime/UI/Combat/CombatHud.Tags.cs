@@ -409,11 +409,21 @@ namespace Terminus.UI.Combat
 
                 var cell = new VisualElement { pickingMode = PickingMode.Ignore };
                 cell.AddToClassList("ch-status__cell");
-                CombatLooks.Border(cell, 1f, color);
-                var letterText = UiStyle.Text(letter, 8, color, TextAnchor.MiddleCenter, true);
-                letterText.pickingMode = PickingMode.Ignore;
-                letterText.AddToClassList("ch-status__letter");
-                cell.Add(letterText);
+                var icon = Terminus.Art.GameIcons.FindStatusIcon(s.Type.ToString());
+                if (icon != null)
+                {
+                    // 픽셀 아이콘 16px 그대로, 테두리 / 바탕 없이
+                    cell.AddToClassList("ch-status__cell--icon");
+                    cell.style.backgroundImage = new StyleBackground(icon);
+                }
+                else
+                {
+                    CombatLooks.Border(cell, 1f, color);
+                    var letterText = UiStyle.Text(letter, 8, color, TextAnchor.MiddleCenter, true);
+                    letterText.pickingMode = PickingMode.Ignore;
+                    letterText.AddToClassList("ch-status__letter");
+                    cell.Add(letterText);
+                }
                 item.Add(cell);
 
                 // 수치가 없는 상태(불사 / 불굴 등)는 남은 턴

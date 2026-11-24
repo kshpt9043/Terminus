@@ -10,6 +10,11 @@ namespace Terminus.Art
     {
         const string RelicFolder = "Icons/Relics/";
         const string SkillFolder = "Icons/Skills/";
+        const string StatusFolder = "Icons/Status/";
+
+        /// <summary>상태이상 아이콘 (StatusEffect 이름, 예: "Poison"). 없으면 null -> 글자 칸</summary>
+        public static Sprite FindStatusIcon(string statusName) =>
+            string.IsNullOrEmpty(statusName) ? null : Load(StatusFolder + statusName);
 
         static readonly Dictionary<string, Sprite> Cache = new Dictionary<string, Sprite>();
 

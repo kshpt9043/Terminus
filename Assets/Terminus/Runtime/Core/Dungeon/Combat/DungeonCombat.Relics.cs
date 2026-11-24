@@ -58,6 +58,7 @@ namespace Terminus.Dungeon
             stats.OnShieldGained += HandleShieldGained;
             stats.OnHitShieldTarget += HandleHitShield;
             stats.OnHealed += HandleHealed;
+            stats.OnCountered += HandleCountered;
             stats.OnEnergySpent += HandleEnergySpent;
             stats.OnSkillEnergySpent += HandleSkillEnergySpent;
             stats.OnDied += HandleStatsDied;
@@ -96,6 +97,7 @@ namespace Terminus.Dungeon
                 stats.OnShieldGained -= HandleShieldGained;
                 stats.OnHitShieldTarget -= HandleHitShield;
                 stats.OnHealed -= HandleHealed;
+                stats.OnCountered -= HandleCountered;
                 stats.OnEnergySpent -= HandleEnergySpent;
                 stats.OnSkillEnergySpent -= HandleSkillEnergySpent;
                 stats.OnDied -= HandleStatsDied;

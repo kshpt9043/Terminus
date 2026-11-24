@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4bb7c2439dcbc314d8145c8026b2b559, type: 3}
+  m_Name: Status_Flooding
+  m_EditorClassIdentifier: Terminus.Art::Terminus.Art.SpriteFlipbook
+  Frames:
+  - {fileID: 21300000, guid: 065cb9a11287c9249889cf3cd4e8aa63, type: 3}
+  - {fileID: 21300000, guid: 3cad6cc22c9b01a409c382d9f27b7b3b, type: 3}
+  - {fileID: 21300000, guid: 38483dc81d1cced46a1cf7f2396bf2c7, type: 3}
+  - {fileID: 21300000, guid: f62293888e61e364ab6cba06d730276e, type: 3}
+  - {fileID: 21300000, guid: fb04aecc70b1a5848919d183b24e0e9a, type: 3}
+  - {fileID: 21300000, guid: 662d584b9e6379540a199859f7ed8dac, type: 3}
+  - {fileID: 21300000, guid: 723ab0c623649524daa05bd4c4e9943d, type: 3}
+  - {fileID: 21300000, guid: 3f9ee54f5c988c04f9cffa1c06aee0d8, type: 3}
+  - {fileID: 21300000, guid: 75589742d76c8b249991e8d67b4588e2, type: 3}
+  FramesPerSecond: 12

@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4bb7c2439dcbc314d8145c8026b2b559, type: 3}
+  m_Name: CounterHit
+  m_EditorClassIdentifier: Terminus.Art::Terminus.Art.SpriteFlipbook
+  Frames:
+  - {fileID: 21300000, guid: 5d67275e9c9ef9a439b5e8a5cbda61eb, type: 3}
+  - {fileID: 21300000, guid: 20fafaab7a5138b46b1c2a578f20c941, type: 3}
+  - {fileID: 21300000, guid: 30874db945238c143a6b9e6124a36e64, type: 3}
+  - {fileID: 21300000, guid: 4222c4e16fec1ac47b132a57c0bfe530, type: 3}
+  - {fileID: 21300000, guid: aa91500aa6f108d4b8f58959941753f1, type: 3}
+  - {fileID: 21300000, guid: b4ac485a6451a004b8fc05752d8860f4, type: 3}
+  - {fileID: 21300000, guid: 12d97afee2f215845baf44be848b2901, type: 3}
+  - {fileID: 21300000, guid: e10f06e09012bf248b6dc39fbd85b6c6, type: 3}
+  - {fileID: 21300000, guid: b6fa75a8fbb9d334fb5586235a86d60b, type: 3}
+  FramesPerSecond: 12

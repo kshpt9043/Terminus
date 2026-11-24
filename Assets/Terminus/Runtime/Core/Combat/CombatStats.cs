@@ -44,6 +44,7 @@ namespace Terminus.Combat
         public event Action<CombatStats, int, CombatStats> OnDamaged;   // (Self, HealthLost, Instigator) 체력이 실제로 깎였을 때 (보호막만 깎이면 안 불림)
         public event Action<CombatStats, int> OnShieldGained;           // 보호막이 늘었을 때
         public event Action<CombatStats, int> OnHitShieldTarget;        // 내가 보호막 있는 대상을 때렸을 때 (Amount = 그 한 대의 피해)
+        public event Action<CombatStats, CombatStats> OnCountered;      // (반격한 쪽 = 나, 반격 맞은 쪽) 반격이 터졌을 때
         public event Action<CombatStats, int> OnHealed;                 // 체력이 실제로 회복됐을 때
         public event Action<CombatStats, int> OnEnergySpent;            // 에너지를 썼을 때
         public event Action<CombatStats, int> OnSkillEnergySpent;       // 스킬 에너지를 썼을 때
@@ -163,6 +164,7 @@ namespace Terminus.Combat
             int counterDamage = GetStatusValue(StatusEffect.Counter);
             if (instigator != null && instigator != this && counterDamage > 0 && amount > 0)
             {
+                OnCountered?.Invoke(this, instigator);
                 instigator.ApplyDamage(counterDamage, null);
             }
 

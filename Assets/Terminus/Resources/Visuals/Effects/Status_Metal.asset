@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4bb7c2439dcbc314d8145c8026b2b559, type: 3}
+  m_Name: Status_Metal
+  m_EditorClassIdentifier: Terminus.Art::Terminus.Art.SpriteFlipbook
+  Frames:
+  - {fileID: 21300000, guid: 1bed99af26ed0be4b9ebc9a002e7a3df, type: 3}
+  - {fileID: 21300000, guid: dc76f55383530e74da2f0ab4b53e582e, type: 3}
+  - {fileID: 21300000, guid: dd7ee0e827a2e80498b88e974992b7b2, type: 3}
+  - {fileID: 21300000, guid: ea67a925ae97508448b9c36e9fd1312c, type: 3}
+  - {fileID: 21300000, guid: 24d06c979d49540429011214fde0e00c, type: 3}
+  - {fileID: 21300000, guid: 8d20953397c9ecc40b8261125372d78f, type: 3}
+  - {fileID: 21300000, guid: c3eff8ed87f9b68468f814d9b0352416, type: 3}
+  - {fileID: 21300000, guid: 1869a54e3569627449a366d85bfcacec, type: 3}
+  - {fileID: 21300000, guid: bca1dc83f0ffb1843aedece510367449, type: 3}
+  FramesPerSecond: 12

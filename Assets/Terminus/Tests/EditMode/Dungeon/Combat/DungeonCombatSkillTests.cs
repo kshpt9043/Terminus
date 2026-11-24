@@ -192,5 +192,30 @@ namespace Terminus.Tests
             Assert.IsFalse(kit.Combat.HasEndedTurn(outsider));
             Assert.AreEqual(3, outsider.Battler.State.Energy);
         }
+
+        [Test]
+        public void SkillUsed_ReportsRowAndTargets()
+        {
+            var kit = StartFighter(out var p);
+            string row = null;
+            System.Collections.Generic.List<int> monsters = null;
+            kit.Combat.SkillUsed += (r, m, pl) => { row = r; monsters = m; };
+
+            kit.Combat.HandleUseSkill(p, 0, 1);
+            Assert.AreEqual(p.Run.GetCombatSkillRow(0), row);
+            CollectionAssert.AreEqual(new[] { kit.Combat.Monsters[1].Id }, monsters);
+        }
+
+        [Test]
+        public void CounterHit_ReportsAttacker()
+        {
+            var kit = StartFighter(out var p);
+            kit.Combat.Monsters[0].Stats.ApplyStatus(StatusEffect.Counter, 2, 2);
+            System.Collections.Generic.List<ulong> hitPlayers = null;
+            kit.Combat.CounterHit += (m, pl) => hitPlayers = pl;
+
+            kit.Combat.HandleUseSkill(p, 0, 0);
+            CollectionAssert.AreEqual(new[] { p.Id }, hitPlayers);
+        }
     }
 }

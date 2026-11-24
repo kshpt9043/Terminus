@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4bb7c2439dcbc314d8145c8026b2b559, type: 3}
+  m_Name: FistKi
+  m_EditorClassIdentifier: Terminus.Art::Terminus.Art.SpriteFlipbook
+  Frames:
+  - {fileID: 21300000, guid: 79649eae56dfaf44fa202872b4011534, type: 3}
+  - {fileID: 21300000, guid: f0afded3e49ef6b46af656e1b8ee4625, type: 3}
+  - {fileID: 21300000, guid: 794d09c6cf72eb648aa10be39b303ebe, type: 3}
+  - {fileID: 21300000, guid: 09c48ec0b589bd647b44f967f66556c1, type: 3}
+  - {fileID: 21300000, guid: 1eab2573113673d408e92b63b1425344, type: 3}
+  - {fileID: 21300000, guid: 918155917e535864d8c633ee6e9bc264, type: 3}
+  - {fileID: 21300000, guid: 4e750e4a3600aba45a3799c7250abaf5, type: 3}
+  - {fileID: 21300000, guid: 3100806f0055f7e48bc439de7a79339b, type: 3}
+  FramesPerSecond: 12

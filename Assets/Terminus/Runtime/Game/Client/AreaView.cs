@@ -3,10 +3,13 @@
 //  - 배신 전투: 배신자는 맞은편 몬스터 0번 자리에서 왼쪽을 봄 (언리얼 BeginBetrayal 의 Place(Betrayer, GetMonsterSlotLocation(0)))
 //  - 스냅샷 체력이 줄면 피격 (몬스터 Hit 플립북 + 붉은 번쩍임), 0 이 되면 사망 (몬스터는 피격 다음에 사망 플립북, 플레이어는 흐리게)
 //  - MonsterActingMsg 로 공격 / 방어 / 스페셜 플립북 (언리얼 PlayIntentAnim)
+//  - SkillUsedMsg 로 맞는 대상 가운데에 스킬 이펙트 플립북 (Resources/Visuals/Effects)
+//  - 스냅샷 상태이상이 새로 걸리거나 늘면 발밑에 Status_<종류> 플립북 + 그 색으로 잠깐 물들임
 // 머리 위 행동 예고 / 발밑 체력바 / 상태이상 / 대상 고르기 칸은 언리얼처럼 전투 HUD(UCombatHUDWidget 의 TagLayer)가 UI 로 그림.
 // 이 클래스는 그 자리를 알려 줌 (TryGetMonsterBounds / TryGetPlayerBounds / PickAt = 화면 좌표로 스프라이트 맞추기)
 using System.Collections.Generic;
 using Terminus.Art;
+using Terminus.Data;
 using Terminus.Game.Net;
 using UnityEngine;
 
@@ -52,6 +55,8 @@ namespace Terminus.Game.Client
             public int LastHealth = int.MinValue;
             public bool Dead;
             public float FlashLeft;
+            public Color FlashTint = FlashColor;
+            public List<StatusInstance> LastStatuses;
         }
 
         readonly Dictionary<ulong, Actor> _players = new Dictionary<ulong, Actor>();
@@ -163,6 +168,7 @@ namespace Terminus.Game.Client
                 // 알림 처리기는 한 번만 붙이고 지금 무대로 넘김 (씬마다 무대가 새로 생겨도 처리기가 쌓이지 않게)
                 _hooked = true;
                 NetBus.On<MonsterActingMsg>(m => { if (Instance != null) Instance.OnMonsterActing(m); });
+                NetBus.On<SkillUsedMsg>(m => { if (Instance != null) Instance.OnSkillUsed(m); });
             }
             ClientState.AreasChanged += Refresh;
             ClientState.PartyChanged += Refresh;
@@ -194,6 +200,104 @@ namespace Terminus.Game.Client
                 case "Defend": a.MonsterAnim.PlayAction(MonsterAction.Defend); break;
                 default: a.MonsterAnim.PlayAction(MonsterAction.Special); break;
             }
+        }
+
+        // ------------------------------------------------------------ 스킬 이펙트
+
+        const int EffectSortingOrder = 20;   // 캐릭터(10) 위
+        const float EffectScale = 0.8f;      // 캐릭터 배율 대비 (플레이 확인 후 0.8)
+        static readonly Dictionary<string, SpriteFlipbook> _effects = new Dictionary<string, SpriteFlipbook>();
+
+        // 스킬 -> 이펙트 이름 (Resources/Visuals/Effects/<이름>). 없으면 null
+        // shortcut: 파이터 공격만 연결됨, 다른 묶음은 이펙트를 만들 때 여기에 추가
+        static string EffectNameFor(SkillRow skill)
+        {
+            if (skill == null) return null;
+            if (skill.OwnerClass == SkillOwner.Fighter && skill.SkillType == SkillType.Attack) return "FistKi";
+            return null;
+        }
+
+        static SpriteFlipbook LoadEffect(string name)
+        {
+            if (!_effects.TryGetValue(name, out var fb))
+                _effects[name] = fb = Resources.Load<SpriteFlipbook>("Visuals/Effects/" + name);
+            return fb;
+        }
+
+        void OnSkillUsed(SkillUsedMsg msg)
+        {
+            if (this == null || msg.AreaIndex != _shownArea) return;
+            var name = !string.IsNullOrEmpty(msg.Effect) ? msg.Effect : EffectNameFor(GameData.FindSkillRow(msg.SkillRow));
+            var fb = name != null ? LoadEffect(name) : null;
+            if (fb == null) return;
+            foreach (var id in msg.MonsterIds)
+                if (TryGetMonsterBounds(id, out var b)) SpawnEffect(fb, b.center, ActorScale * EffectScale, FacesLeft(b.center));
+            foreach (var id in msg.PlayerIds)
+                if (TryGetPlayerBounds(id, out var b)) SpawnEffect(fb, b.center, ActorScale * EffectScale, FacesLeft(b.center));
+        }
+
+        // 상태이상 이펙트는 pixelfx 기본 인형(38px) 기준으로 그려짐 -> 우리 그림(64px x ActorScale)에 맞춤
+        const float StatusEffectScale = ActorScale * 64f / 38f * 0.8f;
+
+        // 물들일 색 (이펙트 색과 맞춤). 없는 종류는 이펙트만
+        static readonly Dictionary<StatusEffect, Color> StatusTints = new Dictionary<StatusEffect, Color>
+        {
+            { StatusEffect.Poison, new Color(0.45f, 0.9f, 0.35f) },
+            { StatusEffect.Ice, new Color(0.5f, 0.8f, 1f) },
+            { StatusEffect.Flooding, new Color(0.35f, 0.6f, 1f) },
+            { StatusEffect.Lava, new Color(1f, 0.55f, 0.2f) },
+            { StatusEffect.InternalInjury, new Color(0.9f, 0.25f, 0.3f) },
+            { StatusEffect.Fear, new Color(0.65f, 0.55f, 0.85f) },
+            { StatusEffect.Contrarywind, new Color(0.7f, 0.85f, 0.95f) },
+            { StatusEffect.Dark, new Color(0.6f, 0.35f, 0.85f) },
+            { StatusEffect.Acid, new Color(0.8f, 0.95f, 0.2f) },
+            { StatusEffect.Fusion, new Color(0.8f, 0.65f, 1f) },
+            { StatusEffect.Mark, new Color(1f, 0.35f, 0.3f) },
+            { StatusEffect.Brave, new Color(1f, 0.7f, 0.3f) },
+            { StatusEffect.Metal, new Color(0.75f, 0.8f, 0.88f) },
+            { StatusEffect.Solid, new Color(1f, 0.88f, 0.45f) },
+        };
+
+        static void Flash(Actor a, Color tint)
+        {
+            a.FlashLeft = FlashSeconds;
+            a.FlashTint = tint;
+        }
+
+        // 처음 본 스냅샷은 비교만 (들어오자마자 전부 터지지 않게)
+        void CheckStatuses(Actor a, List<StatusInstance> now)
+        {
+            var prev = a.LastStatuses;
+            a.LastStatuses = now.ConvertAll(s => s.Clone());
+            if (prev == null || a.Root == null) return;
+            foreach (var s in now)
+            {
+                if (s.Type == StatusEffect.None || s.Type == StatusEffect.SelfDamage) continue;
+                var old = prev.Find(x => x.Type == s.Type);
+                if (old != null && s.Value <= old.Value && s.Duration <= old.Duration) continue;
+                var fb = LoadEffect("Status_" + s.Type);
+                if (fb != null) SpawnEffect(fb, a.Root.transform.position, StatusEffectScale);
+                if (StatusTints.TryGetValue(s.Type, out var tint)) Flash(a, tint);
+            }
+        }
+
+        // 타격 이펙트는 오른쪽으로 치는 그림 -> 화면 왼쪽(보통 플레이어) 대상은 뒤집어 맞은편에서 날아오게
+        static bool FacesLeft(Vector3 target)
+        {
+            var cam = Camera.main;
+            return cam != null && target.x < cam.transform.position.x;
+        }
+
+        void SpawnEffect(SpriteFlipbook fb, Vector3 at, float scale, bool flipX = false)
+        {
+            var go = new GameObject("FX_" + fb.name);
+            go.transform.SetParent(transform, false);
+            go.transform.position = at;
+            go.transform.localScale = Vector3.one * scale;
+            var sr = go.AddComponent<SpriteRenderer>();
+            sr.sortingOrder = EffectSortingOrder;
+            sr.flipX = flipX;
+            go.AddComponent<FlipbookPlayer>().Play(fb, false, () => Destroy(go));
         }
 
         void Update()
@@ -228,7 +332,7 @@ namespace Terminus.Game.Client
             if (a.Sprite == null) return;
             var baseColor = !monster && a.Dead ? DeadPlayerColor : Color.white;
             float t = a.FlashLeft / FlashSeconds;
-            var c = Color.Lerp(baseColor, FlashColor, t * t);
+            var c = Color.Lerp(baseColor, a.FlashTint, t * t);
             c.a = baseColor.a;
             a.Sprite.color = c;
         }
@@ -277,8 +381,9 @@ namespace Terminus.Game.Client
                 actor.Sprite.flipX = betrayer;   // 직업 그림은 오른쪽을 봄
 
                 int hp = info.Combat.Health;
-                if (actor.LastHealth != int.MinValue && hp < actor.LastHealth) actor.FlashLeft = FlashSeconds;
+                if (actor.LastHealth != int.MinValue && hp < actor.LastHealth) Flash(actor, FlashColor);
                 actor.LastHealth = hp;
+                CheckStatuses(actor, info.Combat.Statuses);
                 actor.Dead = info.bHasBattler && hp <= 0;
                 ApplyTint(actor, false);
             }
@@ -312,7 +417,7 @@ namespace Terminus.Game.Client
 
                 if (actor.LastHealth != int.MinValue && hp < actor.LastHealth)
                 {
-                    actor.FlashLeft = FlashSeconds;
+                    Flash(actor, FlashColor);
                     actor.MonsterAnim?.PlayAction(MonsterAction.Hit);
                 }
                 if (hp <= 0 && !actor.Dead)
@@ -330,6 +435,7 @@ namespace Terminus.Game.Client
                     if (visual != null) actor.MonsterAnim.SetVisual(visual);
                 }
                 actor.LastHealth = hp;
+                if (!actor.Dead) CheckStatuses(actor, m.State.Statuses);
             }
             RemoveMissing(_monsters, seen);
         }

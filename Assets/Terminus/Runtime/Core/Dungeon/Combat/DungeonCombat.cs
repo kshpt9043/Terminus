@@ -67,6 +67,12 @@ namespace Terminus.Dungeon
         // 몬스터가 예고한 행동을 하기 직전 (언리얼 ATerminusMonster::PlayIntentAnim)
         public event Action<DungeonMonster, MonsterIntentKind> MonsterActing;
 
+        // 스킬을 쓰기 직전 (스킬 이펙트용): 스킬 행, 맞는 몬스터 Id, 맞는 플레이어 Id
+        public event Action<string, List<int>, List<ulong>> SkillUsed;
+
+        // 반격이 터짐 (이펙트용): 반격 맞는 몬스터 Id, 플레이어 Id
+        public event Action<List<int>, List<ulong>> CounterHit;
+
         // 구역 클리어 (언리얼 ClearArea -> ADungeonArea::MarkCleared)
         public event Action AreaCleared;
 
@@ -638,6 +644,7 @@ namespace Terminus.Dungeon
 
             // 광역 추가 피해(마도 캐논 등)가 맞을 상대 편 전체
             var opponents = IsBetrayal() ? GetBetrayalSideStats(p != _betrayer) : GetAliveMonsterStats();
+            RaiseSkillUsed(p.Run.GetCombatSkillRow(skillIndex), targets);
             SkillExecutor.Execute(skill, caster, targets, opponents, _rng);
             FireRelics(FindHolder(caster), RelicTrigger.OnSkillUsed, 0, p.Run.GetCombatSkillRow(skillIndex), skill);
 
@@ -646,6 +653,33 @@ namespace Terminus.Dungeon
             HideDeadMonsters();
             CheckCombatEnd();
             NotifyChanged();
+        }
+
+        void RaiseSkillUsed(string skillRow, List<CombatStats> targets)
+        {
+            if (SkillUsed == null) return;
+            ToIds(targets, out var monsterIds, out var playerIds);
+            SkillUsed(skillRow, monsterIds, playerIds);
+        }
+
+        void HandleCountered(CombatStats self, CombatStats victim)
+        {
+            if (CounterHit == null) return;
+            ToIds(new List<CombatStats> { victim }, out var monsterIds, out var playerIds);
+            CounterHit(monsterIds, playerIds);
+        }
+
+        void ToIds(List<CombatStats> targets, out List<int> monsterIds, out List<ulong> playerIds)
+        {
+            monsterIds = new List<int>();
+            playerIds = new List<ulong>();
+            foreach (var t in targets)
+            {
+                var m = _monsters.Find(x => x != null && x.Stats == t);
+                if (m != null) { monsterIds.Add(m.Id); continue; }
+                var pl = _players.Find(x => GetStats(x) == t);
+                if (pl != null) playerIds.Add(pl.Id);
+            }
         }
 
         public void HandleEndTurn(DungeonPlayer p)
@@ -766,6 +800,7 @@ namespace Terminus.Dungeon
                     var targets = ResolveTargets(skill.TargetType, stats, GetAlivePlayerStats(), GetAliveMonsterStats());
 
                     MonsterActing?.Invoke(monster, intent.Kind);
+                    RaiseSkillUsed(intent.SkillRow, targets);
 
                     SkillExecutor.Execute(skill, stats, targets, GetAlivePlayerStats(), _rng);
                     LogInfo?.Invoke($"[Combat]   몬스터 {_nextMonsterIndex - 1} -> {skill.DisplayName_KR}");

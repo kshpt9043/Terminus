@@ -177,6 +177,8 @@ namespace Terminus.Game
                 combat.RoomRewardOffered += (p, offer) => NetBus.Notify(p.Id, new RoomRewardMsg { Offer = offer });
                 combat.RoomRewardClosed += p => NetBus.Notify(p.Id, new CloseRoomRewardMsg());
                 combat.MonsterActing += (m, kind) => NetBus.Broadcast(new MonsterActingMsg { AreaIndex = areaIndex, MonsterId = m.Id, Kind = kind.ToString() });
+                combat.SkillUsed += (row, monsterIds, playerIds) => NetBus.Broadcast(new SkillUsedMsg { AreaIndex = areaIndex, SkillRow = row, MonsterIds = monsterIds, PlayerIds = playerIds });
+                combat.CounterHit += (monsterIds, playerIds) => NetBus.Broadcast(new SkillUsedMsg { AreaIndex = areaIndex, Effect = "CounterHit", MonsterIds = monsterIds, PlayerIds = playerIds });
                 _combats.Add(combat);
                 _combatHosts.Add(host);
                 _areas.RegisterArea(new DungeonArea(i, combat, NetworkRoot.MaxPartySize, MonsterSlots));

@@ -77,6 +77,8 @@ namespace Terminus.Game.Net
 
     // 몬스터 연출 (언리얼 PlayIntentAnim). 피격 / 사망은 스냅샷 체력 변화로 화면이 알아서
     [Serializable] public sealed class MonsterActingMsg { public int AreaIndex; public int MonsterId; public string Kind = ""; }
+    // 스킬 이펙트: 누가 쓰든 스킬 행 + 맞는 대상 (이펙트는 클라가 스킬 행으로 고름). Effect 가 있으면 그 이펙트 (반격 등 스킬 밖)
+    [Serializable] public sealed class SkillUsedMsg { public int AreaIndex; public string SkillRow = ""; public string Effect = ""; public List<int> MonsterIds = new List<int>(); public List<ulong> PlayerIds = new List<ulong>(); }
 
     // ================================================================ 상태 스냅샷 (언리얼 복제 변수 + OnRep)
 

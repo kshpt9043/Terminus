@@ -274,6 +274,12 @@
     justify-content: center;
 }
 .ch-status__letter { -unity-text-align: middle-center; }
+.ch-status__cell--icon {
+    width: 16px;
+    height: 16px;
+    background-color: rgba(0, 0, 0, 0);
+    -unity-background-scale-mode: scale-to-fit;
+}
 
 /* 머리 위: 아래 가운데 정렬 */
 .ch-tag-head {

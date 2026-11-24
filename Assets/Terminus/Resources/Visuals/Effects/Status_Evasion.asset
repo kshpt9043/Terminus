@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4bb7c2439dcbc314d8145c8026b2b559, type: 3}
+  m_Name: Status_Evasion
+  m_EditorClassIdentifier: Terminus.Art::Terminus.Art.SpriteFlipbook
+  Frames:
+  - {fileID: 21300000, guid: 91452a85e615f0543b45338b0d294bdc, type: 3}
+  - {fileID: 21300000, guid: e92eb1dc4de22a94798d116d51aa804b, type: 3}
+  - {fileID: 21300000, guid: 32e6bed905c959b46834d06323d92fc5, type: 3}
+  - {fileID: 21300000, guid: f430f44884e7a1b4c815db8cd2f6ec36, type: 3}
+  - {fileID: 21300000, guid: 2ca49d85b72741d47a23a8cd1fb221ef, type: 3}
+  - {fileID: 21300000, guid: c93ac2feb74a46a44be774fd736460b9, type: 3}
+  - {fileID: 21300000, guid: 65ef7ab9f06fa8849a48dd8cbd601899, type: 3}
+  - {fileID: 21300000, guid: f5782f26930f1074fabca72fbac9d334, type: 3}
+  - {fileID: 21300000, guid: 8985afa816f39b84086c0941e5cb49f0, type: 3}
+  FramesPerSecond: 12
