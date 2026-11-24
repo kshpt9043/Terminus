@@ -69,6 +69,7 @@ namespace Terminus.UI
                     _current = new TavernView();
                     break;
                 case SceneNames.Dungeon:
+                    StageBackgroundView.Create();
                     AreaView.Create();
                     _current = new DungeonView();
                     break;

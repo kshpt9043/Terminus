@@ -4,6 +4,8 @@
     "references": [
         "Terminus.Core",
         "Terminus.Game",
+        "Terminus.Art",
+        "Unity.RenderPipelines.Universal.2D.Runtime",
         "Unity.Netcode.Runtime"
     ],
     "includePlatforms": [

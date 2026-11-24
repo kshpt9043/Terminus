@@ -20,7 +20,10 @@ namespace Terminus.Game.Client
         static readonly float[] MonsterSlots = { 170f, 340f, 510f };
 
         // 발이 닿는 높이 (화면 아래에서 비율). 아래쪽은 전투 HUD 의 스킬 판 / 체력바가 씀
-        const float GroundViewY = 0.42f;
+        public const float GroundViewY = 0.37f;
+
+        // 직업 / 몬스터 그림 배율 (64px = 0.75 유닛). 배경 확인 미리보기(BackdropPreview)도 같은 값
+        public const float ActorScale = 0.75f;
 
         // 피격 번쩍임
         const float FlashSeconds = 0.22f;
@@ -212,7 +215,7 @@ namespace Terminus.Game.Client
             // 스프라이트 피벗이 가운데 -> 발이 Root 에 닿게 (그림 크기가 몬스터마다 달라서 매번)
             if (a.Sprite != null && a.Sprite.sprite != null)
             {
-                float lift = -a.Sprite.sprite.bounds.min.y;
+                float lift = -a.Sprite.sprite.bounds.min.y * ActorScale;
                 if (Mathf.Abs(a.Body.localPosition.y - lift) > 0.0001f) a.Body.localPosition = new Vector3(0f, lift, 0f);
             }
 
@@ -338,6 +341,7 @@ namespace Terminus.Game.Client
 
             var body = new GameObject("Body");
             body.transform.SetParent(root.transform, false);
+            body.transform.localScale = new Vector3(ActorScale, ActorScale, 1f);
             var sr = body.AddComponent<SpriteRenderer>();
             sr.sortingOrder = 10;
             var player = body.AddComponent<FlipbookPlayer>();
